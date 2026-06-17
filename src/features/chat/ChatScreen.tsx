@@ -54,6 +54,8 @@ import type { CompanionId } from "../auth/types";
 import { ProBadge } from "../../components/ui/ProBadge";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { streamChatRequest } from "../../utils/streamChat";
+import { useHeartsStore } from "../subscription/useHeartsStore";
+import { captureEvent } from "../../lib/posthog";
 import { generateFollowups } from "./generateFollowups";
 import { MarkdownText } from "./MarkdownText";
 
@@ -812,6 +814,17 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
       setInput("");
       setInputHeight(INPUT_MIN_HEIGHT);
       return;
+    }
+
+    // Energy Sink (Yoav 18/06): each AI-chat message costs −1 energy. At 0,
+    // block the send and surface the GLOBAL out-of-energy modal (+ Pro upsell).
+    if (!isProNow) {
+      const spent = useHeartsStore.getState().useHeart(false);
+      if (!spent) {
+        useHeartsStore.getState().flagDepleted();
+        return;
+      }
+      try { captureEvent('energy_spent', { source: 'chat' }); } catch { /* non-fatal */ }
     }
 
     const userMessage: ChatMessage = {

@@ -51,6 +51,7 @@ import { recordSessionTime as apiRecordSessionTime } from "../src/lib/api/userSt
 import { userStatsQueryKey } from "../src/features/user-stats/useUserStats";
 import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { GlobalEnergyDepletedModal } from "../src/features/subscription/HeartsUI";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { useFonts } from "@expo-google-fonts/heebo";
 import {
@@ -725,6 +726,7 @@ function RootLayoutInner() {
               <StreakRepairModalGate />
               <ComebackRewardGate />
               <SharkSkinsGate />
+              <GlobalEnergyDepletedModal />
             </StreakCelebrationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>

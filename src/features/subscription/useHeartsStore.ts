@@ -38,6 +38,10 @@ interface HeartsState {
   // (quizzes + interactive recall + simulators). Every 4-in-a-row grants energy.
   comboStreak: number;
 
+  // Non-persisted: drives a GLOBAL out-of-energy modal for depletion OUTSIDE a
+  // lesson (financial tools, AI chat). In-lesson keeps using its local modal.
+  depletedPromptVisible: boolean;
+
   // Practice-to-Refill (US-006): complete old lesson → +PRACTICE_ENERGY_GRANT, max 2/day
   practiceRefillsToday: number;
   practiceRefillDate: string | null;
@@ -80,6 +84,10 @@ interface HeartsActions {
   /** Reset the combo streak (call on any wrong answer / sim failure). */
   resetCombo: () => void;
 
+  /** Show / hide the GLOBAL out-of-energy modal (non-lesson depletion). */
+  flagDepleted: () => void;
+  clearDepleted: () => void;
+
   reset: () => void;
 }
 
@@ -88,6 +96,7 @@ const initialState: HeartsState = {
   lastHeartLostAt: null,
   sessionHeartsLost: 0,
   comboStreak: 0,
+  depletedPromptVisible: false,
   practiceRefillsToday: 0,
   practiceRefillDate: null,
   pendingPracticeForHeart: false,
@@ -219,6 +228,9 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       },
 
       resetCombo: () => set({ comboStreak: 0 }),
+
+      flagDepleted: () => set({ depletedPromptVisible: true }),
+      clearDepleted: () => set({ depletedPromptVisible: false }),
 
       clearPracticeFlag: () => {
         set({ pendingPracticeForHeart: false });

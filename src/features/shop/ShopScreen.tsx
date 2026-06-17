@@ -191,7 +191,7 @@ function DiamondPattern() {
 
 // ── Category emoji map ──────────────────────────────────────────────────────
 const CATEGORY_EMOJI: Record<ShopCategory, string> = {
-  hearts: '❤️',
+  hearts: '⚡',
   hints: '💡',
   protection: '🛡️',
   boosts: '🚀',

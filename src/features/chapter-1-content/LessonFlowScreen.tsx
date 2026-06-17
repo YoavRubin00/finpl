@@ -4808,7 +4808,8 @@ export function LessonFlowScreen() {
         {/* ── Quizzes phase ── */}
         {phase === "quizzes" && (
           <Animated.View style={[contentStyle, { flex: 1 }]}>
-            {/* Energy display (purple battery) */}
+            {/* Energy display — hidden for Pro (unlimited; no ∞ advertising) */}
+            {!isPro && (
             <View
               onLayout={(e) => {
                 const { width: screenWidth } = Dimensions.get("window");
@@ -4820,9 +4821,10 @@ export function LessonFlowScreen() {
             >
               <EnergyBatteryIcon size={20} level={isPro ? 1 : (MAX_ENERGY > 0 ? heartsCount / MAX_ENERGY : 0)} />
               <Text style={{ fontSize: 14, color: ENERGY.deep, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
-                {isPro ? "∞" : `${heartsCount}/${MAX_ENERGY}`}
+                {`${heartsCount}/${MAX_ENERGY}`}
               </Text>
             </View>
+            )}
             <QuizCard
               key={mod.quizzes[quizIndex].id}
               quiz={mod.quizzes[quizIndex]}

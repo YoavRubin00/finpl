@@ -45,7 +45,11 @@ export function HeartsDisplay() {
         useHeartsStore.getState().refillHearts();
     }, []);
 
-    const value = isPro ? MAX_ENERGY : units;
+    // Pro users have unlimited energy — stop advertising it (Yoav 18/06): hide
+    // the in-lesson energy bar entirely for Pro instead of showing ∞.
+    if (isPro) return null;
+
+    const value = units;
     const level = isPro ? 1 : (MAX_ENERGY > 0 ? value / MAX_ENERGY : 0);
 
     return (
@@ -71,7 +75,7 @@ export function HeartsDisplay() {
 // NOT be an easy money bypass) — a full refill for a hefty price, so the cheap
 // routes stay "wait / watch an ad / play a game", not "pay coins". The ad path
 // stays generous (+8) since ads are the play-first-friendly free option.
-const ENERGY_REFILL_COIN_COST = 1500; // full battery (20), a real decision
+const ENERGY_REFILL_COIN_COST = 5000; // full battery (20), a real decision
 const ENERGY_AD_GRANT = 8;
 
 interface OutOfHeartsModalProps {
@@ -271,6 +275,26 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                 </Animated.View>
             </View>
         </Modal>
+    );
+}
+
+/* ------------------------------------------------------------------ */
+/*  GlobalEnergyDepletedModal — mounted once at the app root. Shows the */
+/*  EnergyDepletedModal whenever energy runs out OUTSIDE a lesson       */
+/*  (financial tools, AI chat) via the store's depletedPromptVisible.   */
+/* ------------------------------------------------------------------ */
+
+export function GlobalEnergyDepletedModal() {
+    const visible = useHeartsStore((s) => s.depletedPromptVisible);
+    const clearDepleted = useHeartsStore((s) => s.clearDepleted);
+    const router = useRouter();
+    return (
+        <OutOfHeartsModal
+            visible={visible}
+            onDismiss={clearDepleted}
+            onUpgrade={() => { clearDepleted(); router.push('/pricing?source=energy_depleted_global' as never); }}
+            onHeartsRefilled={clearDepleted}
+        />
     );
 }
 

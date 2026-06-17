@@ -7,6 +7,7 @@ import { LottieIcon } from '../../components/ui/LottieIcon';
 import { getShopSvgIcon } from '../../components/svg/shop/ShopIcons';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { EnergyBatteryIcon } from '../../components/ui/EnergyBatteryIcon';
 
 const DIAMOND_LOTTIE = require('../../../assets/lottie/Diamond.json');
 import type { ShopItem } from './types';
@@ -108,6 +109,9 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
             //   4. Emoji (last resort, never hits for items we ship SVGs for)
             const AvatarIcon = getAvatarSvgIcon(item.id);
             if (AvatarIcon) return <AvatarIcon size={88} />;
+            // Energy items (category 'hearts' kept as the internal key): render the
+            // purple battery, NOT the legacy red-heart SVG/lottie (Yoav 18/06).
+            if (item.category === 'hearts') return <EnergyBatteryIcon size={76} level={1} />;
             const SvgIcon = getShopSvgIcon(item.id);
             if (SvgIcon) return <SvgIcon size={72} />;
             if (item.lottieSource) return <LottieIcon source={item.lottieSource} size={64} />;

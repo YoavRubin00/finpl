@@ -1,4 +1,6 @@
 import { useCallback } from 'react';
+import { useHeartsStore } from '../../subscription/useHeartsStore';
+import { captureEvent } from '../../../lib/posthog';
 import { useStockAnalystStore } from '../useStockAnalystStore';
 import { useIsPro } from '../../subscription/useSubscription';
 import { useUsageStore } from '../../subscription/useUsageStore';
@@ -75,6 +77,17 @@ export function useAnalystSubmit() {
       // Gate
       if (mode === 'quick' && !canUseAnalystQuick()) return { ok: false, reason: 'gate' };
       if (mode === 'deep' && !canUseAnalystDeep()) return { ok: false, reason: 'gate' };
+
+      // Energy Sink (Yoav 18/06): using the financial analyst tool costs −1
+      // energy. At 0, block and surface the global out-of-energy modal + Pro.
+      if (!isPro) {
+        const spent = useHeartsStore.getState().useHeart(false);
+        if (!spent) {
+          useHeartsStore.getState().flagDepleted();
+          return { ok: false, reason: 'gate' };
+        }
+        try { captureEvent('energy_spent', { source: 'tool', tool: 'analyst' }); } catch { /* non-fatal */ }
+      }
 
       const companyName = deriveCompanyName(ticker);
 

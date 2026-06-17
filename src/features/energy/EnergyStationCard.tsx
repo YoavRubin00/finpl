@@ -150,6 +150,10 @@ export function EnergyStationCard({
     ? "אנרגיה: אינסופית, מנוי Pro"
     : `אנרגיה: ${units} מתוך ${MAX_ENERGY}${isFull ? ", מלא" : countdownLabel ? `, ${countdownLabel.replace("↻ ", "")}` : ""}`;
 
+  // Pro users have unlimited energy — don't advertise it (Yoav 18/06): the whole
+  // power-station band is hidden for Pro, so there's no "∞ / Pro" surface.
+  if (isPro) return null;
+
   return (
     <View style={styles.wrap}>
       <GlowCard glowColor={ENERGY.glow} pressable={false} style={styles.card}>

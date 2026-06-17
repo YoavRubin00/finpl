@@ -76,7 +76,7 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         payload: {
           title: 'נגמרה האנרגיה',
           subtitle: 'יש לכם כמה דרכים להמשיך',
-          primaryCTA: 'מלאו אנרגיה ב-1,500 מטבעות',
+          primaryCTA: 'מלאו אנרגיה ב-5,000 מטבעות',
           framingType: 'loss_aversion',
         },
       },

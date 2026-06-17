@@ -16,7 +16,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     category: 'hearts',
     name: 'מילוי אנרגיה מלא',
     description: 'מחזיר את האנרגיה לתפוסה מלאה. חזרה לפעולה!',
-    coinCost: 1500,
+    coinCost: 5000,
     emoji: '⚡',
     lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json'),
   },

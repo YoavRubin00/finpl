@@ -22,6 +22,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { STITCH } from '../../constants/theme';
+import { useHeartsStore } from '../subscription/useHeartsStore';
 import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
 import { tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
@@ -302,6 +303,12 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
         was_correct: wasCorrect,
         date_key: challenge?.dateKey ?? null,
       });
+      // Energy earn (Yoav 18/06): each answered daily-challenge item charges +1
+      // energy (capped per day).
+      try {
+        const g = useHeartsStore.getState().grantEnergy(1, 'daily-challenge', 6);
+        if (g > 0) { try { captureEvent('energy_granted', { source: 'daily-challenge', granted: g }); } catch { /* non-fatal */ } }
+      } catch { /* non-fatal */ }
     },
     [recordAnswer, challenge?.dateKey],
   );
