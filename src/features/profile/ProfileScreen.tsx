@@ -54,7 +54,7 @@ import { PersonalStatsSection } from "../user-stats/PersonalStatsSection";
 import { BRIDGE_BENEFITS } from "../the-bridge/bridgeData";
 import { captureEvent } from "../../lib/posthog";
 import { Image as ExpoImage } from "expo-image";
-import { FINN_TABLET } from "../retention-loops/finnMascotConfig";
+import { FINN_DANCING } from "../retention-loops/finnMascotConfig";
 
 const GOAL_LABELS: Record<string, string> = {
   "cash-flow": "💸 תזרים מזומנים",
@@ -383,7 +383,7 @@ export function ProfileScreen() {
                 style={[styles.actionCardInner, styles.recoGradient]}
               >
                 <ExpoImage
-                  source={FINN_TABLET}
+                  source={FINN_DANCING}
                   style={styles.recoShark}
                   contentFit="contain"
                   accessible={false}

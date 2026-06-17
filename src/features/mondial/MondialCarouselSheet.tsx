@@ -56,8 +56,14 @@ export function MondialCarouselSheet({
     [total]
   );
 
-  // Horizontal swipe → next/prev. activeOffsetX so a mostly-vertical drag
-  // doesn't hijack; absolute translationX so it's unaffected by RTL.
+  // Horizontal swipe → next/prev.  activeOffsetX so a mostly-vertical drag
+  // doesn't hijack; absolute translationX so it's unaffected by RTL layout.
+  //
+  // RTL gesture mapping (Hebrew "book" reading direction):
+  //   swipe LEFT  (translationX < 0) → advance forward  → go(+1)
+  //   swipe RIGHT (translationX > 0) → go back          → go(-1)
+  // This matches native iOS/Android RTL pager behaviour and feels natural for
+  // a right-to-left reader (slide 0 is the "rightmost" conceptually).
   const pan = Gesture.Pan()
     .activeOffsetX([-15, 15])
     .onEnd((e) => {
@@ -116,7 +122,12 @@ export function MondialCarouselSheet({
             </View>
           </GestureDetector>
 
-          {/* Page dots — tappable, RTL-neutral (cover is always leftmost dot) */}
+          {/* Page dots — tappable, RTL-ordered.
+              flexDirection:"row-reverse" places dot 0 (the cover / first slide)
+              on the visual RIGHT, matching the Hebrew right-to-left reading
+              order so the active pill tracks rightward as the user progresses
+              (mirrors iOS RTL pager behaviour).  accessibilityLabel uses the
+              RTL visual position: dot at visual position (total - i) from right. */}
           <View style={[styles.dotsRow, { paddingBottom: insets.bottom + 18 }]}>
             {MONDIAL_SLIDES.map((s, i) => (
               <Pressable
@@ -127,7 +138,7 @@ export function MondialCarouselSheet({
                 }}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel={`שקופית ${i + 1} מתוך ${total}`}
+                accessibilityLabel={`שקופית ${total - i} מתוך ${total}`}
               >
                 <View style={[styles.dot, i === page && styles.dotActive]} />
               </Pressable>
@@ -161,7 +172,9 @@ const styles = StyleSheet.create({
   stage: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 },
   slideWrap: { alignItems: "center", justifyContent: "center" },
   dotsRow: {
-    flexDirection: "row",
+    // RTL: dot 0 (first/cover slide) sits on the visual right, trailing dots
+    // extend leftward — mirrors the Hebrew right-to-left reading order.
+    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
