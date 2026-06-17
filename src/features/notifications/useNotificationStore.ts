@@ -496,6 +496,12 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       scheduleToolDiscovery: async (content, hourOfDay = 20): Promise<void> => {
         const { permissionGranted, scheduled, cancelChannel } = get();
         if (!permissionGranted) return;
+        // The 'tools' Android channel is NEW — existing users who granted
+        // permission before this build last ran ensureAndroidChannels() WITHOUT
+        // it (it only runs inside requestPermission, which the Settings toggle
+        // skips when permission is already granted). Re-register here so
+        // scheduling to channelId:'tools' isn't silently dropped on Android 8+.
+        await ensureAndroidChannels();
         await cancelChannel("tools");
         const identifier = await Notifications.scheduleNotificationAsync({
           content,

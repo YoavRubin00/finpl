@@ -42,11 +42,14 @@ export function appRedirectHtml(deepLink: string, fallbackUrl: string): string {
       // FinPlay?" prompt is still up when the 1.5s timer fired and yanked the
       // page to the website, so the CTA "never opened the app").
       function cancel() { bailed = true; }
+      // Only 'page hidden' / 'pagehide' reliably mean the app took over. NOT
+      // 'blur' — blur fires for OS dialogs, password-manager popups, tab
+      // switches, notifications, so cancelling on blur would permanently
+      // suppress the fallback and strand desktop/webmail users without the app.
       document.addEventListener('visibilitychange', function () {
         if (document.hidden) cancel();
       });
       window.addEventListener('pagehide', cancel);
-      window.addEventListener('blur', cancel);
 
       // Trigger the app open from a real page load (browsers allow this).
       window.location.href = deep;

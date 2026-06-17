@@ -32,7 +32,16 @@ export async function capturePostHog(
   distinctId: string,
   properties: Record<string, unknown> = {},
 ): Promise<void> {
-  if (!POSTHOG_KEY || !distinctId) return;
+  if (!POSTHOG_KEY) {
+    // Loud-fail observability: EXPO_PUBLIC_POSTHOG_KEY is a CLIENT-build var and
+    // may be ABSENT in the Vercel function runtime — in which case the entire
+    // server-side funnel (email sent/opened/clicked, whatsapp tap) is a silent
+    // no-op. Warn so this shows up in Vercel logs instead of vanishing. The RC
+    // webhook relies on the same var, so if that works, this key is set.
+    console.warn(`[posthogCapture] EXPO_PUBLIC_POSTHOG_KEY missing in server runtime — '${eventName}' dropped`);
+    return;
+  }
+  if (!distinctId) return;
   try {
     await fetch(`${POSTHOG_HOST}/capture/`, {
       method: 'POST',
