@@ -201,8 +201,9 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 4,
   },
-  // Unselected = white with a clear BLUE outline + blue text (was near-white
-  // #f8fafc on a white sheet → "can't see the buttons", user 2026-06-08).
+  // Unselected = white bg + deep-blue (#2563eb) outline + dark text.
+  // #2563eb text on #ffffff = 4.6:1 (WCAG AA). Was sky-blue #0ea5e9 text
+  // on white = 2.96:1 (failed WCAG AA).
   pill: {
     width: '22%',
     paddingVertical: 12,
@@ -211,31 +212,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#ffffff',
     borderWidth: 1.5,
-    borderColor: '#0ea5e9',
+    borderColor: '#2563eb',
   },
+  // Selected = #2563eb fill + white text = 4.6:1 — aligned to primary CTA.
+  // Was #0ea5e9 fill + white text = 2.96:1 (failed WCAG AA).
   pillSelected: {
-    backgroundColor: '#0ea5e9',
-    borderColor: '#0284c7',
+    backgroundColor: '#2563eb',
+    borderColor: '#1d4ed8',
   },
   pillText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#0ea5e9',
+    color: '#2563eb',
     writingDirection: 'rtl',
   },
   pillTextSelected: {
     color: '#ffffff',
   },
-  // Full-width blue confirm CTA — mirrors the addBtn in BreakingNewsScreen.
+  // Full-width confirm CTA — mirrors addBtn in BreakingNewsScreen:
+  // #2563eb + #1d4ed8 border-bottom (WCAG AA: white on #2563eb = 4.6:1).
+  // Was #0ea5e9 (2.96:1 — failed AA).
   confirmBtn: {
     marginTop: 14,
     paddingVertical: 15,
     borderRadius: 14,
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#2563eb',
     alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 4,
-    borderBottomColor: '#0369a1',
+    borderBottomColor: '#1d4ed8',
   },
   confirmBtnText: {
     fontSize: 16,

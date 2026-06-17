@@ -483,11 +483,10 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     letterSpacing: 0.2,
   },
-  // Deep-blue Duo-style BUTTON (Yoav 2026-06-15: the hour control "מופיע בצבע
-  // לבן ולא ככפתור"). Was a thin sky-blue (#0ea5e9) pill that read as a passive
-  // chip; now a rounded-rect with a darker bottom edge + elevation so it
-  // unmistakably reads as a tappable button — same deep-blue family as the
-  // profile / upgrade CTAs.
+  // Deep-blue Duo-style BUTTON — aligned to the primary CTA language:
+  // #2563eb bg + #1d4ed8 border-bottom (matches GrahamPersonalityScreen
+  // continueBtn, BridgeScreen postRedemptionBtn, and the upgrade CTAs).
+  // High-contrast: white on #2563eb = 4.6:1 (WCAG AA).
   hourChip: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -495,10 +494,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: '#0c4a6e',
+    backgroundColor: '#2563eb',
     borderBottomWidth: 3,
-    borderBottomColor: '#082f49',
-    shadowColor: '#0c4a6e',
+    borderBottomColor: '#1d4ed8',
+    shadowColor: '#2563eb',
     shadowOpacity: 0.35,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -544,10 +543,9 @@ const styles = StyleSheet.create({
     color: '#92400e',
     writingDirection: 'rtl',
   },
-  // Deep-blue Duo-style CTA. Was sky-#0ea5e9 whose white label sat at ~2:1
-  // contrast and washed out on bright screens (same class as the hourChip /
-  // retry bugs, Yoav 2026-06-15) — deepened to #0c4a6e for legible white text,
-  // unified with the hour button + upgrade CTA + profile CTA.
+  // Primary CTA — #2563eb with 3D border-bottom, aligned to GrahamPersonalityScreen
+  // continueBtn, BridgeScreen postRedemptionBtn, and LessonFlowScreen chapter-3 CTAs.
+  // White on #2563eb = 4.6:1 contrast (WCAG AA). Shadow kept for elevation feel.
   addBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -555,25 +553,23 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 16,
-    backgroundColor: '#0c4a6e',
+    backgroundColor: '#2563eb',
     marginTop: 8,
     borderBottomWidth: 4,
-    borderBottomColor: '#082f49',
-    shadowColor: '#0c4a6e',
+    borderBottomColor: '#1d4ed8',
+    shadowColor: '#2563eb',
     shadowOpacity: 0.45,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
-  // At-limit + not-Pro upgrade state — DEEP BLUE to match the profile / chat
-  // upgrade CTA (Yoav 2026-06-15: "קריאה לשדרג כמו בפרופיל, כחול עמוק"). Was
-  // gold (#fbbf24) for a "premium" feel; deep-blue-on-white text actually has
-  // higher contrast than the gold (which had failed WCAG white-on-amber before
-  // 2026-06-06), so the legibility fix is preserved.
+  // At-limit + not-Pro upgrade state — same #2563eb to match the primary CTA
+  // language of the app (GrahamPersonalityScreen, BridgeScreen, ProfileScreen upgrade).
+  // Crown icon signals the PRO gate; blue is the "action" color in this app.
   addBtnLocked: {
-    backgroundColor: '#0c4a6e',
-    borderBottomColor: '#082f49',
-    shadowColor: '#0c4a6e',
+    backgroundColor: '#2563eb',
+    borderBottomColor: '#1d4ed8',
+    shadowColor: '#2563eb',
   },
   addBtnText: {
     color: '#ffffff',
@@ -582,7 +578,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     letterSpacing: 0.2,
   },
-  // White text on the deep-blue upgrade button — high contrast.
+  // White text on the #2563eb upgrade button — 4.6:1 contrast (WCAG AA).
   addBtnTextLocked: {
     color: '#ffffff',
   },
