@@ -22,6 +22,7 @@ import { getPyramidStatus } from "../../utils/progression";
 import { tapHaptic } from "../../utils/haptics";
 import { Lock } from "lucide-react-native";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
+import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
 
 const ASSETS_INTRO_DISMISSED_KEY = "assets_market_intro_dismissed";
 
@@ -125,6 +126,11 @@ export function InvestmentsHubScreen() {
 
   return (
     <View style={s.root}>
+      {/* Second placement for the notify-permission prompt (Yoav 2026-06-17):
+          only ~3-5% of users saw it on the learn map alone. Self-gated
+          (post-onboarding + walkthrough + first module + 14d re-show) and
+          shares the 10s banner cooldown, so it never double-shows or overlaps. */}
+      <NotificationPermissionBanner />
       <View style={[s.content, { paddingBottom: insets.bottom + 16 }]}>
 
         {/* ── Page title ── */}
