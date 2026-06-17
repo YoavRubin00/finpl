@@ -6,34 +6,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, ScrollView, Dimensions, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  withDelay,
   FadeInDown,
   FadeInUp,
-  SlideInRight,
   SlideInLeft,
-  Easing,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { X } from 'lucide-react-native';
 
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { GlowCard } from '../../components/ui/GlowCard';
 import { SimLottieBackground } from '../../components/ui/SimLottieBackground';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
+import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
 import { SIM_LOTTIE } from '../shared-sim/simLottieMap';
 import {
   FINN_STANDARD,
   FINN_HAPPY,
 } from '../retention-loops/finnMascotConfig';
 import { SIM4, RTL } from '../chapter-4-content/simulations/simTheme';
+import { STITCH } from '../../constants/theme';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 
@@ -49,25 +43,83 @@ interface GrahamPersonalityScreenProps {
   onComplete?: (profileId: InvestorProfileId) => void;
 }
 
-/* ── Progress Bar ── */
+/* ── Top Header Bar ── */
+// Unified header: title + SheetCloseButton + progress bar below.
+// Mirrors DailyNewsChallengeSheet topBar pattern (titleRow + progressRow).
 
-function ProgressBar({ current, total }: { current: number; total: number }) {
+interface TopHeaderProps {
+  current: number;
+  total: number;
+  onClose: () => void;
+}
+
+function TopHeader({ current, total, onClose }: TopHeaderProps) {
+  const insets = useSafeAreaInsets();
   const pct = Math.min(((current + 1) / total) * 100, 100);
   return (
-    <View style={{ transform: [{ scaleX: -1 }] }}>
-      <View style={styles.progressTrack}>
-        <LinearGradient
-          colors={['#0891b2', '#06b6d4']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.progressFill, { width: `${pct}%` }]}
-        >
-          <View style={styles.progressShine} />
-        </LinearGradient>
+    <View style={[headerStyles.topBar, { paddingTop: insets.top + 4 }]}>
+      <View style={headerStyles.titleRow}>
+        <SheetCloseButton onPress={onClose} accessibilityLabel="סגור שאלון" />
+        <Text style={headerStyles.title} allowFontScaling={false} numberOfLines={1}>
+          איזה משקיע אתה?
+        </Text>
+        <Text style={headerStyles.counter} allowFontScaling={false}>
+          {current + 1}/{total}
+        </Text>
+      </View>
+      <View style={headerStyles.progressRow}>
+        {/* scaleX -1 so fill grows RTL (right→left) */}
+        <View style={{ transform: [{ scaleX: -1 }] }}>
+          <View style={styles.progressTrack}>
+            <LinearGradient
+              colors={['#2563eb', '#0ea5e9']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[styles.progressFill, { width: `${pct}%` }]}
+            >
+              <View style={styles.progressShine} />
+            </LinearGradient>
+          </View>
+        </View>
       </View>
     </View>
   );
 }
+
+const headerStyles = StyleSheet.create({
+  topBar: {
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: STITCH.surfaceHighest,
+    paddingBottom: 8,
+    gap: 4,
+  },
+  titleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  title: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '900',
+    color: STITCH.onSurface,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    letterSpacing: -0.2,
+  },
+  counter: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: STITCH.onSurfaceVariant,
+    textAlign: 'left',
+  },
+  progressRow: {
+    paddingHorizontal: 16,
+  },
+});
 
 /* ── Option Button ── */
 
@@ -103,11 +155,18 @@ function OptionButton({ text, index, selected, onPress }: OptionButtonProps) {
 }
 
 /* ── Back Button ── */
+// Secondary style: light blue ghost pill, matches LessonFlowScreen's
+// secondary/back affordance (bg #e0f2fe, border #7dd3fc, text #0284c7).
 
 function BackButton({ onPress }: { onPress: () => void }) {
   return (
-    <AnimatedPressable onPress={onPress} style={styles.backBtn}>
-      <LottieIcon source={SIM_LOTTIE.arrowRight} size={24} />
+    <AnimatedPressable
+      onPress={onPress}
+      style={styles.backBtn}
+      accessibilityRole="button"
+      accessibilityLabel="חזרה לשאלה הקודמת"
+    >
+      <LottieIcon source={SIM_LOTTIE.arrowRight} size={22} />
       <Text style={[styles.backText, RTL]}>חזרה</Text>
     </AnimatedPressable>
   );
@@ -137,6 +196,7 @@ function ResultScreen({
   color,
 }: ResultScreenProps) {
   const showConfetti = useRef(true);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     successHaptic();
@@ -144,7 +204,11 @@ function ResultScreen({
 
   return (
     <ScrollView
-      contentContainerStyle={styles.resultContainer}
+      contentContainerStyle={[
+        styles.resultContainer,
+        // Safe-area bottom so content + CTA never hide behind home-indicator / nav-bar
+        { paddingBottom: Math.max(insets.bottom + 16, 32) },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {showConfetti.current && (
@@ -156,8 +220,8 @@ function ResultScreen({
         <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 85, height: 85 }} contentFit="contain" />
       </Animated.View>
 
-      {/* Profile Card */}
-      <Animated.View entering={FadeInUp.delay(200).duration(500).springify()}>
+      {/* Profile Card — no maxHeight; ScrollView handles overflow */}
+      <Animated.View entering={FadeInUp.delay(200).duration(500).springify()} style={{ width: '100%' }}>
         <GlowCard chapterGlow={color} style={styles.resultCard}>
           <View style={styles.resultCardInner}>
             <Text style={styles.resultEmoji}>{emoji}</Text>
@@ -172,11 +236,14 @@ function ResultScreen({
         </GlowCard>
       </Animated.View>
 
-      {/* Continue Button */}
+      {/* Continue Button — matches LessonFlowScreen primary CTA:
+          #2563eb fill, borderBottomWidth 3, #1d4ed8 bottom border, radius 16 */}
       <Animated.View entering={FadeInUp.delay(400).duration(400).springify()} style={styles.ctaRow}>
         <AnimatedPressable
           onPress={onContinue}
-          style={[styles.continueBtn, { backgroundColor: '#0891b2' }]}
+          style={styles.continueBtn}
+          accessibilityRole="button"
+          accessibilityLabel="המשך"
         >
           <Text style={styles.continueText}>המשך</Text>
         </AnimatedPressable>
@@ -200,6 +267,19 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
 
   const [selectedOpt, setSelectedOpt] = useState<number | null>(null);
   const { playSound } = useSoundEffect();
+  const insets = useSafeAreaInsets();
+
+  const router = useRouter();
+
+  const handleClose = useCallback(() => {
+    tapHaptic();
+    playSound('btn_click_soft_1');
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/learn');
+    }
+  }, [router, playSound]);
 
   const handleSelect = useCallback(
     (optIdx: number) => {
@@ -223,8 +303,6 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
     setSelectedOpt(null);
   }, [goBack, playSound]);
 
-  const router = useRouter();
-
   const handleContinue = useCallback(() => {
     tapHaptic();
     playSound('btn_click_heavy');
@@ -244,7 +322,15 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
         lottieSources={[SIM_LOTTIE.brain, SIM_LOTTIE.chart]}
         chapterColors={['#f0f9ff', '#e0f2fe'] as const}
       >
-        <SafeAreaView style={styles.safe}>
+        {/* Result: no SafeAreaView edges top/bottom — TopHeader handles top
+            inset explicitly; ResultScreen ScrollView handles bottom via insets */}
+        <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+          {/* Unified header for result screen too (close + title) */}
+          <TopHeader
+            current={TOTAL_QUESTIONS - 1}
+            total={TOTAL_QUESTIONS}
+            onClose={handleContinue}
+          />
           <ResultScreen
             onContinue={handleContinue}
             profileId={profile.id}
@@ -267,31 +353,23 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
       lottieSources={[SIM_LOTTIE.brain, SIM_LOTTIE.chart]}
       chapterColors={['#f0f9ff', '#e0f2fe'] as const}
     >
-      <SafeAreaView style={styles.safe}>
+      {/* edges left/right only — TopHeader handles top inset explicitly,
+          ScrollView handles bottom via paddingBottom with insets */}
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+        {/* Unified header bar — title + X close + progress */}
+        <TopHeader
+          current={currentQuestion}
+          total={TOTAL_QUESTIONS}
+          onClose={handleClose}
+        />
+
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom + 16, 32) },
+          ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header: Top Nav + Progress */}
-          <View style={styles.header}>
-            <View style={styles.topNav}>
-               <AnimatedPressable
-                 onPress={() => {
-                   tapHaptic();
-                   if (router.canGoBack()) {
-                     router.back();
-                   } else {
-                     router.replace('/(tabs)/learn');
-                   }
-                 }}
-                 style={styles.closeBtn}
-               >
-                 <X size={24} color={SIM4.textSecondary} />
-               </AnimatedPressable>
-            </View>
-            <ProgressBar current={currentQuestion} total={TOTAL_QUESTIONS} />
-          </View>
-
           {/* Question Card */}
           <Animated.View
             key={question.id}
@@ -320,7 +398,7 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
             ))}
           </View>
 
-          {/* Back Button */}
+          {/* Back Button — secondary style, matches LessonFlowScreen ghost pill */}
           {currentQuestion > 0 && (
             <Animated.View entering={FadeInUp.duration(250)}>
               <BackButton onPress={handleBack} />
@@ -340,36 +418,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingTop: 14,
+    // paddingBottom is set inline (insets.bottom + 16) so safe-area is respected
     gap: 12,
   },
-  header: {
-    gap: 8,
-  },
-  topNav: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  closeBtn: {
-    padding: 8,
-    backgroundColor: '#ffffff',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
   progressTrack: {
-    height: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    height: 10,
+    backgroundColor: 'rgba(37,99,235,0.12)',
     borderRadius: 999,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
   },
   progressFill: {
     height: '100%',
@@ -380,8 +437,8 @@ const styles = StyleSheet.create({
     top: 2,
     left: 6,
     right: 6,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.4)',
     borderRadius: 999,
   },
   questionCard: {
@@ -425,6 +482,7 @@ const styles = StyleSheet.create({
     color: SIM4.textPrimary,
     lineHeight: 22,
   },
+  // Back button — secondary ghost pill, mirrors LessonFlowScreen secondary CTA
   backBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -434,24 +492,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 28,
     backgroundColor: '#e0f2fe',
-    borderRadius: 999,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: '#7dd3fc',
-    shadowColor: '#38bdf8',
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    elevation: 4,
-    marginTop: 10,
+    marginTop: 6,
   },
   backText: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0284c7',
   },
+  // Result screen
   resultContainer: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingTop: 14,
+    // paddingBottom is set inline per ResultScreen (insets.bottom + 16)
     gap: 12,
     alignItems: 'center',
   },
@@ -497,8 +552,9 @@ const styles = StyleSheet.create({
   adviceBox: {
     borderRadius: 14,
     borderWidth: 1.5,
-    padding: 12,
+    padding: 14,
     marginTop: 2,
+    width: '100%',
   },
   adviceText: {
     fontSize: 13,
@@ -510,15 +566,19 @@ const styles = StyleSheet.create({
   },
   ctaRow: {
     width: '100%',
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
+    marginTop: 4,
   },
+  // Continue button — matches LessonFlowScreen primary CTA:
+  // bg #2563eb, borderRadius 16, paddingVertical 14, borderBottomWidth 3, #1d4ed8 bottom
   continueBtn: {
+    backgroundColor: '#2563eb',
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 4,
-    borderBottomColor: '#bae6fd',
+    borderBottomWidth: 3,
+    borderBottomColor: '#1d4ed8',
   },
   continueText: {
     fontSize: 17,

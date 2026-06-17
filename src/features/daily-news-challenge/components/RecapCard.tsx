@@ -96,10 +96,10 @@ export function RecapCard({
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        // Scroll disabled 2026-06-02 (Yam): the recap is sized to fit a
-        // single phone screen. If a device ever clips content, restore
-        // scrollEnabled to default instead of silently growing padding.
-        scrollEnabled={false}
+        // scrollEnabled restored (2026-06-17): some phones with smaller
+        // screens or larger text clip the recap CTA. Scrollable with
+        // flexGrow:1 guarantees the CTA is always reachable.
+        scrollEnabled
       >
         {/* Mascot + headline — framed as fully-completed regardless of
             accuracy. The "false summary" risk is bounded because the reward
