@@ -54,7 +54,6 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
     placeholder: "שאלו את קפטן שארק על כסף...",
     headerImage: FINN_IMAGE,
     animation: {
-      lottieSource: "assets/lottie/fin-standard.json",
       idleFrames: [0, 59],
       talkingFrames: [60, 119],
       thinkingFrames: [120, 179],
@@ -70,7 +69,6 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
     placeholder: "יאללה, שאלו את קפטן שארק...",
     headerImage: FINN_IMAGE,
     animation: {
-      lottieSource: "assets/lottie/fin-standard.json",
       idleFrames: [0, 59],
       talkingFrames: [60, 119],
       thinkingFrames: [120, 179],
@@ -86,7 +84,6 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
     placeholder: "ספרו לקפטן שארק מה מטריד אתכם...",
     headerImage: FINN_IMAGE,
     animation: {
-      lottieSource: "assets/lottie/fin-standard.json",
       idleFrames: [0, 59],
       talkingFrames: [60, 119],
       thinkingFrames: [120, 179],
@@ -102,7 +99,6 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
     placeholder: "שאלו את קפטן שארק...",
     headerImage: FINN_IMAGE,
     animation: {
-      lottieSource: "assets/lottie/fin-standard.json",
       idleFrames: [0, 59],
       talkingFrames: [60, 119],
       thinkingFrames: [120, 179],

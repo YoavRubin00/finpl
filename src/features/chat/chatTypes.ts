@@ -3,7 +3,10 @@ import type { CompanionId } from "../auth/types";
 export type CompanionAnimationState = "idle" | "talking" | "thinking";
 
 export interface CompanionAnimationConfig {
-  lottieSource: string;
+  // lottieSource removed 2026-06-17: the Lottie was deleted (mascot renders via
+  // FINN_IMAGE WebP) and no consumer ever read this field. Kept optional only
+  // so any future Lottie-driven companion can opt back in.
+  lottieSource?: string;
   idleFrames: [number, number];
   talkingFrames: [number, number];
   thinkingFrames: [number, number];
