@@ -3122,6 +3122,14 @@ export function LessonFlowScreen() {
     }
   }, [mod, isModuleAccessible, phase]);
   const [flashcardIndex, setFlashcardIndex] = useState(() => {
+    // A cardFilter chip ('video' / 'non-video') targets a SPECIFIC subset of
+    // cards, not a resume continuation. Honoring the resume checkpoint here is
+    // a bug: if the saved index is PAST the target card (e.g. the video at
+    // index 2, but resume=5 from a prior cards run), the forward-only jump
+    // effect below never finds it and bumps to the end — the video silently
+    // never plays ("הסרטון לא נפתח" in mod-1-1). Start at 0 for filtered chips
+    // so the forward search reliably lands on the first matching card.
+    if (cardFilter === 'video' || cardFilter === 'non-video') return 0;
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
