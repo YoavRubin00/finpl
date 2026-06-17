@@ -59,17 +59,19 @@ export function MondialCarouselSheet({
   // Horizontal swipe → next/prev.  activeOffsetX so a mostly-vertical drag
   // doesn't hijack; absolute translationX so it's unaffected by RTL layout.
   //
-  // RTL gesture mapping (Hebrew "book" reading direction):
-  //   swipe LEFT  (translationX < 0) → advance forward  → go(+1)
-  //   swipe RIGHT (translationX > 0) → go back          → go(-1)
-  // This matches native iOS/Android RTL pager behaviour and feels natural for
-  // a right-to-left reader (slide 0 is the "rightmost" conceptually).
+  // RTL gesture mapping (Yoav 2026-06-17: the old mapping felt reversed vs the
+  // right-to-left dot progression). Content flows right→left, so the NEXT slide
+  // sits to the LEFT and is revealed by dragging content RIGHTWARD:
+  //   swipe RIGHT (translationX > 0) → advance forward → go(+1)
+  //   swipe LEFT  (translationX < 0) → go back         → go(-1)
+  // This matches the RTL dots (active dot moves left as you advance) and native
+  // RTL pager behaviour.
   const pan = Gesture.Pan()
     .activeOffsetX([-15, 15])
     .onEnd((e) => {
       "worklet";
-      if (e.translationX <= -40) runOnJS(go)(1);
-      else if (e.translationX >= 40) runOnJS(go)(-1);
+      if (e.translationX >= 40) runOnJS(go)(1);
+      else if (e.translationX <= -40) runOnJS(go)(-1);
     });
 
   if (!visible) return null;
