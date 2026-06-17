@@ -1392,6 +1392,43 @@ export function DuoLearnScreen() {
   // Without this, completing a module while offline leaves it marked as
   // "active" on the map until the next successful server sync (QA 2026-05-31).
   const localCompletedModuleIds = useCompletedModulesStore((s) => s.completedIds);
+
+  // Precompute, ONCE per progress/pro change, the per-chapter completed-module
+  // lookup and the globally-first incomplete chapter. Previously this ran as an
+  // IIFE inside the render that re-filtered `progressData` ~12× on EVERY render
+  // (notably on focus/return after finishing a sub-module — the "slow return to
+  // the map"). Memoized here, the JSX just reads from `completedByPrefix`.
+  const { completedByPrefix, globalActiveIdx } = useMemo(() => {
+    const cache = new Map<string, string[]>();
+    const byPrefix = (pfx: string): string[] => {
+      const hit = cache.get(pfx);
+      if (hit) return hit;
+      const serverIds = progressData?.filter((m) => m.moduleId.startsWith(pfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+      const localIds = localCompletedModuleIds.filter((id) => id.startsWith(pfx));
+      const merged = [...new Set([...serverIds, ...localIds])];
+      cache.set(pfx, merged);
+      return merged;
+    };
+    let activeIdx = -1;
+    for (let i = 0; i < ARENAS.length; i++) {
+      const ch = ALL_CHAPTERS[i];
+      const num = storeKey(ch.id).replace('ch-', '');
+      const pfx = `mod-${num}-`;
+      const done = byPrefix(pfx);
+      let unlocked = isPro || i === 0;
+      if (!isPro && i > 0) {
+        const prev = ALL_CHAPTERS[i - 1];
+        const prevPfx = `mod-${storeKey(prev.id).replace('ch-', '')}-`;
+        const prevDone = byPrefix(prevPfx);
+        unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
+      }
+      if (!unlocked) continue;
+      const hasIncomplete = ch.modules.some((m) => !done.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)));
+      if (hasIncomplete) { activeIdx = i; break; }
+    }
+    return { completedByPrefix: byPrefix, globalActiveIdx: activeIdx };
+  }, [progressData, localCompletedModuleIds, isPro]);
+
   // Featured "מאחורי המונדיאל" carousel — surfaces to RETURNING users (≥1
   // completed module) from MONDIAL_LAUNCH_DATE onward, via a mail badge under
   // the shark's stars. The red "new" dot clears after the first open; the
@@ -2469,40 +2506,9 @@ export function DuoLearnScreen() {
 
           {/* Chapter sections */}
           {(() => {
-            // Compute the GLOBALLY-first chapter that holds an incomplete module.
-            // For Pro users every chapter is unlocked, so without this guard the
-            // active marker (Finn cursor + news badge + quest widget) would
-            // appear on every chapter that still has work — user reported seeing
-            // two cursors. Only ONE chapter — the earliest with an incomplete
-            // playable module — should host the active markers.
-            // Merge server progress (from React Query) with the local
-            // completed-modules store. The local store is the source of
-            // truth between a successful local completion and the next
-            // server sync — without merging, offline completions vanish
-            // from the map.
-            const completedByPrefix = (pfx: string): string[] => {
-              const serverIds = progressData?.filter((m) => m.moduleId.startsWith(pfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
-              const localIds = localCompletedModuleIds.filter((id) => id.startsWith(pfx));
-              return [...new Set([...serverIds, ...localIds])];
-            };
-            let globalActiveIdx = -1;
-            for (let i = 0; i < ARENAS.length; i++) {
-              const ch = ALL_CHAPTERS[i];
-              const num = storeKey(ch.id).replace('ch-', '');
-              const pfx = `mod-${num}-`;
-              const done = completedByPrefix(pfx);
-              // Same unlock rule as below — Pro: always; Free: prev chapter fully done.
-              let unlocked = isPro || i === 0;
-              if (!isPro && i > 0) {
-                const prev = ALL_CHAPTERS[i - 1];
-                const prevPfx = `mod-${storeKey(prev.id).replace('ch-', '')}-`;
-                const prevDone = completedByPrefix(prevPfx);
-                unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
-              }
-              if (!unlocked) continue;
-              const hasIncomplete = ch.modules.some((m) => !done.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)));
-              if (hasIncomplete) { globalActiveIdx = i; break; }
-            }
+            // `completedByPrefix` + `globalActiveIdx` are precomputed once via
+            // useMemo above (keyed on progressData / localCompletedModuleIds /
+            // isPro) — see the note there. The render below only reads them.
             return ARENAS.map((arena, idx) => {
             const chapter = ALL_CHAPTERS[idx];
             const chNum = storeKey(chapter.id).replace('ch-', '');

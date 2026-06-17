@@ -3,10 +3,17 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 
-export const MAX_HEARTS = 5;
-const HEART_REFILL_MS = 5 * 60 * 60 * 1000; // 5 hours per heart
+// Energy units (formerly "hearts"). The store file keeps the `hearts`/`useHeart`
+// names in v1 to avoid churning ~6 call-sites; the full rename to
+// useEnergyStore happens in phase 2 (see plan E). Semantically these ARE the
+// purple energy units shown in the תחנת הכוח / power-station component.
+export const MAX_HEARTS = 20; // MAX energy units (was 5)
+/** Alias for new energy-aware code. Same value as MAX_HEARTS. */
+export const MAX_ENERGY = MAX_HEARTS;
+const HEART_REFILL_MS = 15 * 60 * 1000; // 15 minutes per energy unit (was 5h) → full 0→20 in 5h
 
-const MAX_PRACTICE_REFILLS_PER_DAY = 2;
+const MAX_PRACTICE_REFILLS_PER_DAY = 2; // ×PRACTICE_ENERGY_GRANT = +10/day
+const PRACTICE_ENERGY_GRANT = 5; // energy granted per practice/replay completion (was +1)
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -25,10 +32,15 @@ interface HeartsState {
   // Non-persisted: resets on cold-start, used by upgrade_trigger_timing bandit experiment
   sessionHeartsLost: number;
 
-  // Practice-to-Refill (US-006): complete old lesson → +1 heart, max 2/day
+  // Practice-to-Refill (US-006): complete old lesson → +PRACTICE_ENERGY_GRANT, max 2/day
   practiceRefillsToday: number;
   practiceRefillDate: string | null;
   pendingPracticeForHeart: boolean;
+
+  // Power-station: per-source daily energy grants, each with its own daily cap.
+  // Keyed by source ('quest' | 'daily-task' | 'station-game' | 'ad' | 'combo' …).
+  // Value = energy granted from that source TODAY (reset on date change).
+  energyGrantsBySource: Record<string, { date: string; energy: number }>;
 }
 
 interface HeartsActions {
@@ -43,6 +55,14 @@ interface HeartsActions {
   grantPracticeHeart: () => boolean;
   startPracticeForHeart: () => boolean;
   clearPracticeFlag: () => void;
+
+  /**
+   * Add energy from a power-station source, respecting an optional per-source
+   * daily cap. Settles passive regen first, clamps to MAX_ENERGY. Returns the
+   * amount actually granted (0 if at max or daily cap reached). Pass no cap for
+   * uncapped sources (e.g. a one-off purchase).
+   */
+  grantEnergy: (amount: number, source: string, dailyCap?: number) => number;
 
   reset: () => void;
 }

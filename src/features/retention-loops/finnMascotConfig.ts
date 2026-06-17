@@ -15,7 +15,6 @@
  *   fin-tablet-1.webp, taking notes (onboarding Q&A acknowledgement)
  *   fin-dancing-1.webp, celebration / victory moments (milestones, summaries)
  */
-import type { AnimationObject } from "lottie-react-native";
 import type { ImageSource } from "expo-image";
 
 export type FinnAnimationState =
@@ -29,30 +28,6 @@ export type FinnAnimationState =
   | "talking"
   | "tablet"
   | "dancing";
-
-// ── Lottie (animated, looping) ──────────────────────────────────────────────
-
-/** Standard idle / presence animation */
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-export const FINN_SOURCE_STANDARD = require("../../../assets/lottie/fin-standard.json") as unknown as AnimationObject;
-
-/** Celebration / success animation, lazy-loaded */
-let _excitedCache: AnimationObject | null = null;
-export function FINN_SOURCE_EXCITED(): AnimationObject {
-  if (!_excitedCache) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    _excitedCache = require("../../../assets/lottie/fin-excited.json") as unknown as AnimationObject;
-  }
-  return _excitedCache;
-}
-
-/** Backward-compatible alias, Lottie standard */
-export const FINN_LOTTIE_SOURCE = FINN_SOURCE_STANDARD;
-
-/** Maps state to Lottie source (for animated contexts) */
-export function getFinnSource(state: FinnAnimationState): AnimationObject {
-  return state === "celebrate" ? FINN_SOURCE_EXCITED() : FINN_SOURCE_STANDARD;
-}
 
 // ── WebP Images (static, contextual) ────────────────────────────────────────
 

@@ -129,7 +129,7 @@ import { PizzaIndexScreen } from "../fun/PizzaIndexScreen";
 import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
 import LottieView from "lottie-react-native";
-import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, FINN_DANCING, getFinnSource, getFinnImage } from "../retention-loops/finnMascotConfig";
+import { FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, FINN_DANCING, getFinnImage } from "../retention-loops/finnMascotConfig";
 import { InteractiveRecallScreen } from "../sentence-exercise/InteractiveRecallScreen";
 import { SharkDilemmaCard } from "../shark-dilemma/SharkDilemmaCard";
 import { VideoSharkDilemmaCard } from "../shark-dilemma/VideoSharkDilemmaCard";
@@ -1106,7 +1106,6 @@ function QuizCard({
   }, []);
   const { playSound } = useSoundEffect();
   const [finnState, setFinnState] = useState<FinnAnimationState>("thinking");
-  const finnSource = getFinnSource(finnState);
 
   const shakeStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shakeX.value }],
@@ -1414,7 +1413,6 @@ function SummaryScreen({
   const wisdomItem = useWisdomStore((s) => s.activeItem);
   const summaryFinnState: FinnAnimationState =
     correctCount === totalCount ? "celebrate" : correctCount >= totalCount / 2 ? "idle" : "empathy";
-  const summaryFinnSource = getFinnSource(summaryFinnState);
 
   // Haptic feedback based on quiz performance
   useEffect(() => {
