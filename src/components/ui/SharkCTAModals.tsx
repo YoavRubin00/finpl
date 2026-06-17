@@ -273,13 +273,17 @@ export function SharkToolCTA({ visible, onOpenTool, onDismiss }: ToolCTAProps) {
   const tool = toolOfTheDay();
 
   useEffect(() => {
-    if (visible) {
+    // Only record + fire the impression when we ACTUALLY render (visible AND
+    // allowed). Recording on `visible` alone burns the session/day token and
+    // logs a phantom notification_banner_shown when canShow('tools') is false
+    // and the component returns null just below.
+    if (visible && canShow('tools')) {
       recordShown('tools');
       try {
         track({ name: 'notification_banner_shown', props: { source: 'tools_lesson_cta', tool_key: tool.toolKey } });
       } catch { /* non-fatal */ }
     }
-  }, [visible, recordShown, tool.toolKey]);
+  }, [visible, canShow, recordShown, tool.toolKey]);
 
   if (!visible || !canShow('tools')) return null;
 

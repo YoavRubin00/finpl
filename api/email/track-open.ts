@@ -26,6 +26,8 @@ const PIXEL = Buffer.from(
   'base64',
 );
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function sendPixel(res: VercelResponse): void {
   res.setHeader('Content-Type', 'image/gif');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -41,7 +43,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = typeof req.query.u === 'string' ? req.query.u : '';
   const variantId = typeof req.query.v === 'string' ? req.query.v : '';
 
-  if (userId && userId.length <= 64) {
+  // Only count opens for a real userProfiles UUID. Without this, Gmail/Apple
+  // image proxies + link scanners hitting the pixel with garbage `u` would
+  // create ghost PostHog persons and inflate the open rate.
+  if (UUID_RE.test(userId)) {
     await capturePostHog('retention_email_opened', userId, {
       variant_id: variantId || 'unknown',
     });

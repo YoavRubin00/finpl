@@ -23,8 +23,11 @@ function escapeAttr(s: string): string {
 }
 
 export function appRedirectHtml(deepLink: string, fallbackUrl: string): string {
-  const deep = JSON.stringify(deepLink);
-  const fb = JSON.stringify(fallbackUrl);
+  // Escape `<` so a URL containing `</script>` can't break out of the inline
+  // <script> block. Not exploitable via the current callers (whitelisted
+  // targets) but cheap defense-in-depth for any future caller.
+  const deep = JSON.stringify(deepLink).replace(/</g, '\\u003c');
+  const fb = JSON.stringify(fallbackUrl).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
 <html dir="rtl" lang="he"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">

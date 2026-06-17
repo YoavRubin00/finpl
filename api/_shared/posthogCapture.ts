@@ -43,7 +43,7 @@ export async function capturePostHog(
   }
   if (!distinctId) return;
   try {
-    await fetch(`${POSTHOG_HOST}/capture/`, {
+    const post = fetch(`${POSTHOG_HOST}/capture/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -54,6 +54,14 @@ export async function capturePostHog(
         timestamp: new Date().toISOString(),
       }),
     });
+    // Hard cap the AWAIT: callers (track-click/wa-click/track-open) await this
+    // BEFORE redirecting, so a PostHog outage must not stall the redirect up to
+    // the function's maxDuration. Bound the wait to 2.5s (the fetch itself may
+    // finish in the background); a capture is fire-and-forget, never blocking.
+    await Promise.race([
+      post,
+      new Promise((resolve) => setTimeout(resolve, 2500)),
+    ]);
   } catch (err) {
     console.warn('[posthogCapture]', eventName, err);
   }

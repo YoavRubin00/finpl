@@ -29,8 +29,10 @@ const WHATSAPP_CTA_IMAGE = {
   uri: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/whatsapp-community.jpg?v=2026-06-01",
 } as const;
 
-/** Same official FinPlay WhatsApp invite used in `MoreScreen` and email
- *  templates — keeps a single source of truth (chat.whatsapp.com/Clx7...). */
+/** In-app WhatsApp invite (same group as MoreScreen: chat.whatsapp.com/Clx7…).
+ *  ⚠️ DRIFT: the EMAIL path (welcomeEmail / api/email/wa-click) points to a
+ *  DIFFERENT group (chat.whatsapp.com/JzyPh…). Consolidating the two is a
+ *  product decision (which group is canonical) — left as-is on purpose. */
 const WHATSAPP_URL = "https://chat.whatsapp.com/Clx7d0eFQmyHuQPppH6f7m?mode=gi_t";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");

@@ -146,11 +146,17 @@ export function useFinnNotificationScheduler() {
                 // ── Tool-of-the-day discovery — a SECONDARY push for ENGAGED
                 // users only (active today → daysSinceActive < 1, so it never
                 // competes with a retention nudge for a churning user). At most
-                // ONE tool push/day (own 'tools' channel, midday slot). The
-                // 2/day cap below still wins: if a streak primary + streak
-                // fallback already fill both slots (an at-risk user), this
-                // tool push is cancelled — retention keeps priority.
-                if (preferences.tools && ctx.daysSinceActive < 1) {
+                // ONE tool push/day (own 'tools' channel, midday slot).
+                // We only schedule it when a slot is genuinely free (< 2 already
+                // scheduled) so retention pushes ALWAYS keep priority — relying
+                // on enforceNotificationCap to trim afterwards was order-dependent
+                // (getAllScheduledNotificationsAsync ordering isn't guaranteed, so
+                // it could have dropped a streak push instead of this one).
+                if (
+                    preferences.tools &&
+                    ctx.daysSinceActive < 1 &&
+                    useNotificationStore.getState().scheduled.length < 2
+                ) {
                     const tool = toolOfTheDay();
                     await store.scheduleToolDiscovery(
                         {

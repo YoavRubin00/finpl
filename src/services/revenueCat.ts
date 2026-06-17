@@ -127,15 +127,26 @@ export async function logoutRevenueCat(): Promise<void> {
  * 2026-06). Now we keep retrying until `current` actually has packages, with
  * backoff, and only give up (returning whatever `current` is, even if empty)
  * after the last attempt.
+ *
+ * Each getOfferings() call is bounded by a 4s timeout so a hung BillingClient
+ * can't stack 5 unbounded network waits on top of the backoff. Worst case is
+ * ~6s of backoff + at most one in-flight 4s call ≈ 10s before we return the
+ * fallback — the PricingScreen shows a spinner the whole time, never a hang.
  */
+async function getOfferingsWithTimeout(ms: number): Promise<PurchasesOffering | null> {
+  return Promise.race([
+    Purchases!.getOfferings().then((o: { current?: PurchasesOffering | null }) => o.current ?? null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
 export async function getOffering(): Promise<PurchasesOffering | null> {
   if (IS_WEB || !Purchases) return null;
   const MAX_ATTEMPTS = 5;
   let lastCurrent: PurchasesOffering | null = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      const offerings = await Purchases.getOfferings();
-      const current = offerings.current ?? null;
+      const current = await getOfferingsWithTimeout(4000);
       if (current) lastCurrent = current;
       // Only accept a fully-hydrated offering. An offering with no packages is
       // treated as "not ready yet" and retried (the cold-BillingClient case).
@@ -144,8 +155,7 @@ export async function getOffering(): Promise<PurchasesOffering | null> {
       // swallow — retry
     }
     if (attempt < MAX_ATTEMPTS - 1) {
-      // Backoff: 0.6s, 1.2s, 1.8s, 2.4s — gives the store time to hydrate
-      // without an excessively long spinner (~6s worst case).
+      // Backoff: 0.6s, 1.2s, 1.8s, 2.4s — gives the store time to hydrate.
       await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
     }
   }
@@ -245,7 +255,7 @@ export async function purchaseGemBundle(
   try {
     const offering = await getOffering();
     if (offering) {
-      const pkg = offering.availablePackages.find(
+      const pkg = offering.availablePackages?.find(
         (p) => p.product?.identifier === productId,
       );
       if (pkg) {

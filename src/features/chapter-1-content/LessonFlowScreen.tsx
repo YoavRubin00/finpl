@@ -4997,9 +4997,15 @@ export function LessonFlowScreen() {
                               // module where no bridge/referral/cover is due.
                               // Once/day (useToolNudgeStore) so it never nags;
                               // skip the very first module (too early to upsell tools).
+                              // canShow('tools') MUST be checked here too: without it,
+                              // during the 48h nudge cooldown SharkToolCTA returns null
+                              // yet showToolCTA stays true (blocking PostCelebration's
+                              // auto-advance) AND markShown() burns the day + fires a
+                              // phantom impression. Gating at the source avoids both.
                               totalCompletedNow > 0 &&
                               id !== "mod-0-1" &&
-                              !useToolNudgeStore.getState().isShownToday()
+                              !useToolNudgeStore.getState().isShownToday() &&
+                              useNudgeQueueStore.getState().canShow('tools')
                             ) {
                               safeTimeout(() => setPendingPostChestNudge('tools'), 2000);
                             }
