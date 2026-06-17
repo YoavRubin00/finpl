@@ -17,6 +17,7 @@ import Animated, {
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useAuthStore } from "../auth/useAuthStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { useNotificationStore } from "../notifications/useNotificationStore";
 import { useBannerCooldownStore } from "../notifications/useBannerCooldownStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
@@ -172,7 +173,9 @@ export function AppWalkthroughOverlay() {
   const [contentKey, setContentKey] = useState(0);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === "minor");
   const isGuest = useAuthStore((s) => s.isGuest);
+  const isPro = useIsPro();
   const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
+  const setPendingPostWalkthroughProTeaser = useTutorialStore((s) => s.setPendingPostWalkthroughProTeaser);
 
   // Filter out Bridge step for minors (legal protection, no real-money features)
   const activeSteps = isMinor ? STEPS.filter((s) => s.screenSignal !== "bridge") : STEPS;
@@ -229,26 +232,30 @@ export function AppWalkthroughOverlay() {
   const routePostWalkthrough = useCallback((via: 'completed' | 'skipped') => {
     setActiveScreen(null);
 
-    // Arm the post-walkthrough register-CTA modal for Guests. The gate in
-    // app/_layout.tsx renders it the moment we land on /(tabs).
+    // Arm the post-walkthrough modals. Guests → register-CTA first (the Pro
+    // teaser is armed afterwards, when that CTA resolves — see
+    // PostWalkthroughRegisterCTA). Registered non-Pro → the soft Pro teaser
+    // directly. Both gates live in app/_layout.tsx and render once we land on
+    // /(tabs). Pro users get nothing.
     if (isGuest) {
       try { setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ }
+    } else if (!isPro) {
+      try { setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ }
     }
 
     try {
-      // Paywall removed from the post-walkthrough slot (2026-06-11): analytics
-      // showed it fired too early — before the user got any value — and ~38% of
-      // onboarders hit it during module 0-1, cratering first-module completion.
-      // The paywall now fires after mod-0-1b (see LessonFlowScreen
-      // goToNextSequentialModule). Here we just drop the user on the learn map;
-      // the notification-permission banner (re-armed by handleNext above) prompts
-      // at the top and they continue straight into learning.
+      // The HARD paywall stays out of this slot (removed 2026-06-11 — it fired
+      // before any value, ~38% hit it mid-mod-0-1, cratering first-module
+      // completion; it now lives at post_mod_0_1b / post_mod_0_4). What returns
+      // here (2026-06-17) is only a SOFT, dismissible Pro teaser (armed above),
+      // restoring the post_walkthrough monetization moment without blocking the
+      // path to the first module.
       void via;
       router.replace("/(tabs)" as never);
     } catch {
       // No-op — already on a safe route.
     }
-  }, [isGuest, router, setActiveScreen, setPendingPostWalkthroughCTA]);
+  }, [isGuest, isPro, router, setActiveScreen, setPendingPostWalkthroughCTA, setPendingPostWalkthroughProTeaser]);
 
   const handleNext = useCallback(() => {
     try {

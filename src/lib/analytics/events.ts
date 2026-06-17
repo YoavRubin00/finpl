@@ -135,7 +135,7 @@ export type AppEvent =
   | { name: 'trial_started'; props: { plan: string; price?: string; trial_days?: number; source?: string } }
   | { name: 'subscription_purchased'; props: { plan: string; price?: string; trial_days?: number; source?: string } }
   | { name: 'subscription_cancelled_at_checkout'; props?: Record<string, never> }
-  | { name: 'subscription_purchase_failed'; props: { error_message: string } }
+  | { name: 'subscription_purchase_failed'; props: { error_message: string; error_code?: string; platform?: string } }
   // Diagnostic (Moni 2026-06-13): is the purchase even POSSIBLE? Fires once per
   // pricing visit when the RevenueCat offering resolves to 'ready' (a buyable
   // CTA) or 'unavailable' (no packages → the CTA degrades to a silent "נסה שוב"

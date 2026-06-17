@@ -21,6 +21,14 @@ const PRODUCT_CATEGORY: ProductCategoryEnum | null = IS_WEB
   : ((RNPurchases?.PRODUCT_CATEGORY ?? RNPurchases?.ProductCategory ?? RNPurchases?.ProductType) as ProductCategoryEnum | null);
 const NON_SUBSCRIPTION_TYPE = PRODUCT_CATEGORY?.NON_SUBSCRIPTION ?? PRODUCT_CATEGORY?.INAPP;
 
+// RevenueCat's structured error-code enum (web-safe; null on web). Used to
+// reliably tell a user-cancellation apart from a real purchase failure — the
+// `/cancel/i` message regex alone misses iOS StoreKit / Android BillingClient
+// codes that don't contain the word "cancel".
+const PURCHASES_ERROR_CODE: Record<string, string> | null = IS_WEB
+  ? null
+  : (RNPurchases?.PURCHASES_ERROR_CODE ?? null);
+
 /** Re-export types for consumers (type-only — no runtime cost) */
 export type { PurchasesOffering, PurchasesPackage, CustomerInfo } from 'react-native-purchases';
 type CustomerInfo = import('react-native-purchases').CustomerInfo;
@@ -109,21 +117,41 @@ export async function logoutRevenueCat(): Promise<void> {
 /* ── Offerings ─────────────────────────────────────────────────────── */
 
 /** Fetch the current offering (subscription packages + gem products).
- * Retries up to 3 times — Google Play sometimes returns null on first cold call
- * before the BillingClient is fully ready. Each retry waits 1s.
+ *
+ * Retries up to 5 times — Google Play's BillingClient routinely returns either
+ * null OR a `current` offering SHELL with zero packages on the first cold call,
+ * before products finish hydrating. The old code returned `offerings.current`
+ * as soon as it was truthy, so an empty-package shell was accepted and the
+ * caller (PricingScreen) flipped the CTA to the dead "נסה שוב" state — this is
+ * a large share of the ~24% `paywall_cta_state{unavailable}` rate (PostHog,
+ * 2026-06). Now we keep retrying until `current` actually has packages, with
+ * backoff, and only give up (returning whatever `current` is, even if empty)
+ * after the last attempt.
  */
 export async function getOffering(): Promise<PurchasesOffering | null> {
   if (IS_WEB || !Purchases) return null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const MAX_ATTEMPTS = 5;
+  let lastCurrent: PurchasesOffering | null = null;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
       const offerings = await Purchases.getOfferings();
-      if (offerings.current) return offerings.current;
+      const current = offerings.current ?? null;
+      if (current) lastCurrent = current;
+      // Only accept a fully-hydrated offering. An offering with no packages is
+      // treated as "not ready yet" and retried (the cold-BillingClient case).
+      if (current && (current.availablePackages?.length ?? 0) > 0) return current;
     } catch {
       // swallow — retry
     }
-    if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
+    if (attempt < MAX_ATTEMPTS - 1) {
+      // Backoff: 0.6s, 1.2s, 1.8s, 2.4s — gives the store time to hydrate
+      // without an excessively long spinner (~6s worst case).
+      await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+    }
   }
-  return null;
+  // Last resort: return the best `current` we ever saw (may be empty) so gem
+  // purchases that scan availablePackages still have a shot; null if nothing.
+  return lastCurrent;
 }
 
 /* ── Purchases ─────────────────────────────────────────────────────── */
@@ -135,6 +163,24 @@ export async function purchasePackage(
   if (IS_WEB || !Purchases) throw new Error('Purchases not available on web');
   const { customerInfo } = await Purchases.purchasePackage(pkg);
   return customerInfo;
+}
+
+/** Classify a purchase error as a USER CANCELLATION (not a real failure).
+ *  RevenueCat surfaces a cancel via a `userCancelled` boolean AND/OR the
+ *  structured `PURCHASE_CANCELLED_ERROR` code; some native paths only carry a
+ *  "cancel" message. Check all three so cancellations are never miscounted as
+ *  `subscription_purchase_failed`. */
+export function isPurchaseCancelledError(err: unknown): boolean {
+  const e = err as { userCancelled?: boolean; code?: string } | null;
+  if (e?.userCancelled === true) return true;
+  if (PURCHASES_ERROR_CODE && e?.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) return true;
+  const msg = err instanceof Error ? err.message : '';
+  return /cancel/i.test(msg);
+}
+
+/** Best-effort RevenueCat error-code string for failure diagnostics. */
+export function purchaseErrorCode(err: unknown): string {
+  return (err as { code?: string } | null)?.code ?? 'unknown';
 }
 
 /** Purchase a consumable product by its store product ID (for gem bundles).

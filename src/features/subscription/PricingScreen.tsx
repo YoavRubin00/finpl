@@ -35,7 +35,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { ParentalConsentGate } from "../legal/ParentalConsentGate";
 import { ParentalEmailModal } from "../legal/ParentalEmailModal";
 import { selectHasActiveParentalConsent, useParentalConsentStore } from "../legal/useParentalConsent";
-import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases } from "../../services/revenueCat";
+import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases, isPurchaseCancelledError, purchaseErrorCode } from "../../services/revenueCat";
 import type { PurchasesPackage } from "../../services/revenueCat";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
@@ -456,18 +456,18 @@ export function PricingScreen() {
         Alert.alert("ברוכים הבאים ל-Pro! 🎉", "גישה מלאה פתוחה. תהנו!");
       }
     } catch (err: unknown) {
-      // RevenueCat / native sheets surface user cancellation as several
-      // different strings: "PURCHASE_CANCELLED", "Purchase was cancelled.",
-      // "User cancelled", and a userCancelled boolean on the error object.
-      // Match all of them so cancellations don't get logged as failures.
+      // Cancellation detection is centralized in isPurchaseCancelledError —
+      // it checks RevenueCat's `userCancelled` flag AND the structured
+      // PURCHASE_CANCELLED_ERROR code AND the legacy message regex, so iOS
+      // StoreKit / Android BillingClient cancel codes (which don't contain the
+      // word "cancel") stop being miscounted as failures.
       const message = err instanceof Error ? err.message : '';
-      const userCancelled =
-        (err as { userCancelled?: boolean } | null)?.userCancelled === true;
-      const isCancelled = userCancelled || /cancel/i.test(message);
-      if (isCancelled) {
+      if (isPurchaseCancelledError(err)) {
         track({ name: 'subscription_cancelled_at_checkout' });
       } else {
-        track({ name: 'subscription_purchase_failed', props: { error_message: message || 'unknown' } });
+        // Enriched with error_code + platform so any GENUINE failure is
+        // diagnosable in PostHog instead of an opaque error string.
+        track({ name: 'subscription_purchase_failed', props: { error_message: message || 'unknown', error_code: purchaseErrorCode(err), platform: Platform.OS } });
         // Soft, non-blocking inline notice instead of Alert("שגיאת תשלום", raw).
         // Never surface the raw SDK/StoreKit string in a popup — App Review
         // 2.1a treats a hard error on a purchase attempt as a blocker. The user

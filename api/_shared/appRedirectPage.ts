@@ -32,14 +32,34 @@ export function appRedirectHtml(deepLink: string, fallbackUrl: string): string {
 <body style="margin:0;font-family:Arial,Helvetica,sans-serif;background:#f0f9ff;color:#374151;text-align:center;padding:64px 20px;direction:rtl;">
   <h2 style="color:#0ea5e9;margin:0 0 12px;">פותחים את FinPlay…</h2>
   <p style="margin:0;font-size:15px;">אם האפליקציה לא נפתחת תוך רגע,
-    <a href="${escapeAttr(fallbackUrl)}" style="color:#0ea5e9;font-weight:700;text-decoration:underline;">לחצו כאן</a>.</p>
+    <a id="fb" href="${escapeAttr(fallbackUrl)}" style="color:#0ea5e9;font-weight:700;text-decoration:underline;">לחצו כאן</a>.</p>
   <script>
     (function () {
-      var deep = ${deep}, fb = ${fb};
+      var deep = ${deep}, fb = ${fb}, bailed = false;
+      // If the app takes over, the browser tab is hidden/backgrounded. Cancel
+      // the web fallback in that case — otherwise navigating to fb mid-handoff
+      // ABORTS the app open (the original bug: on iOS Mail/Gmail the "Open in
+      // FinPlay?" prompt is still up when the 1.5s timer fired and yanked the
+      // page to the website, so the CTA "never opened the app").
+      function cancel() { bailed = true; }
+      // Only 'page hidden' / 'pagehide' reliably mean the app took over. NOT
+      // 'blur' — blur fires for OS dialogs, password-manager popups, tab
+      // switches, notifications, so cancelling on blur would permanently
+      // suppress the fallback and strand desktop/webmail users without the app.
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) cancel();
+      });
+      window.addEventListener('pagehide', cancel);
+
       // Trigger the app open from a real page load (browsers allow this).
       window.location.href = deep;
-      // If we're still here ~1.5s later, the app didn't take over → fall back.
-      setTimeout(function () { window.location.href = fb; }, 1500);
+
+      // Only fall back if the app clearly did NOT take over. Longer window
+      // (2.5s) so the OS confirmation dialog has time to resolve to a hidden
+      // page before we give up.
+      setTimeout(function () {
+        if (!bailed && !document.hidden) window.location.href = fb;
+      }, 2500);
     })();
   </script>
 </body></html>`;

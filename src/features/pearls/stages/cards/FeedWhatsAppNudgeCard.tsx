@@ -37,11 +37,13 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface Props {
   isActive?: boolean;
-  /** Pearl flow: fired when the user advances past this CTA. Any tap on the
-   *  poster background calls onContinue; the WhatsApp button calls it after
-   *  opening the deeplink (so when the user returns from WhatsApp the pearl
-   *  has already advanced). */
+  /** Pearl flow: advance to the next stage on skip ("אחר כך" / background tap). */
   onContinue?: () => void;
+  /** Pearl flow: fired when the user TAPS the WhatsApp CTA — finalizes the pearl
+   *  in-place (close + mark completed) WITHOUT pushing to the next module, so
+   *  opening WhatsApp doesn't also shove the user into the next lesson behind it.
+   *  Mirrors FeedTradingNudgeCard / FeedReferralNudgeCard. */
+  onTapCta?: () => void;
   /** Pearl context — threaded through for typed pearl_cta_tapped /
    *  pearl_cta_dismissed analytics. PearlCtaStage owns the pearl_cta_shown
    *  emit on mount. */
@@ -51,6 +53,7 @@ interface Props {
 
 export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
   onContinue,
+  onTapCta,
   afterModuleId,
   chapterId,
 }: Props) {
@@ -80,9 +83,14 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
         });
       } catch { /* non-fatal */ }
     }
-    Linking.openURL(WHATSAPP_URL).catch(() => {/* user can ignore — backgroundTap still advances */});
-    onContinue?.();
-  }, [onContinue, playSound, afterModuleId, chapterId]);
+    // Finalize the pearl in-place BEFORE opening WhatsApp — onTapCta closes the
+    // sheet + marks the pearl completed but does NOT router.push to the next
+    // module (which onContinue would). Prevents the next lesson from loading
+    // behind WhatsApp. Falls back to onContinue if onTapCta isn't wired (non-
+    // pearl usage). Mirrors FeedTradingNudgeCard.
+    (onTapCta ?? onContinue)?.();
+    Linking.openURL(WHATSAPP_URL).catch(() => {/* user can ignore */});
+  }, [onTapCta, onContinue, playSound, afterModuleId, chapterId]);
 
   const handleBackgroundTap = useCallback(() => {
     tapHaptic();
