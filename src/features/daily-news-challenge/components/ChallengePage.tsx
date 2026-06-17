@@ -368,7 +368,7 @@ export function ChallengePage({
           </View>
         )}
 
-        <View>{renderedHeadline}</View>
+        <View style={{ width: '100%' }}>{renderedHeadline}</View>
 
         {!showResult && (
           <View style={styles.chipsGrid}>
@@ -542,12 +542,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+    flexWrap: 'wrap',
   },
   // Task-hint pill, surfaces the per-page action without duplicating the
   // sheet's LIVE chrome. Soft cyan to read as "instruction" rather than
   // "alert" (LIVE is already red in the topper). Sits at the visual start
   // of the eyebrow row (RTL: right side).
   taskPill: {
+    flexShrink: 1,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 999,
@@ -812,9 +814,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   resultHeaderText: {
+    flex: 1,
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '900',
     writingDirection: 'rtl',
+    textAlign: 'right',
   },
   summary: {
     fontSize: 15,
@@ -836,8 +841,8 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     backgroundColor: '#fefce8',
-    borderLeftWidth: 4,
-    borderLeftColor: '#facc15',
+    borderEndWidth: 4,
+    borderEndColor: '#facc15',
   },
   detailRow: {
     flexDirection: 'row-reverse',
@@ -873,8 +878,8 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     backgroundColor: '#fefce8',
-    borderLeftWidth: 4,
-    borderLeftColor: '#facc15',
+    borderEndWidth: 4,
+    borderEndColor: '#facc15',
   },
   detailBodyText: {
     fontSize: 13,

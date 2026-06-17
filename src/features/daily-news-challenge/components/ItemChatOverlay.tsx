@@ -268,14 +268,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   bubbleUser: {
-    alignSelf: 'flex-start',
+    // RTL: user messages align to the RIGHT (visual end = flex-end in LTR)
+    alignSelf: 'flex-end',
     backgroundColor: STITCH.primary,
-    borderBottomLeftRadius: 4,
+    borderBottomEndRadius: 4,
   },
   bubbleAssistant: {
-    alignSelf: 'flex-end',
+    // RTL: assistant messages align to the LEFT (visual start = flex-start in LTR)
+    alignSelf: 'flex-start',
     backgroundColor: STITCH.surfaceLow,
-    borderBottomRightRadius: 4,
+    borderBottomStartRadius: 4,
   },
   bubbleText: {
     fontSize: 13,

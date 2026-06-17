@@ -112,6 +112,24 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     return out;
   }, [topics, completedMap]);
 
+  // Yoav 2026-06-17: the 70% chest must also require the QUIZ to be answered —
+  // reaching 70% of the chips alone isn't "done" if the quiz chip is still
+  // open. If the module has no quiz chip at all, this doesn't gate (true).
+  const quizAnswered = useMemo(() => {
+    const quiz = topics.find((t) => t.kind === 'quiz');
+    return !quiz || Boolean(isCompletedMap[quiz.id]);
+  }, [topics, isCompletedMap]);
+
+  // Yoav 2026-06-17: mod-0-1 injects an inline knowledgeLevel onboarding
+  // question right after its quiz — the chest must appear AFTER it. Hold the
+  // mod-0-1 chest until that question is resolved: knowledgeLevel is set
+  // (answered) OR the skip-safe flag fired (LessonFlowScreen onDone, on answer
+  // OR "דלג"). Never blocks — the flag always fires. Other modules: always true.
+  const knowledgeLevel = useAuthStore((s) => s.profile?.knowledgeLevel);
+  const mod01KnowledgeResolved = useTutorialStore((s) => s.mod01KnowledgeResolved);
+  const mod01QuestionResolved =
+    module.id !== 'mod-0-1' || Boolean(knowledgeLevel) || mod01KnowledgeResolved;
+
   // Threshold crossing side effects.
   const past25Ref = useRef<boolean>(false);
   const past50Ref = useRef<boolean>(false);
@@ -280,13 +298,20 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // ref/store flag stays so analytics + future re-enable still work,
     // but no second modal fires.
     const seventyJustCrossed =
-      summary.isModuleDone && !past70Ref.current && !modulePastThreshold;
+      summary.isModuleDone && quizAnswered && mod01QuestionResolved &&
+      !past70Ref.current && !modulePastThreshold;
     if (!seventyJustCrossed) return;
 
     past70Ref.current = true;
-    // Persist the "first crossed 70%" flag (moved out of summaryForModule,
-    // which is now a pure read — was a set()-during-render bug).
-    useTopicProgressStore.getState().stampModuleThreshold(module.id);
+    // ATOMIC dedup: stampModuleThreshold test-and-sets the persisted flag and
+    // returns true only for the FIRST caller. When several accordion instances
+    // (or re-runs) cross 70% in the same commit they all read the still-stale
+    // subscribed `modulePastThreshold` (false) and reach here — but only the
+    // one that actually stamps proceeds; the rest bail. Without this the reward
+    // + ChestCelebrationModal fired once PER racing instance (Yoav saw the
+    // chest 3×). The first chest is correct; the duplicates are killed here.
+    const newlyStamped = useTopicProgressStore.getState().stampModuleThreshold(module.id);
+    if (!newlyStamped) return;
 
     // Module-completion analytics. The topic-tree method previously fired
     // NO `lesson_completed`, so every module learned this way was invisible
@@ -369,7 +394,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
+  }, [summary.isModuleDone, summary.pct, quizAnswered, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer

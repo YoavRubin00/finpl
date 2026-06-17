@@ -1092,10 +1092,19 @@ const ChapterSection = React.memo(function ChapterSection({
                 <View
                   style={{
                     alignItems: 'center',
-                    marginTop: 0,
+                    // Align badges directly under the ProgressStars row that sits
+                    // beneath the shark mascot. The shark's horizontal centre is at:
+                    //   CENTER_X + offsetX ± (NODE_SIZE/2 + 6 + CHAR_SIZE/2)
+                    // which works out to offsetX ± 97.5.  The previous value (±55)
+                    // placed the badges ~43 px short of the shark's centre, making
+                    // them appear to the left/right of the stars rather than below
+                    // them.  marginTop adds a small gap so the badges clear the
+                    // bottom of the ProgressStars pill (which overflows the nodeRow
+                    // via position:absolute) without visually detaching from it.
+                    marginTop: 8,
                     marginBottom: 0,
                     transform: [{
-                      translateX: getNodeOffset(i) + (getNodeOffset(i) >= 0 ? 55 : -55),
+                      translateX: getNodeOffset(i) + (getNodeOffset(i) >= 0 ? 98 : -98),
                     }],
                   }}
                 >

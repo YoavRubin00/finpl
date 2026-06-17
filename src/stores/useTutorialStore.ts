@@ -54,6 +54,11 @@ interface TutorialState {
    *  monetization moment (volume) without blocking the path to the first
    *  module. One-shot: cleared on either CTA. */
   pendingPostWalkthroughProTeaser: boolean;
+  /** mod-0-1's inline knowledgeLevel question was resolved (answered OR
+   *  skipped). Gates the mod-0-1 70% chest so it appears AFTER the onboarding
+   *  question, never before/over it (Yoav 2026-06-17). Skip-safe: set on either
+   *  outcome, so the chest is never blocked. */
+  mod01KnowledgeResolved: boolean;
   _hydrated: boolean;
   completeTradingHubIntro: () => void;
   completeAppWalkthrough: () => void;
@@ -74,6 +79,7 @@ interface TutorialState {
   setWalkthroughActiveScreen: (screen: WalkthroughScreen) => void;
   setPendingPostWalkthroughCTA: (value: boolean) => void;
   setPendingPostWalkthroughProTeaser: (value: boolean) => void;
+  markMod01KnowledgeResolved: () => void;
   resetWalkthrough: () => void;
   reset: () => void;
 }
@@ -100,6 +106,7 @@ export const useTutorialStore = create<TutorialState>()(
       walkthroughActiveScreen: null,
       pendingPostWalkthroughCTA: false,
       pendingPostWalkthroughProTeaser: false,
+      mod01KnowledgeResolved: false,
       _hydrated: false,
       completeTradingHubIntro: () => set({ hasSeenTradingHubIntro: true }),
       completeAppWalkthrough: () => set({ hasSeenAppWalkthrough: true, appWalkthroughStep: -1, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: false }),
@@ -120,6 +127,7 @@ export const useTutorialStore = create<TutorialState>()(
       setWalkthroughActiveScreen: (screen: WalkthroughScreen) => set({ walkthroughActiveScreen: screen }),
       setPendingPostWalkthroughCTA: (value: boolean) => set({ pendingPostWalkthroughCTA: value }),
       setPendingPostWalkthroughProTeaser: (value: boolean) => set({ pendingPostWalkthroughProTeaser: value }),
+      markMod01KnowledgeResolved: () => set({ mod01KnowledgeResolved: true }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false }),
       reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasSeenPearlTooltip: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
     }),
