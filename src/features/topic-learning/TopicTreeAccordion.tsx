@@ -120,6 +120,16 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     return !quiz || Boolean(isCompletedMap[quiz.id]);
   }, [topics, isCompletedMap]);
 
+  // Yoav 2026-06-17: mod-0-1 injects an inline knowledgeLevel onboarding
+  // question right after its quiz — the chest must appear AFTER it. Hold the
+  // mod-0-1 chest until that question is resolved: knowledgeLevel is set
+  // (answered) OR the skip-safe flag fired (LessonFlowScreen onDone, on answer
+  // OR "דלג"). Never blocks — the flag always fires. Other modules: always true.
+  const knowledgeLevel = useAuthStore((s) => s.profile?.knowledgeLevel);
+  const mod01KnowledgeResolved = useTutorialStore((s) => s.mod01KnowledgeResolved);
+  const mod01QuestionResolved =
+    module.id !== 'mod-0-1' || Boolean(knowledgeLevel) || mod01KnowledgeResolved;
+
   // Threshold crossing side effects.
   const past25Ref = useRef<boolean>(false);
   const past50Ref = useRef<boolean>(false);
@@ -288,7 +298,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // ref/store flag stays so analytics + future re-enable still work,
     // but no second modal fires.
     const seventyJustCrossed =
-      summary.isModuleDone && quizAnswered && !past70Ref.current && !modulePastThreshold;
+      summary.isModuleDone && quizAnswered && mod01QuestionResolved &&
+      !past70Ref.current && !modulePastThreshold;
     if (!seventyJustCrossed) return;
 
     past70Ref.current = true;
@@ -383,7 +394,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-  }, [summary.isModuleDone, summary.pct, quizAnswered, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
+  }, [summary.isModuleDone, summary.pct, quizAnswered, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer

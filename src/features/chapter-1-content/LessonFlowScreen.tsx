@@ -5575,6 +5575,13 @@ export function LessonFlowScreen() {
           onDone={() => {
             const answeredKind = profileQuestionKind;
             setProfileQuestionKind(null);
+            // mod-0-1's inline knowledgeLevel question just resolved (answered
+            // OR skipped). Unblock the mod-0-1 70% chest so it appears AFTER
+            // this question. Skip-safe: fires on both outcomes (the question's
+            // "דלג" doesn't set knowledgeLevel), so the chest is never stuck.
+            if (answeredKind === 'knowledgeLevel') {
+              try { useTutorialStore.getState().markMod01KnowledgeResolved(); } catch { /* non-fatal */ }
+            }
             // Self-declared expert ("כריש מוול סטריט") on the knowledge question
             // → bump straight to chapter 1 instead of grinding the rest of chapter
             // 0. Mark all ch-0 modules complete (server-synced via upsertProgress)
