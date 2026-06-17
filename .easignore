@@ -159,3 +159,28 @@ assets/lottie/wired-flat-977-internship-hover-pinch.json
 assets/lottie/wired-flat-978-project-management-hover-pinch.json
 assets/lottie/wired-flat-981-consultation-hover-conversation.json
 assets/lottie/wired-flat-986-canvas-business-model-hover-pinch.json
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Build-archive hygiene (Yoav 2026-06-17): marketing outputs + non-code
+# artifacts must NEVER inflate the EAS upload. Applied automatically every
+# `eas build`. Archive was 231MB because EAS fell back to .gitignore (which
+# only drops node_modules/.git/.expo/dist) and pulled in docs/ (79MB),
+# tmp-daisy/ (20MB) + source PNGs. These are belt-and-suspenders so the archive
+# stays ~100MB even if .easignore is used standalone (EAS would otherwise
+# re-include node_modules without these).
+# ─────────────────────────────────────────────────────────────────────────────
+node_modules/
+.expo/
+.vercel/
+.secrets/
+.idea/
+.vscode/
+_qcprev/
+tmp-email-previews/
+*.log
+
+# Marketing / Higgsfield outputs that live in-repo but never ship in the app.
+# (docs/ + tmp-*/ already excluded above; these are the remaining sources.)
+# Retention email cards are hosted on Vercel Blob (emailTemplates.ts uses remote
+# URLs); the local source PNGs are not referenced by any require().
+assets/IMAGES/retention/
