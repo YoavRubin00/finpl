@@ -35,18 +35,25 @@ import { getRecallSet } from '../sentence-exercise/sentenceData';
 // R5.14 (2026-06-10): `game` chip added after `sim` per Yoav — the
 // sandbox/sim is the open-ended explorer, the game is a scored short
 // game from the inter-module-games registry. Both surface when present;
-// in CANONICAL they sit late next to sim, in SIM_FIRST they sit at the
-// top alongside sim so the play surfaces lead.
+// in SIM_FIRST they sit at the top alongside sim so the play surfaces lead.
+// R5.15 (2026-06-17): MOVED sim+game from the tail (after `quiz`) into the
+// MIDDLE (right after `recall`, before `podcast`/`quiz`). They used to sit in
+// the last ~30% of chips, so most users hit the 70% completion gate (and got
+// the chest) WITHOUT ever doing the sandbox/sim. Mid-order = learn (cards) →
+// practice (sim/game) → reinforce → test (quiz), and guarantees the sim falls
+// inside the first 70% (Yoav: "תעביר אותו ... להיות באמצע המפת אקורדיון, ככה
+// שהוא יכלל ב-70% הראשונים"). Completion math is count-based so this only
+// changes chip ORDER + the "recommended next" pointer, nothing else.
 const CANONICAL_ORDER: TopicKind[] = [
   'intro',
   'cards',
   'tutorial-video',
   'recall',
+  'sim',
+  'game',
   'podcast',
   'couple-dilemma',
   'quiz',
-  'sim',
-  'game',
   'shark-dilemma',
 ];
 
