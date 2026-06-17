@@ -24,8 +24,14 @@
 // runtime usually LACKS EXPO_PUBLIC_POSTHOG_HOST (an EXPO_PUBLIC_* var baked
 // into the CLIENT build, not the server env). A US default silently ships
 // every server capture to the wrong region. Same lesson as the RC webhook.
-const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
-const POSTHOG_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY;
+// Prefer a clean server-side var (POSTHOG_API_KEY / POSTHOG_HOST) — the correct
+// convention for a Vercel function. Fall back to the EXPO_PUBLIC_* client-build
+// vars for back-compat. 2026-06-17: server captures were a silent no-op for the
+// whole email funnel because ONLY EXPO_PUBLIC_POSTHOG_KEY existed (a client var
+// absent in the function runtime). Setting POSTHOG_API_KEY in Vercel fixes it.
+const POSTHOG_HOST =
+  process.env.POSTHOG_HOST ?? process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
+const POSTHOG_KEY = process.env.POSTHOG_API_KEY ?? process.env.EXPO_PUBLIC_POSTHOG_KEY;
 
 export async function capturePostHog(
   eventName: string,
@@ -38,7 +44,7 @@ export async function capturePostHog(
     // server-side funnel (email sent/opened/clicked, whatsapp tap) is a silent
     // no-op. Warn so this shows up in Vercel logs instead of vanishing. The RC
     // webhook relies on the same var, so if that works, this key is set.
-    console.warn(`[posthogCapture] EXPO_PUBLIC_POSTHOG_KEY missing in server runtime — '${eventName}' dropped`);
+    console.warn(`[posthogCapture] no PostHog key in server runtime (set POSTHOG_API_KEY in Vercel) — '${eventName}' dropped`);
     return;
   }
   if (!distinctId) return;
