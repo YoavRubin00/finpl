@@ -697,6 +697,7 @@ const [rewardsGranted, setRewardsGranted] = useState(false);
             if (!heartDeductedRef.current) {
                 heartDeductedRef.current = true;
                 useHeartsStore.getState().useHeart(isPro);
+                useHeartsStore.getState().resetCombo();
             }
         }
     }, [state.isGameOver, gameOverAnimDone]);
@@ -709,6 +710,8 @@ const [rewardsGranted, setRewardsGranted] = useState(false);
             if (state.isComplete && score && (score.grade === 'S' || score.grade === 'A')) {
                 setShowConfetti(true);
                 successHaptic();
+                // Strong finish → feeds the shared energy combo.
+                useHeartsStore.getState().registerComboCorrect();
             } else if (!state.isGameOver) {
                 errorHaptic();
             }

@@ -79,6 +79,9 @@ import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNews
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 import { BreakingNewsBadge } from "../breaking-news/components/BreakingNewsBadge";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { EnergyStationCard } from "../energy/EnergyStationCard";
+import { DailyGoalRing } from "../economy/DailyGoalRing";
+import { useHeartsStore } from "../subscription/useHeartsStore";
 // FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
 // entry lives in the Daily News Challenge card (added in Stage A).
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
@@ -1326,6 +1329,13 @@ export function DuoLearnScreen() {
       const today = new Date().toISOString().slice(0, 10);
       useDailyChallengesStore.getState().playSwipeGame(today, 0);
     } catch { /* non-fatal */ }
+    // Power-station: a finished swipe round tops up energy (+2, capped 10/day).
+    try {
+      const granted = useHeartsStore.getState().grantEnergy(2, 'station-game', 10);
+      if (granted > 0) {
+        captureEvent('power_station_round_complete', { granted, source: 'swipe' });
+      }
+    } catch { /* non-fatal */ }
     setTimeout(() => setSwipeQuestVisible(false), 800);
   }, []);
 
@@ -2485,6 +2495,18 @@ export function DuoLearnScreen() {
         </Modal>
       )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
+        {/* מטרת היום — daily-XP-goal ring (sea-blue/gold; never energy purple).
+            Slim row pinned above the energy band; fills as XP is earned today. */}
+        <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: 6 }}>
+          <DailyGoalRing size={44} />
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: "#1f2937", writingDirection: "rtl" }}>מטרת היום</Text>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: "#94a3b8", writingDirection: "rtl" }}>כל שיעור מקרב אתכם ליעד</Text>
+          </View>
+        </View>
+        {/* תחנת הכוח — always-visible energy power-station band, pinned above the
+            scrolling lesson path (so it never shifts the path's auto-scroll math). */}
+        <EnergyStationCard onSpeedUp={() => setSwipeQuestVisible(true)} />
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}

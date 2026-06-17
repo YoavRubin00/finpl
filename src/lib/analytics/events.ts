@@ -62,11 +62,15 @@ export type AppEvent =
 
   // ── Lesson / Module ────────────────────────────────────────────────────
   | { name: 'lesson_started'; props: { lesson_id: string; chapter_id?: string; is_replay?: boolean; entry_source?: 'map_tap' | 'auto_advance' | 'deeplink' } }
-  | { name: 'lesson_quiz_question_answered'; props: { lesson_id: string; question_index: number; is_correct: boolean; attempt?: number } }
-  | { name: 'lesson_completed'; props: { lesson_id: string; chapter_id?: string; duration_ms?: number; completed_at_phase?: string; correct_count?: number; total_questions?: number; is_first_lesson?: boolean } }
+  | { name: 'lesson_quiz_question_answered'; props: { lesson_id: string; question_index: number; is_correct: boolean; attempt?: number; combo_at_answer?: number } }
+  | { name: 'lesson_completed'; props: { lesson_id: string; chapter_id?: string; duration_ms?: number; completed_at_phase?: string; correct_count?: number; total_questions?: number; is_first_lesson?: boolean; max_combo?: number; lesson_xp_multiplier?: number } }
   | { name: 'lesson_exited_early'; props: { lesson_id: string; chapter_id?: string; reason: 'back_button' | 'navigation' | 'app_background'; phase?: string } }
   | { name: 'module_unlocked'; props: { module_id: string; chapter_id?: string; trigger?: 'completion' | 'pro_subscribe' | 'manual' } }
   | { name: 'chapter_completed'; props: { chapter_id: string; total_modules?: number } }
+  // Daily-goal ring — fires once per day when xpToday first crosses goalXp.
+  // `overachiever_lessons` counts extra lessons finished after the goal was
+  // already met that day ("מצב על"), so we can size the post-goal pull.
+  | { name: 'daily_goal_reached'; props: { goal_xp: number; xp_today: number; overachiever_lessons: number } }
   // ── Topic-tree (R6-R8 architecture) ───────────────────────────────────
   // The topic-tree learning method (learningMode: 'topic-tree') fires one
   // `topic_completed` per chip. Before this the new method emitted NO learning
@@ -93,7 +97,7 @@ export type AppEvent =
   // master chest was retired). DoN is offered on a 25% roll per open; the
   // quit CTA is offered on a 30% roll for mod-0-2+ — both rolls are
   // emitted on the corresponding _offered events for cohort splits.
-  | { name: 'chest_opened'; props: { module_id: string; chapter_id?: string; rarity: 'common' | 'rare' | 'epic' | 'mythic'; xp: number; coins: number; offered_don: boolean; offered_quit: boolean } }
+  | { name: 'chest_opened'; props: { module_id: string; chapter_id?: string; rarity: 'common' | 'rare' | 'epic' | 'mythic'; xp: number; coins: number; offered_don: boolean; offered_quit: boolean; reveal_variant?: 'mystery' | 'legacy' } }
   | { name: 'chest_cta_tapped'; props: { module_id: string; chapter_id?: string; cta: 'continue' | 'finish_module' | 'quit'; quit_label?: string } }
   | { name: 'chest_don_resolved'; props: { module_id: string; chapter_id?: string; outcome: 'kept' | 'doubled' | 'lost'; base_coins: number } }
   // mod-0-1 walkthrough prompt — fires once. Lets us tie subsequent

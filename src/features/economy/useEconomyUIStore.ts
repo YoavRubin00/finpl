@@ -327,6 +327,14 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         // (see note there) — never from the optimistic cache, which used to
         // clobber coins/gems to 0 on cold-start races.
         fireEconomyDelta({ xpDelta: finalAmount });
+        // Reflect the grant into the daily-goal ring ("מטרת היום"). Pure UI
+        // mirror — the ring is never a source of truth for the economy. Lazy
+        // require avoids a static import cycle (events.ts ← daily-goal ← here).
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { useDailyGoalStore } = require('./useDailyGoalStore') as typeof import('./useDailyGoalStore');
+          useDailyGoalStore.getState().addXpToday(finalAmount);
+        } catch { /* non-fatal */ }
       },
 
       dismissLevelUp: () => set({ pendingLevelUp: null }),

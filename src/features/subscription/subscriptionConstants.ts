@@ -57,13 +57,13 @@ export const PRO_LIMITS: Partial<Record<GatedFeature, number>> = {
   "analyst-deep": 5,    // 5 deep analyses per WEEK for Pro
 };
 
-const HEART_REFILL_MS = 5 * 60 * 60 * 1000; // 5 hours per heart
+const ENERGY_REGEN_MS = 15 * 60 * 1000; // 15 minutes per energy unit (was 5h/heart)
 
-/** Time until next heart refill in ms */
-export function getTimeUntilNextHeart(lastLostAt: string | null, currentHearts: number): number {
-  const MAX_HEARTS = 5;
-  if (!lastLostAt || currentHearts >= MAX_HEARTS) return 0;
+/** Time until the next energy unit regenerates, in ms. */
+export function getTimeUntilNextHeart(lastLostAt: string | null, currentEnergy: number): number {
+  const MAX_ENERGY = 20;
+  if (!lastLostAt || currentEnergy >= MAX_ENERGY) return 0;
   const elapsed = Math.max(0, Date.now() - new Date(lastLostAt).getTime());
-  const remaining = HEART_REFILL_MS - (elapsed % HEART_REFILL_MS);
+  const remaining = ENERGY_REGEN_MS - (elapsed % ENERGY_REGEN_MS);
   return remaining;
 }

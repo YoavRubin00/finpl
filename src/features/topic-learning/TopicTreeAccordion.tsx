@@ -391,6 +391,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           coins: totalCoins,
           offered_don: offerDoN,
           offered_quit: quitLabel !== null,
+          // Mystery reveal shipped 2026-06-17: rarity is now hidden until the
+          // user taps. Tag the cohort so we can compare post-chest engagement
+          // (next lesson within 24h) against the pre-mystery 'legacy' baseline.
+          reveal_variant: 'mystery',
         },
       });
     } catch { /* non-fatal */ }

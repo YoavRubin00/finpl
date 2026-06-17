@@ -139,6 +139,8 @@ export function useInteractiveRecall(
         finnMessage: message,
       }));
 
+      // Feed the shared cross-lesson energy combo (every 4-in-a-row → +1 energy).
+      useHeartsStore.getState().registerComboCorrect();
       return { correct: true, completesPrompt: true, finishesSet };
     },
     [set, state.currentIndex, state.streak],
@@ -146,8 +148,9 @@ export function useInteractiveRecall(
 
   const applyWrong = useCallback(
     (prompt: RecallPrompt): RecallAttemptResult => {
-      // Deduct a heart on every wrong answer — no softening.
+      // Deduct an energy unit on every wrong answer, and reset the combo streak.
       useHeartsStore.getState().useHeart(isPro);
+      useHeartsStore.getState().resetCombo();
       setState((prev) => {
         const prevWrongs = prev.wrongCount[prompt.id] ?? 0;
         const nextWrongs = prevWrongs + 1;

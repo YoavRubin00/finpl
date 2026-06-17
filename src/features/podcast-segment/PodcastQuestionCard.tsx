@@ -20,6 +20,7 @@ import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { DAISY_HAPPY_CELEBRATE_WEBP, DAISY_EMPATHIC_WEBP } from './daisy-assets';
 import type { PodcastQuestion, PodcastQuestionOption } from '../chapter-1-content/types';
+import { useHeartsStore } from '../subscription/useHeartsStore';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -94,9 +95,11 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
       if (option.isCorrect) {
         playSound('modal_open_2');
         successHaptic();
+        useHeartsStore.getState().registerComboCorrect();
       } else {
         playSound('bubble_transition');
         errorHaptic();
+        useHeartsStore.getState().resetCombo();
       }
       onAnswered(option.isCorrect);
     },

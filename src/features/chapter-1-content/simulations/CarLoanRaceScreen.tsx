@@ -311,10 +311,13 @@ const [showFeedback, setShowFeedback] = useState(false);
             setRewardsGranted(true);
             if (state.isRepossessed) {
                 errorHaptic();
-                // Fail outcome → deduct a heart.
+                // Fail outcome → deduct an energy unit + reset the combo streak.
                 useHeartsStore.getState().useHeart(isPro);
+                useHeartsStore.getState().resetCombo();
             } else {
                 successHaptic();
+                // Win → feeds the shared energy combo (4-in-a-row → +1 energy).
+                useHeartsStore.getState().registerComboCorrect();
             }
         }
     }, [state.isComplete, rewardsGranted, state.isRepossessed]);

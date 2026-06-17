@@ -1,23 +1,23 @@
 import type { ShopCategory, ShopItem } from './types';
 
 export const SHOP_ITEMS: readonly ShopItem[] = [
-  // ── לבבות (urgent, expensive in coins, cheap in gems → gem incentive) ──
+  // ── אנרגיה (כלכלת ה-id/category 'hearts' נשמרת פנימית; הטקסט הוא אנרגיה) ──
   {
     id: 'heart-refill-1',
     category: 'hearts',
-    name: 'מילוי לב אחד',
-    description: 'מוסיף לב אחד באופן מיידי. בשביל מי שלא רוצה לחכות 4 שעות.',
-    coinCost: 1500,
-    emoji: '❤️',
+    name: 'טעינת אנרגיה',
+    description: 'מוסיף יחידת אנרגיה באופן מיידי. בשביל מי שלא רוצה לחכות.',
+    coinCost: 600,
+    emoji: '⚡',
     lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json'),
   },
   {
     id: 'heart-refill-full',
     category: 'hearts',
-    name: 'מילוי כל הלבבות',
-    description: 'מחזיר את כל 5 הלבבות לתפוסה מלאה. חזרה לפעולה!',
-    coinCost: 5000,
-    emoji: '💖',
+    name: 'מילוי אנרגיה מלא',
+    description: 'מחזיר את האנרגיה לתפוסה מלאה. חזרה לפעולה!',
+    coinCost: 1500,
+    emoji: '⚡',
     lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json'),
   },
 
@@ -224,7 +224,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
 // hidden until their inventory systems exist (purchasing today wouldn't grant
 // anything in code). `premium` stays as the future-content placeholder.
 export const SHOP_CATEGORIES: readonly { key: ShopCategory; label: string; lottieSource?: number }[] = [
-  { key: 'hearts', label: 'לבבות', lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json') },
+  { key: 'hearts', label: 'אנרגיה', lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json') },
   { key: 'boosts', label: 'בוסטרים', lottieSource: require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json') },
   { key: 'protection', label: 'הגנה', lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json') },
   { key: 'premium', label: 'פרימיום', lottieSource: require('../../../assets/lottie/Diamond.json') },

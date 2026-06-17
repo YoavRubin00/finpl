@@ -14,10 +14,13 @@ import Animated, {
     FadeIn,
     FadeOut,
 } from 'react-native-reanimated';
-import { Heart } from 'lucide-react-native';
-import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
-import { useHeartsStore, MAX_HEARTS } from './useHeartsStore';
+import { useHeartsStore, MAX_HEARTS, MAX_ENERGY } from './useHeartsStore';
 import { getTimeUntilNextHeart } from './subscriptionConstants';
+import { EnergyBatteryIcon } from '../../components/ui/EnergyBatteryIcon';
+import { ENERGY } from '../energy/energyTheme';
+import { SHARK_LOW_NUDGE } from '../energy/energyScenes';
+import { ProUpsellCard } from './ProUpsellCard';
+import { captureEvent } from '../../lib/posthog';
 import { useEconomy, economyQueryKey } from '../../features/economy/useEconomy';
 import { fireEconomyDelta } from '../../features/economy/useEconomyUIStore';
 import { queryClient } from '../../lib/queryClient';
@@ -29,58 +32,47 @@ import { useAppActive } from '../../hooks/useAppActive';
 import { useIsPro } from './useSubscription';
 
 /* ------------------------------------------------------------------ */
-/*  HeartsDisplay, shows in lesson header                             */
+/*  EnergyDisplay (exported as HeartsDisplay for back-compat) —         */
+/*  compact purple battery + count, for the lesson header.             */
 /* ------------------------------------------------------------------ */
 
 export function HeartsDisplay() {
-    const hearts = useHeartsStore((s) => s.hearts);
+    const units = useHeartsStore((s) => s.hearts);
     const isPro = useIsPro();
 
-    // Trigger refill check once on mount
+    // Settle passive regen once on mount.
     useEffect(() => {
         useHeartsStore.getState().refillHearts();
     }, []);
 
-    const heartsDisplayValue = isPro ? Infinity : hearts;
-
-    if (isPro) {
-        return (
-            <View style={styles.heartsRow}>
-                <Text style={styles.infinityIcon}>♾️</Text>
-            </View>
-        );
-    }
-
-    const isFull = hearts === MAX_HEARTS;
+    const value = isPro ? MAX_ENERGY : units;
+    const level = isPro ? 1 : (MAX_ENERGY > 0 ? value / MAX_ENERGY : 0);
 
     return (
-        <View style={[styles.heartsRow, { gap: 6 }]}>
-            <View style={styles.heartsRow}>
-                {Array.from({ length: MAX_HEARTS }).map((_, i) => (
-                    <Heart
-                        key={i}
-                        size={18}
-                        color={i < heartsDisplayValue ? '#ef4444' : '#3f3f46'}
-                        fill={i < heartsDisplayValue ? '#ef4444' : 'transparent'}
-                    />
-                ))}
-            </View>
-            {/* "Hearts full" XP-rampage hint — encourages users to start a lesson
-                while at max. Pure visual incentive (Duolingo "use them while you have them"). */}
-            {isFull && (
-                <View style={styles.fullBoostBadge} accessible accessibilityLabel="כל הלבבות מלאים, בונוס XP על השיעור הבא">
-                    <Text style={styles.fullBoostText} allowFontScaling={false}>+XP</Text>
-                </View>
-            )}
+        <View
+            style={styles.energyRow}
+            accessibilityRole="progressbar"
+            accessibilityLabel={isPro ? 'אנרגיה: אינסופית' : `אנרגיה: ${value} מתוך ${MAX_ENERGY}`}
+            accessibilityValue={isPro ? undefined : { min: 0, max: MAX_ENERGY, now: value }}
+        >
+            <EnergyBatteryIcon size={20} level={level} />
+            <Text style={styles.energyCount} allowFontScaling={false}>
+                {isPro ? '∞' : `${value}/${MAX_ENERGY}`}
+            </Text>
         </View>
     );
 }
 
 /* ------------------------------------------------------------------ */
-/*  OutOfHeartsModal, dramatic overlay when hearts = 0                */
+/*  EnergyDepletedModal (exported as OutOfHeartsModal) — shown at 0     */
 /* ------------------------------------------------------------------ */
 
-const HEART_REFILL_GEM_COST = 25;
+// Energy refill pricing. The COIN path is deliberately expensive (Yoav: it must
+// NOT be an easy money bypass) — a full refill for a hefty price, so the cheap
+// routes stay "wait / watch an ad / play a game", not "pay coins". The ad path
+// stays generous (+8) since ads are the play-first-friendly free option.
+const ENERGY_REFILL_COIN_COST = 1500; // full battery (20), a real decision
+const ENERGY_AD_GRANT = 8;
 
 interface OutOfHeartsModalProps {
     visible: boolean;
@@ -102,9 +94,9 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const router = useRouter();
     const lastHeartLostAt = useHeartsStore((s) => s.lastHeartLostAt);
     const getHearts = useHeartsStore((s) => s.getHearts);
-    const hearts = getHearts();
+    const energy = getHearts();
     const { data: economyData } = useEconomy();
-    const gems = economyData?.gems ?? 0;
+    const coins = economyData?.coins ?? 0;
     const [timeLeft, setTimeLeft] = useState('');
     const appActive = useAppActive();
 
@@ -118,16 +110,16 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     useEffect(() => {
         if (!visible) return;
         const tick = () => {
-            const ms = getTimeUntilNextHeart(lastHeartLostAt, hearts);
+            const ms = getTimeUntilNextHeart(lastHeartLostAt, energy);
             setTimeLeft(ms > 0 ? formatTime(ms) : 'עכשיו!');
         };
         tick();
         if (!appActive) return;
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
-    }, [visible, lastHeartLostAt, hearts, appActive]);
+    }, [visible, lastHeartLostAt, energy, appActive]);
 
-    // Gentle pulse animation for emoji
+    // Gentle pulse animation for the shark
     const pulse = useSharedValue(1);
     const reducedMotion = useReducedMotion();
     useEffect(() => {
@@ -147,7 +139,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         return () => cancelAnimation(pulse);
     }, [visible, pulse, reducedMotion]);
 
-    const emojiStyle = useAnimatedStyle(() => ({
+    const sharkStyle = useAnimatedStyle(() => ({
         transform: [{ scale: pulse.value }],
     }));
 
@@ -161,12 +153,9 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const handleAdRefill = useCallback(() => {
         tapHaptic();
         showAd(() => {
-            // Reward: restore 1 heart
-            const store = useHeartsStore.getState();
-            const current = store.hearts ?? 0;
-            if (current < MAX_HEARTS) {
-                useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: null });
-            }
+            // Reward: top up energy (+8) instead of a single heart.
+            const granted = useHeartsStore.getState().grantEnergy(ENERGY_AD_GRANT, 'ad', 12);
+            try { captureEvent('energy_ad_watched', { granted }); } catch { /* non-fatal */ }
             successHaptic();
             trackConversion();
             if (onHeartsRefilled) {
@@ -177,32 +166,29 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         });
     }, [showAd, onDismiss, onHeartsRefilled, trackConversion]);
 
-    const handleGemRefill = useCallback(() => {
+    // Buy a FULL energy refill with coins (deliberately pricey — not a casual bypass).
+    const handleCoinRefill = useCallback(() => {
         tapHaptic();
-        if (gems >= HEART_REFILL_GEM_COST) {
-            const store = useHeartsStore.getState();
-            const current = store.hearts ?? 0;
-            if (current >= MAX_HEARTS) { onDismiss(); return; }
-            const cachedEcoGems = queryClient.getQueryData<Economy | null>(economyQueryKey);
-            const canAffordGems = (cachedEcoGems?.gems ?? 0) >= HEART_REFILL_GEM_COST;
-            if (canAffordGems) {
-              fireEconomyDelta({ gemsDelta: -HEART_REFILL_GEM_COST });
-            }
-            if (canAffordGems) {
-                useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
-                successHaptic();
-                trackConversion();
-                if (onHeartsRefilled) {
-                    onHeartsRefilled();
-                } else {
-                    onDismiss();
-                }
+        const store = useHeartsStore.getState();
+        if (store.getHearts() >= MAX_HEARTS) { onDismiss(); return; }
+        const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+        const canAfford = (cachedEco?.coins ?? 0) >= ENERGY_REFILL_COIN_COST;
+        if (canAfford) {
+            fireEconomyDelta({ coinsDelta: -ENERGY_REFILL_COIN_COST });
+            const granted = store.grantEnergy(MAX_HEARTS, 'coin-refill'); // full refill
+            try { captureEvent('energy_purchased', { cost: ENERGY_REFILL_COIN_COST, granted, currency: 'coins' }); } catch { /* non-fatal */ }
+            successHaptic();
+            trackConversion();
+            if (onHeartsRefilled) {
+                onHeartsRefilled();
+            } else {
+                onDismiss();
             }
         } else {
             onDismiss();
             router.push('/shop' as never);
         }
-    }, [gems, onDismiss, onHeartsRefilled, router, trackConversion]);
+    }, [onDismiss, onHeartsRefilled, router, trackConversion]);
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss} accessibilityViewIsModal>
@@ -213,73 +199,72 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     style={styles.modalCard}
                 >
                     <ScrollView contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-                    {/* Finn + Title row */}
+                    {/* Shark + Title row */}
                     <View style={styles.finnRow}>
                         <View style={styles.finnTextCol}>
                             <Text style={styles.modalTitle}>{banditPayload.title}</Text>
                             <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 6, marginTop: 6 }}>
                                 <Text style={styles.modalSubtitle}>
-                                    {banditPayload.framingType === 'opportunity' ? banditPayload.subtitle : 'לב חדש בעוד'}
+                                    {banditPayload.framingType === 'opportunity' ? banditPayload.subtitle : 'אנרגיה חוזרת בעוד'}
                                 </Text>
                                 {banditPayload.framingType !== 'opportunity' && <Text style={styles.timer}>{timeLeft}</Text>}
                             </View>
                         </View>
-                        <Animated.View style={[styles.finnWrap, emojiStyle]}>
-                            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 110, height: 110 }} contentFit="contain" />
+                        <Animated.View style={[styles.finnWrap, sharkStyle]}>
+                            <ExpoImage source={SHARK_LOW_NUDGE} accessible={false} style={{ width: 110, height: 110 }} contentFit="contain" />
                         </Animated.View>
                     </View>
 
-                    {/* Empty hearts row */}
-                    <View style={[styles.heartsRow, { marginVertical: 14 }]}>
-                        {Array.from({ length: MAX_HEARTS }).map((_, i) => (
-                            <Heart key={i} size={22} color="#cbd5e1" fill="transparent" />
-                        ))}
+                    {/* Current energy battery (drained low) */}
+                    <View style={{ marginVertical: 14, alignItems: 'center' }}>
+                        <EnergyBatteryIcon size={150} level={MAX_ENERGY > 0 ? energy / MAX_ENERGY : 0} />
                     </View>
 
-                    {/* Watch ad for 1 heart, non-PRO only.
-                        Always render the button so users know the option exists; if the ad
-                        hasn't loaded yet (slow network / AdMob inventory dry / freshly approved
-                        app), disable the button and surface a "loading" state rather than
-                        hiding it — silent disappearance was making users think we removed the
-                        feature on iPhone. */}
+                    {/* Watch ad → energy, non-PRO only. Always render the button so users
+                        know the option exists; if the ad hasn't loaded yet, disable +
+                        show a "loading" state rather than hiding it. */}
                     {!isPro && (
                         <Pressable
                             onPress={adReady ? handleAdRefill : undefined}
                             disabled={!adReady}
                             style={[styles.adRefillBtn, !adReady && { opacity: 0.55 }]}
                             accessibilityRole="button"
-                            accessibilityLabel={adReady ? "צפו בפרסומת וקבלו לב חינם" : "המודעה נטענת"}
+                            accessibilityLabel={adReady ? "צפו בפרסומת וקבלו אנרגיה" : "המודעה נטענת"}
                             accessibilityState={{ disabled: !adReady }}
                         >
                             <Text style={styles.adRefillBtnText}>
-                                {adReady ? 'צפו בפרסומת, קבלו ❤️ חינם' : 'טוען פרסומת...'}
+                                {adReady ? 'צפו בפרסומת, קבלו אנרגיה' : 'טוען פרסומת...'}
                             </Text>
                             <Text style={styles.btnIcon}>🎬</Text>
                         </Pressable>
                     )}
 
-                    {/* Gem instant refill CTA */}
-                    <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="הוסף לב אחד עם יהלום">
-                        <View style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                            <Text style={styles.gemRefillBtnText}>
-                                {gems >= HEART_REFILL_GEM_COST
-                                    ? `❤️ +1 • ${HEART_REFILL_GEM_COST}`
-                                    : 'קנה 💎 • +1 ❤️'}
+                    {/* Coin full-refill CTA (deliberately pricey) */}
+                    <Pressable onPress={handleCoinRefill} style={styles.coinRefillBtn} accessibilityRole="button" accessibilityLabel="מלאו אנרגיה במטבעות">
+                        <View style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                            <EnergyBatteryIcon size={20} level={1} />
+                            <Text style={styles.coinRefillBtnText}>
+                                {coins >= ENERGY_REFILL_COIN_COST
+                                    ? `מילוי מלא • ${ENERGY_REFILL_COIN_COST.toLocaleString()} מטבעות`
+                                    : 'קנו מטבעות למילוי'}
                             </Text>
                         </View>
-                        <Text style={styles.btnIcon}>💎</Text>
+                        <Text style={styles.btnIcon}>🪙</Text>
                     </Pressable>
 
-                    {/* Upgrade CTA */}
-                    <Pressable onPress={handleUpgrade} style={styles.upgradeBtn} accessibilityRole="button" accessibilityLabel="שדרגו ל-Pro, לבבות אינסופיים">
-                        <Text style={styles.upgradeBtnText}>
-                            שדרגו ל-Pro, לבבות אינסופיים
-                        </Text>
-                        <Text style={styles.btnIcon}>❤️</Text>
-                    </Pressable>
+                    {/* Upgrade CTA — deep-blue Profile-format card */}
+                    {!isPro && (
+                        <View style={{ width: '100%', marginTop: 2 }}>
+                            <ProUpsellCard
+                                source="energy_depleted"
+                                headline="אנרגיה אינסופית + בוסט XP"
+                                onPress={handleUpgrade}
+                            />
+                        </View>
+                    )}
 
                     {/* Wait button */}
-                    <Pressable onPress={() => { trackDismiss(); onDismiss(); }} style={styles.waitBtn} accessibilityRole="button" accessibilityLabel="אחכה לחידוש לבבות">
+                    <Pressable onPress={() => { trackDismiss(); onDismiss(); }} style={styles.waitBtn} accessibilityRole="button" accessibilityLabel="אחכה לחידוש האנרגיה">
                         <Text style={styles.waitBtnText}>אחכה ⏳</Text>
                     </Pressable>
                     </ScrollView>
@@ -294,31 +279,21 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
 /* ------------------------------------------------------------------ */
 
 const styles = StyleSheet.create({
-    heartsRow: {
+    energyRow: {
         flexDirection: 'row-reverse',
         alignItems: 'center',
-        gap: 3,
+        gap: 6,
     },
-    fullBoostBadge: {
-        backgroundColor: '#fbbf24',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#f59e0b',
-    },
-    fullBoostText: {
-        fontSize: 10,
-        fontWeight: '900',
-        color: '#78350f',
-        letterSpacing: 0.3,
-    },
-    infinityIcon: {
-        fontSize: 20,
+    energyCount: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: ENERGY.deep,
+        fontVariant: ['tabular-nums'],
+        writingDirection: 'rtl',
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(14,165,233,0.12)',
+        backgroundColor: 'rgba(124,58,237,0.12)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
@@ -327,13 +302,13 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: 360,
         maxHeight: '92%',
-        backgroundColor: '#f0f9ff',
+        backgroundColor: '#faf5ff',
         borderRadius: 24,
         borderWidth: 1.5,
-        borderColor: 'rgba(14,165,233,0.2)',
-        shadowColor: '#0ea5e9',
+        borderColor: 'rgba(124,58,237,0.2)',
+        shadowColor: ENERGY.deep,
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.18,
         shadowRadius: 20,
         elevation: 8,
     },
@@ -359,7 +334,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 22,
         fontWeight: '900',
-        color: '#0c4a6e',
+        color: '#6b21a8',
         writingDirection: 'rtl',
         textAlign: 'right',
     },
@@ -373,35 +348,11 @@ const styles = StyleSheet.create({
     timer: {
         fontSize: 22,
         fontWeight: '900',
-        color: '#0369a1',
+        color: ENERGY.deep,
         fontVariant: ['tabular-nums'],
     },
     btnIcon: {
         fontSize: 20,
-    },
-    upgradeBtn: {
-        width: '100%',
-        flexDirection: 'row-reverse',
-        backgroundColor: '#0ea5e9',
-        borderRadius: 16,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottomWidth: 3,
-        borderBottomColor: '#0284c7',
-        shadowColor: '#0ea5e9',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    upgradeBtnText: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#ffffff',
-        writingDirection: 'rtl',
-        textAlign: 'right',
     },
     waitBtn: {
         marginTop: 12,
@@ -417,7 +368,7 @@ const styles = StyleSheet.create({
     adRefillBtn: {
         width: '100%',
         flexDirection: 'row-reverse',
-        backgroundColor: '#0ea5e9',
+        backgroundColor: ENERGY.base,
         borderRadius: 16,
         paddingVertical: 14,
         paddingHorizontal: 16,
@@ -425,8 +376,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 10,
         borderBottomWidth: 4,
-        borderBottomColor: '#0369a1',
-        shadowColor: '#0ea5e9',
+        borderBottomColor: ENERGY.deep,
+        shadowColor: ENERGY.base,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
@@ -438,7 +389,7 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         writingDirection: 'rtl',
     },
-    gemRefillBtn: {
+    coinRefillBtn: {
         width: '100%',
         flexDirection: 'row-reverse',
         backgroundColor: '#ffffff',
@@ -449,17 +400,17 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 10,
         borderWidth: 1.5,
-        borderColor: 'rgba(14,165,233,0.25)',
-        shadowColor: '#0ea5e9',
+        borderColor: 'rgba(124,58,237,0.25)',
+        shadowColor: ENERGY.deep,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 2,
     },
-    gemRefillBtnText: {
+    coinRefillBtnText: {
         fontSize: 15,
         fontWeight: '800',
-        color: '#0c4a6e',
+        color: '#6b21a8',
         writingDirection: 'rtl',
         textAlign: 'right',
     },

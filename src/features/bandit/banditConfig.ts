@@ -74,9 +74,9 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         id: 'hearts_depleted_v0',
         label: 'loss_aversion',
         payload: {
-          title: 'נגמרו הלבבות 💔',
-          subtitle: 'יש לכם כמה אפשרויות להמשיך',
-          primaryCTA: 'מלאו לב ב-1,500 מטבעות',
+          title: 'נגמרה האנרגיה',
+          subtitle: 'יש לכם כמה דרכים להמשיך',
+          primaryCTA: 'מלאו אנרגיה ב-300 מטבעות',
           framingType: 'loss_aversion',
         },
       },
@@ -85,8 +85,8 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         label: 'opportunity',
         payload: {
           title: 'הפסקה קצרה! 🌟',
-          subtitle: 'הלבבות חוזרים תוך שעות — או תרוויחו אחד עכשיו',
-          primaryCTA: 'הרוויחו לב בתרגול',
+          subtitle: 'האנרגיה חוזרת מעצמה — או תטעינו עכשיו',
+          primaryCTA: 'טענו אנרגיה בתרגול',
           framingType: 'opportunity',
         },
       },
@@ -95,7 +95,7 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         label: 'community',
         payload: {
           title: 'החברים שלכם ממשיכים ללמוד עכשיו 👥',
-          subtitle: 'אל תישארו מאחור — לב אחד יחזיר אתכם למשחק',
+          subtitle: 'אל תישארו מאחור — קצת אנרגיה ואתם שוב במשחק',
           primaryCTA: 'המשיכו עם החברים',
           framingType: 'community',
         },
@@ -104,9 +104,9 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         id: 'hearts_depleted_v3',
         label: 'shark_voice',
         payload: {
-          title: 'ספרתי. אפס לבבות 💔',
+          title: 'ספרתי. אפס אנרגיה',
           subtitle: 'אני יושב פה. מחכה. בלי לחץ — אבל אני זוכר.',
-          primaryCTA: 'תחזירו לי לב, אחזיר לכם משחק',
+          primaryCTA: 'תטעינו, ואחזיר לכם משחק',
           framingType: 'loss_aversion',
         },
       },
@@ -267,7 +267,7 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         id: 'paywall_v1',
         label: 'features',
         payload: {
-          proofText: 'לבבות אינסופיים, בוסט XP פי 2, אפס מגבלות',
+          proofText: 'אנרגיה אינסופית, בוסט XP פי 2, אפס מגבלות',
           ctaText: 'התחילו PRO היום',
           // Audrey 2026-06-11: dropped "הצטרפו ל-10,000+ לומדים פרו" —
           // social-proof claim we can't actually verify.

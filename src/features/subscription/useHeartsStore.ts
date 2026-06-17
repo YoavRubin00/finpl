@@ -10,6 +10,8 @@ import { registerLocalStore } from '../../lib/stores/registry';
 export const MAX_HEARTS = 20; // MAX energy units (was 5)
 /** Alias for new energy-aware code. Same value as MAX_HEARTS. */
 export const MAX_ENERGY = MAX_HEARTS;
+/** Passive regen interval: one energy unit every 15 minutes (full 0→20 in 5h). */
+export const ENERGY_REGEN_MS = 15 * 60 * 1000;
 const HEART_REFILL_MS = 15 * 60 * 1000; // 15 minutes per energy unit (was 5h) → full 0→20 in 5h
 
 const MAX_PRACTICE_REFILLS_PER_DAY = 2; // ×PRACTICE_ENERGY_GRANT = +10/day
@@ -31,6 +33,10 @@ interface HeartsState {
   lastHeartLostAt: string | null;
   // Non-persisted: resets on cold-start, used by upgrade_trigger_timing bandit experiment
   sessionHeartsLost: number;
+
+  // Non-persisted combo streak across ALL correct answers in a lesson
+  // (quizzes + interactive recall + simulators). Every 4-in-a-row grants energy.
+  comboStreak: number;
 
   // Practice-to-Refill (US-006): complete old lesson → +PRACTICE_ENERGY_GRANT, max 2/day
   practiceRefillsToday: number;
@@ -64,6 +70,16 @@ interface HeartsActions {
    */
   grantEnergy: (amount: number, source: string, dailyCap?: number) => number;
 
+  /**
+   * Register one correct answer toward the cross-lesson combo (quizzes +
+   * interactive recall + simulators all call this). Every 4-in-a-row grants
+   * +1 energy (capped 6/day). Returns the energy granted on this call (0 if no
+   * milestone hit or on replay). Pass isReplay to skip counting practice runs.
+   */
+  registerComboCorrect: (isReplay?: boolean) => number;
+  /** Reset the combo streak (call on any wrong answer / sim failure). */
+  resetCombo: () => void;
+
   reset: () => void;
 }
 
@@ -71,9 +87,11 @@ const initialState: HeartsState = {
   hearts: MAX_HEARTS,
   lastHeartLostAt: null,
   sessionHeartsLost: 0,
+  comboStreak: 0,
   practiceRefillsToday: 0,
   practiceRefillDate: null,
   pendingPracticeForHeart: false,
+  energyGrantsBySource: {},
 };
 
 export const useHeartsStore = create<HeartsState & HeartsActions>()(
@@ -143,15 +161,64 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
           set({ pendingPracticeForHeart: false });
           return false;
         }
+        const nextHearts = Math.min(currentHearts + PRACTICE_ENERGY_GRANT, MAX_HEARTS);
         set({
-          hearts: currentHearts + 1,
-          lastHeartLostAt: currentHearts + 1 >= MAX_HEARTS ? null : state.lastHeartLostAt,
+          hearts: nextHearts,
+          lastHeartLostAt: nextHearts >= MAX_HEARTS ? null : state.lastHeartLostAt,
           practiceRefillsToday: count + 1,
           practiceRefillDate: today,
           pendingPracticeForHeart: false,
         });
         return true;
       },
+
+      grantEnergy: (amount: number, source: string, dailyCap?: number): number => {
+        if (amount <= 0) return 0;
+        const today = todayISO();
+        // Settle passive regen first so we grant on top of the true current value.
+        get().refillHearts();
+        const current = get().hearts;
+        if (current >= MAX_HEARTS) return 0;
+
+        let granted = Math.min(amount, MAX_HEARTS - current);
+
+        if (dailyCap != null) {
+          const rec = get().energyGrantsBySource[source];
+          const usedToday = rec && rec.date === today ? rec.energy : 0;
+          granted = Math.min(granted, Math.max(0, dailyCap - usedToday));
+          if (granted <= 0) return 0;
+          const next = Math.min(current + granted, MAX_HEARTS);
+          set((s) => ({
+            hearts: next,
+            lastHeartLostAt: next >= MAX_HEARTS ? null : s.lastHeartLostAt,
+            energyGrantsBySource: {
+              ...s.energyGrantsBySource,
+              [source]: { date: today, energy: usedToday + granted },
+            },
+          }));
+        } else {
+          if (granted <= 0) return 0;
+          const next = Math.min(current + granted, MAX_HEARTS);
+          set((s) => ({
+            hearts: next,
+            lastHeartLostAt: next >= MAX_HEARTS ? null : s.lastHeartLostAt,
+          }));
+        }
+        return granted;
+      },
+
+      registerComboCorrect: (isReplay?: boolean): number => {
+        if (isReplay) return 0;
+        const next = get().comboStreak + 1;
+        set({ comboStreak: next });
+        // Every 4 correct-in-a-row across the whole lesson → +1 energy (capped 6/day).
+        if (next % 4 === 0) {
+          return get().grantEnergy(1, 'combo', 6);
+        }
+        return 0;
+      },
+
+      resetCombo: () => set({ comboStreak: 0 }),
 
       clearPracticeFlag: () => {
         set({ pendingPracticeForHeart: false });
@@ -167,14 +234,22 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
         lastHeartLostAt: state.lastHeartLostAt,
         practiceRefillsToday: state.practiceRefillsToday,
         practiceRefillDate: state.practiceRefillDate,
+        energyGrantsBySource: state.energyGrantsBySource,
         // sessionHeartsLost intentionally NOT persisted (cold-start reset)
         // pendingPracticeForHeart intentionally NOT persisted (transient flag)
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        // Clamp legacy hearts values from previous builds
+        // Legacy builds stored hearts on a 0–5 scale. The energy rescale moved
+        // MAX to 20; a persisted 0–5 value is still valid (just "low"), but a
+        // value above the new MAX (shouldn't happen) is clamped. We deliberately
+        // do NOT upscale old 0–5 values — passive regen (15min/unit) refills
+        // them to 20 within hours, so users heal automatically.
         if (typeof state.hearts === 'number' && state.hearts > MAX_HEARTS) {
           state.hearts = MAX_HEARTS;
+        }
+        if (!state.energyGrantsBySource || typeof state.energyGrantsBySource !== 'object') {
+          state.energyGrantsBySource = {};
         }
       },
     },

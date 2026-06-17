@@ -353,10 +353,12 @@ export function ChestCelebrationModal({
                 ? 'סיימת את כל הרכיבים. תיבת המאסטר נפתחת.'
                 : 'סיימת 70% מהמודולה. הגיע הזמן לפרס.'}
             </Text>
-            {/* R8 T3.4 — rarity badge above the chest. Common stays
-                invisible to avoid noise; rare/mythic surface so the
-                user immediately feels "this drop is special." */}
-            {rarity !== 'common' && (
+            {/* Mystery reveal (Yoav 17/06): the rarity badge is now gated on
+                `opened` so rare/mythic is HIDDEN until the user taps — the chest
+                no longer spoils its own outcome before the pull. Common stays
+                invisible to avoid noise; the post-open particle burst + this
+                badge land together as the surprise. */}
+            {opened && rarity !== 'common' && (
               <View
                 style={[
                   styles.rarityBadge,

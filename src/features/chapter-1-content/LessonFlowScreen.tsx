@@ -74,7 +74,7 @@ import { recordModuleDuration as apiRecordModuleDuration } from "../../lib/api/u
 import { userStatsQueryKey } from "../user-stats/useUserStats";
 import { useWisdomStore } from "../wisdom-flashes/useWisdomStore";
 import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
-import { useHeartsStore } from "../subscription/useHeartsStore";
+import { useHeartsStore, MAX_ENERGY } from "../subscription/useHeartsStore";
 import { useUsageStore } from "../subscription/useUsageStore";
 import { queryClient } from "../../lib/queryClient";
 import type { SubscriptionState } from "../../lib/api/subscription";
@@ -83,6 +83,10 @@ import { PRO_LOCKED_SIMS } from "../../constants/proGates";
 import { OutOfHeartsModal } from "../subscription/HeartsUI";
 import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
+import { EnergyBatteryIcon } from "../../components/ui/EnergyBatteryIcon";
+import { ENERGY } from "../energy/energyTheme";
+import { COMBO_ENERGY_AMOUNT, COMBO_ENERGY_DAILY_CAP, isComboEnergyMilestone } from "../economy/comboEnergy";
+import { useDailyGoalStore } from "../economy/useDailyGoalStore";
 import { DoubleOrNothingModal } from "../../components/ui/DoubleOrNothingModal";
 import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
 import { SharkBridgeCTA, SharkReferralCTA, SharkToolCTA, moduleHasDividendContent } from "../../components/ui/SharkCTAModals";
@@ -1753,21 +1757,13 @@ function HeartBreakOverlay({
 
       {/* Heart halves container */}
       <Animated.View style={[heartBreakStyles.heartContainer, heartAnimsStyle, originX !== undefined && { left: startX - (screenWidth / 2) }]}>
-        {isLastHeart ? (
-          <>
-            {/* Left half */}
-            <Animated.View style={[heartBreakStyles.halfWrap, leftStyle]}>
-              <Text style={[heartBreakStyles.heartEmoji, { marginRight: -24 }]}>💔</Text>
-            </Animated.View>
-
-            {/* Right half */}
-            <Animated.View style={[heartBreakStyles.halfWrap, rightStyle]}>
-              <Text style={[heartBreakStyles.heartEmoji, { marginLeft: -24 }]}>❤️‍🩹</Text>
-            </Animated.View>
-          </>
-        ) : (
-          <Text style={heartBreakStyles.heartEmoji}>❤️</Text>
-        )}
+        {/* Energy "battery dips" — a draining purple battery, not a red heart shatter.
+            leftStyle/rightStyle kept on the wrappers so the same shake rig still plays. */}
+        <Animated.View style={leftStyle}>
+          <Animated.View style={rightStyle}>
+            <EnergyBatteryIcon size={64} level={isLastHeart ? 0 : 0.18} />
+          </Animated.View>
+        </Animated.View>
 
         {/* "-1" floating text attached to heart */}
         <Animated.Text style={[heartBreakStyles.minusText, minusStyle, { position: 'absolute', top: -40, width: 100, textAlign: 'center' }]}>
@@ -1787,7 +1783,7 @@ const heartBreakStyles = StyleSheet.create({
   },
   flash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(239, 68, 68, 0.5)",
+    backgroundColor: "rgba(168, 85, 247, 0.18)",
   },
   heartContainer: {
     flexDirection: "row",
@@ -1808,7 +1804,7 @@ const heartBreakStyles = StyleSheet.create({
     position: "absolute",
     fontSize: 28,
     fontWeight: "900",
-    color: "#ef4444",
+    color: "#7c3aed",
     textShadowColor: "rgba(0,0,0,0.6)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
@@ -1887,7 +1883,10 @@ function ChestFlyToSlot({
 
   if (!visible || !rarity) return null;
 
-  const chestIcon = rarity === "epic" ? "💎" : rarity === "rare" ? "🏆" : "📦";
+  // Mystery reveal (Yoav 17/06): the chest flies to inventory as a NEUTRAL
+  // sealed box — its rarity is no longer spoiled here; it's revealed only when
+  // the user opens it. (rarity is still read above to gate the animation.)
+  const chestIcon = "📦";
 
   const flyStyle = useAnimatedStyle(() => ({
     transform: [
@@ -2487,6 +2486,9 @@ export function LessonFlowScreen() {
 
   // completeModule: server-sync + telemetry + XP/coins (mirrors old store action)
   const MODULE_COMPLETE_XP = 30;
+  // Small coin bonus for finishing a lesson AFTER today's goal was already met
+  // ("מצב על" overachiever pull). Kept modest so the goal stays the headline.
+  const OVERACHIEVER_COIN_BONUS = 20;
   const completeModule = useCallback((moduleId: string) => {
     // Guard: skip if already completed (server is source of truth)
     const alreadyDone = getCompletedModulesSync(chapterStoreKey(chapterId ?? 'chapter-1'));
@@ -2542,7 +2544,19 @@ export function LessonFlowScreen() {
       bestScore: quiz?.correct,
       xpEarned: MODULE_COMPLETE_XP,
     });
-  }, [chapterId, upsertProgress, recordDailyActivity]);
+
+    // Daily-goal ring: if today's goal was ALREADY met before this lesson
+    // (this lesson's XP lands at the chest tap, after here), it's an
+    // overachiever lesson ("מצב על") → small bonus. noteLessonComplete also
+    // advances the overachiever counter for the daily_goal_reached analytics.
+    try {
+      const goal = useDailyGoalStore.getState();
+      if (goal.goalReached && !isReplay) {
+        useEconomyUIStore.getState().addCoins(OVERACHIEVER_COIN_BONUS, 'lesson');
+      }
+      goal.noteLessonComplete();
+    } catch { /* non-fatal */ }
+  }, [chapterId, upsertProgress, recordDailyActivity, isReplay]);
 
   const { isMuted, toggleMute } = useLessonMusic();
   const safeTimeout = useTimeoutCleanup();
@@ -3318,6 +3332,9 @@ export function LessonFlowScreen() {
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? (r.peakStreak ?? 0) : 0;
   });
   const [showStreakPopup, setShowStreakPopup] = useState(false);
+  // True when the most recent correct answer charged the energy battery (combo
+  // milestone). Drives the "+אנרגיה" badge in the streak popup. Energy sync.
+  const [comboEnergyGranted, setComboEnergyGranted] = useState(false);
   const [showQuizIntro, setShowQuizIntro] = useState(false);
   const [showWisdom, setShowWisdom] = useState(false);
   // (legacy showInterGame + interGamePhase removed — the inter-module game
@@ -3885,19 +3902,38 @@ export function LessonFlowScreen() {
     recordQuizAnswer(mod.id, true);
     // AI telemetry for quiz answers
     useAITelemetryStore.getState().addEvent('quiz_answer', mod.id, { correct: true, meta: { questionId: quiz.id } });
-    try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: true }); } catch { /* non-fatal */ }
     const newStreak = consecutiveCorrect + 1;
     setConsecutiveCorrect(newStreak);
     if (newStreak > peakStreak) setPeakStreak(newStreak);
+    // Shared combo streak — counts correct answers across quizzes + recall + sims
+    // + dilemmas + podcast. Every 4-in-a-row → +1 energy. (consecutiveCorrect above
+    // stays for the 3/5/7 streak popup.)
+    const grantedCombo = useHeartsStore.getState().registerComboCorrect(isReplay);
+    if (grantedCombo > 0) { try { captureEvent('combo_energy_earned', { granted: grantedCombo }); } catch { /* non-fatal */ } }
+    try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: true, combo_at_answer: newStreak }); } catch { /* non-fatal */ }
+    // Energy sync (Yoav 17/06): a clean streak charges the purple energy battery
+    // via the reserved 'combo' source — capped per day so it never dents the
+    // out-of-energy paywall. Earned by accuracy only (אודרי-safe). Skipped on
+    // replay so completed modules can't farm free energy.
+    let energyCharged = false;
+    if (isComboEnergyMilestone(newStreak) && !isReplay) {
+      energyCharged = useHeartsStore.getState().grantEnergy(COMBO_ENERGY_AMOUNT, 'combo', COMBO_ENERGY_DAILY_CAP) > 0;
+    }
+    setComboEnergyGranted(energyCharged);
     if (newStreak === 3 || newStreak === 5 || newStreak === 7) {
       if (newStreak >= 7) { doubleHeavyHaptic(); playSound('btn_click_heavy'); }
       else if (newStreak >= 5) { successHaptic(); playSound('btn_click_heavy'); }
       else { playSound('modal_open_4'); }
       setShowStreakPopup(true);
       safeTimeout(() => setShowStreakPopup(false), 2000);
+    } else if (energyCharged) {
+      // Surface the energy charge even when it lands off a 3/5/7 streak tier.
+      successHaptic();
+      setShowStreakPopup(true);
+      safeTimeout(() => setShowStreakPopup(false), 1600);
     }
     advanceQuiz();
-  }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, consecutiveCorrect, peakStreak, playSound]);
+  }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, consecutiveCorrect, peakStreak, playSound, isReplay]);
 
   // Immediate heart drop, called right when wrong answer is selected.
   // Skipped entirely on replay so users can re-do completed modules without
@@ -3905,6 +3941,7 @@ export function LessonFlowScreen() {
   const handleWrongImmediate = useCallback(() => {
     if (!mod) return;
     setConsecutiveCorrect(0); // Reset streak on ANY wrong answer
+    useHeartsStore.getState().resetCombo();
     const quiz = mod.quizzes[quizIndex];
     if (isReplay) return;
     const heartUsed = useHeartsStore.getState().useHeart(isPro);
@@ -4251,6 +4288,13 @@ export function LessonFlowScreen() {
       if (!isReplay) {
         const isProNow = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true;
         for (let i = 0; i < result.unwiseCount; i++) useHeartsStore.getState().useHeart(isProNow);
+        // Combo: a clean dilemma (no unwise choices) feeds the streak; any unwise resets it.
+        if (result.unwiseCount === 0) {
+          const g = useHeartsStore.getState().registerComboCorrect();
+          if (g > 0) { try { captureEvent('combo_energy_earned', { granted: g, source: 'dilemma' }); } catch { /* non-fatal */ } }
+        } else {
+          useHeartsStore.getState().resetCombo();
+        }
       }
       // XP bonus only for branching dilemmas with a perfect path.
       if (result.unwiseCount === 0 && result.path.length > 1) {
@@ -4388,6 +4432,17 @@ export function LessonFlowScreen() {
                 {consecutiveCorrect >= 7 ? "x2 XP" : consecutiveCorrect >= 5 ? "x1.75 XP" : "x1.5 XP"}
               </Text>
             </View>
+            {/* Energy-battery sync: the streak also charged the purple battery. */}
+            {comboEnergyGranted && (
+              <View
+                accessible
+                accessibilityLabel="טענת יחידת אנרגיה"
+                style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 3, backgroundColor: ENERGY.track, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: ENERGY.base }}
+              >
+                <EnergyBatteryIcon size={14} level={1} />
+                <Text style={{ fontSize: 11, fontWeight: '900', color: ENERGY.deep }}>+אנרגיה</Text>
+              </View>
+            )}
           </Animated.View>
         )}
 
@@ -4703,32 +4758,20 @@ export function LessonFlowScreen() {
         {/* ── Quizzes phase ── */}
         {phase === "quizzes" && (
           <Animated.View style={[contentStyle, { flex: 1 }]}>
-            {/* Hearts display */}
+            {/* Energy display (purple battery) */}
             <View
               onLayout={(e) => {
                 const { width: screenWidth } = Dimensions.get("window");
-                // heartsRowY is relative to parent, adding offset for screen-level paddingTop
-                heartsRowY.current = e.nativeEvent.layout.y + 110; 
-                
-                // Calculate center X of the hearts bar (centered in screen)
-                const barCenter = screenWidth / 2;
-                // Offset towards the leftmost FULL heart (indices 0=right, 4=left)
-                const heartIdx = isPro ? 2 : Math.max(0, (heartsCount || 1) - 1);
-                const heartXOffset = (2 - heartIdx) * 20; 
-                
-                heartsRowX.current = barCenter + heartXOffset;
+                // Anchor for the energy-dip animation (kept from the old hearts row).
+                heartsRowY.current = e.nativeEvent.layout.y + 110;
+                heartsRowX.current = screenWidth / 2;
               }}
-              style={{ flexDirection: "row-reverse", justifyContent: "center", gap: 4, marginBottom: 6 }}
+              style={{ flexDirection: "row-reverse", justifyContent: "center", alignItems: "center", gap: 6, marginBottom: 6 }}
             >
-              {isPro ? (
-                <Text style={{ fontSize: 14, color: "#ef4444", fontWeight: "700" }}>♥ ∞</Text>
-              ) : (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <Text key={i} style={{ fontSize: 16, opacity: i < heartsCount ? 1 : 0.2 }}>
-                    {i < heartsCount ? "❤️" : "🤍"}
-                  </Text>
-                ))
-              )}
+              <EnergyBatteryIcon size={20} level={isPro ? 1 : (MAX_ENERGY > 0 ? heartsCount / MAX_ENERGY : 0)} />
+              <Text style={{ fontSize: 14, color: ENERGY.deep, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
+                {isPro ? "∞" : `${heartsCount}/${MAX_ENERGY}`}
+              </Text>
             </View>
             <QuizCard
               key={mod.quizzes[quizIndex].id}
