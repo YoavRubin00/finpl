@@ -11,7 +11,12 @@ function getDb() {
   return drizzle(sqlConnection);
 }
 
-const RC_WEBHOOK_SECRET = process.env.RC_WEBHOOK_SECRET;
+// NOTE: On this project's Vercel deploy ONLY `api/**` is served (see
+// vercel.json `functions`). The LIVE RevenueCat webhook is therefore
+// api/webhooks/revenuecat.ts — this Expo-Router route is its twin, kept in
+// parity in case it serves under Expo hosting. Fix BOTH when changing webhook
+// logic. Accept the server var or the EXPO_PUBLIC back-compat var.
+const RC_WEBHOOK_SECRET = process.env.RC_WEBHOOK_SECRET ?? process.env.EXPO_PUBLIC_RC_WEBHOOK_SECRET;
 
 // EU project (176605). The default MUST be the EU ingestion host: this webhook
 // runs in the Vercel function runtime, which often LACKS EXPO_PUBLIC_POSTHOG_HOST
@@ -20,7 +25,10 @@ const RC_WEBHOOK_SECRET = process.env.RC_WEBHOOK_SECRET;
 // `source='revenuecat_webhook'` events reached the EU project in 120 days, so
 // trial→paid conversions / renewals / churn were entirely invisible. Moni 2026-06-13.
 const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
-const POSTHOG_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY;
+// Prefer the clean server var; EXPO_PUBLIC_* is a CLIENT-build var absent in
+// the function runtime (the reason server captures silently dropped). Same fix
+// as api/_shared/posthogCapture.ts.
+const POSTHOG_KEY = process.env.POSTHOG_API_KEY ?? process.env.EXPO_PUBLIC_POSTHOG_KEY;
 
 /**
  * Server-side PostHog event capture for the trial→paid conversion + renewal +
