@@ -123,7 +123,7 @@ export function InvestorQuizNode({
         {/* Hook label — absolutely placed BELOW the orb so it doesn't shift the
             orb's center off the pearl's band. */}
         <View style={[styles.labelPill, { top: box + 2 }]} pointerEvents="none">
-          <Text style={styles.labelText} allowFontScaling={false} numberOfLines={1}>
+          <Text style={styles.labelText} allowFontScaling={false} numberOfLines={2}>
             איזה משקיע יש בך?
           </Text>
         </View>
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(8,145,178,0.95)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
-    maxWidth: 150,
+    maxWidth: 190,
   },
   labelText: {
     color: '#ffffff',
@@ -181,5 +181,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     writingDirection: 'rtl' as const,
     textAlign: 'center',
+    lineHeight: 14,
   },
 });
