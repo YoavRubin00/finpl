@@ -50,7 +50,9 @@ interface TopicProgressState {
    *  from summaryForModule, which must stay a pure read (stamping there ran
    *  a set() during render → "update during render" warning + re-render
    *  cascade; Yoav 2026-06-11 QA). */
-  stampModuleThreshold: (moduleId: string) => void;
+  /** Test-and-set: stamps the module's 70% flag and returns true ONLY for the
+   *  first caller (false thereafter) so the chest payout fires exactly once. */
+  stampModuleThreshold: (moduleId: string) => boolean;
   stampModuleFullyComplete: (moduleId: string) => void;
   /** Record a chest open NOW. Bumps the streak (or resets it if the
    *  last open was > 48h ago) AND rolls rarity (with pity timer).
@@ -142,13 +144,19 @@ export const useTopicProgressStore = create<TopicProgressState>()(
 
       stampModuleThreshold: (moduleId) => {
         const state = get();
-        if (state.modulesPastThreshold[moduleId]) return;
+        // Atomic test-and-set: returns true ONLY for the first caller, false
+        // for every subsequent one (incl. sibling accordion instances racing
+        // in the same React commit). The chest effect gates its payout on this
+        // return so duplicate chests can never fire (Yoav 2026-06-17: "3 פעמים
+        // ... אלה שמגיעים אחריו צריכים להמחק").
+        if (state.modulesPastThreshold[moduleId]) return false;
         set({
           modulesPastThreshold: {
             ...state.modulesPastThreshold,
             [moduleId]: { firstCrossedAt: nowIso() },
           },
         });
+        return true;
       },
 
       stampModuleFullyComplete: (moduleId) => {
