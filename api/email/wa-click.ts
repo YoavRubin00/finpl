@@ -17,6 +17,7 @@ import { capturePostHog } from '../_shared/posthogCapture';
  * change is tracking-only and does NOT move users to a different community.
  */
 const WHATSAPP_URL = 'https://chat.whatsapp.com/JzyPhMvOOcyBbiwzlm4psT';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -24,7 +25,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const userId = typeof req.query.u === 'string' ? req.query.u : '';
-  if (userId && userId.length <= 64) {
+  // Only attribute to a real userProfiles UUID — link scanners pre-fetch this
+  // redirect, so a loose check would log phantom taps + create ghost persons.
+  if (UUID_RE.test(userId)) {
     await capturePostHog('whatsapp_cta_tapped', userId, { source: 'welcome_email' });
   }
 
