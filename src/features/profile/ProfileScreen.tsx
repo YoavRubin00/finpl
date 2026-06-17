@@ -51,6 +51,10 @@ import { AchievementPill } from "../../components/ui/AchievementPill";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
 import { useWalkthroughGlowTarget } from "../onboarding/AppWalkthroughOverlay";
 import { PersonalStatsSection } from "../user-stats/PersonalStatsSection";
+import { BRIDGE_BENEFITS } from "../the-bridge/bridgeData";
+import { captureEvent } from "../../lib/posthog";
+import { Image as ExpoImage } from "expo-image";
+import { FINN_TABLET } from "../retention-loops/finnMascotConfig";
 
 const GOAL_LABELS: Record<string, string> = {
   "cash-flow": "💸 תזרים מזומנים",
@@ -90,6 +94,30 @@ const LAYER_NAMES_HE: Record<number, string> = {
   5: "חופש כלכלי",
 };
 
+// Real, redeemable Bridge partners (never a 0-coin "בקרוב" placeholder slot).
+const REAL_BRIDGE_PARTNERS = BRIDGE_BENEFITS.filter(
+  (b) => b.isAvailable && !b.partnerAdSlot && !!b.partnerUrl,
+);
+
+// Our single headline conversion recommendation for the profile card: an
+// advanced US broker for experienced / investing-focused users, otherwise the
+// beginner-friendly Israeli broker (0 fees + a ₪200 joining gift). Falls back
+// to the first available real partner if the preferred one is ever pulled.
+function pickRecommendedBenefit(
+  profile: { knowledgeLevel?: string | null; financialGoal?: string | null } | null | undefined,
+) {
+  const wantsAdvanced =
+    profile?.knowledgeLevel === "experienced" ||
+    profile?.knowledgeLevel === "expert" ||
+    profile?.financialGoal === "investing";
+  const preferredId = wantsAdvanced ? "bridge-invest-inter-il" : "bridge-invest-altshuler";
+  return (
+    REAL_BRIDGE_PARTNERS.find((b) => b.id === preferredId) ??
+    REAL_BRIDGE_PARTNERS[0] ??
+    null
+  );
+}
+
 export function ProfileScreen() {
   const isFocused = useIsFocused();
   const router = useRouter();
@@ -108,6 +136,9 @@ export function ProfileScreen() {
   const profile = useAuthStore((s) => s.profile);
   const isPro = useIsPro();
   const isMinor = profile?.ageGroup === "minor";
+  // Our headline conversion recommendation, surfaced as a personal card under
+  // the Bridge CTA and deep-linking straight to that benefit in the Bridge.
+  const recommendedBenefit = pickRecommendedBenefit(profile);
   const referredFriends = useReferralStore((s) => s.referredFriends);
   const { showStreakCelebration } = useStreakCelebration();
   const referralTier = computeReferralTier(referredFriends.length);
@@ -325,6 +356,54 @@ export function ProfileScreen() {
                   <LottieIcon source={require("../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json")} size={28} autoPlay loop active={isFocused} />
                 </View>
               </Animated.View>
+            </AnimatedPressable>
+          )}
+
+          {/* Personalized conversion recommendation — sits right under the
+              Bridge CTA. Captain Shark's single headline pick (singular,
+              gender-free voice) that deep-links straight to that benefit in the
+              Bridge for a one-tap redemption. Hidden for minors (legal). */}
+          {!isMinor && recommendedBenefit && (
+            <AnimatedPressable
+              onPress={() => {
+                captureEvent("profile_bridge_reco_tapped", {
+                  benefit_id: recommendedBenefit.id,
+                  partner_name: recommendedBenefit.partnerName,
+                });
+                router.push(`/bridge?highlight=${recommendedBenefit.id}` as never);
+              }}
+              style={styles.recoCard}
+              accessibilityRole="button"
+              accessibilityLabel={`ההמלצה שלנו, פתחו חשבון ב${recommendedBenefit.partnerName}`}
+            >
+              <LinearGradient
+                colors={["#ecfeff", "#e0f2fe", "#eef2ff"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.actionCardInner, styles.recoGradient]}
+              >
+                <ExpoImage
+                  source={FINN_TABLET}
+                  style={styles.recoShark}
+                  contentFit="contain"
+                  accessible={false}
+                />
+                <View style={{ alignItems: "flex-end", flex: 1 }}>
+                  <Text style={styles.recoLabel}>לפי איך שאנחנו מכירים אותך</Text>
+                  <Text style={styles.recoTitle}>
+                    {(displayName ?? "היי") + ", הכי מתאים לך לפתוח חשבון ב" + recommendedBenefit.partnerName}
+                  </Text>
+                  {!!recommendedBenefit.reward && (
+                    <Text style={styles.recoReward} numberOfLines={2}>
+                      {recommendedBenefit.reward}
+                    </Text>
+                  )}
+                  <View style={styles.recoCtaChip}>
+                    <ChevronRight size={14} color="#0369a1" style={{ transform: [{ scaleX: -1 }] }} />
+                    <Text style={styles.recoCtaText}>לפתיחת החשבון</Text>
+                  </View>
+                </View>
+              </LinearGradient>
             </AnimatedPressable>
           )}
 
@@ -1079,6 +1158,74 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Personalized recommendation card (gold-accented sky gradient — a featured
+  // conversion highlight, distinct from the plain white action cards).
+  recoCard: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: "rgba(250,204,21,0.55)",
+    borderBottomWidth: 3,
+    borderBottomColor: "rgba(245,158,11,0.6)",
+    shadowColor: "#f59e0b",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  recoGradient: {
+    borderRadius: 14,
+  },
+  recoShark: {
+    width: 56,
+    height: 56,
+  },
+  recoLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    color: "#b45309",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  recoTitle: {
+    fontSize: 14.5,
+    fontWeight: "800",
+    color: "#0c4a6e",
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginTop: 3,
+    lineHeight: 20,
+  },
+  recoReward: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#0369a1",
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  recoCtaChip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-end",
+    marginTop: 8,
+    backgroundColor: "rgba(2,132,199,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(2,132,199,0.3)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  recoCtaText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#0369a1",
+    writingDirection: "rtl",
   },
   // Pro card (stays dark, it's the premium upsell)
   proCard: {
