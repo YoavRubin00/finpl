@@ -16,27 +16,27 @@ export interface MondialSlide {
 export const MONDIAL_SLIDES: MondialSlide[] = [
   {
     id: "cover",
-    source: require("../../../assets/IMAGES/mondial-carousel/slide1-cover.png"),
+    source: require("../../../assets/IMAGES/mondial-carousel/slide1-cover.webp"),
     alt: "5 מספרים מטורפים מאחורי המונדיאל",
   },
   {
     id: "betting",
-    source: require("../../../assets/IMAGES/mondial-carousel/slide2-betting.png"),
+    source: require("../../../assets/IMAGES/mondial-carousel/slide2-betting.webp"),
     alt: "50 מיליארד דולר יהמרו על המונדיאל — הבית תמיד מנצח",
   },
   {
     id: "tickets",
-    source: require("../../../assets/IMAGES/mondial-carousel/slide3-tickets.png"),
+    source: require("../../../assets/IMAGES/mondial-carousel/slide3-tickets.webp"),
     alt: "כרטיס לגמר עד 11,000 דולר ל-90 דקות",
   },
   {
     id: "ronaldo",
-    source: require("../../../assets/IMAGES/mondial-carousel/slide4-ronaldo.png"),
+    source: require("../../../assets/IMAGES/mondial-carousel/slide4-ronaldo.webp"),
     alt: "רונאלדו מרוויח 767 אלף דולר ביום, גם כשהוא ישן",
   },
   {
     id: "cta",
-    source: require("../../../assets/IMAGES/mondial-carousel/slide5-cta.png"),
+    source: require("../../../assets/IMAGES/mondial-carousel/slide5-cta.webp"),
     alt: "הכסף זה המגרש, אתה הקפטן — שחק עכשיו",
   },
 ];

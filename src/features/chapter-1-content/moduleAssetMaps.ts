@@ -13,7 +13,7 @@
 
 /** Full-screen character art shown when first opening a module */
 export const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
-  "mod-4-19": require("../../../assets/IMAGES/finn/finn-splash.png") as number,
+  "mod-4-19": require("../../../assets/IMAGES/finn/finn-splash.webp") as number,
   "mod-5-25": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-freedom.png' },
 };
 

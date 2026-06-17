@@ -45,7 +45,7 @@ const LOTTIE_PRO_ANIM = require("../../../assets/lottie/Pro Animation 3rd.json")
 // value story: open chest, coins + bills inside, gold trim, built-in
 // PRO tag.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const PRO_CHEST_PNG = require("../../../assets/chests/pro-chest.png");
+const PRO_CHEST_PNG = require("../../../assets/chests/pro-chest.webp");
 
 /** Finn-opens-the-chest celebration video, plays after flying rewards complete */
 const CHEST_VIDEO_URL =

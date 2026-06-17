@@ -4,9 +4,9 @@ import type { DidYouKnowItem } from './types';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_NVDA = require('../../../assets/IMAGES/NVDA IR.png');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const IMG_FINN_PASSIVE = require('../../../assets/infographics/finn-passive.png');
+const IMG_FINN_PASSIVE = require('../../../assets/infographics/finn-passive.webp');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const IMG_FINN_FREEDOM = require('../../../assets/infographics/finn-freedom.png');
+const IMG_FINN_FREEDOM = require('../../../assets/infographics/finn-freedom.webp');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_INVESTMENT = require('../../../assets/IMAGES/INVESTMENT.jpg');
 const IMG_FINSTARS = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/FINSTARS.png' };

@@ -34,7 +34,7 @@ const CARD_SHADOW = {
   elevation: 3,
 } as const;
 
-const FINN_PROFILE = require('../../../assets/IMAGES/finn/finn-profile.png');
+const FINN_PROFILE = require('../../../assets/IMAGES/finn/finn-profile.webp');
 const FINN_HAPPY = require('../../../assets/webp/fin-happy.webp');
 
 interface Insight {

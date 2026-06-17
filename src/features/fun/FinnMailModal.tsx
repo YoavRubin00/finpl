@@ -66,8 +66,8 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
           <ExpoImage
             source={
               isComeback
-                ? require("../../../assets/IMAGES/MAIL ASSETS/mail-comeback-streak.png")
-                : require("../../../assets/IMAGES/fun/finn_mail.png")
+                ? require("../../../assets/IMAGES/MAIL ASSETS/mail-comeback-streak.webp")
+                : require("../../../assets/IMAGES/fun/finn_mail.webp")
             }
             style={{
               width: "100%",

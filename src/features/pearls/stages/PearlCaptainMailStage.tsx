@@ -57,8 +57,8 @@ export function PearlCaptainMailStage({ isActive, onContinue }: PearlCaptainMail
           <ExpoImage
             source={
               isComeback
-                ? require('../../../../assets/IMAGES/MAIL ASSETS/mail-comeback-streak.png')
-                : require('../../../../assets/IMAGES/fun/finn_mail.png')
+                ? require('../../../../assets/IMAGES/MAIL ASSETS/mail-comeback-streak.webp')
+                : require('../../../../assets/IMAGES/fun/finn_mail.webp')
             }
             style={[styles.header, { height: isComeback ? 170 : 120 }]}
             contentFit="cover"

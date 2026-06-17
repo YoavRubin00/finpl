@@ -184,3 +184,25 @@ tmp-email-previews/
 # Retention email cards are hosted on Vercel Blob (emailTemplates.ts uses remote
 # URLs); the local source PNGs are not referenced by any require().
 assets/IMAGES/retention/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Unreferenced heavy images (Yoav + Claude 2026-06-17 bundle-size sweep).
+# Verified via code scan: these are loaded ONLY from Vercel Blob (remote URI) or
+# not referenced at all — no require()/import bundles them, so excluding them is
+# an archive-only win with zero runtime impact. Individual files (not whole dirs)
+# because sibling files in the same dirs ARE required.
+# ─────────────────────────────────────────────────────────────────────────────
+assets/chests/locked-chest.png
+assets/IMAGES/fun/pizza_index.png
+assets/IMAGES/fun/inflation_meme.png
+assets/IMAGES/finn/finn-arena.png
+assets/IMAGES/finn/finn-error.png
+assets/IMAGES/finn/finn-referral.png
+assets/IMAGES/finn/finn-shop.png
+assets/IMAGES/finn/finn-success.png
+assets/infographics/finn-emergency-fund.png
+assets/infographics/finn-inflation.png
+assets/infographics/finn-installments.png
+assets/infographics/microsoft-sankey.png
+assets/IMAGES/Recitation_3_pdf
+assets/IMAGES/new icon.png

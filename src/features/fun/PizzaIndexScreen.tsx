@@ -27,10 +27,10 @@ const STITCH_BLUE = {
 };
 
 // ── Lottie assets for stat cards ──
-const IMAGE_PIZZA = require("../../../assets/IMAGES/fun/pizza_index_stat.png");
-const IMAGE_COFFEE = require("../../../assets/IMAGES/fun/coffee_streak_stat.png");
-const IMAGE_COMPOUND = require("../../../assets/IMAGES/fun/compound_coins_stat.png");
-const IMAGE_RANK = require("../../../assets/IMAGES/fun/podium_rank_stat.png");
+const IMAGE_PIZZA = require("../../../assets/IMAGES/fun/pizza_index_stat.webp");
+const IMAGE_COFFEE = require("../../../assets/IMAGES/fun/coffee_streak_stat.webp");
+const IMAGE_COMPOUND = require("../../../assets/IMAGES/fun/compound_coins_stat.webp");
+const IMAGE_RANK = require("../../../assets/IMAGES/fun/podium_rank_stat.webp");
 
 // ── Stat card data builder ──
 interface StatCard {
