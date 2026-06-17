@@ -92,7 +92,7 @@ const FEATURES: FeatureRow[] = [
   // Content lock — the 7 Pro-only simulations in proGates.ts
   { label: "7 סימולציות פרימיום", free: false, pro: true },
   // The most viscerally felt daily friction
-  { label: "לבבות", free: "5", pro: "אינסוף ♾️" },
+  { label: "אנרגיה", free: "20", pro: "אינסוף ♾️" },
   // Universal Pro signal — everyone understands the value
   { label: "ללא פרסומות", free: false, pro: true },
   // Progression boost — small but compounds over time

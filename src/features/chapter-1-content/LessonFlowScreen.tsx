@@ -85,7 +85,7 @@ import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { EnergyBatteryIcon } from "../../components/ui/EnergyBatteryIcon";
 import { ENERGY } from "../energy/energyTheme";
-import { COMBO_ENERGY_AMOUNT, COMBO_ENERGY_DAILY_CAP, isComboEnergyMilestone } from "../economy/comboEnergy";
+import { SHARK_FULL_CHEER, SHARK_SPARK_LOST } from "../energy/energyScenes";
 import { useDailyGoalStore } from "../economy/useDailyGoalStore";
 import { DoubleOrNothingModal } from "../../components/ui/DoubleOrNothingModal";
 import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
@@ -168,6 +168,15 @@ import type { LessonContext } from "../chat/buildChatPrompt";
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
 type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "mid-quiz-video" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+
+/** Active learning sub-modules that cost −1 energy on completion (Yoav 18/06).
+ *  Excludes passive phases (intro / video / hero / summary / interstitials /
+ *  infographic) — energy is spent only on real activity, not on watching. */
+const ACTIVE_SUBMODULE_PHASES: ReadonlySet<FlowPhase> = new Set<FlowPhase>([
+  "flashcards", "podcast", "couple-dilemma", "interactive-recall", "quizzes", "sim", "shark-dilemma",
+  // Content sub-modules too (Yoav 18/06 — "every sub-module, not just activities"):
+  "video", "module-infographic",
+]);
 
 /** "למידה רציפה" progress sync (Yoav 2026-06-11): maps a linear FlowPhase
  *  to the topic-tree chip kind it completes, so the continuous flow can
@@ -1757,11 +1766,12 @@ function HeartBreakOverlay({
 
       {/* Heart halves container */}
       <Animated.View style={[heartBreakStyles.heartContainer, heartAnimsStyle, originX !== undefined && { left: startX - (screenWidth / 2) }]}>
-        {/* Energy "battery dips" — a draining purple battery, not a red heart shatter.
-            leftStyle/rightStyle kept on the wrappers so the same shake rig still plays. */}
+        {/* Mistake reaction — Captain Shark reacts (concerned-but-supportive) as a
+            battery segment dims. Replaces the red heart shatter. leftStyle/rightStyle
+            kept on the wrappers so the same gentle shake rig still plays. */}
         <Animated.View style={leftStyle}>
           <Animated.View style={rightStyle}>
-            <EnergyBatteryIcon size={64} level={isLastHeart ? 0 : 0.18} />
+            <ExpoImage source={SHARK_SPARK_LOST} style={{ width: 104, height: 104 }} contentFit="contain" accessible={false} />
           </Animated.View>
         </Animated.View>
 
@@ -2534,6 +2544,12 @@ export function LessonFlowScreen() {
         quizTotal: quiz?.total ?? 0,
       },
     });
+
+    // Perfect-lesson bonus: 0 quiz mistakes → +2 energy (not on replay).
+    if (!isReplay && quiz && quiz.total > 0 && quiz.correct === quiz.total) {
+      const grantedPerfect = useHeartsStore.getState().grantEnergy(2, 'perfect-lesson');
+      if (grantedPerfect > 0) { try { captureEvent('combo_energy_earned', { granted: grantedPerfect, source: 'perfect-lesson' }); } catch { /* non-fatal */ } }
+    }
 
     // Server sync (optimistic via upsertProgress)
     upsertProgress({
@@ -3349,6 +3365,28 @@ export function LessonFlowScreen() {
   const [showCoinsReward, setShowCoinsReward] = useState(false);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
   const [showHeartBreak, setShowHeartBreak] = useState(false);
+
+  // Energy Sink (Yoav 18/06): completing an active learning sub-module costs −1
+  // energy — once per sub-module per lesson, skipped on replay + for Pro. We
+  // charge on LEAVING an active phase, dedup'd so interstitials (mid-quiz video)
+  // don't double-charge. Depleting here surfaces the in-lesson out-of-energy modal.
+  const prevPhaseRef = useRef<FlowPhase | null>(null);
+  const chargedSubmodulesRef = useRef<Set<FlowPhase>>(new Set<FlowPhase>());
+  useEffect(() => {
+    prevPhaseRef.current = null;
+    chargedSubmodulesRef.current = new Set<FlowPhase>();
+  }, [mod?.id]);
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (!prev || prev === phase || isReplay || isPro) return;
+    if (ACTIVE_SUBMODULE_PHASES.has(prev) && !chargedSubmodulesRef.current.has(prev)) {
+      chargedSubmodulesRef.current.add(prev);
+      const ok = useHeartsStore.getState().useHeart(isPro);
+      try { captureEvent('energy_spent', { source: 'submodule', phase: prev }); } catch { /* non-fatal */ }
+      if (!ok || useHeartsStore.getState().getHearts() <= 0) setShowOutOfHearts(true);
+    }
+  }, [phase, isReplay, isPro, mod?.id]);
   const heartsRowY = useRef(140);
   const heartsRowX = useRef(200);
   const [lifelineConcept, setLifelineConcept] = useState<string | null>(null);
@@ -3905,20 +3943,16 @@ export function LessonFlowScreen() {
     const newStreak = consecutiveCorrect + 1;
     setConsecutiveCorrect(newStreak);
     if (newStreak > peakStreak) setPeakStreak(newStreak);
-    // Shared combo streak — counts correct answers across quizzes + recall + sims
-    // + dilemmas + podcast. Every 4-in-a-row → +1 energy. (consecutiveCorrect above
-    // stays for the 3/5/7 streak popup.)
+    // Shared combo streak — SINGLE source of truth. Counts correct answers across
+    // quizzes + recall + sims + dilemmas + podcast; every 4-in-a-row → +1 energy
+    // (capped per day inside registerComboCorrect so it never dents the paywall;
+    // accuracy-only, skipped on replay). consecutiveCorrect above stays for the
+    // 3/5/7 popup. NOTE: this REPLACES the older quiz-only comboEnergy() grant —
+    // the two were double-counting on the same 'combo' source (דואו review).
     const grantedCombo = useHeartsStore.getState().registerComboCorrect(isReplay);
-    if (grantedCombo > 0) { try { captureEvent('combo_energy_earned', { granted: grantedCombo }); } catch { /* non-fatal */ } }
+    const energyCharged = grantedCombo > 0;
+    if (energyCharged) { try { captureEvent('combo_energy_earned', { granted: grantedCombo }); } catch { /* non-fatal */ } }
     try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: true, combo_at_answer: newStreak }); } catch { /* non-fatal */ }
-    // Energy sync (Yoav 17/06): a clean streak charges the purple energy battery
-    // via the reserved 'combo' source — capped per day so it never dents the
-    // out-of-energy paywall. Earned by accuracy only (אודרי-safe). Skipped on
-    // replay so completed modules can't farm free energy.
-    let energyCharged = false;
-    if (isComboEnergyMilestone(newStreak) && !isReplay) {
-      energyCharged = useHeartsStore.getState().grantEnergy(COMBO_ENERGY_AMOUNT, 'combo', COMBO_ENERGY_DAILY_CAP) > 0;
-    }
     setComboEnergyGranted(energyCharged);
     if (newStreak === 3 || newStreak === 5 || newStreak === 7) {
       if (newStreak >= 7) { doubleHeavyHaptic(); playSound('btn_click_heavy'); }
@@ -4443,6 +4477,22 @@ export function LessonFlowScreen() {
                 <Text style={{ fontSize: 11, fontWeight: '900', color: ENERGY.deep }}>+אנרגיה</Text>
               </View>
             )}
+          </Animated.View>
+        )}
+
+        {/* Energy-earned celebration — dancing shark + "+1 אנרגיה" (Yoav 18/06).
+            Makes charging the battery from a streak feel genuinely rewarding. */}
+        {showStreakPopup && comboEnergyGranted && (
+          <Animated.View
+            entering={FadeIn.duration(220)}
+            exiting={FadeOut.duration(220)}
+            style={{ position: 'absolute', top: 86, left: 0, right: 0, alignItems: 'center', zIndex: 11 }}
+            pointerEvents="none"
+          >
+            <ExpoImage source={SHARK_FULL_CHEER} style={{ width: 96, height: 96 }} contentFit="contain" accessible={false} />
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, backgroundColor: ENERGY.base, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 7, marginTop: -6, shadowColor: ENERGY.deep, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#fff', writingDirection: 'rtl' }}>+1 אנרגיה ⚡</Text>
+            </View>
           </Animated.View>
         )}
 

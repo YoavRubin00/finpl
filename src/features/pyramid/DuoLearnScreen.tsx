@@ -2495,18 +2495,10 @@ export function DuoLearnScreen() {
         </Modal>
       )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
-        {/* מטרת היום — daily-XP-goal ring (sea-blue/gold; never energy purple).
-            Slim row pinned above the energy band; fills as XP is earned today. */}
-        <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: 6 }}>
-          <DailyGoalRing size={44} />
-          <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: "#1f2937", writingDirection: "rtl" }}>מטרת היום</Text>
-            <Text style={{ fontSize: 11, fontWeight: "600", color: "#94a3b8", writingDirection: "rtl" }}>כל שיעור מקרב אתכם ליעד</Text>
-          </View>
-        </View>
-        {/* תחנת הכוח — always-visible energy power-station band, pinned above the
+        {/* מטרת היום הוסרה מהמפה כרגע (Yoav 18/06) — הטבעת ריאקטיבית בקוד; תמוקם מחדש בתוך האקורדיון בהמשך. */}
+                {/* תחנת הכוח — always-visible energy power-station band, pinned above the
             scrolling lesson path (so it never shifts the path's auto-scroll math). */}
-        <EnergyStationCard onSpeedUp={() => setSwipeQuestVisible(true)} />
+        <EnergyStationCard onStartLesson={() => { try { scrollRef.current?.scrollTo({ y: calcResumeScrollY(), animated: true }); } catch { /* non-fatal */ } }} />
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}

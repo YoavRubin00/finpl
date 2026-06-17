@@ -37,6 +37,7 @@ import { tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
 import { track } from '../../lib/analytics/events';
+import { useHeartsStore } from '../subscription/useHeartsStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useIsPro } from '../subscription/useSubscription';
 import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
@@ -413,6 +414,8 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       });
     } catch { /* non-fatal */ }
     markCompleted(pearlIdFor(pearl));
+    // Yoav 18/06: completing a pearl charges +1 energy (capped per day).
+    try { useHeartsStore.getState().grantEnergy(1, 'pearl', 6); } catch { /* non-fatal */ }
     onClose();
   }, [pearl, stages.length, markCompleted, onClose]);
 
@@ -501,6 +504,8 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // sum now lives in `PEARL_PER_STAGE_*` and is granted as the user
     // progresses, not at the end.
     markCompleted(pearlIdFor(pearl));
+    // Yoav 18/06: completing a pearl charges +1 energy (capped per day).
+    try { useHeartsStore.getState().grantEnergy(1, 'pearl', 6); } catch { /* non-fatal */ }
     onClose();
     // Yoav 2026-06-11: when the pearl's next module supports the topic
     // tree, route the intro with returnTo=topic-tree so the user lands

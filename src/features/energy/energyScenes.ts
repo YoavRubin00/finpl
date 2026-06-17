@@ -13,3 +13,6 @@ import type { ImageSource } from "expo-image";
 export const SHARK_CHARGING_IDLE: ImageSource = require("../../../assets/webp/energy/shark-charging-idle.webp");
 export const SHARK_FULL_CHEER: ImageSource = require("../../../assets/webp/energy/shark-full-cheer.webp");
 export const SHARK_LOW_NUDGE: ImageSource = require("../../../assets/webp/energy/shark-low-nudge.webp");
+// Shown briefly on a MISTAKE — shark reacts (concerned-but-supportive) as a
+// battery segment dims. Completes the emotional set (charge/cheer/empty/lose).
+export const SHARK_SPARK_LOST: ImageSource = require("../../../assets/webp/energy/shark-spark-lost.webp");

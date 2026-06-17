@@ -75,8 +75,9 @@ setOnUnauthorized(() => {
 // Dev-only: auto-grant PRO subscription + refill hearts so dev iteration
 // isn't blocked by paywall/hearts-out. Removed in production builds.
 if (__DEV__) {
-  // Auto-grant PRO in subscription cache so useIsPro() returns true everywhere
-  queryClient.setQueryData(['subscription'], { isPro: true, proExpiresAt: null });
+  // Yoav 18/06: testing the FREE energy experience — force NON-Pro in dev so the
+  // out-of-energy + upgrade-to-Pro flow is reachable. Flip to isPro:true to test Pro.
+  queryClient.setQueryData(['subscription'], { isPro: false, proExpiresAt: null });
   // Refill hearts on cold start
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports

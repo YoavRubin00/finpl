@@ -1,8 +1,15 @@
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { View, Text, StyleSheet, AppState, Pressable, type DimensionValue } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useReducedMotion } from "react-native-reanimated";
+import Animated, {
+  useReducedMotion,
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { GlowCard } from "../../components/ui/GlowCard";
 import { EnergyBatteryIcon } from "../../components/ui/EnergyBatteryIcon";
 import { ENERGY } from "./energyTheme";
@@ -17,20 +24,25 @@ import {
   ENERGY_REGEN_MS,
 } from "../subscription/useHeartsStore";
 import { useIsPro } from "../subscription/useSubscription";
-import { tapHaptic } from "../../utils/haptics";
+import { tapHaptic, successHaptic } from "../../utils/haptics";
 
 /**
  * תחנת הכוח — the always-visible energy power-station band at the top of the
  * main learning screen (DuoLearnScreen). Captain Shark visibly charges a live
- * purple battery; the user can tap "טען מהר" to play a short game for more
- * energy. Pure presentation — all economy lives in useHeartsStore.
+ * purple battery; the user can tap "שחק +אנרגיה" to play a short game for more
+ * energy. When the battery fills, the CTA flips to "יאללה, שיעור" so a full
+ * battery PULLS into a lesson instead of hiding the button. Any energy gain
+ * pops the battery + floats a "+N ⚡". Pure presentation — economy lives in
+ * useHeartsStore.
  *
- * `onSpeedUp` opens the speed-up mini-game (the daily swipe quest in
- * DuoLearnScreen). Winning it grants energy via grantEnergy('station-game').
+ * `onSpeedUp` opens the speed-up mini-game (the daily swipe quest).
+ * `onStartLesson` jumps the user into their next lesson (full-battery CTA).
  */
-const LOW_ENERGY_THRESHOLD = 3;
-
-export function EnergyStationCard({ onSpeedUp }: { onSpeedUp?: () => void }) {
+export function EnergyStationCard({
+  onStartLesson,
+}: {
+  onStartLesson?: () => void;
+}) {
   const isPro = useIsPro();
   const reduceMotion = useReducedMotion();
   // Subscribe so spend/grant from anywhere re-renders the band.
@@ -69,7 +81,42 @@ export function EnergyStationCard({ onSpeedUp }: { onSpeedUp?: () => void }) {
     : Math.min(MAX_ENERGY, useHeartsStore.getState().getHearts());
   const pct = Math.round((units / MAX_ENERGY) * 100);
   const isFull = units >= MAX_ENERGY;
-  const isLow = !isPro && units <= LOW_ENERGY_THRESHOLD;
+  // Empty (0) → the "low/empty" shark; the moment there's ANY energy → the calm
+  // charging shark; full → the celebration. (Yoav 18/06.)
+  const isEmpty = !isPro && units <= 0;
+
+  // ── Energy-gain juice: pop the battery + float a "+N ⚡" on any increase ──
+  const prevEnergyRef = useRef(units);
+  const pop = useSharedValue(1);
+  const gainOpacity = useSharedValue(0);
+  const gainY = useSharedValue(0);
+  const [gainText, setGainText] = useState("");
+  useEffect(() => {
+    const prev = prevEnergyRef.current;
+    prevEnergyRef.current = units;
+    if (isPro || reduceMotion) return;
+    if (units > prev) {
+      setGainText(`+${units - prev}`);
+      pop.value = withSequence(
+        withSpring(1.22, { damping: 9, stiffness: 320 }),
+        withSpring(1, { damping: 13, stiffness: 220 }),
+      );
+      gainOpacity.value = 0;
+      gainY.value = 0;
+      gainOpacity.value = withSequence(
+        withTiming(1, { duration: 180 }),
+        withTiming(0, { duration: 620 }),
+      );
+      gainY.value = withTiming(-26, { duration: 800 });
+      try { successHaptic(); } catch { /* non-fatal */ }
+    }
+  }, [units, isPro, reduceMotion, pop, gainOpacity, gainY]);
+
+  const batteryPopStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const gainStyle = useAnimatedStyle(() => ({
+    opacity: gainOpacity.value,
+    transform: [{ translateY: gainY.value }],
+  }));
 
   // Countdown to the next unit (only while charging).
   let countdownLabel = "";
@@ -84,7 +131,7 @@ export function EnergyStationCard({ onSpeedUp }: { onSpeedUp?: () => void }) {
 
   const sharkSrc = isFull || isPro
     ? SHARK_FULL_CHEER
-    : isLow
+    : isEmpty
       ? SHARK_LOW_NUDGE
       : SHARK_CHARGING_IDLE;
 
@@ -95,7 +142,9 @@ export function EnergyStationCard({ onSpeedUp }: { onSpeedUp?: () => void }) {
       ? "אנרגיה מלאה — הזמן המושלם לשיעור"
       : countdownLabel;
 
-  const showCta = !isPro && !isFull && !!onSpeedUp;
+  // CTA: full battery → pull into a lesson; otherwise → speed-up game. Pro: none.
+  const ctaMode: "start" | "none" =
+    !isPro && isFull && onStartLesson ? "start" : "none";
 
   const a11yLabel = isPro
     ? "אנרגיה: אינסופית, מנוי Pro"
@@ -124,7 +173,13 @@ export function EnergyStationCard({ onSpeedUp }: { onSpeedUp?: () => void }) {
             <View style={styles.meterTop}>
               <View style={styles.titleGroup}>
                 <Text style={styles.title}>אנרגיה</Text>
-                <EnergyBatteryIcon size={22} level={isPro ? 1 : units / MAX_ENERGY} />
+                <Animated.View style={batteryPopStyle}>
+                  <EnergyBatteryIcon size={22} level={isPro ? 1 : units / MAX_ENERGY} />
+                </Animated.View>
+                {/* "+N ⚡" floating gain */}
+                <Animated.Text style={[styles.gain, gainStyle]} pointerEvents="none">
+                  {`${gainText} ⚡`}
+                </Animated.Text>
               </View>
               <Text style={styles.count}>{countLabel}</Text>
             </View>
@@ -144,16 +199,16 @@ export function EnergyStationCard({ onSpeedUp }: { onSpeedUp?: () => void }) {
             {subline ? <Text style={styles.sub}>{subline}</Text> : null}
           </View>
 
-          {/* Speed-up CTA */}
-          {showCta && (
+          {/* CTA — "start a lesson" when the battery is full */}
+          {ctaMode === "start" && (
             <Pressable
-              onPress={() => { tapHaptic(); onSpeedUp?.(); }}
+              onPress={() => { tapHaptic(); onStartLesson?.(); }}
               style={styles.cta}
               accessibilityRole="button"
-              accessibilityLabel="שחקו משחק קצר כדי להוסיף אנרגיה"
+              accessibilityLabel="האנרגיה מלאה, התחילו שיעור"
             >
-              <Text style={styles.ctaTop}>שחק</Text>
-              <Text style={styles.ctaBottom}>+אנרגיה</Text>
+              <Text style={styles.ctaTop}>יאללה</Text>
+              <Text style={styles.ctaBottom}>שיעור 🚀</Text>
             </Pressable>
           )}
         </View>
@@ -202,6 +257,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: "#1f2937",
+    writingDirection: "rtl",
+  },
+  gain: {
+    position: "absolute",
+    top: -18,
+    left: 0,
+    fontSize: 13,
+    fontWeight: "900",
+    color: ENERGY.deep,
     writingDirection: "rtl",
   },
   count: {
