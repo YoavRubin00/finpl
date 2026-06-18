@@ -120,6 +120,13 @@ interface EconomyUIState {
   activeDates: string[];     // ISO dates when user completed a task (bounded to 90 days)
   frozenDates: string[];     // ISO dates when a streak freeze was auto-consumed
   streakFreezes: number;     // owned freeze items count
+  // Board 2026-06-18: 2 free freezes granted ONCE at onboarding (see grantOnboardingFreezes).
+  // This flag makes that grant idempotent across re-runs / re-installs.
+  onboardingFreezesGranted: boolean;
+  // Board 2026-06-18: day-2 / day-3 are the habit-forming days. We give a small
+  // one-per-day coin reward there; this records the last streak-day we paid out
+  // so the reward can't double-fire if the celebration re-mounts the same day.
+  lastStreakDayRewardDate: string | null;
   pendingFreezeSaveAck: boolean; // true when freeze was consumed, cleared on modal dismiss
   // Streak Repair (US-004), offered ONCE per break if prev streak >= 3
   pendingRepairOffer: boolean;
@@ -164,6 +171,10 @@ interface EconomyUIState {
   grantStarterCapital: () => boolean;
   dismissLevelUp: () => void;
   addStreakFreezes: (count: number) => void;
+  /** Board 2026-06-18: grant the 2 onboarding free freezes, exactly once ever. Returns true if granted. */
+  grantOnboardingFreezes: () => boolean;
+  /** Board 2026-06-18: small day-2 / day-3 habit reward (coins), idempotent per day. Returns coins granted (0 if none). */
+  awardStreakDayReward: (streak: number) => number;
   dismissFreezeSaveAck: () => void;
   repairStreak: (source: "gems" | "ad") => boolean;
   dismissRepairOffer: () => void;
@@ -182,6 +193,8 @@ const INITIAL_STATE = {
   activeDates: [] as string[],
   frozenDates: [] as string[],
   streakFreezes: 0,
+  onboardingFreezesGranted: false,
+  lastStreakDayRewardDate: null as string | null,
   pendingFreezeSaveAck: false,
   pendingRepairOffer: false,
   previousStreakBeforeBreak: 0,
@@ -545,6 +558,34 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         set((state) => ({ streakFreezes: state.streakFreezes + count }));
       },
 
+      // Board 2026-06-18: have-streak>=2 is only ~5%, so protection arriving at
+      // day-7 is too late — almost nobody reaches it. Grant 2 free freezes at
+      // onboarding instead, so the user is protected through the first-72h danger
+      // zone. Persisted flag → granted exactly once ever (re-running onboarding,
+      // re-installs after rehydrate, etc. won't re-grant).
+      grantOnboardingFreezes: (): boolean => {
+        if (get().onboardingFreezesGranted) return false;
+        set((state) => ({
+          streakFreezes: state.streakFreezes + 2,
+          onboardingFreezesGranted: true,
+        }));
+        return true;
+      },
+
+      // Board 2026-06-18: day-2 and day-3 are the habit-forming days. A small,
+      // restrained coin reward (Audrey: not casino) reinforces the loop right
+      // where it matters. Idempotent per day via lastStreakDayRewardDate so a
+      // celebration re-mount can't double-pay.
+      awardStreakDayReward: (streak: number): number => {
+        if (streak !== 2 && streak !== 3) return 0;
+        const today = todayISO();
+        if (get().lastStreakDayRewardDate === today) return 0;
+        const coins = streak === 2 ? 20 : 30;
+        set({ lastStreakDayRewardDate: today });
+        get().addCoins(coins);
+        return coins;
+      },
+
       dismissFreezeSaveAck: () => set({ pendingFreezeSaveAck: false }),
 
       repairStreak: (source: "gems" | "ad") => {
@@ -685,6 +726,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         activeDates: state.activeDates,
         frozenDates: state.frozenDates,
         streakFreezes: state.streakFreezes,
+        onboardingFreezesGranted: state.onboardingFreezesGranted,
+        lastStreakDayRewardDate: state.lastStreakDayRewardDate,
         pendingFreezeSaveAck: state.pendingFreezeSaveAck,
         pendingRepairOffer: state.pendingRepairOffer,
         previousStreakBeforeBreak: state.previousStreakBeforeBreak,
@@ -704,6 +747,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         if (!Array.isArray(state.activeDates)) state.activeDates = [];
         if (!Array.isArray(state.frozenDates)) state.frozenDates = [];
         if (typeof state.streakFreezes !== "number") state.streakFreezes = 0;
+        if (typeof state.onboardingFreezesGranted !== "boolean") state.onboardingFreezesGranted = false;
+        if (typeof state.lastStreakDayRewardDate !== "string" && state.lastStreakDayRewardDate !== null) state.lastStreakDayRewardDate = null;
         if (typeof state.pendingFreezeSaveAck !== "boolean") state.pendingFreezeSaveAck = false;
         if (typeof state.pendingRepairOffer !== "boolean") state.pendingRepairOffer = false;
         if (typeof state.previousStreakBeforeBreak !== "number") state.previousStreakBeforeBreak = 0;

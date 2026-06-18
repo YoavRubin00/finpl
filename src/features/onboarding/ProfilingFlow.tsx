@@ -2463,6 +2463,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const router = useRouter();
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const grantOnboardingFreezes = useEconomyUIStore((s) => s.grantOnboardingFreezes);
   // Streak bump uses markDailyActivityCompleted() helper, not the mutation hook —
   // see comment at the call site in handleDone for rationale.
   const { data: streakData } = useStreak();
@@ -2628,6 +2629,12 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // Flat +50 coins for onboarding completion (2026-05-27 redesign — variable
     // rewards removed; clean path into mod-0-1).
     try { addCoins(ONBOARDING_COINS); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // Board 2026-06-18: have-streak>=2 is only ~5% — the free freeze used to
+    // arrive at day-7 (almost nobody reaches it), AFTER the first-72h danger
+    // window. Grant 2 free freezes ONCE here so new users are protected from
+    // day 1. grantOnboardingFreezes() is idempotent (persisted flag), and the
+    // redo path returns above, so this can't re-grant on a re-do/re-install.
+    try { grantOnboardingFreezes(); } catch (e) { if (__DEV__) console.warn('[onboarding] grantOnboardingFreezes failed:', e); }
     // Day 1 of streak starts here so the user has something to protect from
     // minute zero (loss aversion). Use the unified helper (not the raw
     // mutation): it bumps the LOCAL store first — which now also mirrors the

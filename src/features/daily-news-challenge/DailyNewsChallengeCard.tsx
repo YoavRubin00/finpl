@@ -9,6 +9,7 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  useReducedMotion,
   Easing,
 } from 'react-native-reanimated';
 import { Newspaper, Sparkles, CheckCircle2, ChevronLeft, Snowflake } from 'lucide-react-native';
@@ -59,16 +60,23 @@ export function DailyNewsChallengeCard({
   isPro,
   onPress,
 }: DailyNewsChallengeCardProps): React.ReactElement | null {
+  const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   // Gold pulse glow when there's a fresh challenge waiting and it's daytime.
   // Loops opacity 0.4 ↔ 0.85 every ~2s. Stops once the user completes today.
+  // Respects reduced-motion: we still surface a steady (non-pulsing) ring so
+  // the card stays discoverable, but without the looping animation.
   const glow = useSharedValue(0);
   const eyebrow = useMemo(() => timeOfDayBadge(), []);
   useEffect(() => {
     if (completed || !isPulseHours()) {
       glow.value = 0;
+      return;
+    }
+    if (reducedMotion) {
+      glow.value = 0.7;
       return;
     }
     glow.value = withRepeat(
@@ -79,7 +87,7 @@ export function DailyNewsChallengeCard({
       -1,
       false,
     );
-  }, [completed, glow]);
+  }, [completed, glow, reducedMotion]);
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
   // DNC-specific streak counter was retired — the unified daily streak in
   // the header (GlobalWealthHeader → useEconomyUIStore.currentStreak) is the

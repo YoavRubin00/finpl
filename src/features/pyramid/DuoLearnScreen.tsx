@@ -69,6 +69,7 @@ import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
 import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
+import { DailyNewsChallengeCard } from "../daily-news-challenge/DailyNewsChallengeCard";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { BullshitSwipeCard } from "../finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
 // Three swipe-game variants rotate per Israeli calendar day in the swipe
@@ -1301,6 +1302,17 @@ export function DuoLearnScreen() {
   // point, so this also lets us catch regressions where a stray callsite
   // opens the sheet without setting a source.
   const [newsEntrySource, setNewsEntrySource] = useState<'daily_quests_modal' | 'direct' | 'unknown'>('unknown');
+  // Hero-card reads. Selectors are granular so the card re-renders only when
+  // the relevant slice changes (challenge payload arriving, today's answers,
+  // or the Pro chest opening), not on every store write.
+  const newsChallenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
+  const newsAnswered = useDailyNewsChallengeStore((s) => s.answered);
+  const newsCompletedToday = newsAnswered[0] !== null && newsAnswered[1] !== null;
+  const newsProChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
+  // Fully done = answered both AND (for Pro) opened the Pro chest too. Once
+  // fully done the hero collapses into a compact "סיימת!" pill so it stops
+  // being permanent clutter but still confirms the daily ritual is closed.
+  const newsFullyDone = newsCompletedToday && (isPro ? newsProChestOpened : true);
 
   // Swipe + dilemma daily-quest modals. Each used to live in /quest/* routes
   // that hosted the card standalone, but those routes broke after the Feed
@@ -2330,6 +2342,21 @@ export function DuoLearnScreen() {
   }, []);
   const handleMindMap = useCallback((idx: number) => { tapHaptic(); setMindMapChapter(idx); }, []);
 
+  // Hero-card → news sheet. Distinct from handleQuestPress: the hero card is
+  // its OWN entry point straight into the news sheet, so it is NOT subject to
+  // the mod-0-1 quest-hub gate. Discovery is instead relaxed to "after the app
+  // walkthrough" (see the card mount below) so a brand-new user can reach the
+  // daily challenge on day one — the whole point of surfacing this hero.
+  // If today is already done we wipe per-item answers so the chips re-render
+  // (chests + analytics guards stay set → no double payout / no double event),
+  // mirroring the quests-modal re-do path.
+  const handleNewsCardPress = useCallback(() => {
+    const dnc = useDailyNewsChallengeStore.getState();
+    if (dnc.hasCompletedToday()) dnc.resetTodayAnswers();
+    setNewsEntrySource('direct');
+    setNewsSheetVisible(true);
+  }, []);
+
   return (
     <View style={styles.root}>
       {/* Unified notification-permission banner — the SAME "אתם מפספסים
@@ -2519,11 +2546,42 @@ export function DuoLearnScreen() {
           scrollEventThrottle={100}
         >
 
-          {/* Daily News Challenge entry: floating NewsIconButton was retired.
-              The entry now lives inside the Daily Quests modal as the 4th
-              quest of the day (Captain Shark + 4 stars under him on the
-              active chapter). Tapping the news quest in the modal calls back
-              into this screen via onOpenNewsChallenge to open the same sheet. */}
+          {/* Daily News Challenge — HERO at the very top of the scroll, above
+              the chapters. This is the primary discovery surface (the floating
+              NewsIconButton was retired and the quest-modal entry only reached
+              ~14% of users). Sits INSIDE the scroll, BELOW the pinned energy/
+              stars header (EnergyStationCard is rendered outside the ScrollView)
+              so there's no overlap with the header or the first PathConnector.
+              Discovery gate is relaxed to "after the app walkthrough" so a
+              brand-new user can reach the daily challenge on day one — it does
+              NOT wait for mod-0-1 like the quest-hub gate does.
+              Done-state collapses: while there's something to do we show the
+              full pulsing hero; once fully done it collapses to a compact
+              "סיימת!" pill so it stops being permanent clutter. */}
+          {!isWalkthroughActive && newsChallenge ? (
+            newsFullyDone ? (
+              <Pressable
+                onPress={handleNewsCardPress}
+                accessibilityRole="button"
+                accessibilityLabel="אקטואליה פיננסית — סיימת להיום, הקש כדי לחזור"
+                style={styles.newsDonePill}
+              >
+                <Text style={styles.newsDonePillText} allowFontScaling={false}>
+                  סיימת את האקטואליה הפיננסית להיום 🎉
+                </Text>
+              </Pressable>
+            ) : (
+              <View style={styles.newsHeroWrap}>
+                <DailyNewsChallengeCard
+                  challenge={newsChallenge}
+                  completed={newsCompletedToday}
+                  proChestOpened={newsProChestOpened}
+                  isPro={isPro}
+                  onPress={handleNewsCardPress}
+                />
+              </View>
+            )
+          ) : null}
 
           {/* Chapter sections */}
           {(() => {
@@ -2949,6 +3007,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: H_PAD,
     paddingBottom: 120,
     paddingTop: 4,
+  },
+  // Spacing around the daily-news hero so it breathes between the pinned
+  // energy header above and the first chapter/PathConnector below.
+  newsHeroWrap: {
+    marginTop: 6,
+    marginBottom: 14,
+  },
+  // Compact collapsed state once the daily challenge is fully done — keeps a
+  // low-key confirmation + re-entry point without the full pulsing hero.
+  newsDonePill: {
+    marginTop: 6,
+    marginBottom: 14,
+    alignSelf: "stretch",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: "rgba(14,116,144,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(14,116,144,0.22)",
+  },
+  newsDonePillText: {
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: "#0e7490",
+    writingDirection: "rtl",
+    textAlign: "center",
   },
   greetingRow: {
     flexDirection: "row-reverse",

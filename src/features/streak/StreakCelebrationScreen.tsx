@@ -28,6 +28,7 @@ import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { SparkleOverlay } from "../../components/ui/SparkleOverlay";
 import { FINN_FIRE } from "../retention-loops/finnMascotConfig";
 import { useTimeoutCleanup } from "../../hooks/useTimeoutCleanup";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 
 const WEEKDAY_LABELS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
@@ -53,8 +54,22 @@ export function StreakCelebrationScreen({
 }: StreakCelebrationScreenProps) {
   const isMilestone = streak === 7 || streak === 30 || streak === 100 || streak === 365;
   const grantedFreezeAt7 = streak === 7;
+  // Board 2026-06-18: day-2 / day-3 are the habit-forming days. Treat them as
+  // mini-milestones — encouraging copy + a small coin reward — to pull users
+  // through the first-72h window where have-streak>=2 currently dies (~5%).
+  const isHabitDay = streak === 2 || streak === 3;
+  const [habitReward, setHabitReward] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const safeTimeout = useTimeoutCleanup();
+
+  // Fire the day-2 / day-3 reward once, on mount. The store keeps it idempotent
+  // per day (lastStreakDayRewardDate), so a celebration re-mount won't re-pay.
+  useEffect(() => {
+    if (!isHabitDay) return;
+    const granted = useEconomyUIStore.getState().awardStreakDayReward(streak);
+    if (granted > 0) setHabitReward(granted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Milestone streaks (7/30/100/365) get a celebration video instead of the
   // static FINN_FIRE image. Non-milestone counts keep the existing image.
@@ -238,6 +253,15 @@ export function StreakCelebrationScreen({
             ? "!שבוע מושלם"
             : "";
 
+  // Day-2 / day-3 habit copy — Captain Shark's voice: singular, gender-free
+  // (BRAND.md). Short, encouraging, no preaching.
+  const habitText =
+    streak === 2
+      ? "יומיים ברצף! ההרגל מתחיל"
+      : streak === 3
+        ? "שלושה ימים! ההרגל נתפס"
+        : "";
+
   return (
     <Pressable style={styles.pressableContainer} onPress={handleDismiss}>
       <Animated.View style={[styles.container, overlayStyle]}>
@@ -300,9 +324,22 @@ export function StreakCelebrationScreen({
               <Text style={styles.milestoneLabel}>{milestoneText}</Text>
             </View>
           )}
+          {/* Day-2 / day-3 habit milestone copy */}
+          {isHabitDay && !!habitText && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <Text style={{ fontSize: 20 }}>🔥</Text>
+              <Text style={styles.milestoneLabel}>{habitText}</Text>
+            </View>
+          )}
           {grantedFreezeAt7 && (
             <View style={styles.freezeRewardRow}>
               <Text style={styles.freezeRewardText}>🛡️ +1 מגן רצף</Text>
+            </View>
+          )}
+          {/* Day-2 / day-3 small coin reward badge */}
+          {habitReward > 0 && (
+            <View style={styles.freezeRewardRow}>
+              <Text style={styles.freezeRewardText}>🪙 +{habitReward} מטבעות</Text>
             </View>
           )}
         </Animated.View>
