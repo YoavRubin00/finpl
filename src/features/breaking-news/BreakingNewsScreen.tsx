@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { AlertTriangle, Bell, Crown, LogIn, Newspaper, Plus, Sparkles, X } from 'lucide-react-native';
+import { AlertTriangle, Bell, LogIn, Newspaper, Plus, Sparkles, X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
