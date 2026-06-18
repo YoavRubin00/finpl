@@ -629,10 +629,15 @@ function ModuleNode({
               </View>
             </Pressable>
             {questTotalCount !== undefined && questTotalCount > 0 && (
-              <ProgressStars
-                completedCount={questCompletedCount ?? 0}
-                totalCount={questTotalCount}
-              />
+              // Re-center the stars under the NODE (not the shark, which sits
+              // ±97.5 to the side) so they line up symmetrically with the daily-
+              // challenge message below them (Yoav 2026-06-18).
+              <View style={{ transform: [{ translateX: finnGoesRight ? -(NODE_SIZE / 2 + 6 + CHAR_SIZE / 2) : (NODE_SIZE / 2 + 6 + CHAR_SIZE / 2) }] }}>
+                <ProgressStars
+                  completedCount={questCompletedCount ?? 0}
+                  totalCount={questTotalCount}
+                />
+              </View>
             )}
           </Animated.View>
           {/* Speech bubble above + offset to the right of Finn so it doesn't
@@ -1106,9 +1111,9 @@ const ChapterSection = React.memo(function ChapterSection({
                     // via position:absolute) without visually detaching from it.
                     marginTop: 8,
                     marginBottom: 0,
-                    transform: [{
-                      translateX: getNodeOffset(i) + (getNodeOffset(i) >= 0 ? 98 : -98),
-                    }],
+                    // Centered under the node — symmetric with the re-centered
+                    // ProgressStars above (Yoav 2026-06-18).
+                    transform: [{ translateX: getNodeOffset(i) }],
                   }}
                 >
                   {newsBadgeNode}
@@ -1446,8 +1451,12 @@ export function DuoLearnScreen() {
   const [mondialVisible, setMondialVisible] = useState(false);
   const mondialOpenedAt = useMondialStore((s) => s.openedAt);
   const mondialMarkOpened = useMondialStore((s) => s.markOpened);
+  // Yoav 2026-06-18: once the user opens the carousel, the badge should NOT
+  // appear again (persisted via useMondialStore.openedAt).
   const mondialBadgeVisible =
-    localCompletedModuleIds.length > 0 && localDateISO() >= MONDIAL_LAUNCH_DATE;
+    localCompletedModuleIds.length > 0 &&
+    localDateISO() >= MONDIAL_LAUNCH_DATE &&
+    !mondialOpenedAt;
   // Per-session memory of which modules already triggered the
   // PROFILE_QUESTION_BACKSTOPS modal. Skipping the modal doesn't flip the
   // store flag — without this guard a user could be re-prompted on every
