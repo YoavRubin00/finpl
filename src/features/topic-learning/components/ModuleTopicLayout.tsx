@@ -39,8 +39,11 @@ const SCENE_ANCHOR_FRACTIONS = [0.06, 0.74] as const;
 // than dedicated trail segments (Yoav R5.12 2026-06-10: "החיבור בין
 // סוף המודולה לפנינה שאחריו תהיה קצרה יותר וטבעית. כנל בין כפתור
 // המודולה למה שבא אחריו"). Earlier R5.11 ran 96px+40px overlap which
-// felt like a separate trail; this halves both.
-const EDGE_CONNECTOR_H = 44;
+// felt like a separate trail; this halves both. Tightened again 44→24
+// (Yoav 2026-06-18) to pull the intro chip up under the module node after the
+// floating "מטרת היום" ring was removed. MIRROR in DuoLearnScreen's auto-scroll
+// effect (its local EDGE_CONNECTOR_H) MUST match or the gold-chip scroll drifts.
+const EDGE_CONNECTOR_H = 24;
 // Entry connector ALSO extends upward into the parent ModuleNode's
 // space — DuoLearnScreen doesn't render any trail between mod-1-1 and
 // the accordion (its outer PathConnector goes AFTER the accordion to

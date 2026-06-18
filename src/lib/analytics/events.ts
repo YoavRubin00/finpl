@@ -67,10 +67,6 @@ export type AppEvent =
   | { name: 'lesson_exited_early'; props: { lesson_id: string; chapter_id?: string; reason: 'back_button' | 'navigation' | 'app_background'; phase?: string } }
   | { name: 'module_unlocked'; props: { module_id: string; chapter_id?: string; trigger?: 'completion' | 'pro_subscribe' | 'manual' } }
   | { name: 'chapter_completed'; props: { chapter_id: string; total_modules?: number } }
-  // Daily-goal ring — fires once per day when xpToday first crosses goalXp.
-  // `overachiever_lessons` counts extra lessons finished after the goal was
-  // already met that day ("מצב על"), so we can size the post-goal pull.
-  | { name: 'daily_goal_reached'; props: { goal_xp: number; xp_today: number; overachiever_lessons: number } }
   // ── Topic-tree (R6-R8 architecture) ───────────────────────────────────
   // The topic-tree learning method (learningMode: 'topic-tree') fires one
   // `topic_completed` per chip. Before this the new method emitted NO learning

@@ -86,7 +86,6 @@ import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { EnergyBatteryIcon } from "../../components/ui/EnergyBatteryIcon";
 import { ENERGY } from "../energy/energyTheme";
 import { SHARK_FULL_CHEER } from "../energy/energyScenes";
-import { useDailyGoalStore } from "../economy/useDailyGoalStore";
 import { DoubleOrNothingModal } from "../../components/ui/DoubleOrNothingModal";
 import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
 import { SharkBridgeCTA, SharkReferralCTA, SharkToolCTA, moduleHasDividendContent } from "../../components/ui/SharkCTAModals";
@@ -2307,9 +2306,6 @@ export function LessonFlowScreen() {
 
   // completeModule: server-sync + telemetry + XP/coins (mirrors old store action)
   const MODULE_COMPLETE_XP = 30;
-  // Small coin bonus for finishing a lesson AFTER today's goal was already met
-  // ("מצב על" overachiever pull). Kept modest so the goal stays the headline.
-  const OVERACHIEVER_COIN_BONUS = 20;
   const completeModule = useCallback((moduleId: string) => {
     // Guard: skip if already completed (server is source of truth)
     const alreadyDone = getCompletedModulesSync(chapterStoreKey(chapterId ?? 'chapter-1'));
@@ -2371,18 +2367,6 @@ export function LessonFlowScreen() {
       bestScore: quiz?.correct,
       xpEarned: MODULE_COMPLETE_XP,
     });
-
-    // Daily-goal ring: if today's goal was ALREADY met before this lesson
-    // (this lesson's XP lands at the chest tap, after here), it's an
-    // overachiever lesson ("מצב על") → small bonus. noteLessonComplete also
-    // advances the overachiever counter for the daily_goal_reached analytics.
-    try {
-      const goal = useDailyGoalStore.getState();
-      if (goal.goalReached && !isReplay) {
-        useEconomyUIStore.getState().addCoins(OVERACHIEVER_COIN_BONUS, 'lesson');
-      }
-      goal.noteLessonComplete();
-    } catch { /* non-fatal */ }
   }, [chapterId, upsertProgress, recordDailyActivity, isReplay]);
 
   const { isMuted, toggleMute } = useLessonMusic();

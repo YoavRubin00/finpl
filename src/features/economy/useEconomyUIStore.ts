@@ -296,12 +296,6 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           const boostXp = get().getActiveBoostMultipliers().xp;
           if (boostXp > 1.0) finalAmount = Math.round(finalAmount * boostXp);
         }
-        // Feed the "מטרת היום" daily-goal ring. This was documented as wired but
-        // never actually called — the ring stayed static (Yoav 18/06). Lazy
-        // require avoids a circular import with the daily-goal store.
-        try {
-          require("./useDailyGoalStore").useDailyGoalStore.getState().addXpToday(finalAmount);
-        } catch { /* non-fatal */ }
         // Read current xp from server-backed query cache for level-up detection
         const cached = queryClient.getQueryData<Economy | null>(economyQueryKey);
         const prevXP = cached?.xp ?? 0;
@@ -333,14 +327,6 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         // (see note there) — never from the optimistic cache, which used to
         // clobber coins/gems to 0 on cold-start races.
         fireEconomyDelta({ xpDelta: finalAmount });
-        // Reflect the grant into the daily-goal ring ("מטרת היום"). Pure UI
-        // mirror — the ring is never a source of truth for the economy. Lazy
-        // require avoids a static import cycle (events.ts ← daily-goal ← here).
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { useDailyGoalStore } = require('./useDailyGoalStore') as typeof import('./useDailyGoalStore');
-          useDailyGoalStore.getState().addXpToday(finalAmount);
-        } catch { /* non-fatal */ }
       },
 
       dismissLevelUp: () => set({ pendingLevelUp: null }),

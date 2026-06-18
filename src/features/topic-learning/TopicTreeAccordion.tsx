@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { DailyGoalRing } from '../economy/DailyGoalRing';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { mediumHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
@@ -534,14 +533,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       exiting={FadeOut.duration(180)}
     >
       <View style={{ position: 'relative' }}>
-        {/* מטרת היום — טבעת היעד היומי בתוך האקורדיון (Yoav 18/06). */}
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 8 }}>
-          <DailyGoalRing size={40} />
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: '#1f2937', writingDirection: 'rtl' }}>מטרת היום</Text>
-            <Text style={{ fontSize: 10, fontWeight: '600', color: '#94a3b8', writingDirection: 'rtl' }}>כל שיעור מקרב אתכם ליעד</Text>
-          </View>
-        </View>
         {showWelcomeBanner && (
           <Animated.View
             entering={FadeInDown.delay(120).duration(360)}

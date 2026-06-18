@@ -80,7 +80,6 @@ import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeA
 import { BreakingNewsBadge } from "../breaking-news/components/BreakingNewsBadge";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { EnergyStationCard } from "../energy/EnergyStationCard";
-import { DailyGoalRing } from "../economy/DailyGoalRing";
 import { useHeartsStore } from "../subscription/useHeartsStore";
 // FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
 // entry lives in the Daily News Challenge card (added in Stage A).
@@ -1909,7 +1908,7 @@ export function DuoLearnScreen() {
     const recommendedIdx = topics.findIndex((t) => !completedMap[t.id]);
     const safeRecommendedIdx = recommendedIdx < 0 ? 0 : recommendedIdx;
     const OUTER_MODULE_ROW_H = 114;     // outer ModuleNode row height
-    const EDGE_CONNECTOR_H = 44;        // accordion top connector
+    const EDGE_CONNECTOR_H = 24;        // accordion top connector
     const ENTRY_OVERLAP = 14;           // accordion lifts -14 into module
     const ROW_HEIGHT = 114;             // per-chip row inside accordion
     const VIEWPORT_TOP_PAD = 96;        // headroom above gold chip
@@ -2504,7 +2503,6 @@ export function DuoLearnScreen() {
         </Modal>
       )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
-        {/* מטרת היום הוסרה מהמפה כרגע (Yoav 18/06) — הטבעת ריאקטיבית בקוד; תמוקם מחדש בתוך האקורדיון בהמשך. */}
                 {/* תחנת הכוח — always-visible energy power-station band, pinned above the
             scrolling lesson path (so it never shifts the path's auto-scroll math). */}
         <EnergyStationCard onStartLesson={() => { try { scrollRef.current?.scrollTo({ y: calcResumeScrollY(), animated: true }); } catch { /* non-fatal */ } }} />
