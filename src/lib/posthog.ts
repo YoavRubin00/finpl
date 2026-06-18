@@ -1,5 +1,6 @@
 import PostHog from 'posthog-react-native';
 import type { PostHogEventProperties } from '@posthog/core';
+import * as Linking from 'expo-linking';
 
 // Re-export under a friendlier name so feature code can import a single,
 // well-known type rather than reaching into PostHog internals.
@@ -49,6 +50,34 @@ export function initPostHog(): void {
       console.warn('[PostHog] init failed:', err);
     }
   }
+
+  // Capture UNCAUGHT JS errors to PostHog Error Tracking too — white-screen
+  // crashes usually come from async/uncaught errors the React ErrorBoundary
+  // never sees. Chain the previous handler so RN's red-box / fatal flow stays.
+  type RNErrorUtils = {
+    getGlobalHandler?: () => ((e: unknown, fatal?: boolean) => void) | undefined;
+    setGlobalHandler?: (h: (e: unknown, fatal?: boolean) => void) => void;
+  };
+  const errorUtils = (globalThis as unknown as { ErrorUtils?: RNErrorUtils }).ErrorUtils;
+  if (client && errorUtils?.setGlobalHandler) {
+    const prev = errorUtils.getGlobalHandler?.();
+    errorUtils.setGlobalHandler((error: unknown, isFatal?: boolean) => {
+      try {
+        const message = error instanceof Error ? error.message : String(error);
+        const type = error instanceof Error ? error.name : 'Error';
+        client?.capture('$exception', {
+          $exception_list: [{ type, value: message, mechanism: { handled: false } }],
+          $exception_message: message,
+          $exception_type: type,
+          is_fatal: !!isFatal,
+          capture_source: 'global_handler',
+        });
+      } catch {
+        /* never block the native handler */
+      }
+      prev?.(error, isFatal);
+    });
+  }
 }
 
 export function identifyUser(distinctId: string, properties?: EventProperties): void {
@@ -80,6 +109,38 @@ export function setPersonProperties(properties: EventProperties): void {
 
 export function resetUser(): void {
   client?.reset();
+}
+
+/**
+ * Capture install/launch attribution from the initial deep-link URL (utm_*).
+ * Board 2026-06-18: 100% of installs were "Unknown". This catches users who
+ * arrive via a TRACKED link (Instagram bio, WhatsApp CTA) once those links
+ * carry ?utm_source=… — set them as person properties so the source attaches to
+ * the eventual identified person. Organic store-referrer (Play/App Store) needs
+ * a native install-referrer module (future); this is the link-based first step.
+ */
+export async function captureLaunchAttribution(): Promise<void> {
+  try {
+    const url = await Linking.getInitialURL();
+    if (!url) return;
+    const { queryParams } = Linking.parse(url);
+    if (!queryParams) return;
+    const pick = (k: string): string | undefined => {
+      const v = queryParams[k];
+      return typeof v === 'string' ? v : Array.isArray(v) ? v[0] : undefined;
+    };
+    const source = pick('utm_source');
+    const medium = pick('utm_medium');
+    const campaign = pick('utm_campaign');
+    if (!source && !medium && !campaign) return;
+    setPersonProperties({
+      ...(source ? { initial_utm_source: source } : {}),
+      ...(medium ? { initial_utm_medium: medium } : {}),
+      ...(campaign ? { initial_utm_campaign: campaign } : {}),
+    });
+  } catch {
+    /* attribution is best-effort — never block launch */
+  }
 }
 
 export function getPostHogClient(): PostHog | null {

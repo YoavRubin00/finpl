@@ -2678,6 +2678,11 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // Drop the user straight into the first module (mod-0-1) for a hands-on
     // first taste before the walkthrough offers a tour. The walkthrough only
     // fires once they're in a tab, so navigating to lesson keeps it suppressed.
+    // Bridges onboarding_completed → lesson_started so we can SEE where the
+    // post-onboarding drop happens (board 2026-06-18: only ~34% reach a lesson;
+    // this event splits "abandoned at streak celebration" vs "route/lesson
+    // didn't fire" vs "real drop").
+    try { captureEvent('onboarding_enter_first_module', { target: 'mod-0-1', chapter_id: 'chapter-0' }); } catch { /* non-fatal */ }
     router.replace("/lesson/mod-0-1?chapterId=chapter-0" as Href);
   }
 
