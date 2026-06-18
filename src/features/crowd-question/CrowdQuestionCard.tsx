@@ -22,6 +22,7 @@ import { submitCrowdVote, type CrowdQuestionStats } from '../../db/sync/syncCrow
 import { getIsraelDateISO } from '../../utils/israelTime';
 import { useLivePercents } from './computeLiveStats';
 import { useCrowdQuestionStore } from './useCrowdQuestionStore';
+import { loadCloudPolls } from './crowdQuestionsApi';
 import type { CrowdOption, CrowdQuestion, MarketSnapshot, Sentiment } from './types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -67,6 +68,9 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market,
   const getUserVoteFor = useCrowdQuestionStore((s) => s.getUserVoteFor);
   const recordLocalVote = useCrowdQuestionStore((s) => s.recordLocalVote);
   const authId = useAuthStore((s) => s.email ?? 'guest');
+
+  // Warm Bar's cloud questions so the next open reflects the live set.
+  useEffect(() => { loadCloudPolls().catch(() => {}); }, []);
 
   const question = useMemo<CrowdQuestion>(() => getTodayQuestion(market), [getTodayQuestion, market]);
   const alreadyVoted = hasVotedToday();

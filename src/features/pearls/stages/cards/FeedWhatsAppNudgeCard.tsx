@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Dimensions, Linking } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
@@ -6,6 +6,7 @@ import Svg, { Path } from "react-native-svg";
 import { tapHaptic, successHaptic } from "../../../../utils/haptics";
 import { useSoundEffect } from "../../../../hooks/useSoundEffect";
 import { track } from "../../../../lib/analytics/events";
+import { loadBarCtas, pickBarCta } from "../../../bar-content/barCtaApi";
 
 /** Official WhatsApp glyph (phone-in-bubble), white on green — keeps CTA
  *  brand-aligned instead of a generic 💬 emoji that read as "chat" rather
@@ -62,6 +63,16 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
   const { playSound } = useSoundEffect();
   const mountedAtRef = useRef<number>(Date.now());
 
+  // Bar's cloud WhatsApp CTA (A/B variant) — overrides the bundled poster
+  // image + button copy when present (e.g. a fresh Higgsfield community card).
+  const [cloudCta, setCloudCta] = useState(() => pickBarCta('whatsapp'));
+  useEffect(() => {
+    if (cloudCta) return;
+    let alive = true;
+    loadBarCtas().then(() => { if (alive) setCloudCta(pickBarCta('whatsapp')); });
+    return () => { alive = false; };
+  }, [cloudCta]);
+
   // Dedicated whatsapp_cta_shown — measures the community-join funnel
   // independently of the pearl funnel (which PearlCtaStage owns). source
   // splits in-game vs email so we can compare acquisition channels.
@@ -81,7 +92,7 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
       try {
         track({
           name: 'pearl_cta_tapped',
-          props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'whatsapp', destination_url: WHATSAPP_URL },
+          props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'whatsapp', destination_url: WHATSAPP_URL, cta_variant: cloudCta?.variant },
         });
       } catch { /* non-fatal */ }
     }
@@ -111,7 +122,7 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
     <Pressable style={styles.root} onPress={handleBackgroundTap} accessibilityRole="button" accessibilityLabel="המשך">
       <Animated.View entering={FadeIn.duration(320)} style={styles.imageWrap} pointerEvents="none">
         <ExpoImage
-          source={WHATSAPP_CTA_IMAGE}
+          source={cloudCta?.imageUrl ? { uri: cloudCta.imageUrl } : WHATSAPP_CTA_IMAGE}
           style={styles.image}
           contentFit="contain"
           accessible
@@ -123,7 +134,7 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
         <Pressable onPress={handleJoin} accessibilityRole="button" accessibilityLabel="הצטרפו לקהילה בוואטסאפ">
           {({ pressed }) => (
             <View style={[styles.cta, pressed && styles.ctaPressed]}>
-              <Text style={styles.ctaText}>הצטרפו לקהילה</Text>
+              <Text style={styles.ctaText}>{cloudCta?.cta ?? "הצטרפו לקהילה"}</Text>
               <WhatsAppLogo size={22} color="#ffffff" />
             </View>
           )}

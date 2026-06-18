@@ -326,6 +326,28 @@ export const dailyNewsChallenge = pgTable("daily_news_challenge", {
   index("idx_daily_news_challenge_date").using("btree", table.dateKey.desc()),
 ]);
 
+// Bar (marketing) content pushed to the app LIVE — knowledge tips, binary VS
+// "wisdom of crowds" polls, and CTA copy. One row per content item; Bar's
+// morning routine inserts/updates rows via POST /api/bar/content (admin token).
+// The app fetches by type via GET /api/bar/content and caches on-device. No
+// per-user state here (VS votes live in crowd_question_votes). `payload` shape
+// depends on content_type: tip {titleHe,bodyHe,tagHe}; poll (CrowdQuestion);
+// cta {kind,title,body,cta,imageUrl?,destination}.
+export const barContent = pgTable("bar_content", {
+  id: serial().primaryKey().notNull(),
+  contentType: text("content_type").notNull(),
+  contentKey: text("content_key").notNull(),
+  payload: jsonb().notNull(),
+  active: boolean().notNull().default(true),
+  dateKey: text("date_key"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  unique("bar_content_type_key_uniq").on(table.contentType, table.contentKey),
+  index("idx_bar_content_type_active").using("btree", table.contentType.asc(), table.active.asc(), table.dateKey.desc()),
+  check("bar_content_type_check", sql`content_type IN ('tip', 'poll', 'cta')`),
+]);
+
 // Parental consent records — required by Israeli Capacity Act sec. 4-6 for
 // any ongoing transaction by a minor (ageGroup='minor', i.e. 16-17). A row
 // is created when a minor requests Pro; the parent confirms by clicking

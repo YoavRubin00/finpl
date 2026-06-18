@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Dimensions, ScrollView } from "react-native";
 import Animated, {
   FadeIn,
@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import { tapHaptic, successHaptic } from "../../../../utils/haptics";
 import { useSoundEffect } from "../../../../hooks/useSoundEffect";
 import { track } from "../../../../lib/analytics/events";
+import { loadBarCtas, pickBarCta } from "../../../bar-content/barCtaApi";
 
 const VIDEO_URL =
   "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-referral.mp4";
@@ -50,6 +51,16 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
   const reducedMotion = useReducedMotion();
   const { playSound } = useSoundEffect();
   const mountedAtRef = useRef<number>(Date.now());
+
+  // Bar's cloud CTA copy (A/B variant). Falls back to the hardcoded strings
+  // below when the cloud is cold/empty; swaps in once loaded (one-time).
+  const [cloudCta, setCloudCta] = useState(() => pickBarCta('referral'));
+  useEffect(() => {
+    if (cloudCta) return;
+    let alive = true;
+    loadBarCtas().then(() => { if (alive) setCloudCta(pickBarCta('referral')); });
+    return () => { alive = false; };
+  }, [cloudCta]);
 
   const player = useVideoPlayer(VIDEO_URL, (p) => {
     p.loop = true;
@@ -93,7 +104,7 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
     successHaptic();
     if (afterModuleId) {
       try {
-        track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'referral', destination_url: '/referral' } });
+        track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'referral', destination_url: '/referral', cta_variant: cloudCta?.variant } });
       } catch { /* non-fatal */ }
     }
     // Finalize the pearl in-place BEFORE navigating. onTapCta closes the
@@ -145,9 +156,9 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
             />
           </View>
 
-          <Text style={[styles.title, RTL_CENTER]}>הזמינו חברים</Text>
+          <Text style={[styles.title, RTL_CENTER]}>{cloudCta?.title ?? "הזמינו חברים"}</Text>
           <Text style={[styles.subtitle, RTL_CENTER]}>
-            שתפו את FinPlay עם החברים שלכם וקבלו מטבעות וגמים
+            {cloudCta?.body ?? "שתפו את FinPlay עם החברים שלכם וקבלו מטבעות וגמים"}
           </Text>
 
           <Animated.View
@@ -161,7 +172,7 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
             >
-              <Text style={styles.ctaText}>ראו איך לקבל מטבעות 🎁</Text>
+              <Text style={styles.ctaText}>{cloudCta?.cta ?? "ראו איך לקבל מטבעות 🎁"}</Text>
             </Pressable>
           </Animated.View>
 

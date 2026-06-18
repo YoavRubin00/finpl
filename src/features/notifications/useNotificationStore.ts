@@ -100,6 +100,7 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     body: "גלה את הכלי הפיננסי של היום. בדיקה של דקה.",
     data: { screen: "/fire-calculator" },
   },
+
 };
 
 // ─── Android channel setup ───────────────────────────────────────────────────
@@ -159,6 +160,7 @@ async function ensureAndroidChannels() {
     name: "הכלי הפיננסי של היום",
     importance: Notifications.AndroidImportance.DEFAULT,
   });
+
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -182,6 +184,7 @@ interface NotificationActions {
   /** Tool-of-the-day discovery push at the personalised hour. Lowest-priority
    *  daily push — only scheduled for engaged users (no streak/inactivity risk). */
   scheduleToolDiscovery: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
+
   /** US-009 — schedule a 23:00 "save your streak" fallback on a SEPARATE
    *  channel so it doesn't overwrite the primary streak reminder. The
    *  scheduler can cancel just this channel when the user logs a session. */
@@ -514,6 +517,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         });
         set({ scheduled: [...scheduled.filter((s) => s.channelId !== "tools"), { channelId: "tools" as const, identifier }] });
       },
+
 
       /** Schedule inactivity notification, capped to 1 only */
       scheduleInactivityEscalation: async (notifications): Promise<void> => {

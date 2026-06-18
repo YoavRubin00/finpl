@@ -22,12 +22,7 @@ import {
     buildInactivityEscalation,
     pickFinnCopy,
 } from './finnNotificationCopy';
-import { toolOfTheDay } from '../financial-tools/toolOfTheDay';
 
-/** Midday discovery slot for the tool-of-the-day push — distinct from the
- *  morning (09:00) and evening streak (personalised) windows so the day's
- *  notification load is spread, never stacked at one minute. */
-const TOOL_PUSH_HOUR = 12;
 
 /** US-007: personalized send hour from recent activity pattern.
  *  Returns hour-of-day (0-23). Falls back to 20 if insufficient data (<7 entries). */
@@ -143,30 +138,8 @@ export function useFinnNotificationScheduler() {
                     store.setLastFinnCopyTitle(copy.title);
                 }
 
-                // ── Tool-of-the-day discovery — a SECONDARY push for ENGAGED
-                // users only (active today → daysSinceActive < 1, so it never
-                // competes with a retention nudge for a churning user). At most
-                // ONE tool push/day (own 'tools' channel, midday slot).
-                // We only schedule it when a slot is genuinely free (< 2 already
-                // scheduled) so retention pushes ALWAYS keep priority — relying
-                // on enforceNotificationCap to trim afterwards was order-dependent
-                // (getAllScheduledNotificationsAsync ordering isn't guaranteed, so
-                // it could have dropped a streak push instead of this one).
-                if (
-                    preferences.tools &&
-                    ctx.daysSinceActive < 1 &&
-                    useNotificationStore.getState().scheduled.length < 2
-                ) {
-                    const tool = toolOfTheDay();
-                    await store.scheduleToolDiscovery(
-                        {
-                            title: tool.pushTitle,
-                            body: tool.pushBody,
-                            data: { screen: tool.route, source: 'tool_push', tool_key: tool.toolKey },
-                        },
-                        TOOL_PUSH_HOUR,
-                    );
-                }
+                // Tool-of-the-day is now an IN-APP top banner (ToolsDiscoveryBanner
+                // on the home screen), not an OS push (Yoav 18/06: keep it in-app).
 
                 // Safety net: never leave more than 2 notifications scheduled
                 await enforceNotificationCap(2);

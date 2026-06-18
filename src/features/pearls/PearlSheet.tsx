@@ -61,6 +61,7 @@ import { PearlProfileQuestionStage } from './stages/PearlProfileQuestionStage';
 import { PearlDailyConceptStage } from './stages/PearlDailyConceptStage';
 import { PearlDailyQuoteStage } from './stages/PearlDailyQuoteStage';
 import { PearlCaptainMailStage } from './stages/PearlCaptainMailStage';
+import { PearlDailyTipStage } from './stages/PearlDailyTipStage';
 import { PearlVideoStage } from './stages/PearlVideoStage';
 import { PearlSwipeStage } from './stages/PearlSwipeStage';
 import { PearlScenarioStage } from './stages/PearlScenarioStage';
@@ -113,11 +114,11 @@ function pickCtaKindFor(moduleId: string): PearlCtaKind {
  *  the same date — same anchor as DAILY_CONCEPTS / wisdomQuotes. The mail
  *  variant is filtered out on days the user already opened it (see
  *  useFunStore.lastMailDate) so we don't spam-feel the user. */
-type DailyPickKind = 'concept' | 'quote' | 'captain-mail';
+type DailyPickKind = 'concept' | 'quote' | 'captain-mail' | 'tip';
 
 function pickDailyContentKind(mailAlreadyShownToday: boolean): DailyPickKind {
   const dayIndex = Math.floor(Date.now() / 86400000);
-  const rotation: DailyPickKind[] = ['concept', 'quote', 'captain-mail'];
+  const rotation: DailyPickKind[] = ['concept', 'quote', 'captain-mail', 'tip'];
   const pick = rotation[dayIndex % rotation.length];
   // Captain mail gating: if the user already opened mail today, fall through
   // to concept (won't see the mail twice across multiple pearls in one day).
@@ -631,6 +632,13 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           return (
             <View style={containerStyle}>
               <PearlDailyQuoteStage isActive={isActive} onContinue={handleStageDone} />
+            </View>
+          );
+        }
+        if (dailyPickKind === 'tip') {
+          return (
+            <View style={containerStyle}>
+              <PearlDailyTipStage isActive={isActive} onContinue={handleStageDone} />
             </View>
           );
         }

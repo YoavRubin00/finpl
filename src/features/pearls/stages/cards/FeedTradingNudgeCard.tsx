@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Dimensions, ScrollView } from "react-native";
 import Animated, {
   FadeIn,
@@ -19,6 +19,7 @@ import { useSoundEffect } from "../../../../hooks/useSoundEffect";
 import { trackBridgeClick } from "../../../../utils/trackBridgeClick";
 import { useAuthStore } from "../../../auth/useAuthStore";
 import { track } from "../../../../lib/analytics/events";
+import { loadBarCtas, pickBarCta } from "../../../bar-content/barCtaApi";
 
 const VIDEO_URL =
   "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4";
@@ -51,6 +52,16 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
   const userEmail = useAuthStore((s) => s.email);
   const { playSound } = useSoundEffect();
   const mountedAtRef = useRef<number>(Date.now());
+
+  // Bar's cloud CTA copy (A/B variant). Falls back to the hardcoded strings
+  // below when the cloud is cold/empty; swaps in once loaded (one-time).
+  const [cloudCta, setCloudCta] = useState(() => pickBarCta('trading'));
+  useEffect(() => {
+    if (cloudCta) return;
+    let alive = true;
+    loadBarCtas().then(() => { if (alive) setCloudCta(pickBarCta('trading')); });
+    return () => { alive = false; };
+  }, [cloudCta]);
 
   const player = useVideoPlayer(VIDEO_URL, (p) => {
     p.loop = true;
@@ -100,7 +111,7 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
     trackBridgeClick("feed-trading-nudge", "link_open", userEmail);
     if (afterModuleId) {
       try {
-        track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'trading', destination_url: '/bridge' } });
+        track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'trading', destination_url: '/bridge', cta_variant: cloudCta?.variant } });
       } catch { /* non-fatal */ }
     }
     // Finalize the pearl in-place BEFORE navigating. onTapCta closes the
@@ -150,9 +161,9 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
             />
           </View>
 
-          <Text style={[styles.title, RTL_CENTER]}>ידע לבד לא מספיק</Text>
+          <Text style={[styles.title, RTL_CENTER]}>{cloudCta?.title ?? "ידע לבד לא מספיק"}</Text>
           <Text style={[styles.subtitle, RTL_CENTER]}>
-            הגיע הזמן לפעול. הגשר מחבר את הלמידה לעולם האמיתי
+            {cloudCta?.body ?? "הגיע הזמן לפעול. הגשר מחבר את הלמידה לעולם האמיתי"}
           </Text>
 
           {/* CTA bg/border live on an inner View — Pressable's function-style
@@ -172,7 +183,7 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
             >
               {({ pressed }) => (
                 <View style={[styles.cta, pressed && styles.ctaPressed]}>
-                  <Text style={styles.ctaText}>בואו לגשר</Text>
+                  <Text style={styles.ctaText}>{cloudCta?.cta ?? "בואו לגשר"}</Text>
                 </View>
               )}
             </Pressable>

@@ -19,6 +19,7 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { useIsPro } from '../subscription/useSubscription';
 import { BREAKING_NEWS_PRO_TICKER_CAP, BASIC_LIMITS } from '../subscription/subscriptionConstants';
 import { useUpgradeModalStore } from '../../stores/useUpgradeModalStore';
+import { ProUpgradeCard } from '../../components/ui/ProUpgradeCard';
 import { useNotificationStore } from '../notifications/useNotificationStore';
 import { captureEvent } from '../../lib/posthog';
 
@@ -385,32 +386,32 @@ export function BreakingNewsScreen(): React.ReactElement {
               </View>
             ) : null}
 
-            <Pressable
-              onPress={handleOpenPicker}
-              style={({ pressed }) => [
-                styles.addBtn,
-                atLimit && styles.addBtnLocked,
-                pressed && { opacity: 0.85 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={atLimit ? 'שדרג ל-PRO' : 'הוסף מניה'}
-            >
-              {atLimit && !isPro ? (
-                <Crown size={18} color="#ffffff" strokeWidth={2.6} />
-              ) : (
-                <Plus size={18} color="#ffffff" strokeWidth={2.6} />
-              )}
-              <Text
-                style={[styles.addBtnText, atLimit && !isPro && styles.addBtnTextLocked]}
-                allowFontScaling={false}
+            {atLimit && !isPro ? (
+              // Free user hit the ticker cap → the canonical premium upgrade card
+              // (identical to the Profile screen). Tap routes through handleOpenPicker
+              // which fires the upgrade modal for this state.
+              <ProUpgradeCard
+                onPress={handleOpenPicker}
+                headline={`לעוד ${BREAKING_NEWS_PRO_TICKER_CAP - items.length} מניות + התראות`}
+              />
+            ) : (
+              <Pressable
+                onPress={handleOpenPicker}
+                style={({ pressed }) => [
+                  styles.addBtn,
+                  pressed && { opacity: 0.85 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={atLimit ? 'הגעת למקסימום מניות' : 'הוסף מניה'}
               >
-                {atLimit && !isPro
-                  ? `שדרג ל-PRO לעוד ${BREAKING_NEWS_PRO_TICKER_CAP - items.length} מניות`
-                  : atLimit
+                <Plus size={18} color="#ffffff" strokeWidth={2.6} />
+                <Text style={styles.addBtnText} allowFontScaling={false}>
+                  {atLimit
                     ? `${items.length}/${limit} — הסר כדי להוסיף`
                     : 'הוסף מניה'}
-              </Text>
-            </Pressable>
+                </Text>
+              </Pressable>
+            )}
 
             <Text style={styles.footerHint} allowFontScaling={false}>
               סיכומים חדשים נוצרים אוטומטית כל יום ב-9:00 בבוקר. ההתראה שלך תגיע ב-{String(notificationHour).padStart(2, '0')}:00.

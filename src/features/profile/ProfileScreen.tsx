@@ -35,6 +35,7 @@ import {
   SPRING_BOUNCY,
 } from "../../utils/animations";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
+import { ProUpgradeCard } from "../../components/ui/ProUpgradeCard";
 import { GoldCircleBadge } from "../../components/ui/GoldCircleBadge";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useReferralStore } from "../social/useReferralStore";
@@ -160,23 +161,7 @@ export function ProfileScreen() {
   const profileInfoStyle = useEntranceAnimation(fadeInUp, { delay: 420 });
   const actionsStyle = useEntranceAnimation(fadeInUp, { delay: 660 });
 
-  // PRO card pulsing gold border
-  const proBorderOpacity = useSharedValue(0.4);
-  useEffect(() => {
-    proBorderOpacity.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1000 }),
-        withTiming(0.4, { duration: 1000 }),
-      ),
-      -1,
-      true,
-    );
-    return () => { cancelAnimation(proBorderOpacity); };
-  }, []);
-  const proBorderStyle = useAnimatedStyle(() => ({
-    borderColor: `rgba(250,204,21,${proBorderOpacity.value})`,
-    shadowOpacity: proBorderOpacity.value * 0.5,
-  }));
+  // PRO upgrade card extracted to <ProUpgradeCard/> (shared with breaking-news).
 
   // ---- Walkthrough: bridge CTA glow ----
   const glowTarget = useWalkthroughGlowTarget();
@@ -537,54 +522,11 @@ export function ProfileScreen() {
 
             {/* Pro Upgrade CTA, only for free users */}
             {!isPro && (
-              <AnimatedPressable
+              <ProUpgradeCard
                 onPress={() => router.push("/pricing" as never)}
-                accessibilityRole="button"
-                accessibilityLabel="שדרג ל-PRO"
-              >
-                <Animated.View style={[styles.proCard, proBorderStyle]}>
-                  <LinearGradient
-                    colors={["#0a2540", "#164e63", "#0a2540"]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                    style={{ borderRadius: 16, overflow: "hidden" }}
-                  >
-                    {["✦", "✦", "✦", "✦", "✦"].map((s, i) => (
-                      <Text
-                        key={i}
-                        style={{
-                          position: "absolute",
-                          color: i % 2 === 0 ? "#facc15" : "#67e8f9",
-                          fontSize: i === 2 ? 10 : 7,
-                          opacity: 0.6,
-                          top: [8, 16, 6, 22, 12][i],
-                          left: [12, 60, 130, 200, 260][i],
-                        }}
-                      >{s}</Text>
-                    ))}
-                    <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", padding: 16 }}>
-                      <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12 }}>
-                        <View style={{ width: 48, height: 48, overflow: "hidden", borderRadius: 14, backgroundColor: "rgba(14,116,144,0.3)", borderWidth: 1, borderColor: "rgba(103,232,249,0.5)", alignItems: "center", justifyContent: "center" }} accessible={false}>
-                          <LottieIcon source={require("../../../assets/lottie/Pro Animation 3rd.json")} size={40} autoPlay loop active={isFocused} />
-                        </View>
-                        <View style={{ alignItems: "flex-end" }}>
-                          <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 2, color: "#facc15", textTransform: "uppercase" }}>
-                            שדרגו ל-PRO
-                          </Text>
-                          <Text style={{ fontSize: 15, fontWeight: "700", color: "#ffffff", marginTop: 2 }}>
-                            לבבות אינסופיים + בוסט XP
-                          </Text>
-                          <Text style={{ fontSize: 11, color: "rgba(103,232,249,0.8)", marginTop: 2 }}>
-                            ✦ ללא הגבלות ✦ בלעדי לחברים ✦
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={{ borderRadius: 20, backgroundColor: "rgba(250,204,21,0.15)", borderWidth: 1.5, borderColor: "rgba(250,204,21,0.5)", paddingHorizontal: 12, paddingVertical: 8 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "900", color: "#facc15" }}>PRO</Text>
-                      </View>
-                    </View>
-                  </LinearGradient>
-                </Animated.View>
-              </AnimatedPressable>
+                headline="לבבות אינסופיים + בוסט XP"
+                active={isFocused}
+              />
             )}
           </Animated.View>
 
@@ -1226,15 +1168,5 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#0369a1",
     writingDirection: "rtl",
-  },
-  // Pro card (stays dark, it's the premium upsell)
-  proCard: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    shadowColor: "#facc15",
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 14,
-    elevation: 8,
-    overflow: "hidden",
   },
 });

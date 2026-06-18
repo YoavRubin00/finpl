@@ -51,6 +51,9 @@ interface NudgeState {
   /** ISO date when the invite-friends nudge was last shown — gates 3-day cadence */
   lastInviteNudgeDateISO: string | null;
   setLastInviteNudgeDateISO: (d: string) => void;
+  /** ISO date when the crowd-question (VS) popup last showed — once per day */
+  lastCrowdPopupDateISO: string | null;
+  setLastCrowdPopupDateISO: (d: string) => void;
   reset: () => void;
 }
 
@@ -129,6 +132,9 @@ export const useNudgeQueueStore = create<NudgeState>()(
       lastInviteNudgeDateISO: null,
       setLastInviteNudgeDateISO: (d) => set({ lastInviteNudgeDateISO: d }),
 
+      lastCrowdPopupDateISO: null,
+      setLastCrowdPopupDateISO: (d) => set({ lastCrowdPopupDateISO: d }),
+
       reset: () => set({
         dismissHistory: emptyMap<number[]>([]),
         lastShownTs: emptyMap<number>(0),
@@ -139,6 +145,7 @@ export const useNudgeQueueStore = create<NudgeState>()(
         streakShownThisSession: false,
         lastBridgeNudgeDateISO: null,
         lastInviteNudgeDateISO: null,
+        lastCrowdPopupDateISO: null,
       }),
     }),
     {
@@ -150,6 +157,7 @@ export const useNudgeQueueStore = create<NudgeState>()(
         lastActedTs: state.lastActedTs,
         lastBridgeNudgeDateISO: state.lastBridgeNudgeDateISO,
         lastInviteNudgeDateISO: state.lastInviteNudgeDateISO,
+        lastCrowdPopupDateISO: state.lastCrowdPopupDateISO,
         // sessionShown deliberately NOT persisted — resets each cold start
       }),
     },

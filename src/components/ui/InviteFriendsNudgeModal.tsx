@@ -19,6 +19,8 @@ import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { useEconomyUIStore } from '../../features/economy/useEconomyUIStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { loadBarCtas, pickBarCta } from '../../features/bar-content/barCtaApi';
+import { track } from '../../lib/analytics/events';
 
 import { REFERRAL_SIGNUP_BONUS_COINS, REFERRAL_DAILY_DIVIDEND_RATE } from '../../features/social/referralConstants';
 
@@ -55,6 +57,16 @@ export function InviteFriendsNudgeModal() {
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const [visible, setVisible] = useState(false);
+
+  // Bar's cloud CTA copy (A/B variant) drives this in-app popup; falls back to
+  // the tuned DAILY_COPY below when the cloud is cold/empty.
+  const [cloudCta, setCloudCta] = useState(() => pickBarCta('referral'));
+  useEffect(() => {
+    if (cloudCta) return;
+    let alive = true;
+    loadBarCtas().then(() => { if (alive) setCloudCta(pickBarCta('referral')); });
+    return () => { alive = false; };
+  }, [cloudCta]);
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
@@ -160,11 +172,18 @@ export function InviteFriendsNudgeModal() {
   }, [visible, reducedMotion, glowAnim]);
   const glowStyle = useAnimatedStyle(() => ({ shadowOpacity: glowAnim.value }));
 
+  // A/B impression — fire once when the popup actually shows.
+  useEffect(() => {
+    if (!visible) return;
+    try { track({ name: 'cta_nudge_shown', props: { surface: 'invite_modal', cta_variant: cloudCta?.variant } }); } catch { /* non-fatal */ }
+  }, [visible, cloudCta]);
+
   const today = new Date().toISOString().slice(0, 10);
   const dayOfWeek = new Date().getDay();
 
   function handleAct() {
     successHaptic();
+    try { track({ name: 'cta_nudge_tapped', props: { surface: 'invite_modal', cta_variant: cloudCta?.variant } }); } catch { /* non-fatal */ }
     recordAct('referral');
     recordShown('referral');
     setLastInviteNudgeDateISO(today);
@@ -214,10 +233,10 @@ export function InviteFriendsNudgeModal() {
             />
           </Animated.View>
 
-          <Text style={styles.title}>{DAILY_COPY[dayOfWeek]}</Text>
+          <Text style={styles.title}>{cloudCta?.title ?? DAILY_COPY[dayOfWeek]}</Text>
 
           <Text style={styles.subtitle}>
-            {_SIGNUP} מטבעות מיד כשהחבר נרשם, ועוד {_DIV_PCT}% מכל מטבע שהוא ירוויח מלמידה — כל יום, ישר אליכם.
+            {cloudCta?.body ?? `${_SIGNUP} מטבעות מיד כשהחבר נרשם, ועוד ${_DIV_PCT}% מכל מטבע שהוא ירוויח מלמידה — כל יום, ישר אליכם.`}
           </Text>
 
           <Animated.View style={[styles.ctaGlowWrap, glowStyle]}>
@@ -231,7 +250,7 @@ export function InviteFriendsNudgeModal() {
                   styles.ctaBtn,
                   pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }
                 ]}>
-                  <Text style={styles.ctaText}>הזמן חברים</Text>
+                  <Text style={styles.ctaText}>{cloudCta?.cta ?? "הזמן חברים"}</Text>
                   <Text style={styles.ctaEmoji}>💰</Text>
                 </View>
               )}

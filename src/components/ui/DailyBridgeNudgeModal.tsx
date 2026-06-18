@@ -19,6 +19,8 @@ import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { useEconomyUIStore } from '../../features/economy/useEconomyUIStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { loadBarCtas, pickBarCta } from '../../features/bar-content/barCtaApi';
+import { track } from '../../lib/analytics/events';
 
 const DAILY_COPY: Record<number, string> = {
   0: 'בנית בסיס חזק.\nהגיע הזמן להשתמש בו',
@@ -35,6 +37,16 @@ export function DailyBridgeNudgeModal() {
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const [visible, setVisible] = useState(false);
+
+  // Bar's cloud CTA copy (A/B variant) drives this in-app popup; falls back to
+  // the tuned DAILY_COPY below when the cloud is cold/empty.
+  const [cloudCta, setCloudCta] = useState(() => pickBarCta('trading'));
+  useEffect(() => {
+    if (cloudCta) return;
+    let alive = true;
+    loadBarCtas().then(() => { if (alive) setCloudCta(pickBarCta('trading')); });
+    return () => { alive = false; };
+  }, [cloudCta]);
 
   // Auth / profile guards
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -138,11 +150,18 @@ export function DailyBridgeNudgeModal() {
   }, [visible, reducedMotion, glowAnim]);
   const glowStyle = useAnimatedStyle(() => ({ shadowOpacity: glowAnim.value }));
 
+  // A/B impression — fire once when the popup actually shows.
+  useEffect(() => {
+    if (!visible) return;
+    try { track({ name: 'cta_nudge_shown', props: { surface: 'bridge_modal', cta_variant: cloudCta?.variant } }); } catch { /* non-fatal */ }
+  }, [visible, cloudCta]);
+
   const today = new Date().toISOString().slice(0, 10);
   const dayOfWeek = new Date().getDay();
 
   function handleAct() {
     successHaptic();
+    try { track({ name: 'cta_nudge_tapped', props: { surface: 'bridge_modal', cta_variant: cloudCta?.variant } }); } catch { /* non-fatal */ }
     recordAct('bridge');
     recordShown('bridge');
     setLastBridgeNudgeDateISO(today);
@@ -195,11 +214,11 @@ export function DailyBridgeNudgeModal() {
           </Animated.View>
 
           {/* Title */}
-          <Text style={styles.title}>{DAILY_COPY[dayOfWeek]}</Text>
+          <Text style={styles.title}>{cloudCta?.title ?? DAILY_COPY[dayOfWeek]}</Text>
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            הגשר שלנו, הטבות אמיתיות מחברות ישראליות מובילות
+            {cloudCta?.body ?? "הגשר שלנו, הטבות אמיתיות מחברות ישראליות מובילות"}
           </Text>
 
           {/* CTA button — light-blue glow, lottie left of text */}
@@ -214,7 +233,7 @@ export function DailyBridgeNudgeModal() {
                   styles.ctaBtn,
                   pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }
                 ]}>
-                  <Text style={styles.ctaText}>קח אותי לגשר</Text>
+                  <Text style={styles.ctaText}>{cloudCta?.cta ?? "קח אותי לגשר"}</Text>
                   <Text style={styles.ctaEmoji}>🌉</Text>
                 </View>
               )}
