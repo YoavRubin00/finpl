@@ -696,7 +696,8 @@ const [rewardsGranted, setRewardsGranted] = useState(false);
             setTimeout(() => heavyHaptic(), 300);
             if (!heartDeductedRef.current) {
                 heartDeductedRef.current = true;
-                useHeartsStore.getState().useHeart(isPro);
+                // Simulations are a SANDBOX — game-over does NOT cost energy
+                // (Yoav 2026-06-17). Only break the combo streak.
                 useHeartsStore.getState().resetCombo();
             }
         }

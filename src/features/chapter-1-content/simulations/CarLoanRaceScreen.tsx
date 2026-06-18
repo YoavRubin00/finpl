@@ -311,8 +311,8 @@ const [showFeedback, setShowFeedback] = useState(false);
             setRewardsGranted(true);
             if (state.isRepossessed) {
                 errorHaptic();
-                // Fail outcome → deduct an energy unit + reset the combo streak.
-                useHeartsStore.getState().useHeart(isPro);
+                // Simulations are a SANDBOX — a fail does NOT cost energy (Yoav
+                // 2026-06-17). Only break the combo streak.
                 useHeartsStore.getState().resetCombo();
             } else {
                 successHaptic();
