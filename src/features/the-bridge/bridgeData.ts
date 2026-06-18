@@ -17,11 +17,11 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerName: 'אלטשולר שחם טרייד',
     partnerLogo: '📈',
     partnerLogoImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/bridge-logos/altshuler.png' },
-    // Re-priced 4000→3000 (Moni 2026-06-13): top/premium tier. PostHog 30d:
-    // median bridge-viewer balance ~694 coins (P90 ~3,089), so 4000 was above
-    // even the 90th percentile → ~0 redemptions. 3000 ≈ reachable by committed
-    // users. Coins are only an affiliate-unlock gate, so lowering is pure upside.
-    costCoins: 3000,
+    // Re-priced 4000→3000 (Moni 2026-06-13) → 3000→2500 (Yoav board decision
+    // 2026-06-18): Bridge is the working monetization engine (redeems 1→1→5/wk);
+    // median bridge-viewer balance ~694 (P90 ~3,089). 2500 brings the top tier
+    // closer to reach. Coins are only an affiliate-unlock gate → lowering = upside.
+    costCoins: 2500,
     category: 'investments',
     isAvailable: true,
     reward: 'מתנת הצטרפות ₪200 + קורס שוק ההון בשווי ₪1,400 במתנה',
