@@ -87,6 +87,7 @@ if (__DEV__) {
   } catch { /* swallow */ }
 }
 import { RewardAnimationProvider } from "../src/hooks/useRewardAnimation";
+import { EnergyAnimationProvider } from "../src/features/energy/EnergyAnimationProvider";
 import { StreakCelebrationProvider } from "../src/hooks/useStreakCelebration";
 import { WisdomPopupCard } from "../src/features/wisdom-flashes/WisdomPopupCard";
 import { ShopModal } from "../src/features/shop/ShopModal";
@@ -105,6 +106,7 @@ import { useUpgradeNudgeBanner } from "../src/features/monetization/useUpgradeNu
 import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQuestCompletionModal";
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
+import { GlobalCrowdQuestionGate } from "../src/components/ui/GlobalCrowdQuestionGate";
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
 import { PostWalkthroughProTeaserGate } from "../src/features/subscription/PostWalkthroughProTeaser";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
@@ -641,6 +643,7 @@ function RootLayoutInner() {
       <KeyboardProvider>
       <GlobalErrorBoundary>
         <RewardAnimationProvider>
+          <EnergyAnimationProvider>
             <StreakCelebrationProvider>
               {/* Root navigator. Was <Slot/> — which has NO stack, so pushing
                   /lesson/[id] swapped the whole (tabs) tree with no animation
@@ -676,6 +679,7 @@ function RootLayoutInner() {
               {allowAutoPopups && <GlobalQuestCompletionModal />}
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
+              {allowAutoPopups && <GlobalCrowdQuestionGate />}
               {/* Post-walkthrough register CTA for Guests. The gate handles
                   all conditions internally: pendingPostWalkthroughCTA flag
                   set by AppWalkthroughOverlay on completion + isGuest +
@@ -728,6 +732,7 @@ function RootLayoutInner() {
               <SharkSkinsGate />
               <GlobalEnergyDepletedModal />
             </StreakCelebrationProvider>
+          </EnergyAnimationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>
       {splashVisible && <AppIntroSplash onDismiss={() => setSplashVisible(false)} />}

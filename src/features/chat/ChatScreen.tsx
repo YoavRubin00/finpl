@@ -819,7 +819,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     // Energy Sink (Yoav 18/06): each AI-chat message costs −1 energy. At 0,
     // block the send and surface the GLOBAL out-of-energy modal (+ Pro upsell).
     if (!isProNow) {
-      const spent = useHeartsStore.getState().useHeart(false);
+      const spent = useHeartsStore.getState().useHeart(false, 'chat');
       if (!spent) {
         useHeartsStore.getState().flagDepleted();
         return;

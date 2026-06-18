@@ -85,7 +85,7 @@ import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { EnergyBatteryIcon } from "../../components/ui/EnergyBatteryIcon";
 import { ENERGY } from "../energy/energyTheme";
-import { SHARK_FULL_CHEER, SHARK_SPARK_LOST } from "../energy/energyScenes";
+import { SHARK_FULL_CHEER } from "../energy/energyScenes";
 import { useDailyGoalStore } from "../economy/useDailyGoalStore";
 import { DoubleOrNothingModal } from "../../components/ui/DoubleOrNothingModal";
 import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
@@ -1631,195 +1631,6 @@ function SummaryScreen({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  HeartBreakOverlay, dramatic heart-loss animation                  */
-/* ------------------------------------------------------------------ */
-
-function HeartBreakOverlay({
-  visible,
-  onFinish,
-  originY = 120,
-  originX = undefined,
-  isLastHeart = false,
-}: {
-  visible: boolean;
-  onFinish: () => void;
-  originY?: number;
-  originX?: number;
-  isLastHeart?: boolean;
-}) {
-  const flashOpacity = useSharedValue(0);
-  const heartDropY = useSharedValue(0);
-  const heartScale = useSharedValue(0);
-  const heartRotate = useSharedValue(0);
-  const leftTranslateX = useSharedValue(0);
-  const rightTranslateX = useSharedValue(0);
-  const minusOpacity = useSharedValue(0);
-  const minusTranslateY = useSharedValue(0);
-  const heartOpacity = useSharedValue(0);
-
-  const { width: screenWidth } = Dimensions.get("window");
-  const startX = originX ?? screenWidth / 2;
-
-  useEffect(() => {
-    if (!visible) return;
-
-    // Reset values
-    flashOpacity.value = 0;
-    heartDropY.value = 0;
-    heartScale.value = 0.8; 
-    heartRotate.value = 0;
-    leftTranslateX.value = 0;
-    rightTranslateX.value = 0;
-    minusOpacity.value = 0;
-    minusTranslateY.value = 0;
-    heartOpacity.value = 1;
-
-    // Fade in flash
-    flashOpacity.value = withSequence(
-      withTiming(0.2, { duration: 150 }),
-      withTiming(0, { duration: 600 }),
-    );
-
-    let finishTimeout = 1800;
-
-    if (isLastHeart) {
-      // Phase 1: Pop out from origin
-      heartScale.value = withSpring(1.2, { damping: 12, stiffness: 90 }); 
-      heartDropY.value = withSequence(
-        withSpring(-30, { damping: 14, stiffness: 180 }),
-        withSpring(20, { damping: 10, stiffness: 70 })
-      );
-
-      // Phase 2: Heart breaks mid-air
-      setTimeout(() => {
-        heavyHaptic();
-        leftTranslateX.value = withSpring(-20, { damping: 14, stiffness: 90 });
-        rightTranslateX.value = withSpring(20, { damping: 14, stiffness: 90 });
-        heartRotate.value = withSpring(-10, { damping: 14, stiffness: 90 });
-          
-        minusOpacity.value = withTiming(1, { duration: 300 });
-        minusTranslateY.value = withSpring(-50, { damping: 15, stiffness: 100 });
-      }, 500);
-      
-      finishTimeout = 1800;
-    } else {
-      // Simple smooth float up and disappear
-      heartScale.value = withSpring(1.2, { damping: 15, stiffness: 100 });
-      heartDropY.value = withTiming(-150, { duration: 1000 });
-      
-      setTimeout(() => {
-        minusOpacity.value = withTiming(1, { duration: 300 });
-        minusTranslateY.value = withTiming(-30, { duration: 800 });
-      }, 100);
-
-      setTimeout(() => {
-        heartOpacity.value = withTiming(0, { duration: 500 });
-      }, 600);
-      
-      finishTimeout = 1000;
-    }
-
-    // Phase 4: Fade everything out and notify complete
-    const finishTimer = setTimeout(() => {
-      if (isLastHeart) heartOpacity.value = withTiming(0, { duration: 400 });
-      setTimeout(() => onFinish(), 400);
-    }, finishTimeout);
-
-    return () => {
-      clearTimeout(finishTimer);
-    };
-  }, [visible, isLastHeart]);
-
-  const flashStyle = useAnimatedStyle(() => ({
-    opacity: flashOpacity.value,
-  }));
-
-  const heartAnimsStyle = useAnimatedStyle(() => ({
-    opacity: heartOpacity.value,
-    transform: [
-      { translateY: heartDropY.value },
-      { scale: heartScale.value },
-      { rotate: `${heartRotate.value}deg` },
-    ],
-  }));
-
-  const leftStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: leftTranslateX.value }],
-  }));
-
-  const rightStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: rightTranslateX.value }],
-  }));
-
-  const minusStyle = useAnimatedStyle(() => ({
-    opacity: minusOpacity.value,
-    transform: [{ translateY: minusTranslateY.value }],
-  }));
-
-  if (!visible) return null;
-
-  return (
-    <View style={[heartBreakStyles.overlay, { paddingTop: originY }]} pointerEvents="none">
-      {/* Red flash vignette */}
-      <Animated.View style={[heartBreakStyles.flash, flashStyle]} />
-
-      {/* Heart halves container */}
-      <Animated.View style={[heartBreakStyles.heartContainer, heartAnimsStyle, originX !== undefined && { left: startX - (screenWidth / 2) }]}>
-        {/* Mistake reaction — Captain Shark reacts (concerned-but-supportive) as a
-            battery segment dims. Replaces the red heart shatter. leftStyle/rightStyle
-            kept on the wrappers so the same gentle shake rig still plays. */}
-        <Animated.View style={leftStyle}>
-          <Animated.View style={rightStyle}>
-            <ExpoImage source={SHARK_SPARK_LOST} style={{ width: 104, height: 104 }} contentFit="contain" accessible={false} />
-          </Animated.View>
-        </Animated.View>
-
-        {/* "-1" floating text attached to heart */}
-        <Animated.Text style={[heartBreakStyles.minusText, minusStyle, { position: 'absolute', top: -40, width: 100, textAlign: 'center' }]}>
-          -1
-        </Animated.Text>
-      </Animated.View>
-    </View>
-  );
-}
-
-const heartBreakStyles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    zIndex: 90,
-  },
-  flash: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(168, 85, 247, 0.18)",
-  },
-  heartContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  halfWrap: {
-    overflow: "hidden",
-    width: 48,
-    height: 80,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heartEmoji: {
-    fontSize: 72,
-  },
-  minusText: {
-    position: "absolute",
-    fontSize: 28,
-    fontWeight: "900",
-    color: "#7c3aed",
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
-  },
-});
 
 /* ------------------------------------------------------------------ */
 /*  ChestFlyToSlot, chest icon flies from center to inventory         */
@@ -3364,7 +3175,6 @@ export function LessonFlowScreen() {
   const [showXpReward, setShowXpReward] = useState(false);
   const [showCoinsReward, setShowCoinsReward] = useState(false);
   const [showOutOfHearts, setShowOutOfHearts] = useState(false);
-  const [showHeartBreak, setShowHeartBreak] = useState(false);
 
   // Energy Sink (Yoav 18/06): completing an active learning sub-module costs −1
   // energy — once per sub-module per lesson, skipped on replay + for Pro. We
@@ -3387,8 +3197,6 @@ export function LessonFlowScreen() {
       if (!ok || useHeartsStore.getState().getHearts() <= 0) setShowOutOfHearts(true);
     }
   }, [phase, isReplay, isPro, mod?.id]);
-  const heartsRowY = useRef(140);
-  const heartsRowX = useRef(200);
   const [lifelineConcept, setLifelineConcept] = useState<string | null>(null);
   const { showAd: showRewardedAd, isLoaded: adLoaded, isPro: isProForAds } = useRewardedAd();
   const [lifelineChatConcept, setLifelineChatConcept] = useState<string | null>(null);
@@ -3483,7 +3291,6 @@ export function LessonFlowScreen() {
     setShowXpReward(false);
     setShowCoinsReward(false);
     setShowOutOfHearts(false);
-    setShowHeartBreak(false);
     setLifelineConcept(null);
     setShowChapterComplete(false);
     setChestFullScreen(false);
@@ -3980,7 +3787,7 @@ export function LessonFlowScreen() {
     if (isReplay) return;
     const heartUsed = useHeartsStore.getState().useHeart(isPro);
     if (heartUsed) {
-      setShowHeartBreak(true);
+      // Loss animation fires globally via the useHeart() store signal.
       heavyHaptic();
       if (quiz.conceptTag) {
         const isStruggling = useAdaptiveStore.getState().isConceptStruggledWith(quiz.conceptTag);
@@ -4811,12 +4618,6 @@ export function LessonFlowScreen() {
             {/* Energy display — hidden for Pro (unlimited; no ∞ advertising) */}
             {!isPro && (
             <View
-              onLayout={(e) => {
-                const { width: screenWidth } = Dimensions.get("window");
-                // Anchor for the energy-dip animation (kept from the old hearts row).
-                heartsRowY.current = e.nativeEvent.layout.y + 110;
-                heartsRowX.current = screenWidth / 2;
-              }}
               style={{ flexDirection: "row-reverse", justifyContent: "center", alignItems: "center", gap: 6, marginBottom: 6 }}
             >
               <EnergyBatteryIcon size={20} level={isPro ? 1 : (MAX_ENERGY > 0 ? heartsCount / MAX_ENERGY : 0)} />
@@ -5415,14 +5216,8 @@ export function LessonFlowScreen() {
         </Pressable>
       </Modal>
 
-      {/* Heart break animation overlay */}
-      <HeartBreakOverlay
-        visible={showHeartBreak}
-        isLastHeart={!isPro && heartsCount === 0}
-        onFinish={() => setShowHeartBreak(false)}
-        originY={heartsRowY.current}
-        originX={heartsRowX.current}
-      />
+      {/* Energy-loss animation is now global (EnergyAnimationProvider) — fired
+          by the useHeart() store signal, no local overlay needed. */}
 
       {/* AI Lifeline intervention, triggered when concept is consistently failed */}
       <LifelineModal

@@ -12,7 +12,7 @@ import Animated, {
 import { Coins, Diamond } from "lucide-react-native";
 import { SPRING_BOUNCY } from "../../utils/animations";
 
-export type RewardType = "xp" | "coins" | "gems";
+export type RewardType = "xp" | "coins" | "gems" | "energy";
 
 interface RewardPopupProps {
   amount: number;
@@ -24,12 +24,14 @@ const COLORS: Record<RewardType, string> = {
   xp: "#a78bfa",
   coins: "#facc15",
   gems: "#06b6d4",
+  energy: "#a855f7",
 };
 
 const LABELS: Record<RewardType, string> = {
   xp: "XP",
   coins: "",
   gems: "💎",
+  energy: "⚡",
 };
 
 export function RewardPopup({ amount, type, onComplete }: RewardPopupProps) {
@@ -65,7 +67,7 @@ export function RewardPopup({ amount, type, onComplete }: RewardPopupProps) {
   const label = LABELS[type];
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]} accessibilityLiveRegion="polite" accessibilityLabel={`+${amount} ${type === "xp" ? "XP" : type === "coins" ? "מטבעות" : "ג'מס"}`}>
+    <Animated.View style={[styles.container, animatedStyle]} accessibilityLiveRegion="polite" accessibilityLabel={`+${amount} ${type === "xp" ? "XP" : type === "coins" ? "מטבעות" : type === "energy" ? "אנרגיה" : "ג'מס"}`}>
       {type === "coins" && (
         <Coins size={18} color={color} style={styles.icon} />
       )}

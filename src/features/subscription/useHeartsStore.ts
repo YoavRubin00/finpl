@@ -17,6 +17,11 @@ const HEART_REFILL_MS = 15 * 60 * 1000; // 15 minutes per energy unit (was 5h) �
 const MAX_PRACTICE_REFILLS_PER_DAY = 2; // ×PRACTICE_ENERGY_GRANT = +10/day
 const PRACTICE_ENERGY_GRANT = 5; // energy granted per practice/replay completion (was +1)
 
+// Monotonic counter so two identical back-to-back deltas (same type/amount/
+// source) still re-fire the EnergyAnimationProvider (object-identity selector
+// would otherwise miss the second). One store instance → module scope is fine.
+let energyDeltaNonce = 0;
+
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -33,6 +38,14 @@ interface HeartsState {
   lastHeartLostAt: string | null;
   // Non-persisted: resets on cold-start, used by upgrade_trigger_timing bandit experiment
   sessionHeartsLost: number;
+
+  // Non-persisted PUSH signal for the global EnergyAnimationProvider. Set on
+  // every real spend/grant; the provider subscribes via selector and fires the
+  // gain/loss animation. `nonce` forces a re-fire on identical back-to-back
+  // deltas. Kept OUT of partialize (transient, like sessionHeartsLost).
+  lastEnergyDelta:
+    | { type: 'gain' | 'loss'; amount: number; source: string; nonce: number }
+    | null;
 
   // Non-persisted combo streak across ALL correct answers in a lesson
   // (quizzes + interactive recall + simulators). Every 4-in-a-row grants energy.
@@ -59,7 +72,9 @@ interface HeartsActions {
   hasHearts: () => boolean;
 
   // Actions
-  useHeart: (isPro: boolean) => boolean;
+  // `source` tiers the loss animation: 'penalty' (wrong answer) = dramatic
+  // overlay; 'chat'/'analyst-tool' (usage cost) = subtle toast.
+  useHeart: (isPro: boolean, source?: string) => boolean;
   refillHearts: () => void;
   restoreAllHearts: () => void;
   grantPracticeHeart: () => boolean;
@@ -95,6 +110,7 @@ const initialState: HeartsState = {
   hearts: MAX_HEARTS,
   lastHeartLostAt: null,
   sessionHeartsLost: 0,
+  lastEnergyDelta: null,
   comboStreak: 0,
   depletedPromptVisible: false,
   practiceRefillsToday: 0,
@@ -105,7 +121,13 @@ const initialState: HeartsState = {
 
 export const useHeartsStore = create<HeartsState & HeartsActions>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      // Push an energy-change signal the global EnergyAnimationProvider watches.
+      const emit = (type: 'gain' | 'loss', amount: number, source: string): void => {
+        if (amount <= 0) return;
+        set({ lastEnergyDelta: { type, amount, source, nonce: ++energyDeltaNonce } });
+      };
+      return {
       ...initialState,
 
       getHearts: (): number => {
@@ -121,7 +143,7 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
         return get().getHearts() > 0;
       },
 
-      useHeart: (isPro: boolean): boolean => {
+      useHeart: (isPro: boolean, source: string = 'penalty'): boolean => {
         if (isPro) return true;
         const state = get();
         state.refillHearts();
@@ -132,6 +154,7 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
           lastHeartLostAt: new Date().toISOString(),
           sessionHeartsLost: s.sessionHeartsLost + 1,
         }));
+        emit('loss', 1, source);
         return true;
       },
 
@@ -144,7 +167,9 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       },
 
       restoreAllHearts: () => {
+        const before = get().hearts;
         set({ hearts: MAX_HEARTS, lastHeartLostAt: null });
+        emit('gain', MAX_HEARTS - before, 'restore');
       },
 
       startPracticeForHeart: (): boolean => {
@@ -178,6 +203,7 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
           practiceRefillDate: today,
           pendingPracticeForHeart: false,
         });
+        emit('gain', nextHearts - currentHearts, 'practice');
         return true;
       },
 
@@ -213,6 +239,7 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
             lastHeartLostAt: next >= MAX_HEARTS ? null : s.lastHeartLostAt,
           }));
         }
+        emit('gain', granted, source);
         return granted;
       },
 
@@ -237,7 +264,8 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       },
 
       reset: () => set(initialState),
-    }),
+      };
+    },
     {
       name: 'hearts-storage-v1',
       storage: createJSONStorage(() => zustandStorage),

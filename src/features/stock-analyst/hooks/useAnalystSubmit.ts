@@ -81,7 +81,7 @@ export function useAnalystSubmit() {
       // Energy Sink (Yoav 18/06): using the financial analyst tool costs −1
       // energy. At 0, block and surface the global out-of-energy modal + Pro.
       if (!isPro) {
-        const spent = useHeartsStore.getState().useHeart(false);
+        const spent = useHeartsStore.getState().useHeart(false, 'analyst-tool');
         if (!spent) {
           useHeartsStore.getState().flagDepleted();
           return { ok: false, reason: 'gate' };

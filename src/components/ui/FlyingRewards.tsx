@@ -9,6 +9,7 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import LottieView from "lottie-react-native";
+import { EnergyBatteryIcon } from "./EnergyBatteryIcon";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
@@ -29,7 +30,7 @@ function bezier(t: number, p0: number, p1: number, p2: number): number {
 }
 
 interface FlyingRewardsProps {
-  type: "coins" | "xp" | "gems";
+  type: "coins" | "xp" | "gems" | "energy";
   amount: number;
   direction?: "up" | "down";
   onComplete: () => void;
@@ -53,7 +54,7 @@ function FlyingParticle({
   onDone,
 }: {
   config: ParticleConfig;
-  type: "coins" | "xp" | "gems";
+  type: "coins" | "xp" | "gems" | "energy";
   amount: number;
   index: number;
   onDone: () => void;
@@ -95,14 +96,19 @@ function FlyingParticle({
 
   return (
     <Animated.View style={animStyle} pointerEvents="none">
-      <LottieView
-        source={source}
-        autoPlay
-        loop
-        speed={1.2}
-        style={{ width: type === "coins" ? 38 : 45, height: type === "coins" ? 38 : 45 }}
-        resizeMode="contain"
-      />
+      {type === "energy" ? (
+        // Energy has no Lottie — render the canonical purple battery glyph.
+        <EnergyBatteryIcon size={42} />
+      ) : (
+        <LottieView
+          source={source}
+          autoPlay
+          loop
+          speed={1.2}
+          style={{ width: type === "coins" ? 38 : 45, height: type === "coins" ? 38 : 45 }}
+          resizeMode="contain"
+        />
+      )}
     </Animated.View>
   );
 }
@@ -115,6 +121,7 @@ export function FlyingRewards({ type, amount, direction = "up", onComplete }: Fl
     if (type === "coins") targetX = SCREEN_W * 0.25;      // Left-aligned pill (RTL)
     else if (type === "gems") targetX = SCREEN_W * 0.45;  // Center pill
     else if (type === "xp") targetX = SCREEN_W * 0.70;    // Right layer ring (RTL)
+    else if (type === "energy") targetX = SCREEN_W * 0.5; // Energy flies to top-center
 
     if (direction === "down") {
       // Reverse: from header area down to center
