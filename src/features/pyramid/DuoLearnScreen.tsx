@@ -142,6 +142,19 @@ function getNodeOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
 
+/** X offset (from the content centre) of the active node's Captain Shark mascot
+ *  centre — mirrors ModuleNode's `charLeft` clamp. Centring anything with this
+ *  translateX lands it EXACTLY under the shark on both sides of the path (and at
+ *  the screen-edge clamp), so the daily-quest stars + news badge track the shark
+ *  rather than the node (Yoav 2026-06-19). */
+function getSharkCenterOffset(offsetX: number): number {
+  const nodeCenter = CENTER_X + offsetX;
+  const charLeft = offsetX >= 0
+    ? Math.min(nodeCenter + NODE_SIZE / 2 + 6, CONTENT_W - CHAR_SIZE)
+    : Math.max(nodeCenter - NODE_SIZE / 2 - CHAR_SIZE - 6, 0);
+  return charLeft + CHAR_SIZE / 2 - CENTER_X;
+}
+
 /** The single chapter-1 spot where the standalone "איזה משקיע יש בך?" quiz node
  *  appears, sitting PARALLEL to this module's bonus pearl. One fixed anchor (not
  *  per-session random) so the node has a stable home on the map; move this id to
@@ -564,6 +577,7 @@ function ModuleNode({
   modIndex,
   isProLocked,
   isComingSoon,
+  isCompleted,
   isLastModule,
   displayName,
   friendEmojis,
@@ -583,6 +597,10 @@ function ModuleNode({
   modIndex: number;
   isProLocked: boolean;
   isComingSoon: boolean;
+  /** True when the user has ACTUALLY finished this module (real completion
+   *  list), independent of the position-derived `state`. Drives the ✓ badge —
+   *  essential for PRO users, whose modules all render "active". */
+  isCompleted?: boolean;
   isLastModule: boolean;
   displayName: string;
   friendEmojis?: string[];
@@ -629,15 +647,14 @@ function ModuleNode({
               </View>
             </Pressable>
             {questTotalCount !== undefined && questTotalCount > 0 && (
-              // Re-center the stars under the NODE (not the shark, which sits
-              // ±97.5 to the side) so they line up symmetrically with the daily-
-              // challenge message below them (Yoav 2026-06-18).
-              <View style={{ transform: [{ translateX: finnGoesRight ? -(NODE_SIZE / 2 + 6 + CHAR_SIZE / 2) : (NODE_SIZE / 2 + 6 + CHAR_SIZE / 2) }] }}>
-                <ProgressStars
-                  completedCount={questCompletedCount ?? 0}
-                  totalCount={questTotalCount}
-                />
-              </View>
+              // Stars sit DIRECTLY under the shark on both sides (Yoav 2026-06-19).
+              // They live inside characterWrapper (alignItems:center, width=CHAR_SIZE),
+              // so translateX:0 already == the shark's centre — no offset needed. The
+              // news badge below uses getSharkCenterOffset() to line up with them.
+              <ProgressStars
+                completedCount={questCompletedCount ?? 0}
+                totalCount={questTotalCount}
+              />
             )}
           </Animated.View>
           {/* Speech bubble above + offset to the right of Finn so it doesn't
@@ -710,6 +727,17 @@ function ModuleNode({
         {isComingSoon && (
           <View style={styles.comingSoonBadge}>
             <Text style={styles.comingSoonText}>בפיתוח 🔧</Text>
+          </View>
+        )}
+
+        {/* Completed checkmark — shown on every module the user actually
+            finished (real completion list, NOT the position-derived `state`).
+            Critical for PRO users: all their modules render unlocked/"active",
+            so without this they can't tell what they've already done (Yoav
+            2026-06-19: "סימון V קטן על המודולות שהמשתמש השלים"). */}
+        {isCompleted && !isComingSoon && (
+          <View style={styles.completedBadge} accessible={true} accessibilityLabel="הושלם">
+            <Text style={styles.completedCheck} allowFontScaling={false}>✓</Text>
           </View>
         )}
 
@@ -1071,6 +1099,7 @@ const ChapterSection = React.memo(function ChapterSection({
                 modIndex={i}
                 isProLocked={!isPro && PRO_LOCKED_SIMS.has(module.id)}
                 isComingSoon={!!module.comingSoon}
+                isCompleted={completedModules.includes(module.id)}
                 isLastModule={i === chapter.modules.length - 1}
                 displayName={displayName}
                 friendEmojis={friendsOnModule[module.id]}
@@ -1111,9 +1140,11 @@ const ChapterSection = React.memo(function ChapterSection({
                     // via position:absolute) without visually detaching from it.
                     marginTop: 8,
                     marginBottom: 0,
-                    // Centered under the node — symmetric with the re-centered
-                    // ProgressStars above (Yoav 2026-06-18).
-                    transform: [{ translateX: getNodeOffset(i) }],
+                    // Directly under the shark — matches the ProgressStars above,
+                    // which now sit under the shark too (Yoav 2026-06-19). Uses the
+                    // clamp-aware shark centre so it tracks the shark on both sides
+                    // and at the screen-edge clamp, not the node.
+                    transform: [{ translateX: getSharkCenterOffset(getNodeOffset(i)) }],
                   }}
                 >
                   {newsBadgeNode}
@@ -1900,14 +1931,16 @@ export function DuoLearnScreen() {
     const completedNonIntroCount = topics.filter(
       (t) => t.kind !== 'intro' && completedMap[t.id],
     ).length;
-    // Anchor the MODULE NODE near the top (instead of jumping to the gold
-    // chip) for the early window of EVERY topic-tree module — intro done, no
-    // real chip yet. This (a) keeps the mod-0-1 welcome reading order, and (b)
-    // surfaces the "למידה רציפה" autopilot HEADER that TopicTreeAccordion
-    // renders at the accordion top in exactly this window (Yoav 2026-06-13:
-    // the header was invisible because the gold-chip anchor scrolled it off).
-    // Once the user clears their first chip, the gold-chip anchor takes over.
-    const anchorAccordionTop = completedNonIntroCount < 1;
+    // Anchor the MODULE NODE near the top ONLY for the mod-0-1 welcome window
+    // (intro done, no real chip yet) so a brand-new user reads top-down
+    // "מושגי יסוד" → "ברוכים הבאים" → accordion. For EVERY OTHER module we
+    // jump straight to the next gold chip the moment any chip is finished, so
+    // the user is taken to "what's next" instead of a stale module title (Yoav
+    // 2026-06-19: "חוזרים לאקורדיון — לא מביא אותי לתת מודולה הבאה"). The old
+    // every-module top-anchor partly existed to surface the "למידה רציפה"
+    // autopilot header, which was REMOVED 2026-06-19 — so that reason is gone.
+    const anchorAccordionTop =
+      topicTreeModule.module.id === 'mod-0-1' && completedNonIntroCount < 1;
     if (anchorAccordionTop) {
       const TOP_PAD = 12; // small gap below the wealth header
       const raf = requestAnimationFrame(() => {
@@ -1915,8 +1948,10 @@ export function DuoLearnScreen() {
       });
       return () => cancelAnimationFrame(raf);
     }
-    // After the first chip completes, anchor on the next gold chip so
-    // the user sees "what's next" instead of a stale module title.
+    // After any chip completes, anchor on the next gold chip so the user sees
+    // "what's next". Two-pass (rAF + short delay) because the accordion may
+    // still be laying out on the return frame — without the second pass the
+    // first scrollTo lands short and the gold chip can stay off-screen.
     const recommendedIdx = topics.findIndex((t) => !completedMap[t.id]);
     const safeRecommendedIdx = recommendedIdx < 0 ? 0 : recommendedIdx;
     const OUTER_MODULE_ROW_H = 114;     // outer ModuleNode row height
@@ -1927,11 +1962,14 @@ export function DuoLearnScreen() {
     const chipOffsetFromModule =
       OUTER_MODULE_ROW_H - ENTRY_OVERLAP
       + EDGE_CONNECTOR_H + safeRecommendedIdx * ROW_HEIGHT;
-    const targetY = moduleY + chipOffsetFromModule - VIEWPORT_TOP_PAD;
+    const targetY = Math.max(0, moduleY + chipOffsetFromModule - VIEWPORT_TOP_PAD);
     const raf = requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true });
+      scrollRef.current?.scrollTo({ y: targetY, animated: true });
     });
-    return () => cancelAnimationFrame(raf);
+    const t2 = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    }, 280);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t2); };
   }, [topicTreeModule, calcModuleScrollY, completedMap, isWalkthroughActive]);
 
   // Auto-scroll on initial mount — prefer last-completed module so the user
@@ -3168,6 +3206,33 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: "900",
     color: "#1a1035",
+  },
+  // ✓ badge on completed module nodes (esp. for PRO users who see all
+  // modules unlocked). Green disc, white check, top-right of the node.
+  completedBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#22c55e",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 25,
+    shadowColor: "#16a34a",
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  completedCheck: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "900",
+    lineHeight: 17,
   },
   comingSoonBadge: {
     position: "absolute",
