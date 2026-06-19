@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import LottieView from "lottie-react-native";
 import { AnimatedPressable } from "../../../components/ui/AnimatedPressable";
@@ -20,6 +21,10 @@ export function InflationThiefScreen({ onComplete }: { onComplete: (score: numbe
   const [step, setStep] = useState(0);
   const current = TIMELINE[step];
   const isFinished = step === TIMELINE.length - 1;
+  // The sim renders inside LessonFlowScreen's sim phase with no SafeAreaView, so
+  // the bottom button fell below the home indicator on notched devices (Yoav
+  // 2026-06-19: "חורג מהחלק התחתון"). Pad the scroll content past the inset.
+  const insets = useSafeAreaInsets();
 
   const handleNextYear = () => {
     mediumHaptic();
@@ -34,7 +39,7 @@ export function InflationThiefScreen({ onComplete }: { onComplete: (score: numbe
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 32 }]}
       showsVerticalScrollIndicator={false}
       bounces={false}
     >
