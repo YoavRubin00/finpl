@@ -11,6 +11,22 @@ interface BackfillBody {
   modules?: LocalModuleProgress[];
 }
 
+// Same IL-zoned streak reconciliation as GET /api/sync/streak — kept in sync so
+// the backfill can't hand back a streak the calendar doesn't support.
+function diffDays(later: string, earlier: string): number {
+  const a = new Date(later + 'T00:00:00Z').getTime();
+  const b = new Date(earlier + 'T00:00:00Z').getTime();
+  return Math.round((a - b) / (1000 * 60 * 60 * 24));
+}
+function todayIsraelDate(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
 export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -45,6 +61,17 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
   };
 
   const mergedProfile = mergeProfile(serverProfile, body.profile ?? {});
+
+  // Lapse guard: max(server, local) currentStreak can resurrect a streak the
+  // calendar no longer supports (e.g. a reinstall where the server still holds
+  // an old peak). Reconcile against the server's lastActiveDate, mirroring GET
+  // /api/sync/streak. Only fires when a lastActiveDate EXISTS — a fresh
+  // guest→registered migration (no server date) keeps its real local streak,
+  // exactly as the GET path leaves it. longestStreak (a peak) is untouched.
+  if (profileRow.lastActiveDate && mergedProfile.currentStreak > 0) {
+    const gap = diffDays(todayIsraelDate(), profileRow.lastActiveDate);
+    if (gap > 1) mergedProfile.currentStreak = 0;
+  }
 
   await db
     .update(userProfiles)
