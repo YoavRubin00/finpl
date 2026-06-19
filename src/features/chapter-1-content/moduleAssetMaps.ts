@@ -10,6 +10,7 @@
  * and are now re-exported from there for back-compat with the dozens of
  * internal callsites.
  */
+import { toProxiedImageUri } from '../../lib/imageProxy';
 
 /** Full-screen character art shown when first opening a module */
 export const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -86,3 +87,16 @@ export const MODULE_POST_VIDEO_MAP: Record<string, string> = {
   "mod-5-29": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
   "mod-5-30": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-100.mp4",
 };
+
+// Route the IMAGE maps through our /api/img proxy in prod (per-client 403 fix —
+// see toProxiedImageUri). Videos are intentionally left direct: they stream via
+// the player/Range path, not ExpoImage, and the proxy buffers full bodies.
+for (const k of Object.keys(MODULE_INFOGRAPHIC_MAP)) {
+  MODULE_INFOGRAPHIC_MAP[k] = { uri: toProxiedImageUri(MODULE_INFOGRAPHIC_MAP[k].uri) };
+}
+for (const k of Object.keys(MODULE_HERO_MAP)) {
+  const v = MODULE_HERO_MAP[k];
+  if (v && typeof v === 'object' && 'uri' in v) {
+    MODULE_HERO_MAP[k] = { uri: toProxiedImageUri(v.uri) };
+  }
+}

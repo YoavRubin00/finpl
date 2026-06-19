@@ -15,6 +15,7 @@ import type { ImageSourcePropType } from "react-native";
 import LottieView from "lottie-react-native";
 import type { AnimationObject } from "lottie-react-native";
 import { captureEvent } from "../../lib/posthog";
+import { toProxiedImageUri } from "../../lib/imageProxy";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
@@ -447,6 +448,22 @@ const TEXT_OVERLAYS: Record<string, TextOverlay[]> = {
     },
   ],
 };
+
+// Route every remote infographic / Finn image through our /api/img proxy in
+// prod to dodge Vercel Blob's per-client http_403 (see toProxiedImageUri).
+// Mutates the exported maps in place at module load — synchronously, before any
+// consumer (this component OR LessonFlowScreen's prefetch) reads them. No-op in
+// dev and for non-Blob/bundled entries.
+function proxyImageMapInPlace(map: Record<string, unknown>): void {
+  for (const k of Object.keys(map)) {
+    const v = map[k];
+    if (v && typeof v === "object" && "uri" in v && typeof (v as { uri: unknown }).uri === "string") {
+      map[k] = { ...(v as object), uri: toProxiedImageUri((v as { uri: string }).uri) };
+    }
+  }
+}
+proxyImageMapInPlace(INFOGRAPHIC_MAP as unknown as Record<string, unknown>);
+proxyImageMapInPlace(FINN_MAP as unknown as Record<string, unknown>);
 
 interface Props {
   cardId: string;
