@@ -85,6 +85,17 @@ export function TradingHubScreen() {
 
     const hasSeenIntro = useTutorialStore((s) => s.hasSeenTradingHubIntro);
     const [showTutorial, setShowTutorial] = useState(!hasSeenIntro);
+    // First-entry clean view (Yoav 2026-06-19: "נקי ופחות מפחיד"): hide the top
+    // mission card + shark tip the very first time the hub opens. Capture the
+    // flag once at mount, then mark done so the full top cluster returns on the
+    // next visit.
+    const tradingHubFirstEntryDone = useTutorialStore((s) => s.tradingHubFirstEntryDone);
+    const markTradingHubFirstEntryDone = useTutorialStore((s) => s.markTradingHubFirstEntryDone);
+    const [isFirstEntry] = useState(!tradingHubFirstEntryDone);
+    useEffect(() => {
+      if (!tradingHubFirstEntryDone) markTradingHubFirstEntryDone();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const insets = useSafeAreaInsets();
 
     // Knowledge-level personalisation
@@ -300,11 +311,15 @@ export function TradingHubScreen() {
                     {/* Market status (shows SPY state regardless of selected asset) */}
                     <MarketStatusBar selectedAssetId={selectedId} />
 
-                    {/* Captain Shark, daily contextual tip */}
-                    <SharkInlineTip />
-
-                    {/* Daily market mission */}
-                    <MarketMissionCard />
+                    {/* Captain Shark daily tip + daily market mission — hidden on
+                        the very first hub entry for a clean, less-intimidating
+                        first impression; both return from the second visit on. */}
+                    {!isFirstEntry && (
+                      <>
+                        <SharkInlineTip />
+                        <MarketMissionCard />
+                      </>
+                    )}
 
                     {/* One-time hint: long-press = watchlist */}
                     <WatchlistHint />

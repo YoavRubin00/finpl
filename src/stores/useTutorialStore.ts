@@ -9,6 +9,11 @@ type WalkthroughScreen = 'learn' | 'lesson-preview' | 'tools' | 'chat' | 'shop' 
 
 interface TutorialState {
   hasSeenTradingHubIntro: boolean;
+  /** First-ever entry to the Trading Hub: while false, the top mission card +
+   *  shark tip are hidden for a clean, less-intimidating first impression
+   *  (Yoav 2026-06-19). Set true after the first mount → they appear from the
+   *  second visit on. */
+  tradingHubFirstEntryDone: boolean;
   hasSeenAppWalkthrough: boolean;
   /** Set when the user explicitly opts into the walkthrough (e.g. taps
    *  "המשך" on the mod-0-1 completion modal). The overlay only renders
@@ -61,6 +66,7 @@ interface TutorialState {
   mod01KnowledgeResolved: boolean;
   _hydrated: boolean;
   completeTradingHubIntro: () => void;
+  markTradingHubFirstEntryDone: () => void;
   completeAppWalkthrough: () => void;
   triggerWalkthrough: () => void;
   completeChatStyleChoice: () => void;
@@ -88,6 +94,7 @@ export const useTutorialStore = create<TutorialState>()(
   persist(
     (set) => ({
       hasSeenTradingHubIntro: true,
+      tradingHubFirstEntryDone: false,
       hasSeenAppWalkthrough: false,
       walkthroughTriggered: false,
       hasChosenChatStyle: false,
@@ -109,6 +116,7 @@ export const useTutorialStore = create<TutorialState>()(
       mod01KnowledgeResolved: false,
       _hydrated: false,
       completeTradingHubIntro: () => set({ hasSeenTradingHubIntro: true }),
+      markTradingHubFirstEntryDone: () => set({ tradingHubFirstEntryDone: true }),
       completeAppWalkthrough: () => set({ hasSeenAppWalkthrough: true, appWalkthroughStep: -1, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: false }),
       triggerWalkthrough: () => set({ walkthroughTriggered: true }),
       completeChatStyleChoice: () => set({ hasChosenChatStyle: true }),
@@ -129,7 +137,7 @@ export const useTutorialStore = create<TutorialState>()(
       setPendingPostWalkthroughProTeaser: (value: boolean) => set({ pendingPostWalkthroughProTeaser: value }),
       markMod01KnowledgeResolved: () => set({ mod01KnowledgeResolved: true }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasSeenPearlTooltip: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasSeenPearlTooltip: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v12",
