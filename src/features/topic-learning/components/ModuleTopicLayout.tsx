@@ -69,6 +69,12 @@ interface ModuleTopicLayoutProps {
   topics: Topic[];
   isCompletedMap: Record<string, boolean>;
   recommendedTopicId?: string | null;
+  /** Registers a View ref for the RECOMMENDED ("next") chip's row so the parent
+   *  (DuoLearnScreen) can MEASURE its real on-screen position and scroll it into
+   *  view on chip-return — instead of estimating from layout constants (which
+   *  drifted "too high"). Called with null on unmount / when no chip is
+   *  recommended. */
+  onRecommendedChipRef?: (ref: View | null) => void;
   /** Retained for API stability — the GrowingTree it used to drive was
    *  retired in R5.10 per Yoav ("תוריד בבקשה את העץ, הוא לא מתאים"). */
   progressPct?: number;
@@ -113,6 +119,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   topics,
   isCompletedMap,
   recommendedTopicId,
+  onRecommendedChipRef,
   nodeOffsetX = 0,
   onTopicPress,
   onStartContinuous,
@@ -286,7 +293,16 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   />
                 </View>
               )}
-              <View style={[styles.nodeSlot, { transform: [{ translateX: offsetX }] }]}>
+              <View
+                // The recommended ("next") chip's row registers its ref so the
+                // parent can measure + scroll it precisely into view on return.
+                ref={
+                  !isCompleted && recommendedTopicId === topic.id
+                    ? (r) => onRecommendedChipRef?.(r)
+                    : undefined
+                }
+                style={[styles.nodeSlot, { transform: [{ translateX: offsetX }] }]}
+              >
                 <TopicChip
                   topic={topic}
                   completed={isCompleted}

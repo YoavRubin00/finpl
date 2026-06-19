@@ -217,12 +217,14 @@ export function ReferralScreen() {
             <View style={styles.rewardBanner}>
               <SectionIcon source={LOTTIE_GIFT} />
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginBottom: 4, flexWrap: 'wrap', justifyContent: 'flex-start' }}>
                   <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}>{REFERRAL_SIGNUP_BONUS_COINS}</Text>
                   <GoldCoinIcon size={14} />
-                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}> לכם + {REFERRAL_SIGNUP_BONUS_COINS}</Text>
+                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}>לכם</Text>
+                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}>+</Text>
+                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}>{REFERRAL_SIGNUP_BONUS_COINS}</Text>
                   <GoldCoinIcon size={14} />
-                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}> לחבר</Text>
+                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}>לחבר</Text>
                 </View>
                 <Text style={styles.rewardBannerSubtitle}>
                   {REFERRAL_COPY.fullRewardExplain}

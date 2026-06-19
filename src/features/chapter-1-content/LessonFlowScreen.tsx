@@ -4335,8 +4335,11 @@ export function LessonFlowScreen() {
             );
           })()}
 
-          {/* Progress bar, hidden during sim-intro */}
-          {(phase as string) !== "sim-intro" && (() => {
+          {/* Progress bar, hidden during sim-intro AND the sim itself — a
+              sandbox ("ארגז חול") has no linear step progress, so any bar there
+              reads as a stale "whole-module" indicator (Yoav 2026-06-19: "בר
+              ההתקדמות... מראה עדיין את כל המודולה"). */}
+          {(phase as string) !== "sim-intro" && (phase as string) !== "sim" && (() => {
             const hasSim = MODULES_WITH_SIM.has(mod.id);
             const isSimFirst = SIM_FIRST_MODULES.has(mod.id);
             // Podcast + couple-dilemma each add one step to the lesson flow.
@@ -4401,7 +4404,11 @@ export function LessonFlowScreen() {
                   // happened".
                   : 50)
               : pctLessonWide;
-            const isOnFire = consecutiveCorrect >= 3;
+            // Fire bar ignites at 2-in-a-row (Yoav 2026-06-19: "אחרי 2 תשובות
+            // הבר יהיה לוהט עם אש") — NOT Pro-gated, so both Pro and free users
+            // get the cool streak visual. The energy combo bonus (every 4) is
+            // granted separately in handleCorrectAnswer via registerComboCorrect.
+            const isOnFire = consecutiveCorrect >= 2;
             const barColors: [string, string, string] = isOnFire ? ['#fbbf24', '#f97316', '#ef4444'] : [unitColors.glow, unitColors.glow, unitColors.bg];
             const barShadow = isOnFire ? '#f97316' : unitColors.glow;
             const barBorder = isOnFire ? '#ef4444' : '#d1d5db';

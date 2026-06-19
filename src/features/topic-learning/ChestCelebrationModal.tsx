@@ -294,9 +294,14 @@ export function ChestCelebrationModal({
     glowOpacity.value = withTiming(0, { duration: 350 });
     bodyScale.value = withSpring(1.18, { damping: 10, stiffness: 200 });
     lottieRef.current?.play();
-    // Was 600ms — reduced to 200ms so the reward pills + flying coins
-    // surface immediately on tap ("שמיד יתעופפו" — Yoav 2026-06-11).
-    chestTimersRef.current.push(setTimeout(() => setOpened(true), 200));
+    // Open on the FIRST tap, synchronously — NOT via a clearable timer
+    // (Yoav 2026-06-19: "התיבה נפתחת אחרי לחיצה אחת עליה, ולא 2"). The old
+    // 200ms setTimeout was pushed onto chestTimersRef, which the
+    // visible-change effect cancels — so a re-render that briefly flipped
+    // `visible` swallowed the open and forced a second tap. Flipping
+    // `opened` inline guarantees one tap = open; the escalating burst
+    // haptics above still play over the next ~540ms as the reward fades in.
+    setOpened(true);
   }, [opened, glowScale, glowOpacity, bodyScale, playSound, isFinale]);
 
   // Yoav 2026-06-11 (round 2): reverted the auto-open — the user wants

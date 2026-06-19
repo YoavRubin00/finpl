@@ -907,6 +907,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onTopicTreeAdvanceToNextModule,
   onPearlReady,
   onInvestorQuizPress,
+  onRecommendedChipRef,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -984,6 +985,10 @@ const ChapterSection = React.memo(function ChapterSection({
   /** Opens the standalone investor-personality quiz. Wired only for the
    *  chapter-1 anchor module; navigates to /graham-personality. */
   onInvestorQuizPress?: () => void;
+  /** Registers the recommended ("next") chip's View ref (forwarded to the
+   *  TopicTreeAccordion → ModuleTopicLayout) so the parent can measure +
+   *  scroll it into view on return. */
+  onRecommendedChipRef?: (ref: View | null) => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -1171,6 +1176,7 @@ const ChapterSection = React.memo(function ChapterSection({
                   onContinueAfterChest={onTopicTreeContinueAfterChest}
                   onAdvanceToNextModule={onTopicTreeAdvanceToNextModule}
                   onModuleCompleted={onTopicTreeModuleCompleted}
+                  onRecommendedChipRef={onRecommendedChipRef}
                 />
               )}
               {showQuestBox && questPathNodeProps && (
@@ -1757,6 +1763,16 @@ export function DuoLearnScreen() {
     if (ref) pearlRefsMap.current.set(moduleId, ref);
     else pearlRefsMap.current.delete(moduleId);
   }, []);
+  // Live View ref of the RECOMMENDED ("next") chip inside the open accordion.
+  // The gold-chip auto-scroll measures THIS node instead of estimating the
+  // offset from layout constants — the estimate drifted "too high" so the user
+  // landed above the accordion (Yoav 2026-06-19). Only the one open accordion
+  // registers a node; it clears to null on close. Stable callback so the
+  // child's ref isn't re-invoked every render.
+  const recommendedChipRef = useRef<View | null>(null);
+  const registerRecommendedChipRef = useCallback((ref: View | null) => {
+    recommendedChipRef.current = ref;
+  }, []);
 
   const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
@@ -2001,12 +2017,36 @@ export function DuoLearnScreen() {
       OUTER_MODULE_ROW_H - ENTRY_OVERLAP
       + EDGE_CONNECTOR_H + safeRecommendedIdx * ROW_HEIGHT;
     const targetY = Math.max(0, moduleY + chipOffsetFromModule - VIEWPORT_TOP_PAD);
-    const raf = requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ y: targetY, animated: true });
-    });
-    const t2 = setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: targetY, animated: true });
-    }, 280);
+    // Prefer MEASURING the real recommended-chip node (registered via
+    // onRecommendedChipRef) and scroll to its actual position. measureLayout is
+    // relative to the ScrollView's inner content node, so the returned y is
+    // already a content offset usable by scrollTo. The constant `targetY` above
+    // is now only the FALLBACK — used when the node/ref isn't ready (accordion
+    // mid-layout) or a platform lacks measureLayout. This kills the "lands too
+    // high above the accordion" drift from the estimate (Yoav 2026-06-19).
+    const scrollToRecommended = () => {
+      const chip = recommendedChipRef.current;
+      const scroller = scrollRef.current;
+      const fallback = () => scrollRef.current?.scrollTo({ y: targetY, animated: true });
+      if (!chip || !scroller || typeof chip.measureLayout !== 'function') { fallback(); return; }
+      const innerGetter = scroller as unknown as { getInnerViewNode?: () => unknown };
+      const inner = innerGetter.getInnerViewNode?.();
+      const relativeTo = typeof inner === 'number' ? inner : findNodeHandle(scroller);
+      if (relativeTo == null) { fallback(); return; }
+      try {
+        chip.measureLayout(
+          relativeTo,
+          (_x: number, y: number) => {
+            scrollRef.current?.scrollTo({ y: Math.max(0, y - VIEWPORT_TOP_PAD), animated: true });
+          },
+          fallback,
+        );
+      } catch {
+        fallback();
+      }
+    };
+    const raf = requestAnimationFrame(scrollToRecommended);
+    const t2 = setTimeout(scrollToRecommended, 280);
     return () => { cancelAnimationFrame(raf); clearTimeout(t2); };
   }, [topicTreeModule, calcModuleScrollY, completedMap, isWalkthroughActive]);
 
@@ -2752,6 +2792,7 @@ export function DuoLearnScreen() {
                 onTopicTreeContinueAfterChest={handleTopicTreeContinueAfterChest}
                 onTopicTreeAdvanceToNextModule={handleTopicTreeAdvanceToNextModule}
                 onPearlReady={registerPearlRef}
+                onRecommendedChipRef={registerRecommendedChipRef}
               />
             );
 

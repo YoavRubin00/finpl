@@ -15,6 +15,18 @@ function diffDays(later: string, earlier: string): number {
   return Math.round((a - b) / (1000 * 60 * 60 * 24));
 }
 
+// Server-side "today" in Israel time — the same calendar the client uses for
+// dateIl (todayIsraelDate in src/features/economy/useStreak.ts). All streak
+// math is IL-zoned, so reconciliation must be too.
+function todayIsraelDate(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
 export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => {
   const db = getDb();
 
@@ -28,7 +40,24 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
       .from(userProfiles)
       .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
-    return res.status(200).json({ ok: true, streak: rows[0] ?? null });
+
+    // Reconcile on read: a stored streak only "lives" if the last active day
+    // was today or yesterday. Without this the GET returns the stale stored
+    // peak — so a user whose streak lapsed (or who reinstalled: server still
+    // holds 3 while the device's local activeDates shows only today) sees an
+    // inflated "3" in the header that disagrees with the calendar. The DB is
+    // NOT mutated here (GET stays a pure read); the day's first
+    // recordDailyActivity POST rewrites currentStreak authoritatively (→ 1).
+    // The server is freeze-blind by design (freeze magic is client-side), and
+    // its POST path already resets on any gap > 1, so this read stays
+    // consistent with that behaviour.
+    const row = rows[0] ?? null;
+    let streak = row;
+    if (row?.lastActiveDate && row.currentStreak) {
+      const gap = diffDays(todayIsraelDate(), row.lastActiveDate);
+      if (gap > 1) streak = { ...row, currentStreak: 0 };
+    }
+    return res.status(200).json({ ok: true, streak });
   }
 
   if (req.method === 'POST') {

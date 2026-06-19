@@ -67,6 +67,9 @@ interface TopicTreeAccordionProps {
    *  on the user's choice in the chest modal. Parent dismisses the
    *  accordion after the user's interaction. */
   onModuleCompleted?: () => void;
+  /** Forwarded to ModuleTopicLayout — registers the recommended ("next") chip's
+   *  View ref so DuoLearnScreen can measure + scroll it into view on return. */
+  onRecommendedChipRef?: (ref: View | null) => void;
 }
 
 /**
@@ -86,6 +89,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   onContinueAfterChest,
   onAdvanceToNextModule,
   onModuleCompleted,
+  onRecommendedChipRef,
 }: TopicTreeAccordionProps): React.ReactElement {
   const topics = useMemo(
     () => resolveTopics(module, { simFirst }),
@@ -516,16 +520,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // autopilot and switch to the accordion mid-way. chapterId is derived from
   // the module id (same canonical parse the store uses) since the accordion
   // has no route param for it.
-  const handleStartContinuous = useCallback(() => {
-    tapHaptic();
-    const chId = chapterIdFromModuleId(module.id);
-    // continuous_run_started is now fired by LessonFlowScreen (the lifecycle
-    // owner) when ttProgress=1 mounts — so it brackets completed/exited
-    // symmetrically and covers EVERY entry path, not just this key. Firing it
-    // here too would double-count and still miss the other paths.
-    const chParam = chId ? `?chapterId=${chId}&ttProgress=1` : `?ttProgress=1`;
-    router.push(`/lesson/${module.id}${chParam}` as never);
-  }, [module.id, router]);
+  // "למידה רציפה" autopilot was REMOVED (Yoav 2026-06-19: "תבטל את האופציה של
+  // אוטופיילוט לרוץ על מודולה"). Every module is now learned chip-by-chip via
+  // the accordion (returnTo=topic-tree), which keeps the per-chip progress bar
+  // accurate and the 70% chest firing from the accordion (not the legacy
+  // whole-module summary chest). The ttProgress/continuous-run plumbing stays
+  // dormant — nothing launches it anymore.
 
   return (
     <Animated.View
@@ -558,24 +558,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           topics={topics}
           isCompletedMap={isCompletedMap}
           recommendedTopicId={summary.nextTopic?.id ?? null}
+          onRecommendedChipRef={onRecommendedChipRef}
           progressPct={summary.pct}
           nodeOffsetX={nodeOffsetX}
           onTopicPress={onTopicSelected}
-          onStartContinuous={
-            // Autopilot is offered on REAL modules (chapter 1+), as long as the
-            // module isn't fully complete, and never during the mod-0-1 welcome
-            // banner. Chapter 0 is the intro/tutorial chapter ("מה זה בכלל כסף"
-            // = mod-0-2 etc.) — it must be done manually so a new user actually
-            // learns the app, never accidentally autopiloted (Yoav 2026-06-14).
-            // Earlier this also required "no content chip done yet", which hid
-            // the key the moment one chip was cleared — Yoav 2026-06-15: "לא
-            // רואה את כפתור האוטופיילוט בשום מקום". Now shows until 100%.
-            !showWelcomeBanner &&
-            summary.pct < 100 &&
-            !module.id.startsWith('mod-0-')
-              ? handleStartContinuous
-              : undefined
-          }
         />
 
         {/* #6 Graduate onboarding — a still-unanswered staged profile question,

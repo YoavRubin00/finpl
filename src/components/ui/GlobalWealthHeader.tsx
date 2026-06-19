@@ -239,7 +239,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
       // small to the side, with prominent confetti on top.
       avatarSize: Math.max(22, Math.round(28 * scale)),
       avatarBorderR: Math.max(11, Math.round(14 * scale)),
-      nameFont: Math.max(13, Math.round(16 * scale)),
+      nameFont: Math.max(11, Math.round(16 * scale)),
       nameMaxW: Math.max(70, Math.round(100 * scale)),
       profileGap: Math.max(6, Math.round(10 * scale)),
       profilePadR: Math.max(6, Math.round(10 * scale)),
@@ -589,6 +589,8 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
               <Text
                 style={[s.profileNameCompact, { fontSize: d.nameFont, maxWidth: d.nameMaxW }, isPro && { color: "#d97706" }]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
                 ellipsizeMode="tail"
               >
                 {(displayName ?? "שחקן").split(" ")[0]}

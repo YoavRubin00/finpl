@@ -225,6 +225,29 @@ export function ProfileScreen() {
             <View style={styles.confettiLayer} pointerEvents="none">
               <ConfettiExplosion />
             </View>
+            {/* Equipped avatar — shown ONLY when the user has one
+                (bought in the shop / picked a free one). Free users with
+                no avatar keep the clean name-only hero (2026-06-03 decision).
+                Re-added per request 2026-06-19: "במידה וקונים אווטר, שיראו
+                אותו בפרופיל". Tapping it opens the full ChampionCard. */}
+            {profile?.avatarId ? (
+              <Pressable
+                onPress={() => setShowChampionPopup(true)}
+                accessibilityRole="button"
+                accessibilityLabel="הצג כרטיס שחקן מלא"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.bannerAvatarWrap}
+              >
+                <View style={[styles.bannerAvatarCircle, isPro && { borderColor: "#facc15" }]}>
+                  <AvatarImage avatarId={profile.avatarId} size={68} emojiStyle={styles.avatarEmoji} />
+                </View>
+                {isPro && (
+                  <View style={styles.avatarCrown}>
+                    <Crown size={14} color="#facc15" fill="#f59e0b" />
+                  </View>
+                )}
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={() => setShowChampionPopup(true)}
               accessibilityRole="button"
@@ -777,6 +800,28 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 0 },
     elevation: 4,
+  },
+  bannerAvatarWrap: {
+    zIndex: 1,
+    marginBottom: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bannerAvatarCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: "#f0f9ff",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#bae6fd",
+    overflow: "hidden",
+    shadowColor: "#0891b2",
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   avatarInner: {
     width: 80,

@@ -259,9 +259,17 @@ function PearlExternalGameWrap({
         onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
         accessibilityRole="button"
         accessibilityLabel="המשך לשלב הבא"
-        style={({ pressed }) => [externalStyles.continueBtn, pressed && externalStyles.continueBtnPressed]}
+        style={externalStyles.continuePressable}
       >
-        <Text style={externalStyles.continueText}>המשך לשלב הבא ←</Text>
+        {({ pressed }) => (
+          // bg/border on the inner View — a function-style `style` prop on
+          // Pressable drops backgroundColor on Android, rendering the button
+          // white-on-white (Yoav 2026-06-19: "מופיע בצבע לבן על לבן"). Same
+          // workaround as PearlScenarioStage / CrowdQuestionCard.
+          <View style={[externalStyles.continueBtn, pressed && externalStyles.continueBtnPressed]}>
+            <Text style={externalStyles.continueText}>המשך לשלב הבא ←</Text>
+          </View>
+        )}
       </Pressable>
     </View>
   );
@@ -270,10 +278,12 @@ function PearlExternalGameWrap({
 const externalStyles = StyleSheet.create({
   root: { flex: 1 },
   cardArea: { flex: 1, justifyContent: 'center' },
-  continueBtn: {
+  continuePressable: {
     marginHorizontal: 20,
     marginBottom: 18,
     marginTop: 12,
+  },
+  continueBtn: {
     paddingVertical: 14,
     borderRadius: 14,
     backgroundColor: '#0ea5e9',
@@ -323,9 +333,16 @@ function ScenarioLabCtaCard({ seed }: { seed: string | undefined }): React.React
         }}
         accessibilityRole="button"
         accessibilityLabel={`שחק את התרחיש ${scenario.title}`}
-        style={({ pressed }) => [scenarioStyles.playBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
+        style={scenarioStyles.playPressable}
       >
-        <Text style={scenarioStyles.playText}>שחק את התרחיש →</Text>
+        {({ pressed }) => (
+          // bg on inner View — Pressable function-style drops the bg on
+          // Android, making the button read as plain text (Yoav 2026-06-19:
+          // "שחק את התרחיש צריך להיות ככפתור ולא כטקסט").
+          <View style={[scenarioStyles.playBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}>
+            <Text style={scenarioStyles.playText}>שחק את התרחיש →</Text>
+          </View>
+        )}
       </Pressable>
     </View>
   );
@@ -351,7 +368,8 @@ const scenarioStyles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '900', color: '#ffffff', textAlign: 'center', writingDirection: 'rtl' as const },
   year: { fontSize: 13, fontWeight: '700', color: '#bae6fd', writingDirection: 'rtl' as const },
   briefing: { fontSize: 13, color: '#e0f2fe', textAlign: 'center', writingDirection: 'rtl' as const, lineHeight: 19, marginTop: 8, paddingHorizontal: 4 },
-  playBtn: { marginTop: 14, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 12, backgroundColor: '#0ea5e9', borderBottomWidth: 3, borderBottomColor: '#075985' },
+  playPressable: { marginTop: 14, alignSelf: 'center' },
+  playBtn: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 12, backgroundColor: '#0ea5e9', borderBottomWidth: 3, borderBottomColor: '#075985', alignItems: 'center' },
   playText: { color: '#ffffff', fontSize: 15, fontWeight: '900', writingDirection: 'rtl' as const },
 });
 
