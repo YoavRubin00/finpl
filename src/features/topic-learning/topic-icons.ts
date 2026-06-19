@@ -63,6 +63,10 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   // second-to-last in every module's order by the resolver so it always
   // lands right before shark-dilemma.
   'chat': { svgXml: SVG_CHAT },
+  // Blue document (folded corner + text lines) for the bonus "tool" chip —
+  // reads as a payslip/sheet, fitting the "נתח תלוש שכר" analyzer. The actual
+  // per-module label/route comes from moduleToolMap.ts.
+  'tool': { svgXml: SVG_LESSON },
 };
 
 /** Hebrew label shown on the chip. Singular, gender-neutral per BRAND.md. */
@@ -80,4 +84,7 @@ export const TOPIC_LABELS: Record<TopicKind, string> = {
   'post-video': 'סרטון סיכום',
   'shark-dilemma': 'דילמה',
   'chat': 'צ׳אט',
+  // Generic fallback — the per-module tool registry overrides this with the
+  // specific label (e.g. "נתח תלוש שכר").
+  'tool': 'כלי',
 };

@@ -40,7 +40,13 @@ export type TopicKind =
    *  fires after the post-video celebration in the legacy flow. Surfaces
    *  here as its own chip because the data backing it (dilemmasData)
    *  exists for most modules including mod-1-1. */
-  | 'shark-dilemma';
+  | 'shark-dilemma'
+  /** Bonus CTA chip that deep-links into a full financial TOOL (e.g. the
+   *  "נתח תלוש שכר" payslip analyzer), NOT a learning phase. Registered per
+   *  module in `moduleToolMap.ts`, appended to the END of the accordion and
+   *  REVEALED only past a completion %. Excluded from the completion math —
+   *  it never counts toward the chest and is never marked "done". */
+  | 'tool';
 
 /**
  * R5.11 (2026-06-10) — chip visual upgraded from emoji to Design System

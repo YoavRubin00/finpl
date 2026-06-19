@@ -99,6 +99,7 @@ import { isBundledIntroAudio } from "../../hooks/useIntroAudio";
 import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
 import { resolveTopics, shouldUseTopicTree } from "../topic-learning/topicResolver";
 import { getGameForModule } from "../topic-learning/moduleGameMap";
+import { getModuleTool } from "../topic-learning/moduleToolMap";
 import type { Topic, TopicKind } from "../topic-learning/types";
 
 import { tapHaptic, successHaptic } from "../../utils/haptics";
@@ -1929,6 +1930,31 @@ export function DuoLearnScreen() {
     return calcModuleScrollY(targetChapterIdx, targetModuleIdx);
   }, [progressData, localCompletedModuleIds, calcModuleScrollY]);
 
+  // Content-Y of the module where Captain Shark (the active cursor) sits.
+  // Mirrors the shark-render logic exactly — the global active chapter
+  // (globalActiveIdx) at the played module (Pro jump-ahead via playedModuleIdx)
+  // or the first-incomplete module otherwise — so the map opens ON the shark's
+  // chip (Yoav 2026-06-19: "בדיפולט להפתח על הציפ של המודולה שבה נמצא קפטן שארק").
+  // Returns null only when nothing is active (all accessible modules done) so
+  // callers fall back to the last-completed anchor.
+  const calcSharkScrollY = useCallback((): number | null => {
+    if (globalActiveIdx < 0) return null;
+    const ch = ALL_CHAPTERS[globalActiveIdx];
+    if (!ch) return null;
+    const num = storeKey(ch.id).replace('ch-', '');
+    const done = completedByPrefix(`mod-${num}-`);
+    const firstIncomplete = ch.modules.findIndex(
+      (m) => !done.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
+    );
+    const sharkIdx =
+      playedModuleIdx != null
+        ? playedModuleIdx
+        : firstIncomplete === -1
+          ? 0
+          : firstIncomplete;
+    return calcModuleScrollY(globalActiveIdx, sharkIdx);
+  }, [globalActiveIdx, playedModuleIdx, completedByPrefix, isPro, calcModuleScrollY]);
+
   // On every tab focus, scroll to the user's last-completed module (with a
   // fallback to "next active module" for fresh users). Skips the very first
   // mount because the dedicated mount effect below already runs then (and
@@ -1947,11 +1973,10 @@ export function DuoLearnScreen() {
         setRefreshKey((k) => k + 1);
         return;
       }
-      const lastY = calcLastCompletedScrollY();
-      const targetY = lastY ?? calcResumeScrollY();
+      const targetY = calcSharkScrollY() ?? calcLastCompletedScrollY() ?? calcResumeScrollY();
       scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 80), animated: true });
       setRefreshKey((k) => k + 1);
-    }, [calcResumeScrollY, calcLastCompletedScrollY])
+    }, [calcResumeScrollY, calcLastCompletedScrollY, calcSharkScrollY])
   );
 
   // Anchor an open topic-tree module so the user's NEXT golden (recommended)
@@ -2054,8 +2079,10 @@ export function DuoLearnScreen() {
   // lands on "where I finished last time" with the next lesson right below.
   // Fresh users (no completions) fall back to calcResumeScrollY → mod-0-1.
   useEffect(() => {
-    const lastY = calcLastCompletedScrollY();
-    const y = lastY ?? calcResumeScrollY();
+    // Open on Captain Shark's chip (the active module), not the last-completed
+    // node above it (Yoav 2026-06-19). Fall back to last-completed → resume only
+    // when there is no active shark (everything done) or data isn't ready yet.
+    const y = calcSharkScrollY() ?? calcLastCompletedScrollY() ?? calcResumeScrollY();
     if (y > 0) {
       // Two-pass scroll: snap immediately so the first paint already lands
       // on the anchor node, then a tiny smooth nudge once layout settles.
@@ -2237,6 +2264,17 @@ export function DuoLearnScreen() {
     if (topic.kind === 'chat') {
       isNavigatingRef.current = true;
       router.push(`/topic-chat/${current.module.id}` as never);
+      return;
+    }
+    // Bonus 'tool' chip — deep-link straight into the full financial tool
+    // (e.g. /payslip-analyzer). Not a learning phase, so it bypasses the
+    // phase router entirely. Route comes from the per-module tool registry.
+    if (topic.kind === 'tool') {
+      const tool = getModuleTool(current.module.id);
+      if (tool) {
+        isNavigatingRef.current = true;
+        router.push(tool.route as never);
+      }
       return;
     }
     const phaseForKind: Record<string, string> = {

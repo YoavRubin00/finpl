@@ -19,6 +19,7 @@ import type { Module } from '../chapter-1-content/types';
 import type { Topic, ChestRarity } from './types';
 import { CHEST_RARITY_BONUS } from './types';
 import { resolveTopics } from './topicResolver';
+import { getModuleTool, buildToolTopic } from './moduleToolMap';
 import { useTopicProgressStore } from './useTopicProgressStore';
 import { useContinuousRunStore } from './useContinuousRunStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
@@ -115,6 +116,20 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     topics.forEach((t) => { out[t.id] = Boolean(completedMap[t.id]); });
     return out;
   }, [topics, completedMap]);
+
+  // Bonus "tool" chip (e.g. "נתח תלוש שכר") — appended to the END of the
+  // accordion ONLY once the module crosses the registered reveal % (Yoav
+  // 2026-06-19: "שיופיע ב-60 אחוז"). It's display-only: built off `topics`
+  // (NOT mutating it) so the completion summary / chest math above stay based
+  // purely on the real learning topics. Tapping it deep-links into the tool
+  // via the parent's onTopicSelected ('tool' kind).
+  const displayTopics = useMemo(() => {
+    const tool = getModuleTool(module.id);
+    if (tool && summary.pct >= tool.revealPct) {
+      return [...topics, buildToolTopic(module.id, tool)];
+    }
+    return topics;
+  }, [topics, module.id, summary.pct]);
 
   // Yoav 2026-06-17: the 70% chest must also require the QUIZ to be answered —
   // reaching 70% of the chips alone isn't "done" if the quiz chip is still
@@ -555,7 +570,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         {/* Tree + path chips, no surrounding rectangle so the accordion
             reads as a continuation of the outer module path. */}
         <ModuleTopicLayout
-          topics={topics}
+          topics={displayTopics}
           isCompletedMap={isCompletedMap}
           recommendedTopicId={summary.nextTopic?.id ?? null}
           onRecommendedChipRef={onRecommendedChipRef}
