@@ -339,7 +339,9 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
     // never claims the chests, and hasReportedCompletionFor=true blocks
     // re-entry so the rewards are lost permanently (QA blocker 2026-05-31).
     if (bothAnswered) {
-      if (!regularChestOpened) handleClaimRegular();
+      // Pro gets ONLY the Pro chest, non-Pro ONLY the regular — never both
+      // (Yoav 2026-06-19: Pro users were getting a double payout here).
+      if (!isPro && !regularChestOpened) handleClaimRegular();
       if (isPro && !proChestOpened) handleClaimPro();
     }
     onClose();
@@ -380,7 +382,8 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
       // claim* methods so re-opens of a completed day are no-ops.
       if (currentIdx >= PAGE_COUNT - 1) {
         if (bothAnswered) {
-          if (!regularChestOpened) handleClaimRegular();
+          // Pro gets ONLY the Pro chest, non-Pro ONLY the regular — never both.
+          if (!isPro && !regularChestOpened) handleClaimRegular();
           if (isPro && !proChestOpened) handleClaimPro();
         }
         if (challenge?.dateKey && recapOpenedAtRef.current !== null) {

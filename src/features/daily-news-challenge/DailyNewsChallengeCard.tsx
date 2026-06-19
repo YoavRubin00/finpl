@@ -99,12 +99,13 @@ export function DailyNewsChallengeCard({
 
   if (!challenge) return null;
 
-  // Pro user who already completed + opened both chests => fully done
+  // Pro user who completed + opened the Pro chest => fully done (Pro has a
+  // single Pro chest now, never a regular one too).
   const fullyDone = completed && (isPro ? proChestOpened : true);
 
   const ctaText = (() => {
     if (!completed) return 'התחל לעדכן את עצמך';
-    if (isPro && !proChestOpened) return 'פתח גם את תיבת ה-Pro';
+    if (isPro && !proChestOpened) return 'פתח את תיבת ה-Pro';
     return 'סיימת את האקטואליה הפיננסית להיום 🎉';
   })();
 

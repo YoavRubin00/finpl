@@ -121,7 +121,7 @@ export function CompletionChests({
 
   return (
     <Animated.View entering={FadeIn.duration(360)} style={styles.wrap}>
-      <View style={[styles.row, !isPro && styles.rowSingle]}>
+      <View style={[styles.row, styles.rowSingle]}>
         {/* PRO chest — rendered ONLY for Pro subscribers. Non-Pro users see
             just the regular chest (no lock/upsell here — the Pro upsell lives
             elsewhere in the app, no need to clutter the chest area). */}
@@ -169,7 +169,9 @@ export function CompletionChests({
           </View>
         )}
 
-        {/* Regular chest — smaller, on the RIGHT */}
+        {/* Regular chest — shown ONLY for non-Pro users. Pro gets the Pro chest
+            above and never both (Yoav 2026-06-19). */}
+        {!isPro && (
         <View style={styles.regularCol}>
           <View style={{ height: 36 }} accessible={false} />
           <View style={styles.chestOuter}>
@@ -202,6 +204,7 @@ export function CompletionChests({
             <RewardPill icon={<GoldCoinIcon size={14} />} value={`+${(lastRegular ?? regularPreview).coins}`} color="#facc15" />
           </View>
         </View>
+        )}
       </View>
 
       {regularPreview.streakBonusPct > 0 && (
