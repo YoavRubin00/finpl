@@ -11,6 +11,12 @@ dist/
 # it out of git AND the build (also listed in .easignore). NEVER save generated
 # marketing media under assets/ (that bundles into the .aab/.ipa).
 marketing-output/
+# In-repo marketing REFERENCE media (CAPTAIN SHARK / DAISY source PNGs + a 49MB
+# "finplay app screen share.mp4") — committed by past marketing work, never
+# imported by app code (Metro doesn't bundle them) and already in .easignore.
+# Untracked from git 2026-06-19 to slim the repo + EAS upload archive (~70MB).
+# Files stay on disk; only git stops tracking them.
+docs/marketing/ASSETS/
 *.jks
 *.p8
 *.p12
