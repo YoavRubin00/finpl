@@ -55,6 +55,8 @@ import { userStatsQueryKey } from "../src/features/user-stats/useUserStats";
 import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GlobalEnergyDepletedModal } from "../src/features/subscription/HeartsUI";
+import { useHeartsStore } from "../src/features/subscription/useHeartsStore";
+import { useIsPro } from "../src/features/subscription/useSubscription";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { useFonts } from "@expo-google-fonts/heebo";
 import {
@@ -355,6 +357,16 @@ function RootLayoutInner() {
   useEffect(() => {
     configureRevenueCat();
   }, []);
+
+  // Mirror PRO status into the energy store so EVERY energy mutation is inert
+  // for Pro (Yoav 18/06: "למשתמש שהוא פרו לא צריך לרדת/להוסיף אנרגיה בכלל").
+  // useHeart already skips via its param, but grantEnergy/combo/practice/restore
+  // didn't — so Pro users still gained combo energy + a gain animation. The
+  // store-level mirror short-circuits all of them.
+  const isProForEnergy = useIsPro();
+  useEffect(() => {
+    try { useHeartsStore.getState().setIsPro(isProForEnergy); } catch { /* non-fatal */ }
+  }, [isProForEnergy]);
 
   // DEV-only web pro override removed: subscription tier is now server-driven
   // via useSubscription() / React Query. Dev accounts that need Pro access

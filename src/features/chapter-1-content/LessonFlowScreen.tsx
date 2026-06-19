@@ -4113,6 +4113,12 @@ export function LessonFlowScreen() {
       if (!isReplay) {
         const isProNow = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true;
         for (let i = 0; i < result.unwiseCount; i++) useHeartsStore.getState().useHeart(isProNow);
+        // This path used to deplete SILENTLY (no CTA). If the unwise choices
+        // drained energy to 0, surface the out-of-energy modal here too so the
+        // watch-ad/refill/upgrade options always appear on depletion.
+        if (!isProNow && result.unwiseCount > 0 && useHeartsStore.getState().getHearts() <= 0) {
+          setShowOutOfHearts(true);
+        }
         // Combo: a clean dilemma (no unwise choices) feeds the streak; any unwise resets it.
         if (result.unwiseCount === 0) {
           const g = useHeartsStore.getState().registerComboCorrect();
@@ -4599,16 +4605,30 @@ export function LessonFlowScreen() {
         {/* ── Quizzes phase ── */}
         {phase === "quizzes" && (
           <Animated.View style={[contentStyle, { flex: 1 }]}>
-            {/* Energy display — hidden for Pro (unlimited; no ∞ advertising) */}
+            {/* Energy display — hidden for Pro (unlimited; no ∞ advertising).
+                Tappable: when empty → straight to the Pro paywall (Yoav 18/06);
+                otherwise open the refill modal (timer + ad + coins). */}
             {!isPro && (
-            <View
+            <Pressable
+              onPress={() => {
+                tapHaptic();
+                if (heartsCount <= 0) {
+                  try { captureEvent('energy_indicator_tapped', { state: 'empty' }); } catch { /* non-fatal */ }
+                  router.push('/pricing?source=energy_indicator_empty' as never);
+                } else {
+                  setShowOutOfHearts(true);
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={heartsCount <= 0 ? 'אזלה האנרגיה — שדרגו לאנרגיה אינסופית' : `אנרגיה: ${heartsCount} מתוך ${MAX_ENERGY}`}
+              hitSlop={8}
               style={{ flexDirection: "row-reverse", justifyContent: "center", alignItems: "center", gap: 6, marginBottom: 6 }}
             >
-              <EnergyBatteryIcon size={20} level={isPro ? 1 : (MAX_ENERGY > 0 ? heartsCount / MAX_ENERGY : 0)} />
+              <EnergyBatteryIcon size={20} level={MAX_ENERGY > 0 ? heartsCount / MAX_ENERGY : 0} />
               <Text style={{ fontSize: 14, color: ENERGY.deep, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
                 {`${heartsCount}/${MAX_ENERGY}`}
               </Text>
-            </View>
+            </Pressable>
             )}
             <QuizCard
               key={mod.quizzes[quizIndex].id}

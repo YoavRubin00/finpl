@@ -64,6 +64,13 @@ interface HeartsState {
   // Keyed by source ('quest' | 'daily-task' | 'station-game' | 'ad' | 'combo' …).
   // Value = energy granted from that source TODAY (reset on date change).
   energyGrantsBySource: Record<string, { date: string; energy: number }>;
+
+  // PRO users have unlimited energy → energy must be fully INERT for them:
+  // never decreases, never increases, no gain/loss animations. Mirrored from
+  // the server-driven subscription via setIsPro() in a root effect so EVERY
+  // mutation path (not just useHeart's param) can short-circuit. Non-persisted
+  // (re-synced each launch from useSubscription).
+  isPro: boolean;
 }
 
 interface HeartsActions {
@@ -103,6 +110,10 @@ interface HeartsActions {
   flagDepleted: () => void;
   clearDepleted: () => void;
 
+  /** Mirror PRO status into the store so every energy mutation is inert for
+   *  Pro users (set from a root effect via useIsPro). */
+  setIsPro: (value: boolean) => void;
+
   reset: () => void;
 }
 
@@ -117,6 +128,7 @@ const initialState: HeartsState = {
   practiceRefillDate: null,
   pendingPracticeForHeart: false,
   energyGrantsBySource: {},
+  isPro: false,
 };
 
 export const useHeartsStore = create<HeartsState & HeartsActions>()(
@@ -144,7 +156,8 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       },
 
       useHeart: (isPro: boolean, source: string = 'penalty'): boolean => {
-        if (isPro) return true;
+        // Pro = inert: never spend (param OR mirrored store flag).
+        if (isPro || get().isPro) return true;
         const state = get();
         state.refillHearts();
         const current = get().hearts;
@@ -167,6 +180,7 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       },
 
       restoreAllHearts: () => {
+        if (get().isPro) return; // Pro = inert
         const before = get().hearts;
         set({ hearts: MAX_HEARTS, lastHeartLostAt: null });
         emit('gain', MAX_HEARTS - before, 'restore');
@@ -182,6 +196,7 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       },
 
       grantPracticeHeart: (): boolean => {
+        if (get().isPro) return false; // Pro = inert
         const today = todayISO();
         const state = get();
         if (!state.pendingPracticeForHeart) return false;
@@ -208,7 +223,8 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       },
 
       grantEnergy: (amount: number, source: string, dailyCap?: number): number => {
-        if (amount <= 0) return 0;
+        if (get().isPro || amount <= 0) return 0; // Pro = inert
+
         const today = todayISO();
         // Settle passive regen first so we grant on top of the true current value.
         get().refillHearts();
@@ -244,7 +260,7 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       },
 
       registerComboCorrect: (isReplay?: boolean): number => {
-        if (isReplay) return 0;
+        if (isReplay || get().isPro) return 0; // Pro = inert (no combo energy/anim)
         const next = get().comboStreak + 1;
         set({ comboStreak: next });
         // Every 4 correct-in-a-row across the whole lesson → +1 energy (capped 6/day).
@@ -261,6 +277,10 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
 
       clearPracticeFlag: () => {
         set({ pendingPracticeForHeart: false });
+      },
+
+      setIsPro: (value: boolean): void => {
+        if (get().isPro !== value) set({ isPro: value });
       },
 
       reset: () => set(initialState),
