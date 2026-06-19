@@ -457,10 +457,14 @@ interface Props {
 // Retry policy for transient image-load failures. iOS CFNetwork errors 303
 // + Vercel Blob intermittent 403s have been observed for the same URLs that
 // curl perfectly (PostHog 2026-06-05: 7 hits on fc-0-2-3 in a single day).
-// Two backoff retries usually clear them. Mirrors useModulePrefetch's
-// audio/video retry pattern, kept smaller (800ms/2400ms vs 1s/3s/9s) because
-// the user is already staring at the card waiting to see it.
-const IMAGE_RETRY_DELAYS_MS = [800, 2400] as const;
+// Lengthened 2026-06-19: a 2-step ladder gave up too early — the per-client
+// Vercel Blob 403 episodes outlast it (see useModulePrefetch note), so module
+// infographics stayed BLANK for throttled users while pearl videos (Range-
+// streamed) still loaded. 4 steps (~21s) clears the shorter episodes; a
+// shimmer skeleton keeps the slot from looking broken while it retries. The
+// definitive fix for sustained per-client 403s is moving infographics off
+// Vercel Blob (R2 / image-proxy CDN).
+const IMAGE_RETRY_DELAYS_MS = [800, 2400, 6000, 12000] as const;
 
 export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Props) {
   const baseSource = INFOGRAPHIC_MAP[cardId];
@@ -471,6 +475,9 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   const [finnFullscreen, setFinnFullscreen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
+  // Drives the shimmer skeleton: false until the image actually paints. Web
+  // never fires onLoad here (handleLoad is native-only), so seed it true there.
+  const [loaded, setLoaded] = useState(Platform.OS === 'web');
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
@@ -488,6 +495,12 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     }
   }, [cardId]);
 
+  // Re-show the skeleton whenever the image (re)mounts — new card or a retry
+  // (the <AnimatedExpoImage> key includes retryAttempt, so it remounts).
+  useEffect(() => {
+    if (Platform.OS !== 'web') setLoaded(false);
+  }, [cardId, retryAttempt]);
+
   // On retry, append ?r=N to the URI so ExpoImage's memory-disk cache cannot
   // serve a previously-cached failure for the same URL. The original entry
   // stays untouched in INFOGRAPHIC_MAP; only the in-flight request is busted.
@@ -502,6 +515,7 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   })();
 
   const handleLoad = useCallback((e: ImageLoadEventData) => {
+    setLoaded(true);
     const { width, height } = e.source;
     if (width && height) {
       setRatio(width / height);
@@ -549,6 +563,10 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   const breathScale = useSharedValue(1);
   const breathDriftY = useSharedValue(0);
 
+  // Loading shimmer — a gentle opacity pulse on the skeleton placeholder so a
+  // slow/retrying infographic reads as "loading" rather than a broken blank.
+  const shimmer = useSharedValue(0.45);
+
   useEffect(() => {
     let targetX = 0, targetY = 0, targetScale = 1;
     if (zoomRegions) {
@@ -593,6 +611,16 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
       true,
     );
   }, [breathScale, breathDriftY]);
+
+  useEffect(() => {
+    shimmer.value = withRepeat(
+      withTiming(0.85, { duration: 900, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [shimmer]);
+
+  const shimmerStyle = useAnimatedStyle(() => ({ opacity: shimmer.value }));
 
   const zoomStyle = useAnimatedStyle(() => ({
     transform: [
@@ -650,6 +678,9 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
       )}
       {source && !imageError && (
         <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270, backgroundColor: '#f1f5f9' }]}>
+          {!loaded && (
+            <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: '#e2e8f0' }, shimmerStyle]} />
+          )}
           <AnimatedExpoImage key={`img-${cardId}-${retryAttempt}`} source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} onError={handleImageError} />
           {TEXT_OVERLAYS[cardId]?.map((o, i) => (
             <Animated.View
