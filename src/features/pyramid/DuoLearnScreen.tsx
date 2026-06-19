@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions } from "react-native";
+import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions, findNodeHandle } from "react-native";
 // Gesture-handler ScrollView + RootView — used ONLY inside the swipe/dilemma
 // Modals below. RN's Modal mounts in a separate native window so the
 // app-level GestureHandlerRootView doesn't extend into it, and RN's
@@ -897,6 +897,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onQuestPress,
   newsBadgeNode,
   isGlobalActiveChapter,
+  activeIndexOverride,
   onPearlPress,
   completedPearlIds,
   expandedTopicTreeModuleId,
@@ -931,6 +932,12 @@ const ChapterSection = React.memo(function ChapterSection({
   // a Finn per chapter. The parent computes the global active chapter via
   // `globalActiveIdx` and passes it down here.
   isGlobalActiveChapter: boolean;
+  /** Index of the module that hosts the "active" cursor (Finn mascot + quest
+   *  cluster). Defaults to the chapter's first-incomplete module; the parent
+   *  overrides it with the module the user is actively PLAYING
+   *  (useChapterUIStore) so a Pro user who jumped ahead keeps the shark on
+   *  "the module I'm in", not the earliest unfinished one. */
+  activeIndexOverride?: number | null;
   questPathNodeProps?: {
     completedCount: number;
     totalQuests: number;
@@ -982,7 +989,9 @@ const ChapterSection = React.memo(function ChapterSection({
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
   );
   const activeIndex = isUnlocked
-    ? firstIncompleteIndex === -1 ? chapter.modules.length : firstIncompleteIndex
+    ? activeIndexOverride != null
+      ? activeIndexOverride
+      : firstIncompleteIndex === -1 ? chapter.modules.length : firstIncompleteIndex
     : -1;
 
   return (
@@ -1450,12 +1459,20 @@ export function DuoLearnScreen() {
   // "active" on the map until the next successful server sync (QA 2026-05-31).
   const localCompletedModuleIds = useCompletedModulesStore((s) => s.completedIds);
 
+  // The chapter/module the user last opened ("the module I'm playing in"),
+  // persisted in useChapterUIStore (written by onModulePress). Used to keep
+  // Captain Shark's active cursor on the played module for Pro users who jump
+  // ahead of the first-incomplete one (Yoav 2026-06-19: "קפטן שארק על הציפ של
+  // המודולה שאני משחק בה — אם פרו, ממשיך איתו למודולה שהוא נמצא").
+  const playedChapterId = useChapterUIStore((s) => s.currentChapterId);
+  const playedModuleIdxMap = useChapterUIStore((s) => s.currentModuleIndexByChapter);
+
   // Precompute, ONCE per progress/pro change, the per-chapter completed-module
   // lookup and the globally-first incomplete chapter. Previously this ran as an
   // IIFE inside the render that re-filtered `progressData` ~12× on EVERY render
   // (notably on focus/return after finishing a sub-module — the "slow return to
   // the map"). Memoized here, the JSX just reads from `completedByPrefix`.
-  const { completedByPrefix, globalActiveIdx } = useMemo(() => {
+  const { completedByPrefix, globalActiveIdx, playedModuleIdx } = useMemo(() => {
     const cache = new Map<string, string[]>();
     const byPrefix = (pfx: string): string[] => {
       const hit = cache.get(pfx);
@@ -1483,8 +1500,29 @@ export function DuoLearnScreen() {
       const hasIncomplete = ch.modules.some((m) => !done.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)));
       if (hasIncomplete) { activeIdx = i; break; }
     }
-    return { completedByPrefix: byPrefix, globalActiveIdx: activeIdx };
-  }, [progressData, localCompletedModuleIds, isPro]);
+
+    // "The module I'm playing in" override. A Pro user can jump ahead, so the
+    // earliest-unfinished module (activeIdx above) is not necessarily where they
+    // are — move the active cursor (Finn mascot) onto the module they last
+    // opened (useChapterUIStore), as long as it's still a real, unfinished,
+    // accessible module. Gated to Pro: free users can't skip, so their played
+    // module always equals the first-incomplete one (this would be a no-op).
+    let playedIdx: number | null = null;
+    if (isPro && playedChapterId) {
+      const pChIdx = ALL_CHAPTERS.findIndex((c) => storeKey(c.id) === playedChapterId);
+      if (pChIdx >= 0) {
+        const pCh = ALL_CHAPTERS[pChIdx];
+        const pModIdx = playedModuleIdxMap[playedChapterId];
+        const pMod = pModIdx != null ? pCh.modules[pModIdx] : undefined;
+        const pDone = byPrefix(`mod-${storeKey(pCh.id).replace('ch-', '')}-`);
+        if (pMod && !pMod.comingSoon && !PRO_LOCKED_SIMS.has(pMod.id) && !pDone.includes(pMod.id)) {
+          activeIdx = pChIdx;
+          playedIdx = pModIdx;
+        }
+      }
+    }
+    return { completedByPrefix: byPrefix, globalActiveIdx: activeIdx, playedModuleIdx: playedIdx };
+  }, [progressData, localCompletedModuleIds, isPro, playedChapterId, playedModuleIdxMap]);
 
   // Featured "מאחורי המונדיאל" carousel — surfaces to RETURNING users (≥1
   // completed module) from MONDIAL_LAUNCH_DATE onward, via a mail badge under
@@ -2395,6 +2433,34 @@ export function DuoLearnScreen() {
     setNewsSheetVisible(true);
   }, []);
 
+  // Stable, memoized props for the ONE active ChapterSection. These two props
+  // were created fresh every render (a new JSX node + a new object), the last
+  // memo-breakers defeating ChapterSection's React.memo for the active chapter
+  // (Yoav 2026-06-19 perf pass). Memoizing them lets the active section skip
+  // re-renders when unrelated parent state changes (scroll, banners, etc.).
+  const handleMondialBadgePress = useCallback(() => {
+    mondialMarkOpened();
+    setMondialVisible(true);
+    try { captureEvent("mondial_carousel_opened", { source: "learn_map" }); } catch { /* non-fatal */ }
+  }, [mondialMarkOpened]);
+
+  const activeNewsBadgeNode = useMemo(() => (
+    <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+      <BreakingNewsBadge />
+      {mondialBadgeVisible ? (
+        <MondialMailBadge isNew={!mondialOpenedAt} onPress={handleMondialBadgePress} />
+      ) : null}
+    </View>
+  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress]);
+
+  const activeQuestPathNodeProps = useMemo(() => ({
+    completedCount: questCompletedCount,
+    totalQuests: questTotalCount,
+    allCompleted: questAllCompleted,
+    rewardClaimed: questRewardClaimed,
+    onPress: handleQuestPress,
+  }), [questCompletedCount, questTotalCount, questAllCompleted, questRewardClaimed, handleQuestPress]);
+
   return (
     <View style={styles.root}>
       {/* Unified notification-permission banner — the SAME "אתם מפספסים
@@ -2671,31 +2737,12 @@ export function DuoLearnScreen() {
                 onChapterPress={handleRoadmapPress}
                 onMindMap={() => handleMindMap(idx)}
                 isGlobalActiveChapter={hasActiveModule}
-                questPathNodeProps={hasActiveModule ? {
-                  completedCount: questCompletedCount,
-                  totalQuests: questTotalCount,
-                  allCompleted: questAllCompleted,
-                  rewardClaimed: questRewardClaimed,
-                  onPress: handleQuestPress,
-                } : undefined}
+                activeIndexOverride={hasActiveModule ? playedModuleIdx : undefined}
+                questPathNodeProps={hasActiveModule ? activeQuestPathNodeProps : undefined}
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
-                newsBadgeNode={hasActiveModule ? (
-                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
-                    <BreakingNewsBadge />
-                    {mondialBadgeVisible ? (
-                      <MondialMailBadge
-                        isNew={!mondialOpenedAt}
-                        onPress={() => {
-                          mondialMarkOpened();
-                          setMondialVisible(true);
-                          try { captureEvent("mondial_carousel_opened", { source: "learn_map" }); } catch { /* non-fatal */ }
-                        }}
-                      />
-                    ) : null}
-                  </View>
-                ) : undefined}
+                newsBadgeNode={hasActiveModule ? activeNewsBadgeNode : undefined}
                 onPearlPress={handlePearlPress}
                 onInvestorQuizPress={handleInvestorQuizPress}
                 completedPearlIds={completedPearlIds}
