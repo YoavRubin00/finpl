@@ -124,13 +124,14 @@ export function MondialCarouselSheet({
             </View>
           </GestureDetector>
 
-          {/* Page dots — tappable, RTL-ordered.
-              flexDirection:"row-reverse" places dot 0 (the cover / first slide)
-              on the visual RIGHT, matching the Hebrew right-to-left reading
-              order so the active pill tracks rightward as the user progresses
-              (mirrors iOS RTL pager behaviour).  accessibilityLabel uses the
-              RTL visual position: dot at visual position (total - i) from right. */}
-          <View style={[styles.dotsRow, { paddingBottom: insets.bottom + 18 }]}>
+          {/* Progress — numeric "X / N" counter (Yoav: "כמה מכמה + מספור") above
+              the tappable RTL dots. flexDirection:"row-reverse" places dot 0 on
+              the visual RIGHT, matching Hebrew right-to-left reading so the active
+              pill tracks rightward as the user advances (iOS RTL pager behaviour). */}
+          <Text style={styles.counterText} allowFontScaling={false}>
+            {`${page + 1} / ${total}`}
+          </Text>
+          <View style={styles.dotsRow}>
             {MONDIAL_SLIDES.map((s, i) => (
               <Pressable
                 key={s.id}
@@ -145,6 +146,26 @@ export function MondialCarouselSheet({
                 <View style={[styles.dot, i === page && styles.dotActive]} />
               </Pressable>
             ))}
+          </View>
+
+          {/* Bottom CTA — explicit "המשך" so advancing isn't swipe-only (Yoav:
+              "כפתור המשך למטה"); becomes "סיום" on the last slide. Swipe + dots
+              still work alongside it. */}
+          <View style={[styles.ctaWrap, { paddingBottom: insets.bottom + 16 }]}>
+            <Pressable
+              onPress={() => {
+                tapHaptic();
+                if (page < total - 1) go(1);
+                else onClose();
+              }}
+              style={styles.ctaBtn}
+              accessibilityRole="button"
+              accessibilityLabel={page < total - 1 ? "לשקופית הבאה" : "סיום"}
+            >
+              <Text style={styles.ctaText} allowFontScaling={false}>
+                {page < total - 1 ? "המשך" : "סיום"}
+              </Text>
+            </Pressable>
           </View>
         </SafeAreaView>
       </GestureHandlerRootView>
@@ -191,5 +212,31 @@ const styles = StyleSheet.create({
   dotActive: {
     width: 22,
     backgroundColor: "#16a34a",
+  },
+  counterText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#64748b",
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
+  },
+  ctaWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  ctaBtn: {
+    backgroundColor: "#16a34a",
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    borderBottomWidth: 4,
+    borderBottomColor: "#15803d",
+  },
+  ctaText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "800",
+    writingDirection: "rtl",
   },
 });
