@@ -283,11 +283,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // ONCE, and surfaces ONE master modal whose displayed `xp` + `coins`
   // already include both 70% + 100% payouts.
   useEffect(() => {
-    // Suppress entirely while a continuous "למידה רציפה" run for this module
-    // is in flight — it marks topics live (crossing 70% mid-lesson) but its
-    // reward is the legacy summary chest, not ours. Firing here would pop a
-    // Modal over the running lesson.
-    if (continuousRunActive) return;
+    // Continuous-run "למידה רציפה" was removed 2026-06-19, so its suppression of
+    // this chest is gone: the 70% accordion chest is now the ONLY chest, so it
+    // must ALWAYS fire when 70% is crossed (Yoav 2026-06-19: "תמיד מקבלים תיבה
+    // אחרי 70%"). The atomic stampModuleThreshold below still prevents any
+    // double-fire. (continuousRunActive stays in deps but no longer gates it.)
     // Also honor the LIVE persisted flags, not just the mount-seeded refs:
     // the "למידה רציפה" continuous flow can stamp modulesPastThreshold from
     // INSIDE LessonFlowScreen while this accordion stays mounted beneath it.

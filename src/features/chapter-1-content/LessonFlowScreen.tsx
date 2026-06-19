@@ -2761,7 +2761,14 @@ export function LessonFlowScreen() {
   // enter) means we only credit a phase the user actually completed, so a
   // mid-flow exit lights up exactly the chips they cleared — letting them
   // start in autopilot and switch to the broken-down accordion mid-way.
-  const ttProgressActive = ttProgress === '1' && returnTo !== 'topic-tree';
+  // Continuous-run "autopilot" (ttProgress=1) was REMOVED 2026-06-19 — the app is
+  // chip-only now. HARD kill-switch so a STALE ttProgress=1 link/route can't
+  // silently auto-run a whole module (Yoav 2026-06-19: it ran the credit module
+  // on its own). Every effect below gates on ttProgressActive → all become
+  // no-ops, so the module runs as a normal lesson. ttProgress/returnTo stay
+  // referenced so the disable is explicit (flip to re-enable — don't).
+  const CONTINUOUS_RUN_ENABLED = false;
+  const ttProgressActive = CONTINUOUS_RUN_ENABLED && ttProgress === '1' && returnTo !== 'topic-tree';
   const ttPrevPhaseRef = useRef<FlowPhase | null>(ttProgressActive ? phase : null);
   useEffect(() => {
     if (!ttProgressActive || !mod) return;
