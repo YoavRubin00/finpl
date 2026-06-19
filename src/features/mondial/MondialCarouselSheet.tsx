@@ -70,8 +70,10 @@ export function MondialCarouselSheet({
     .activeOffsetX([-15, 15])
     .onEnd((e) => {
       "worklet";
-      if (e.translationX >= 40) runOnJS(go)(1);
-      else if (e.translationX <= -40) runOnJS(go)(-1);
+      // Advance on a clear drag (≥40px) OR a quick flick (velocity), so short
+      // fast swipes register too — Instagram-like. RTL: rightward = forward.
+      if (e.translationX >= 40 || e.velocityX >= 500) runOnJS(go)(1);
+      else if (e.translationX <= -40 || e.velocityX <= -500) runOnJS(go)(-1);
     });
 
   if (!visible) return null;
@@ -91,6 +93,11 @@ export function MondialCarouselSheet({
         style={{ flex: 1, paddingTop: insets.top, backgroundColor: "#f8fafc" }}
       >
         <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+          {/* Swipe ANYWHERE on the sheet advances (Yoav 2026-06-19) — the Pan
+              wraps the WHOLE content, not just the image. activeOffsetX([-15,15])
+              lets vertical drags + taps (close / dots / "המשך") pass through. */}
+          <GestureDetector gesture={pan}>
+          <View style={{ flex: 1 }}>
           <View style={styles.topBar}>
             <View style={styles.topRow}>
               <Text style={styles.title} allowFontScaling={false}>
@@ -106,7 +113,6 @@ export function MondialCarouselSheet({
             </View>
           </View>
 
-          <GestureDetector gesture={pan}>
             <View style={styles.stage}>
               <Animated.View
                 key={page}
@@ -122,7 +128,6 @@ export function MondialCarouselSheet({
                 />
               </Animated.View>
             </View>
-          </GestureDetector>
 
           {/* Progress — numeric "X / N" counter (Yoav: "כמה מכמה + מספור") above
               the tappable RTL dots. flexDirection:"row-reverse" places dot 0 on
@@ -167,6 +172,8 @@ export function MondialCarouselSheet({
               </Text>
             </Pressable>
           </View>
+          </View>
+          </GestureDetector>
         </SafeAreaView>
       </GestureHandlerRootView>
     </Modal>
