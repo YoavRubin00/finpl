@@ -705,6 +705,526 @@ export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
       },
     ],
   },
+
+  // ===== Batch 1 (2026-06-20): opening modules, chapters 0–1 =====
+  // Each set is grounded in the module's own flashcards/quiz content
+  // (chapter0Data.ts / chapter1Data.ts). Adding a moduleId here also requires
+  // adding it to MODULES_WITH_INTERACTIVE_RECALL in LessonFlowScreen.tsx.
+  "mod-0-1b": {
+    moduleId: "mod-0-1b",
+    title: "בואו נתרגל!",
+    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    prompts: [
+      {
+        type: "fill-blank",
+        id: "recall-mod-0-1b-fb-1",
+        template: "פנסיה היא קופת חיסכון שאליה מופרשים כספים מדי חודש גם מהמשכורת שלכם וגם {{w}}, ומושקעים לטווח ארוך.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "maasik", explanation: "נכון, חלק מההפרשה לפנסיה מגיע מכם וחלק נוסף מהמעסיק — ולכן זו הטבה שלא כדאי לוותר עליה." },
+        ],
+        choices: [
+          { id: "maasik", text: "מהמעסיק" },
+          { id: "bituach", text: "מהביטוח הלאומי" },
+          { id: "bank", text: "מהבנק" },
+          { id: "keren", text: "מקרן החירום" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "יפה!", "הבנתם את הבסיס!"],
+          empathicFirst: "חשבו מי עוד מוסיף כסף לפנסיה שלכם מלבדכם.",
+          hintAfterTwoWrongs: "רמז: זה מי שמשלם לכם את המשכורת.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-0-1b-fb-2",
+        template: "כשמפצלים קנייה ל'תשלומים בקליק', בפועל לוקחים {{w}} — לרוב בריבית גבוהה.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "halvaa", explanation: "בדיוק, פריסה לתשלומים אינה 'חינם' — זו הלוואה שעולה ריבית." },
+        ],
+        choices: [
+          { id: "halvaa", text: "הלוואה" },
+          { id: "matana", text: "מתנה" },
+          { id: "hanaha", text: "הנחה" },
+          { id: "hiskon", text: "חיסכון" },
+        ],
+        finn: {
+          correct: ["מדויק!", "יפה מאוד!", "זוכרים את המלכודת!"],
+          empathicFirst: "חשבו מה באמת קורה כשדוחים תשלום לעתיד.",
+          hintAfterTwoWrongs: "רמז: זה משהו שלוקחים מהבנק ומחזירים עם תוספת.",
+        },
+      },
+      {
+        type: "timeline-order",
+        id: "recall-mod-0-1b-to-1",
+        instruction: "סדרו את שלבי חיסכון הפנסיה לפי סדר הזמן",
+        difficulty: "medium",
+        items: [
+          { id: "hafrasha", label: "הפרשה חודשית מהמשכורת ומהמעסיק", correctOrder: 0 },
+          { id: "tsvira", label: "צבירה והשקעה לאורך עשרות שנים", correctOrder: 1 },
+          { id: "prisha", label: "הגעה לגיל פרישה", correctOrder: 2 },
+          { id: "kitsba", label: "קבלת קצבה חודשית קבועה", correctOrder: 3 },
+        ],
+        finn: {
+          correct: ["מצוין!", "הבנתם את התהליך!", "בדיוק!"],
+          empathicFirst: "חשבו מה קורה קודם — חוסכים או מקבלים קצבה?",
+          hintAfterTwoWrongs: "רמז: קודם מפרישים שנים רבות, ורק בפרישה מקבלים קצבה.",
+        },
+      },
+    ],
+  },
+  "mod-0-2": {
+    moduleId: "mod-0-2",
+    title: "בואו נתרגל!",
+    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    prompts: [
+      {
+        type: "fill-blank",
+        id: "recall-mod-0-2-fb-1",
+        template: "לכסף המודרני (שקל, דולר) אין ערך פנימי — ערכו נשען על {{w}} בממשלה ועל כך שכולם מסכימים לקבל אותו.",
+        difficulty: "medium",
+        slots: [
+          { slotId: "w", correctChoiceId: "emun", explanation: "נכון, כסף כזה נקרא 'פיאט' — ערכו נובע מאמון ומכך שהמדינה מגבה אותו." },
+        ],
+        choices: [
+          { id: "emun", text: "אמון" },
+          { id: "zahav", text: "כיסוי בזהב" },
+          { id: "neft", text: "מאגרי נפט" },
+          { id: "kesef", text: "כסף פיזי בכספת" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "יפה!", "הבנתם מה זה פיאט!"],
+          empathicFirst: "חשבו על מה באמת מבוסס הערך של שטר של 100 ₪.",
+          hintAfterTwoWrongs: "רמז: זה לא זהב — זה משהו שאנחנו נותנים זה לזה.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-0-2-fb-2",
+        template: "הכסף הומצא כדי לפתור את בעיית {{w}} — הקושי למצוא מישהו שגם רוצה את מה שיש לכם וגם מציע את מה שאתם צריכים.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "halifin", explanation: "בדיוק, סחר חליפין דרש 'צירוף מקרים' נדיר — הכסף פתר זאת כאמצעי חליפין אוניברסלי." },
+        ],
+        choices: [
+          { id: "halifin", text: "סחר החליפין" },
+          { id: "inflatzia", text: "האינפלציה" },
+          { id: "mas", text: "המיסוי" },
+          { id: "ribit", text: "הריבית" },
+        ],
+        finn: {
+          correct: ["מדויק!", "יפה מאוד!", "תפסתם את הרעיון!"],
+          empathicFirst: "חשבו למה קשה היה להחליף שק תפוחי אדמה בנעליים.",
+          hintAfterTwoWrongs: "רמז: זו השיטה הישנה של 'מוצר תמורת מוצר'.",
+        },
+      },
+      {
+        type: "timeline-order",
+        id: "recall-mod-0-2-to-1",
+        instruction: "סדרו לפי סדר הופעתם בהיסטוריה — מהקדום לחדיש",
+        difficulty: "medium",
+        items: [
+          { id: "barter", label: "סחר חליפין — מוצר תמורת מוצר", correctOrder: 0 },
+          { id: "coins", label: "מטבעות ממתכת יקרה (זהב/כסף)", correctOrder: 1 },
+          { id: "backed", label: "שטרות נייר מגובים בזהב", correctOrder: 2 },
+          { id: "fiat", label: "כסף פיאט — מבוסס אמון בלבד", correctOrder: 3 },
+        ],
+        finn: {
+          correct: ["מצוין!", "הבנתם את ההתפתחות!", "בדיוק!"],
+          empathicFirst: "חשבו מה היה קודם — זהב או שטר נייר?",
+          hintAfterTwoWrongs: "רמז: סחר חליפין הכי קדום, פיאט (אמון) הכי חדיש.",
+        },
+      },
+    ],
+  },
+  "mod-0-4": {
+    moduleId: "mod-0-4",
+    title: "בואו נתרגל!",
+    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    prompts: [
+      {
+        type: "fill-blank",
+        id: "recall-mod-0-4-fb-1",
+        template: "הרווח האישי שלכם הוא מה שנשאר כשמחסירים מההכנסות את {{w}}.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "hotsaot", explanation: "נכון, הכנסות פחות הוצאות = הדלתא. דלתא חיובית היא חיסכון, דלתא שלילית היא גירעון." },
+        ],
+        choices: [
+          { id: "hotsaot", text: "ההוצאות" },
+          { id: "hiskon", text: "החיסכון" },
+          { id: "mas", text: "המיסים בלבד" },
+          { id: "hachnasot", text: "ההכנסות הנוספות" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "יפה!", "הבנתם את הדלתא!"],
+          empathicFirst: "חשבו מה צריך לרדת מההכנסות כדי לדעת כמה נשאר.",
+          hintAfterTwoWrongs: "רמז: זה כל הכסף שיוצא מכם בחודש.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-0-4-fb-2",
+        template: "תשלומים שחייבים לשלם כמו שכר דירה, חשמל ואוכל בסיסי נקראים {{w}}, להבדיל מ'רצונות' שאפשר לקצץ בהם.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "tsrahim", explanation: "בדיוק, צרכים הם הוצאות חובה; רצונות (מסעדות, טיסות) הם הראשונים שאפשר לצמצם." },
+        ],
+        choices: [
+          { id: "tsrahim", text: "צרכים" },
+          { id: "retsonot", text: "רצונות" },
+          { id: "nechasim", text: "נכסים" },
+          { id: "hithayvuyot", text: "התחייבויות" },
+        ],
+        finn: {
+          correct: ["מדויק!", "יפה מאוד!", "זוכרים את ההבדל!"],
+          empathicFirst: "חשבו מה אי-אפשר לוותר עליו בחודש הקרוב.",
+          hintAfterTwoWrongs: "רמז: דיור, חשמל ואוכל בסיסי הם חובה — לא בחירה.",
+        },
+      },
+      {
+        type: "timeline-order",
+        id: "recall-mod-0-4-to-1",
+        instruction: "סדרו את מסלול הכסף בחודש לפי הסדר ההגיוני",
+        difficulty: "medium",
+        items: [
+          { id: "income", label: "ההכנסה נכנסת לחשבון", correctOrder: 0 },
+          { id: "needs", label: "תשלום צרכים חיוניים (דיור, חשמל, אוכל)", correctOrder: 1 },
+          { id: "wants", label: "הוצאה על רצונות (אם נשאר)", correctOrder: 2 },
+          { id: "delta", label: "הדלתא שנשארת — חיסכון", correctOrder: 3 },
+        ],
+        finn: {
+          correct: ["מצוין!", "הבנתם את התזרים!", "בדיוק!"],
+          empathicFirst: "חשבו מה קורה קודם — נכנס כסף או יוצא כסף?",
+          hintAfterTwoWrongs: "רמז: קודם נכנסת ההכנסה, ובסוף רואים מה נשאר.",
+        },
+      },
+    ],
+  },
+  "mod-0-5": {
+    moduleId: "mod-0-5",
+    title: "בואו נתרגל!",
+    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    prompts: [
+      {
+        type: "fill-blank",
+        id: "recall-mod-0-5-fb-1",
+        template: "בניגוד לצריכה (קניית מוצר שמאבד ערך), {{w}} היא נטיעת הכסף בנכס שמחזיר תשואה — כמו מניות, ריבית או נדל\"ן.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "hashkaa", explanation: "נכון, השקעה גורמת לכסף 'לעבוד' ולייצר תשואה לאורך זמן." },
+        ],
+        choices: [
+          { id: "hashkaa", text: "השקעה" },
+          { id: "hotsaa", text: "הוצאה" },
+          { id: "tsricha", text: "צריכה" },
+          { id: "halvaa", text: "הלוואה" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "יפה!", "הבנתם את ההבדל!"],
+          empathicFirst: "חשבו מה גורם לכסף לגדול במקום להישחק.",
+          hintAfterTwoWrongs: "רמז: זה ההפך מצריכה — שמים כסף בנכס שמחזיר תשואה.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-0-5-fb-2",
+        template: "לטווח ארוך, הסיכון האמיתי דווקא הוא {{w}} — כי כסף שלא מושקע נשחק מהאינפלציה.",
+        difficulty: "medium",
+        slots: [
+          { slotId: "w", correctChoiceId: "lo", explanation: "בדיוק, תנודתיות קצרת-טווח חולפת, אבל כסף ששוכב ללא תשואה מאבד מערכו בוודאות." },
+        ],
+        choices: [
+          { id: "lo", text: "לא להשקיע" },
+          { id: "maniot", text: "להשקיע במניות" },
+          { id: "pizur", text: "לפזר את ההשקעות" },
+          { id: "bank", text: "לחסוך בבנק" },
+        ],
+        finn: {
+          correct: ["מדויק!", "תובנה חזקה!", "אלופים!"],
+          empathicFirst: "חשבו מה קורה לכסף ששוכב בעו\"ש עשר שנים.",
+          hintAfterTwoWrongs: "רמז: הגנב השקוף (אינפלציה) שוחק כל כסף שלא עובד.",
+        },
+      },
+      {
+        type: "timeline-order",
+        id: "recall-mod-0-5-to-1",
+        instruction: "סדרו את מסלול 'הכסף עובד בשבילכם' לפי הסדר הנכון",
+        difficulty: "medium",
+        items: [
+          { id: "work", label: "עבודה מייצרת הכנסה", correctOrder: 0 },
+          { id: "save", label: "חוסכים חלק מההכנסה", correctOrder: 1 },
+          { id: "invest", label: "משקיעים את החיסכון", correctOrder: 2 },
+          { id: "yield", label: "ההשקעה מניבה תשואה שמייצרת עוד כסף", correctOrder: 3 },
+        ],
+        finn: {
+          correct: ["מצוין!", "הבנתם את הקסם!", "בדיוק!"],
+          empathicFirst: "חשבו מאיפה מגיע הכסף שמשקיעים בכלל.",
+          hintAfterTwoWrongs: "רמז: קודם עובדים וחוסכים, ורק אז הכסף מתחיל לעבוד לבד.",
+        },
+      },
+    ],
+  },
+  "mod-1-3": {
+    moduleId: "mod-1-3",
+    title: "בואו נתרגל!",
+    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    prompts: [
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-3-fb-1",
+        template: "ניצול קבוע של מעל {{w}} ממסגרת האשראי בכרטיס עלול להוריד את דירוג האשראי שלכם.",
+        difficulty: "medium",
+        slots: [
+          { slotId: "w", correctChoiceId: "p30", explanation: "נכון, שימוש גבוה ועקבי במסגרת (מעל 30%-40%) מסמן סיכון ופוגע בדירוג." },
+        ],
+        choices: [
+          { id: "p30", text: "30%-40%" },
+          { id: "p5", text: "5%-10%" },
+          { id: "p70", text: "70%-80%" },
+          { id: "p100", text: "100%" },
+        ],
+        finn: {
+          correct: ["מדויק!", "יפה!", "זוכרים את הסף!"],
+          empathicFirst: "חשבו כמה מהמסגרת 'בטוח' לנצל באופן קבוע.",
+          hintAfterTwoWrongs: "רמז: זה סף נמוך יחסית — שליש עד שני חמישיות מהמסגרת.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-3-fb-2",
+        template: "בעסקת תשלומים, סכום הקנייה המלא נתפס ממסגרת האשראי כבר {{w}}, ולא רק התשלום החודשי.",
+        difficulty: "medium",
+        slots: [
+          { slotId: "w", correctChoiceId: "yom", explanation: "בדיוק, כל הסכום 'תופס' מהמסגרת מיד ביום הקנייה — ולכן עסקאות תשלומים עלולות לחסום את הכרטיס." },
+        ],
+        choices: [
+          { id: "yom", text: "ביום הקנייה" },
+          { id: "last", text: "בתשלום האחרון" },
+          { id: "year", text: "בסוף השנה" },
+          { id: "monthly", text: "בכל חודש בנפרד" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "מצוין!", "הבנתם את האשליה!"],
+          empathicFirst: "חשבו מתי באמת 'נתפס' הכסף במסגרת — בהתחלה או בסוף?",
+          hintAfterTwoWrongs: "רמז: כל הסכום נתפס מיד, גם אם תשלמו אותו לאורך שנה.",
+        },
+      },
+      {
+        type: "timeline-order",
+        id: "recall-mod-1-3-to-1",
+        instruction: "סדרו את אפיקי האשראי מהבטוח והזול ביותר ליקר והמסוכן ביותר",
+        difficulty: "medium",
+        items: [
+          { id: "debit", label: "כרטיס דביט — בלי אפשרות להיכנס לחוב", correctOrder: 0 },
+          { id: "regular", label: "אשראי רגיל שמשולם במלואו כל חודש", correctOrder: 1 },
+          { id: "rolling", label: "אשראי מתגלגל — ריבית על היתרה", correctOrder: 2 },
+          { id: "club", label: "כרטיס מועדון חוץ-בנקאי בריבית הגבוהה ביותר", correctOrder: 3 },
+        ],
+        finn: {
+          correct: ["מצוין!", "הבנתם את הסדר!", "בדיוק!"],
+          empathicFirst: "חשבו היכן בכלל אי-אפשר להיכנס לחוב, והיכן הריבית הכי גבוהה.",
+          hintAfterTwoWrongs: "רמז: דביט הכי בטוח, כרטיס מועדון חוץ-בנקאי הכי יקר.",
+        },
+      },
+    ],
+  },
+  "mod-1-4": {
+    moduleId: "mod-1-4",
+    title: "בואו נתרגל!",
+    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    prompts: [
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-4-fb-1",
+        template: "לפי כלל 50/30/20, ההמלצה היא להקצות {{w}} מההכנסה לצרכים בסיסיים.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "p50", explanation: "נכון, 50% לצרכים, 30% לרצונות, ו-20% לעתיד (חיסכון והשקעה)." },
+        ],
+        choices: [
+          { id: "p50", text: "50%" },
+          { id: "p30", text: "30%" },
+          { id: "p20", text: "20%" },
+          { id: "p70", text: "70%" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "יפה!", "זוכרים את החלוקה!"],
+          empathicFirst: "חשבו על המחצית הראשונה של הכלל — לְמה היא מיועדת.",
+          hintAfterTwoWrongs: "רמז: המספר הראשון בכלל 50/30/20 שייך לצרכים.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-4-fb-2",
+        template: "בשיטת 'שלם לעצמך תחילה', מעבירים את {{w}} לחיסכון מיד עם קבלת המשכורת — לפני ההוצאות.",
+        difficulty: "medium",
+        slots: [
+          { slotId: "w", correctChoiceId: "p20", explanation: "נכון, מעבירים 20% לחיסכון מיד — כך החיסכון הופך למחויבות קבועה ולא תלוי במה שנשאר בסוף החודש." },
+        ],
+        choices: [
+          { id: "p20", text: "20%" },
+          { id: "p50", text: "50%" },
+          { id: "p5", text: "5%" },
+          { id: "rest", text: "כל מה שנשאר" },
+        ],
+        finn: {
+          correct: ["מדויק!", "אלופים!", "זה הסוד של החיסכון!"],
+          empathicFirst: "חשבו על החלק שהכלל מייעד לעתיד — אותו מעבירים קודם.",
+          hintAfterTwoWrongs: "רמז: זה ה-20 בכלל 50/30/20.",
+        },
+      },
+      {
+        type: "timeline-order",
+        id: "recall-mod-1-4-to-1",
+        instruction: "סדרו את חלוקת המשכורת לפי שיטת 'שלם לעצמך תחילה'",
+        difficulty: "medium",
+        items: [
+          { id: "salary", label: "המשכורת נכנסת", correctOrder: 0 },
+          { id: "save", label: "מעבירים 20% לחיסכון מיד", correctOrder: 1 },
+          { id: "needs", label: "משלמים 50% על צרכים", correctOrder: 2 },
+          { id: "wants", label: "מה שנשאר (30%) לרצונות", correctOrder: 3 },
+        ],
+        finn: {
+          correct: ["מצוין!", "הבנתם את השיטה!", "בדיוק!"],
+          empathicFirst: "ב'שלם לעצמך תחילה' — מה עושים מיד אחרי שהמשכורת נכנסת?",
+          hintAfterTwoWrongs: "רמז: החיסכון קודם, ורק אחר כך משלמים את שאר ההוצאות.",
+        },
+      },
+    ],
+  },
+  "mod-1-5": {
+    moduleId: "mod-1-5",
+    title: "בואו נתרגל!",
+    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    prompts: [
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-5-fb-1",
+        template: "שכר {{w}} הוא הסכום המלא לפני כל הניכויים, ומשמש לחישוב זכויות סוציאליות כמו פנסיה ופיצויים.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "bruto", explanation: "נכון, ברוטו = לפני ניכויים; נטו = מה שמגיע בפועל לחשבון הבנק." },
+        ],
+        choices: [
+          { id: "bruto", text: "ברוטו" },
+          { id: "neto", text: "נטו" },
+          { id: "panui", text: "פנוי" },
+          { id: "shuli", text: "שולי" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "יפה!", "זוכרים את ההבדל!"],
+          empathicFirst: "חשבו מהו הסכום לפני שמורידים ממנו מס וביטוח לאומי.",
+          hintAfterTwoWrongs: "רמז: זה הסכום הגדול בתלוש, לפני כל הניכויים.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-5-fb-2",
+        template: "עלות המעביד בפועל גבוהה מהברוטו בכ-{{w}}, כי המעסיק מוסיף הפרשות סוציאליות ומיסי מעסיק.",
+        difficulty: "medium",
+        slots: [
+          { slotId: "w", correctChoiceId: "p25", explanation: "נכון, על ברוטו של 10,000 ₪ המעסיק עשוי לשלם בפועל כ-12,500-13,000 ₪." },
+        ],
+        choices: [
+          { id: "p25", text: "20%-30%" },
+          { id: "p5", text: "5%" },
+          { id: "p55", text: "50%-60%" },
+          { id: "p0", text: "0% (זהה לברוטו)" },
+        ],
+        finn: {
+          correct: ["מדויק!", "אלופים!", "זוכרים את עלות המעביד!"],
+          empathicFirst: "חשבו שהמעסיק מוסיף מעבר לברוטו גם הפרשות ומיסים.",
+          hintAfterTwoWrongs: "רמז: על ברוטו 10,000 ₪ המעסיק משלם בערך 12,500 ₪.",
+        },
+      },
+      {
+        type: "timeline-order",
+        id: "recall-mod-1-5-to-1",
+        instruction: "סדרו מהסכום הגבוה לנמוך ביותר (לדוגמה על ברוטו 10,000 ₪)",
+        difficulty: "medium",
+        items: [
+          { id: "employer", label: "עלות מעביד — כ-12,500 ₪", correctOrder: 0 },
+          { id: "gross", label: "שכר ברוטו — 10,000 ₪", correctOrder: 1 },
+          { id: "net", label: "שכר נטו — כ-8,200 ₪", correctOrder: 2 },
+          { id: "deductions", label: "סך הניכויים מהברוטו — כ-1,800 ₪", correctOrder: 3 },
+        ],
+        finn: {
+          correct: ["מצוין!", "הבנתם את התלוש!", "בדיוק!"],
+          empathicFirst: "חשבו מה גדול יותר — עלות המעביד או הנטו שמגיע אליכם.",
+          hintAfterTwoWrongs: "רמז: עלות המעביד הכי גבוהה, הנטו קטן ממנה, והניכויים הם הסכום הקטן.",
+        },
+      },
+    ],
+  },
+  "mod-1-9": {
+    moduleId: "mod-1-9",
+    title: "בואו נתרגל!",
+    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    prompts: [
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-9-fb-1",
+        template: "גודל קרן החירום המומלץ הוא {{w}} של הוצאות מחיה בסיסיות.",
+        difficulty: "easy",
+        slots: [
+          { slotId: "w", correctChoiceId: "m36", explanation: "נכון, 3-6 חודשי הוצאות — בערך הזמן הממוצע למצוא עבודה חדשה אם פוטרתם." },
+        ],
+        choices: [
+          { id: "m36", text: "3 עד 6 חודשים" },
+          { id: "w1", text: "שבוע עד חודש" },
+          { id: "y12", text: "שנה עד שנתיים" },
+          { id: "y10", text: "10 שנים" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "יפה!", "זוכרים את הכלל!"],
+          empathicFirst: "חשבו כמה זמן לוקח בממוצע למצוא עבודה חדשה.",
+          hintAfterTwoWrongs: "רמז: בין שלושה לשישה חודשי הוצאות בסיסיות.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-9-fb-2",
+        template: "קרן חירום חייבת להיות נזילה וזמינה תוך {{w}}, ולכן לא משקיעים אותה במניות תנודתיות.",
+        difficulty: "medium",
+        slots: [
+          { slotId: "w", correctChoiceId: "h48", explanation: "נכון, צריך גישה כמעט מיידית — בדיוק כשצריך אותה (משבר) השוק עלול דווקא לרדת." },
+        ],
+        choices: [
+          { id: "h48", text: "24-48 שעות" },
+          { id: "d30", text: "30 יום" },
+          { id: "y1", text: "שנה" },
+          { id: "y5", text: "5 שנים" },
+        ],
+        finn: {
+          correct: ["מדויק!", "אלופים!", "הבנתם למה לא מניות!"],
+          empathicFirst: "חשבו מתי תזדקקו לכסף — ומה קורה אז לשוק המניות.",
+          hintAfterTwoWrongs: "רמז: צריך אותה מיד — תוך יום-יומיים, לא חודשים.",
+        },
+      },
+      {
+        type: "fill-blank",
+        id: "recall-mod-1-9-fb-3",
+        template: "עצמאי זקוק לקרן חירום גדולה יותר — כ-{{w}} חודשי הוצאות — בשל הכנסה תנודתית והיעדר דמי אבטלה.",
+        difficulty: "medium",
+        slots: [
+          { slotId: "w", correctChoiceId: "m69", explanation: "נכון, לעצמאי אין רשת ביטחון של אבטלה, ולכן מומלצת קרן גדולה יותר מ-3-6 החודשים של שכיר." },
+        ],
+        choices: [
+          { id: "m69", text: "6 עד 9" },
+          { id: "m12", text: "1 עד 2" },
+          { id: "m24", text: "12 עד 24" },
+          { id: "half", text: "חצי חודש" },
+        ],
+        finn: {
+          correct: ["בדיוק!", "מצוין!", "זוכרים את ההבדל בין שכיר לעצמאי!"],
+          empathicFirst: "חשבו מי לא מקבל דמי אבטלה אם ההכנסה נעצרת.",
+          hintAfterTwoWrongs: "רמז: עצמאי צריך כרית גדולה יותר משכיר (3-6) — בערך 6-9 חודשים.",
+        },
+      },
+    ],
+  },
 };
 
 export function getRecallSet(moduleId: string): InteractiveRecallSet | undefined {

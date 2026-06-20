@@ -3,6 +3,7 @@ export { MinusTrapGameScreen } from './MinusTrapGameScreen';
 export { SnowballGameScreen } from './SnowballGameScreen';
 export { CompoundSimScreen } from './CompoundSimScreen';
 export { PayslipNinjaScreen } from './PayslipNinjaScreen';
+export { CarLoanRaceScreen } from './CarLoanRaceScreen';
 
 export { BankCombatScreen } from './BankCombatScreen';
 export { ShoppingCartScreen } from './ShoppingCartScreen';

@@ -1955,6 +1955,26 @@ export function DuoLearnScreen() {
     return calcModuleScrollY(globalActiveIdx, sharkIdx);
   }, [globalActiveIdx, playedModuleIdx, completedByPrefix, isPro, calcModuleScrollY]);
 
+  // The active module itself (mirrors calcSharkScrollY's module selection) so
+  // cold-open / tab-focus can EXPAND it and land the user ON the next chip to
+  // learn (the gold chip), not the collapsed module node (Yoav 2026-06-20).
+  // Returns null when nothing is active (all done) so callers fall back to the
+  // last-completed module-node anchor.
+  const getActiveModule = useCallback((): { module: Module; chapterId: string } | null => {
+    if (globalActiveIdx < 0) return null;
+    const ch = ALL_CHAPTERS[globalActiveIdx];
+    if (!ch) return null;
+    const num = storeKey(ch.id).replace('ch-', '');
+    const done = completedByPrefix(`mod-${num}-`);
+    const firstIncomplete = ch.modules.findIndex(
+      (m) => !done.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
+    );
+    const idx = playedModuleIdx != null ? playedModuleIdx : firstIncomplete;
+    if (idx < 0) return null;
+    const module = ch.modules[idx];
+    return module ? { module, chapterId: ch.id } : null;
+  }, [globalActiveIdx, playedModuleIdx, completedByPrefix, isPro]);
+
   // On every tab focus, scroll to the user's last-completed module (with a
   // fallback to "next active module" for fresh users). Skips the very first
   // mount because the dedicated mount effect below already runs then (and
@@ -1973,10 +1993,21 @@ export function DuoLearnScreen() {
         setRefreshKey((k) => k + 1);
         return;
       }
+      // Entering the Learn tab with no open accordion: expand the active module
+      // so we land ON the next chip to learn (the gold chip), mirroring cold
+      // open (Yoav 2026-06-20). The accordion's auto-scroll effect positions it.
+      if (!isWalkthroughActive) {
+        const active = getActiveModule();
+        if (active && shouldUseTopicTree(active.module)) {
+          setTopicTreeModule(active);
+          setRefreshKey((k) => k + 1);
+          return;
+        }
+      }
       const targetY = calcSharkScrollY() ?? calcLastCompletedScrollY() ?? calcResumeScrollY();
       scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 80), animated: true });
       setRefreshKey((k) => k + 1);
-    }, [calcResumeScrollY, calcLastCompletedScrollY, calcSharkScrollY])
+    }, [calcResumeScrollY, calcLastCompletedScrollY, calcSharkScrollY, getActiveModule, isWalkthroughActive])
   );
 
   // Anchor an open topic-tree module so the user's NEXT golden (recommended)
@@ -2049,39 +2080,61 @@ export function DuoLearnScreen() {
     // is now only the FALLBACK — used when the node/ref isn't ready (accordion
     // mid-layout) or a platform lacks measureLayout. This kills the "lands too
     // high above the accordion" drift from the estimate (Yoav 2026-06-19).
-    const scrollToRecommended = () => {
+    // Prefer the MEASURED gold-chip node. On a fresh expand (cold open / return)
+    // the ref/accordion may still be laying out for the first frames — so retry
+    // across several passes and only fall back to the `targetY` ESTIMATE on the
+    // final pass, instead of estimating early and visibly hopping. measureLayout
+    // is order-independent, so it lands on the right chip even if the index
+    // estimate drifts (Yoav 2026-06-20: "עדיין לא נפתח על הציפ הנכון").
+    const scrollToRecommended = (isLast: boolean) => {
       const chip = recommendedChipRef.current;
       const scroller = scrollRef.current;
-      const fallback = () => scrollRef.current?.scrollTo({ y: targetY, animated: true });
-      if (!chip || !scroller || typeof chip.measureLayout !== 'function') { fallback(); return; }
+      const estimate = () => scrollRef.current?.scrollTo({ y: targetY, animated: true });
+      if (!chip || !scroller || typeof chip.measureLayout !== 'function') {
+        if (isLast) estimate();
+        return;
+      }
       const innerGetter = scroller as unknown as { getInnerViewNode?: () => unknown };
       const inner = innerGetter.getInnerViewNode?.();
       const relativeTo = typeof inner === 'number' ? inner : findNodeHandle(scroller);
-      if (relativeTo == null) { fallback(); return; }
+      if (relativeTo == null) { if (isLast) estimate(); return; }
       try {
         chip.measureLayout(
           relativeTo,
           (_x: number, y: number) => {
             scrollRef.current?.scrollTo({ y: Math.max(0, y - VIEWPORT_TOP_PAD), animated: true });
           },
-          fallback,
+          () => { if (isLast) estimate(); },
         );
       } catch {
-        fallback();
+        if (isLast) estimate();
       }
     };
-    const raf = requestAnimationFrame(scrollToRecommended);
-    const t2 = setTimeout(scrollToRecommended, 280);
-    return () => { cancelAnimationFrame(raf); clearTimeout(t2); };
+    const raf = requestAnimationFrame(() => scrollToRecommended(false));
+    const delays = [120, 280, 500];
+    const timers = delays.map((d, i) =>
+      setTimeout(() => scrollToRecommended(i === delays.length - 1), d),
+    );
+    return () => { cancelAnimationFrame(raf); timers.forEach(clearTimeout); };
   }, [topicTreeModule, calcModuleScrollY, completedMap, isWalkthroughActive]);
 
   // Auto-scroll on initial mount — prefer last-completed module so the user
   // lands on "where I finished last time" with the next lesson right below.
   // Fresh users (no completions) fall back to calcResumeScrollY → mod-0-1.
   useEffect(() => {
-    // Open on Captain Shark's chip (the active module), not the last-completed
-    // node above it (Yoav 2026-06-19). Fall back to last-completed → resume only
-    // when there is no active shark (everything done) or data isn't ready yet.
+    // Cold open: EXPAND the active module's accordion so the user lands ON the
+    // next chip to learn (the gold chip), not the collapsed module node (Yoav
+    // 2026-06-20). The accordion's own auto-scroll effect owns positioning once
+    // expanded. Skipped during the walkthrough and when everything is done.
+    if (!isWalkthroughActive) {
+      const active = getActiveModule();
+      if (active && shouldUseTopicTree(active.module)) {
+        setTopicTreeModule(active);
+        return;
+      }
+    }
+    // Fallback (all done / linear-flow / walkthrough): open on Captain Shark's
+    // module node, then last-completed → resume.
     const y = calcSharkScrollY() ?? calcLastCompletedScrollY() ?? calcResumeScrollY();
     if (y > 0) {
       // Two-pass scroll: snap immediately so the first paint already lands

@@ -210,7 +210,7 @@ import { MODULE_HERO_MAP, MODULE_INFOGRAPHIC_MAP, MODULE_POST_VIDEO_MAP } from '
  *  mod-0-2 (the "מה זה בכלל כסף?" slot). mod-0-1 ("מושגי יסוד פיננסיים")
  *  has no sim — leaving it in this set caused the lesson to enter
  *  sim-intro → sim, then SimulatorLoader returned null → blank screen. */
-const MODULES_WITH_SIM = new Set(["mod-0-2", "mod-0-3", "mod-0-4", "mod-1-1", "mod-1-2", "mod-1-3", "mod-1-4", "mod-1-5", "mod-1-7", "mod-1-8", "mod-1-9", "mod-2-10", "mod-2-11", "mod-2-12", "mod-2-13", "mod-2-14", "mod-3-15", "mod-3-16", "mod-3-17", "mod-3-18", "mod-4-19", "mod-4-20", "mod-4-21", "mod-4-22", "mod-4-23", "mod-4-24", "mod-5-25", "mod-5-26", "mod-5-27", "mod-5-28", "mod-5-29", "mod-4-25", "mod-4-26", "mod-4-27", "mod-4-28", "mod-4-29", "mod-4-30", "mod-5-30", "mod-4-b1", "mod-4-b2", "mod-4-b3", "mod-4-b4"]);
+const MODULES_WITH_SIM = new Set(["mod-0-2", "mod-0-3", "mod-0-4", "mod-1-1", "mod-1-2", "mod-1-3", "mod-1-4", "mod-1-5", "mod-1-6", "mod-1-7", "mod-1-8", "mod-1-9", "mod-2-10", "mod-2-11", "mod-2-12", "mod-2-13", "mod-2-14", "mod-3-15", "mod-3-16", "mod-3-17", "mod-3-18", "mod-4-19", "mod-4-20", "mod-4-21", "mod-4-22", "mod-4-23", "mod-4-24", "mod-5-25", "mod-5-26", "mod-5-27", "mod-5-28", "mod-5-29", "mod-4-25", "mod-4-26", "mod-4-27", "mod-4-28", "mod-4-29", "mod-4-30", "mod-5-30", "mod-4-b1", "mod-4-b2", "mod-4-b3", "mod-4-b4"]);
 
 /** Modules where sim comes BEFORE flashcards (intro → sim → flashcards → quizzes → summary).
  *  2026-05-30 chapter-0 swap: the barter sim used to open mod-0-1; same
@@ -235,14 +235,18 @@ const MODULES_WITH_INTERACTIVE_RECALL = new Set([
   "mod-1-1",
   // 2026-05-30 chapter-0 swap: Financial Basics moved from mod-0-2 to mod-0-1.
   // The recall prompts (interest / overdraft / loan / pension) belong to that
-  // content, so the gate follows to mod-0-1. mod-0-2 (money-essence) has no
-  // recall set in sentenceData.ts and must NOT enter the recall phase.
+  // content, so the gate follows to mod-0-1.
   "mod-0-1", "mod-0-3",
   "mod-1-2",
   "mod-2-10", "mod-2-11",
   "mod-3-15",
   "mod-4-19", "mod-4-20",
   "mod-5-25", "mod-5-26",
+  // 2026-06-20 batch 1: opening modules (chapters 0–1). Each id below has a
+  // matching set in sentenceData.ts. mod-0-2 now HAS a recall set (money basics)
+  // so it correctly enters the recall phase.
+  "mod-0-1b", "mod-0-2", "mod-0-4", "mod-0-5",
+  "mod-1-3", "mod-1-4", "mod-1-5", "mod-1-9",
 ]);
 
 // MODULE_INFOGRAPHIC_MAP + MODULE_POST_VIDEO_MAP records now live in

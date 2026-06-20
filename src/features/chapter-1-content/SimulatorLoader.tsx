@@ -28,7 +28,7 @@ const SIM_LOADERS: Record<string, () => SimScreen> = {
   "mod-1-3": () => require("./simulations").SnowballGameScreen,
   "mod-1-4": () => require("./simulations").BudgetGameScreen,
   "mod-1-5": () => require("./simulations").PayslipNinjaScreen,
-  // mod-1-6 sim removed
+  "mod-1-6": () => require("./simulations").CarLoanRaceScreen,
   "mod-1-7": () => require("./simulations").BankCombatScreen,
   "mod-1-8": () => require("./simulations").ShoppingCartScreen,
   "mod-1-9": () => require("./simulations").EmergencyFundScreen,
