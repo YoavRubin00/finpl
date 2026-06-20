@@ -67,6 +67,9 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   // reads as a payslip/sheet, fitting the "נתח תלוש שכר" analyzer. The actual
   // per-module label/route comes from moduleToolMap.ts.
   'tool': { svgXml: SVG_LESSON },
+  // Light-bulb "explainer" glyph for the bonus in-app CAROUSEL chip (swipeable
+  // branded slides). Per-module title/slides come from moduleCarouselMap.ts.
+  'carousel': { svgXml: SVG_TIP },
 };
 
 /** Hebrew label shown on the chip. Singular, gender-neutral per BRAND.md. */
@@ -87,4 +90,5 @@ export const TOPIC_LABELS: Record<TopicKind, string> = {
   // Generic fallback — the per-module tool registry overrides this with the
   // specific label (e.g. "נתח תלוש שכר").
   'tool': 'כלי',
+  'carousel': 'קרוסלה',
 };

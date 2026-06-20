@@ -20,6 +20,8 @@ import type { Topic, ChestRarity } from './types';
 import { CHEST_RARITY_BONUS } from './types';
 import { resolveTopics } from './topicResolver';
 import { getModuleTool, buildToolTopic } from './moduleToolMap';
+import { getModuleCarousel, buildCarouselTopic } from './moduleCarouselMap';
+import { CarouselSheet } from './components/CarouselSheet';
 import { useTopicProgressStore } from './useTopicProgressStore';
 import { useContinuousRunStore } from './useContinuousRunStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
@@ -123,13 +125,26 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // (NOT mutating it) so the completion summary / chest math above stay based
   // purely on the real learning topics. Tapping it deep-links into the tool
   // via the parent's onTopicSelected ('tool' kind).
+  const moduleCarousel = useMemo(() => getModuleCarousel(module.id), [module.id]);
+  const [carouselOpen, setCarouselOpen] = useState(false);
+
   const displayTopics = useMemo(() => {
+    const extra: Topic[] = [];
+    // Carousel (998) always shows; tool (999) reveals past its threshold. Both
+    // are appended AFTER the real learning chips and are display-only — never in
+    // the completion `topics`, so they don't move the chest math.
+    if (moduleCarousel) extra.push(buildCarouselTopic(module.id, moduleCarousel));
     const tool = getModuleTool(module.id);
-    if (tool && summary.pct >= tool.revealPct) {
-      return [...topics, buildToolTopic(module.id, tool)];
-    }
-    return topics;
-  }, [topics, module.id, summary.pct]);
+    if (tool && summary.pct >= tool.revealPct) extra.push(buildToolTopic(module.id, tool));
+    return extra.length ? [...topics, ...extra] : topics;
+  }, [topics, module.id, moduleCarousel, summary.pct]);
+
+  // Carousel chip opens an in-app sheet (not a lesson phase), so intercept it
+  // here; every other chip delegates to the parent's navigation handler.
+  const handleChipPress = useCallback((topic: Topic) => {
+    if (topic.kind === 'carousel') { setCarouselOpen(true); return; }
+    onTopicSelected(topic);
+  }, [onTopicSelected]);
 
   // Yoav 2026-06-17: the 70% chest must also require the QUIZ to be answered —
   // reaching 70% of the chips alone isn't "done" if the quiz chip is still
@@ -576,8 +591,17 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onRecommendedChipRef={onRecommendedChipRef}
           progressPct={summary.pct}
           nodeOffsetX={nodeOffsetX}
-          onTopicPress={onTopicSelected}
+          onTopicPress={handleChipPress}
         />
+
+        {moduleCarousel && (
+          <CarouselSheet
+            visible={carouselOpen}
+            onClose={() => setCarouselOpen(false)}
+            title={moduleCarousel.titleHe}
+            slides={moduleCarousel.slides}
+          />
+        )}
 
         {/* #6 Graduate onboarding — a still-unanswered staged profile question,
             surfaced only AFTER the chest sequence closes (never mid-sequence). */}

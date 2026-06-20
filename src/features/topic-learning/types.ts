@@ -46,7 +46,13 @@ export type TopicKind =
    *  module in `moduleToolMap.ts`, appended to the END of the accordion and
    *  REVEALED only past a completion %. Excluded from the completion math —
    *  it never counts toward the chest and is never marked "done". */
-  | 'tool';
+  | 'tool'
+  /** Bonus in-app CAROUSEL chip — a swipeable set of branded cloud-hosted
+   *  slides (the Instagram edu-carousel, minus its download CTA, since in-app
+   *  the user is already playing). Registered per module in
+   *  `moduleCarouselMap.ts`, opens an in-app sheet, excluded from the
+   *  completion math (never counts toward the chest, never marked "done"). */
+  | 'carousel';
 
 /**
  * R5.11 (2026-06-10) — chip visual upgraded from emoji to Design System
