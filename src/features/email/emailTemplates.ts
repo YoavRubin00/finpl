@@ -1,13 +1,17 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-// ─── Upload these WebP files to Vercel Blob and update the URLs below ──────
-// Source files: assets/webp/fin-fire-1.webp, fin-happy.webp, fin-empathic.webp
+// ─── Mascot images — PNG (NOT webp/gif) on purpose ─────────────────────────
+// Gmail proxies every image and converts WebP-with-alpha to JPEG (no alpha) →
+// the shark rendered with a BLACK box (Yoav 2026-06-20). Gmail preserves PNG
+// transparency, so we serve transparent PNGs that composite cleanly on the blue
+// header. Regenerate + upload via scripts/upload-mascot-pngs.ts (source frames:
+// assets/webp/fin-*.webp).
 const BLOB = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/mascot';
-const SHARK_FIRE    = `${BLOB}/fin-fire-1.webp`;
-const SHARK_HAPPY   = `${BLOB}/fin-happy.gif`;
-const SHARK_EMPATHIC = `${BLOB}/fin-empathic.webp`;
-const SHARK_STANDARD = `${BLOB}/fin-standard.webp`;
+const SHARK_FIRE    = `${BLOB}/fin-fire-1.png`;
+const SHARK_HAPPY   = `${BLOB}/fin-happy.png`;
+const SHARK_EMPATHIC = `${BLOB}/fin-empathic.png`;
+const SHARK_STANDARD = `${BLOB}/fin-standard.png`;
 
 const BLUE      = '#0ea5e9';
 const DARK_BLUE = '#0369a1';
