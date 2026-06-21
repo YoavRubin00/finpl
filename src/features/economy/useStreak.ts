@@ -38,10 +38,20 @@ export function useRecordDailyActivity() {
   return useMutation({
     mutationFn: async () => (await recordDailyActivity(todayIsraelDate())).streak,
     onSuccess: (streak) => {
+      // Snapshot the pre-update streak BEFORE overwriting the cache so the
+      // shared emitter can detect a genuine streak extension.
+      const prev = qc.getQueryData<StreakState | null>(streakQueryKey)?.currentStreak ?? 0;
       qc.setQueryData<StreakState | null>(streakQueryKey, streak);
-      // Mirror the daily-tick gate so an explicit completion (onboarding /
-      // lesson) suppresses the next foreground's redundant POST the same day.
-      AsyncStorage.setItem(STREAK_DAILY_TICK_KEY, todayIsraelDate()).catch(() => {});
+      try {
+        setPersonProperties({
+          current_streak: streak?.currentStreak ?? 0,
+          longest_streak: streak?.longestStreak ?? 0,
+        });
+      } catch { /* non-fatal */ }
+      // Fire daily_active_day (+ streak_extended) from the app-open path — THIS
+      // is the under-firing fix. emitDailyActivitySignals writes the gate key,
+      // so the activity path dedups against it (exactly one emit per day).
+      void emitDailyActivitySignals(streak, prev);
     },
   });
 }
@@ -52,6 +62,52 @@ export function useRecordDailyActivity() {
  * already idempotent per dateIl — this just spares us redundant network calls.
  */
 export const STREAK_DAILY_TICK_KEY = 'streak-daily-tick:last';
+
+/**
+ * Emit the daily-activity analytics signals exactly ONCE per Israeli calendar
+ * day, from whichever path records the day FIRST — the app-open tick
+ * (useStreakDailyTick) or an in-app activity (markDailyActivityCompleted).
+ *
+ * Bug fix (Yoav 2026-06-21): `daily_active_day` used to fire ONLY from the
+ * activity path, while the app-open tick wrote STREAK_DAILY_TICK_KEY WITHOUT
+ * firing it. Since the tick runs on every foreground, it usually wrote the gate
+ * key before the user did any activity, suppressing the event for ~70% of
+ * active users (it sat at ~30% coverage vs Application Opened). Emitting here,
+ * gated by the shared key, restores full coverage. `streak_extended` rides
+ * along on the day's first record (the streak grows at most once/day, so the
+ * key gate is correct), making BOTH events reliable for the PMF/retention
+ * dashboards. Auth-only by design (server streak is keyed off authId; guests
+ * are still captured by the reliable `Application Opened` event the dashboards
+ * use).
+ */
+async function emitDailyActivitySignals(
+  streak: StreakState | null | undefined,
+  prevStreak: number,
+): Promise<void> {
+  const today = todayIsraelDate();
+  let last: string | null = null;
+  try { last = await AsyncStorage.getItem(STREAK_DAILY_TICK_KEY); } catch { /* treat as not-fired */ }
+  if (last === today) return; // the other path already emitted today
+  const newStreak = streak?.currentStreak ?? 0;
+  const longestStreak = streak?.longestStreak ?? 0;
+  try {
+    captureEvent('daily_active_day', { date_il: today, streak: newStreak, longest_streak: longestStreak });
+    if (newStreak > prevStreak) {
+      const MILESTONES = new Set([2, 7, 14, 30, 100, 365]);
+      track({
+        name: 'streak_extended',
+        props: {
+          prev_streak: prevStreak,
+          new_streak: newStreak,
+          longest_streak: longestStreak,
+          is_milestone: MILESTONES.has(newStreak),
+          reached_two: prevStreak < 2 && newStreak >= 2,
+        },
+      });
+    }
+  } catch { /* non-fatal */ }
+  AsyncStorage.setItem(STREAK_DAILY_TICK_KEY, today).catch(() => {});
+}
 
 /**
  * Single entry point for "the user did a streak-eligible activity today".
@@ -83,58 +139,19 @@ export function markDailyActivityCompleted(): void {
   const prevStreakBefore = prevSnapshot?.currentStreak ?? 0;
 
   void recordDailyActivity(todayIsraelDate())
-    .then(async (res) => {
+    .then((res) => {
       queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
-      const newStreak = res.streak?.currentStreak ?? 0;
-      const longestStreak = res.streak?.longestStreak ?? 0;
-
-      // Push current streak to PostHog as a person property so downstream
-      // cohorts ("users currently holding a streak ≥ 2") can be defined
-      // without joining event tables. Setting on every successful
-      // recordDailyActivity keeps the value fresh including the case where
-      // the server reset the streak (returned 1 or 0).
+      // Keep the PostHog person streak props fresh (incl. server resets to 1/0).
       try {
         setPersonProperties({
-          current_streak: newStreak,
-          longest_streak: longestStreak,
+          current_streak: res.streak?.currentStreak ?? 0,
+          longest_streak: res.streak?.longestStreak ?? 0,
         });
       } catch { /* non-fatal */ }
-
-      // Fire `daily_active_day` exactly once per Israeli calendar day so
-      // NSM Secondary (Active Streaks) becomes a direct PostHog query
-      // instead of a server-side join. Guarded by STREAK_DAILY_TICK_KEY:
-      // if today's key was already written we've already fired today.
-      try {
-        const last = await AsyncStorage.getItem(STREAK_DAILY_TICK_KEY);
-        const today = todayIsraelDate();
-        if (last !== today) {
-          captureEvent('daily_active_day', {
-            date_il: today,
-            streak: newStreak,
-            longest_streak: longestStreak,
-          });
-
-          // Fire `streak_extended` ONLY when the streak actually grew.
-          // `daily_active_day` fires on every active day (including
-          // streak=1 resets after a break); `streak_extended` carries the
-          // delta so the "users holding a streak ≥ 2" cohort and the
-          // 1→2 / 2→3 funnel can be built directly.
-          if (newStreak > prevStreakBefore) {
-            const MILESTONES = new Set([2, 7, 14, 30, 100, 365]);
-            track({
-              name: 'streak_extended',
-              props: {
-                prev_streak: prevStreakBefore,
-                new_streak: newStreak,
-                longest_streak: longestStreak,
-                is_milestone: MILESTONES.has(newStreak),
-                reached_two: prevStreakBefore < 2 && newStreak >= 2,
-              },
-            });
-          }
-        }
-      } catch { /* non-fatal */ }
-      AsyncStorage.setItem(STREAK_DAILY_TICK_KEY, todayIsraelDate()).catch(() => {});
+      // daily_active_day + streak_extended via the shared once-per-day emitter
+      // (the app-open tick fires the same; whichever runs first wins and the
+      // other dedups on STREAK_DAILY_TICK_KEY).
+      void emitDailyActivitySignals(res.streak, prevStreakBefore);
     })
     .catch(() => { /* offline / 401, local state stays correct, server retries on next foreground */ });
 }
