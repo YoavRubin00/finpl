@@ -112,7 +112,27 @@ export function DeepAnalysisCard({ data }: Props): React.ReactElement {
   };
 
   return (
-    <View style={{ gap: 10 }}>
+    // Light-blue panel so the revealed analysis reads as one cohesive surface.
+    // Without a background the outer wrapper was transparent and the dark navy
+    // screen gradient (#0b1735) showed through every gap between the white
+    // sections — the analysis looked like it floated on a "transparent" bg
+    // (user report). sky-200 fill + sky-400 border guarantee it registers as a
+    // real panel on the dark background.
+    <View
+      style={{
+        gap: 10,
+        backgroundColor: '#bfdbfe',
+        borderRadius: 20,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#38bdf8',
+        shadowColor: '#0369a1',
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 3,
+      }}
+    >
       {/* Summary header card — always open */}
       <View
         style={{

@@ -100,7 +100,15 @@
         }
       ],
       "./plugins/with-modular-podfile",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@livekit/react-native-expo-plugin",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "FinPlay משתמשת במיקרופון כדי שתוכל/י לנהל שיחת קול חיה עם קפטן שארק לבדיקת הבנה.",
+          "cameraPermission": "FinPlay אינה מצלמת — ההרשאה נדרשת רק עבור רכיב שיחות הקול."
+        }
+      ]
     ],
     "extra": {
       "router": {},
@@ -128,7 +136,8 @@
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.FOREGROUND_SERVICE"
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.CAMERA"
       ],
       "intentFilters": [
         {

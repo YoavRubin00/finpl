@@ -38,6 +38,10 @@ interface TutorialState {
    *  to re-discover the Bridge on their own — this CTA closes that loop on
    *  first completion. Per דואו's one-shot rule, never show twice. */
   hasSeenMod05BridgeCTA: boolean;
+  /** One-shot guard: the free user's single trial of the live Captain Shark
+   *  comprehension call (offered on mod-0-2). After this the live call is
+   *  Pro-only; the cheap text report stays available weekly. */
+  hasUsedFreeSharkCall: boolean;
   /** One-shot guard for the in-pearl-topper "פנינה = תוכן בונוס, אפשר לדלג
    *  ולחזור מתי שבא לך" tooltip. Shows the first time the user enters a
    *  pearl in their lifetime, marks itself seen on tap-"הבנתי", and never
@@ -96,6 +100,7 @@ interface TutorialState {
   markRatePromptShown: () => void;
   /** User tapped "rate" (or opted out) — never ask again. */
   markRated: () => void;
+  markFreeSharkCallUsed: () => void;
   resetWalkthrough: () => void;
   reset: () => void;
 }
@@ -117,6 +122,7 @@ export const useTutorialStore = create<TutorialState>()(
       hasSeenToolTutorial: {},
       moduleEndGateShown: {},
       hasSeenMod05BridgeCTA: false,
+      hasUsedFreeSharkCall: false,
       hasSeenPearlTooltip: false,
       appWalkthroughStep: 0,
       walkthroughGlowTab: null,
@@ -142,6 +148,7 @@ export const useTutorialStore = create<TutorialState>()(
       markToolTutorialSeen: (toolKey: ToolKey) => set((s) => ({ hasSeenToolTutorial: { ...s.hasSeenToolTutorial, [toolKey]: true } })),
       markModuleEndGateShown: (moduleId: string) => set((s) => ({ moduleEndGateShown: { ...s.moduleEndGateShown, [moduleId]: true } })),
       markMod05BridgeCTASeen: () => set({ hasSeenMod05BridgeCTA: true }),
+      markFreeSharkCallUsed: () => set({ hasUsedFreeSharkCall: true }),
       markPearlTooltipSeen: () => set({ hasSeenPearlTooltip: true }),
       setAppWalkthroughStep: (step: number) => set({ appWalkthroughStep: step }),
       setWalkthroughGlowTab: (tab: string | null) => set({ walkthroughGlowTab: tab }),
@@ -152,7 +159,7 @@ export const useTutorialStore = create<TutorialState>()(
       markRatePromptShown: () => set((s) => ({ ratePromptCount: s.ratePromptCount + 1, lastRatePromptAt: Date.now() })),
       markRated: () => set({ ratePromptHandled: true }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",

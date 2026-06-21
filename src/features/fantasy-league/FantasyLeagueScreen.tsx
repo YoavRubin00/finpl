@@ -193,18 +193,24 @@ function PositionRow({
         swipeableRef.current?.close();
         onSell(position.id, position.currentPrice);
       }}
-      style={({ pressed }) => ({
-        backgroundColor: pressed ? '#b91c1c' : CLASH.redBadge,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 80,
-        marginBottom: 8,
-        marginLeft: 8,
-      })}
+      style={{ width: 80, marginBottom: 8, marginLeft: 8, borderRadius: 14 }}
     >
-      <Text style={{ fontSize: 22, marginBottom: 2 }}>💰</Text>
-      <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>מכור</Text>
+      {({ pressed }) => (
+        // bg on an inner View — a function-style Pressable drops backgroundColor
+        // on Android, leaving the "מכור" button blank (audit P2 #7).
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: pressed ? '#b91c1c' : CLASH.redBadge,
+            borderRadius: 14,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ fontSize: 22, marginBottom: 2 }}>💰</Text>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>מכור</Text>
+        </View>
+      )}
     </Pressable>
   );
 

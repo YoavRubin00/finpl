@@ -51,6 +51,10 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
     title: "ניתוח תלוש שכר, הגעת למכסה החודשית",
     body: `ב‑Free מקבלים ${BASIC_LIMITS.payslip} ניתוח תלוש בחודש.\nב‑PRO תוכלו לנתח תלוש בכל פעם שתרצו — כל חודש, כל בונוס, כל שינוי במשרה.`,
   },
+  "lesson-report": {
+    title: "דוח סיכום שיעור, הגעת למכסה השבועית",
+    body: `ב‑Free מקבלים ${BASIC_LIMITS["lesson-report"]} דוח סיכום שיעור בשבוע.\nב‑PRO מקבלים דוח הבנה איכותי אחרי כל שיעור — עם נקודות לשיפור ושיחה עם קפטן שארק על הדוח.`,
+  },
 };
 
 /** Standalone usage, must be placed once in app/_layout.tsx */

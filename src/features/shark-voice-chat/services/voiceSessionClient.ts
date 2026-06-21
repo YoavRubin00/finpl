@@ -25,8 +25,11 @@ interface TokenResponse {
 }
 
 function resolveBase(): string {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const host = window.location?.hostname ?? '';
+  // `window` isn't in the project's TS lib (no DOM) — read location off
+  // globalThis instead, mirroring the other voice/report API-base resolvers.
+  if (Platform.OS === 'web') {
+    const w = (globalThis as { location?: { hostname?: string } }).location;
+    const host = w?.hostname ?? '';
     if (host === 'localhost' || host === '127.0.0.1') {
       return PROD_API_BASE;
     }

@@ -121,6 +121,20 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
   const fromAddress = process.env.EMAIL_FROM ?? 'FinPlay <onboarding@resend.dev>';
   const weekAgoIso = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
+  // Click-tracking secret, read ONCE per batch. When it's missing, every CTA
+  // silently falls back to the UNTRACKED /api/go link and click-through reads a
+  // false 0% — the failure that stayed invisible for weeks (2026-06). Fail LOUD
+  // so a future misconfiguration surfaces in Vercel logs (and a PostHog alert)
+  // immediately, instead of a month of blank dashboards.
+  const trackingSecret = process.env.EMAIL_TRACKING_SECRET ?? '';
+  if (!trackingSecret) {
+    console.error(
+      '[send-daily] EMAIL_TRACKING_SECRET is MISSING — every CTA link will be ' +
+        'UNTRACKED and click-through will read 0%. Set it in Vercel env.',
+    );
+    await capturePostHog('email_tracking_secret_missing', 'system', { batch: todayDate });
+  }
+
   let sent = 0;
   let failed = 0;
 
@@ -150,7 +164,6 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       const picked = selectBestVariant(banditStats);
       const variantId = (picked?.variantId ?? RETENTION_VARIANT_IDS[0]) as RetentionVariantId;
 
-      const trackingSecret = process.env.EMAIL_TRACKING_SECRET ?? '';
       const sig = trackingSecret ? signEmailClick(user.id, variantId, trackingSecret) : '';
       const clickUrl = trackingSecret
         ? `${baseUrl}/api/email/track-click?u=${encodeURIComponent(user.id)}&v=${encodeURIComponent(variantId)}&s=${sig}`

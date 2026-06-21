@@ -23,12 +23,12 @@ interface CopyVariant {
 
 const COPY: Record<CapExceededReason, CopyVariant> = {
   'daily-cap': {
-    title: 'השארק עייף 🦈',
+    title: 'השארק עייף',
     body: 'הגעת לעשר דקות השיחה היומיות שלך. נדבר שוב מחר!',
     primaryLabel: 'סבבה',
   },
   'free-trial-over': {
-    title: 'רוצה להמשיך לדבר עם השארק? 🦈',
+    title: 'רוצה להמשיך לדבר עם השארק?',
     body: 'דקת ההתנסות שלך הסתיימה. שדרג לפרו לעוד עשר דקות שיחה ביום + פיצ׳רים מתקדמים.',
     primaryLabel: 'שדרג לפרו',
     secondaryLabel: 'אולי אחר כך',

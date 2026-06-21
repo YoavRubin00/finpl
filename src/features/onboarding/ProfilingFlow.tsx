@@ -561,23 +561,31 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
             accessible
             accessibilityRole="button"
             accessibilityLabel={`ערוך ${row.label}: ${row.value}`}
-            style={({ pressed }) => ({
-              width: '100%',
-              backgroundColor: pressed ? '#f0f9ff' : '#ffffff', borderRadius: 14,
-              paddingVertical: 12, paddingHorizontal: 16,
-              borderWidth: 1.5, borderColor: pressed ? '#7dd3fc' : '#e2e8f0',
-              shadowColor: '#0891b2', shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
-            })}
+            style={{ width: '100%' }}
           >
-            {/* Row 1: pencil + emoji + label — all same height */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Pencil size={14} color="#64748b" strokeWidth={2.2} />
-              <Text style={{ fontSize: 20, includeFontPadding: false, marginBottom: Platform.OS === 'ios' ? 2 : 0 }} accessible={false}>{row.icon}</Text>
-              <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: '#0f172a', textAlign: 'right', writingDirection: 'rtl', includeFontPadding: false }}>{row.label}</Text>
-            </View>
-            {/* Row 2: value below, right-aligned */}
-            <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', marginTop: 4 }}>{row.value}</Text>
+            {({ pressed }) => (
+              // bg/border on an inner View — a function-style Pressable drops
+              // backgroundColor on Android, leaving the row transparent (audit P2 #7).
+              <View
+                style={{
+                  width: '100%',
+                  backgroundColor: pressed ? '#f0f9ff' : '#ffffff', borderRadius: 14,
+                  paddingVertical: 12, paddingHorizontal: 16,
+                  borderWidth: 1.5, borderColor: pressed ? '#7dd3fc' : '#e2e8f0',
+                  shadowColor: '#0891b2', shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
+                }}
+              >
+                {/* Row 1: pencil + emoji + label — all same height */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Pencil size={14} color="#64748b" strokeWidth={2.2} />
+                  <Text style={{ fontSize: 20, includeFontPadding: false, marginBottom: Platform.OS === 'ios' ? 2 : 0 }} accessible={false}>{row.icon}</Text>
+                  <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: '#0f172a', textAlign: 'right', writingDirection: 'rtl', includeFontPadding: false }}>{row.label}</Text>
+                </View>
+                {/* Row 2: value below, right-aligned */}
+                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', marginTop: 4 }}>{row.value}</Text>
+              </View>
+            )}
           </Pressable>
         ))}
       </Animated.View>

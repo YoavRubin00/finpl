@@ -325,7 +325,7 @@ export function PricingScreen() {
     if (isGuest) {
       captureEvent('register_cta_shown', { source: 'pro_purchase' });
       Alert.alert(
-        'רגע לפני Pro 🦈',
+        'רגע לפני Pro',
         'כדי לפתוח את Pro צריך חשבון — ההרשמה חינמית ולוקחת שנייה. נרשמים, וחוזרים בדיוק לכאן.',
         [
           { text: 'אולי אחר כך', style: 'cancel', onPress: () => captureEvent('register_cta_dismissed', { source: 'pro_purchase' }) },

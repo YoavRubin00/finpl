@@ -156,6 +156,13 @@ export const chapter3Data: Chapter = {
         'בעולם ההשקעות, ההחלטות הטובות ביותר מתקבלות מתוך הבנה שיטתית ולא מתוך רגש. נלמד באילו דרכים הפסיכולוגיה משפיעה על הבחירות שלנו, וכיצד נוכל לאמץ משמעת שמובילה לצמיחה בטוחה.',
       introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-3-16-short-tzrffE7AfJNd35D60myi1Sx2DDDA7W.mp3' },
       flashcards: [{
+          id: 'mod-3-16-fear-greed',
+          text: 'מדד הפחד והחמדנות',
+          isMeme: true,
+          memeImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/memes/mod_3_16_fear_greed.png' },
+          hideTextOverlay: true,
+        },
+        {
           id: 'fc-3-16-1',
           text: 'שנאת הפסד: מחקרים של כהנמן וטברסקי הוכיחו שהכאב הפסיכולוגי מהפסד של 1,000 ש"ח חזק פי 2 מההנאה שברווח של 1,000 ש"ח. לכן משקיעים נוטים למכור בלחץ כשהשוק יורד, בדיוק כשכדאי לקנות.',
           diveMode: true,

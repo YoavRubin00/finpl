@@ -54,6 +54,7 @@ interface UsageState {
 
   // Weekly counters
   analystDeepUsesThisWeek: number;
+  lessonReportUsesThisWeek: number;
   lastUsageResetWeek: string | null;
 
   // Monthly counters
@@ -93,6 +94,7 @@ const initialState: UsageState = {
   analystQuickUsesToday: 0,
   lastUsageResetDate: null,
   analystDeepUsesThisWeek: 0,
+  lessonReportUsesThisWeek: 0,
   lastUsageResetWeek: null,
   aiInsightsUsesThisMonth: 0,
   payslipUsesThisMonth: 0,
@@ -127,6 +129,7 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         if (lastUsageResetWeek !== thisWeek) {
           set({
             analystDeepUsesThisWeek: 0,
+            lessonReportUsesThisWeek: 0,
             lastUsageResetWeek: thisWeek,
           });
         }
@@ -164,6 +167,9 @@ export const useUsageStore = create<UsageState & UsageActions>()(
             break;
           case 'analyst-deep':
             set((s) => ({ analystDeepUsesThisWeek: s.analystDeepUsesThisWeek + 1 }));
+            break;
+          case 'lesson-report':
+            set((s) => ({ lessonReportUsesThisWeek: s.lessonReportUsesThisWeek + 1 }));
             break;
           case 'payslip':
             set((s) => ({ payslipUsesThisMonth: s.payslipUsesThisMonth + 1 }));
@@ -208,6 +214,8 @@ export const useUsageStore = create<UsageState & UsageActions>()(
             return state.lastUsageResetDate !== today || state.analystQuickUsesToday < limit;
           case 'analyst-deep':
             return state.lastUsageResetWeek !== thisWeek || state.analystDeepUsesThisWeek < limit;
+          case 'lesson-report':
+            return state.lastUsageResetWeek !== thisWeek || state.lessonReportUsesThisWeek < limit;
           case 'payslip':
             return state.lastUsageResetMonth !== thisMonth || state.payslipUsesThisMonth < limit;
           case 'aiInsights':
@@ -248,6 +256,8 @@ export const useUsageStore = create<UsageState & UsageActions>()(
             return state.lastUsageResetDate !== today ? limit : Math.max(0, limit - state.analystQuickUsesToday);
           case 'analyst-deep':
             return state.lastUsageResetWeek !== thisWeek ? limit : Math.max(0, limit - state.analystDeepUsesThisWeek);
+          case 'lesson-report':
+            return state.lastUsageResetWeek !== thisWeek ? limit : Math.max(0, limit - state.lessonReportUsesThisWeek);
           case 'payslip':
             return state.lastUsageResetMonth !== thisMonth ? limit : Math.max(0, limit - state.payslipUsesThisMonth);
           case 'aiInsights':
@@ -283,6 +293,7 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         analystQuickUsesToday: state.analystQuickUsesToday,
         lastUsageResetDate: state.lastUsageResetDate,
         analystDeepUsesThisWeek: state.analystDeepUsesThisWeek,
+        lessonReportUsesThisWeek: state.lessonReportUsesThisWeek,
         lastUsageResetWeek: state.lastUsageResetWeek,
         aiInsightsUsesThisMonth: state.aiInsightsUsesThisMonth,
         payslipUsesThisMonth: state.payslipUsesThisMonth,

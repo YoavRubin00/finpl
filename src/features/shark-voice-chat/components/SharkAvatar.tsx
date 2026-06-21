@@ -13,14 +13,18 @@ import { useSharkAvatarState, type SharkExpression } from '../hooks/useSharkAvat
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { DUO } from '../../../constants/theme';
 
+// Purpose-built live-call loops (Higgsfield Seedance → chroma-key, 2026-06-21).
+// The shark's mouth genuinely moves in the talking loops so the call feels live;
+// three talking variants are cycled mid-turn (see useSharkAvatarState) so a long
+// reply never looks like a repeating GIF.
 const SOURCES: Record<SharkExpression, number> = {
-  'idle': require('../../../../assets/webp/fin-standard.webp'),
-  'listening': require('../../../../assets/webp/fin-empathic.webp'),
-  'thinking': require('../../../../assets/webp/fin-tablet-1.webp'),
-  'talking-1': require('../../../../assets/webp/fin-talking-1.webp'),
-  'talking-2': require('../../../../assets/webp/fin-hello.webp'),
-  'talking-3': require('../../../../assets/webp/fin-happy.webp'),
-  'empathic': require('../../../../assets/webp/fin-empathic.webp'),
+  'idle': require('../../../../assets/webp/shark-call-listening.webp'),
+  'listening': require('../../../../assets/webp/shark-call-listening.webp'),
+  'thinking': require('../../../../assets/webp/shark-call-thinking.webp'),
+  'talking-1': require('../../../../assets/webp/shark-call-talking-1.webp'),
+  'talking-2': require('../../../../assets/webp/shark-call-talking-2.webp'),
+  'talking-3': require('../../../../assets/webp/shark-call-talking-3.webp'),
+  'empathic': require('../../../../assets/webp/shark-call-listening.webp'),
   'victory': require('../../../../assets/webp/fin-victory.webp'),
 };
 
@@ -138,6 +142,9 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   imageInner: {
-    transform: [{ scale: 1.22 }, { translateY: 14 }],
+    // The shark-call WebPs already frame the captain large and centered, so
+    // only a gentle fill is needed (the old 1.22/+14 was tuned for the older
+    // fin-*.webp loops that carried lots of head-room whitespace).
+    transform: [{ scale: 1.05 }],
   },
 });

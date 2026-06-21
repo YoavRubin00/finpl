@@ -11,7 +11,8 @@ export type GatedFeature =
   | "shark-voice"
   | "analyst-quick"
   | "analyst-deep"
-  | "payslip";
+  | "payslip"
+  | "lesson-report";
 
 // Free-tier caps per gated feature. The CADENCE varies by feature:
 //   simulator/arena/chat/analyst-quick — per DAY (reset at local midnight)
@@ -40,6 +41,10 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
   "analyst-quick": 2,   // 2 quick analyses per DAY for Free
   "analyst-deep": 1,    // 1 deep analysis per WEEK for Free
   payslip: 1,           // 1 payslip analysis per MONTH for Free
+  // 1 AI lesson-comprehension report per WEEK for Free; Pro is unlimited (not
+  // in PRO_LIMITS). At the end of every lesson the user is offered the report —
+  // once the weekly one is spent, the offer becomes a Pro upsell.
+  "lesson-report": 1,
 };
 
 /** How many tickers a Pro user can track for daily Breaking News summaries. */

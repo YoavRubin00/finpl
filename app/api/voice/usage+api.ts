@@ -14,7 +14,7 @@ import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { clampNumber } from '../_shared/validate';
 
-const MAX_REPORT_SECONDS = 60;
+const MAX_REPORT_SECONDS = 45;
 
 interface UsageBody {
   seconds?: unknown;

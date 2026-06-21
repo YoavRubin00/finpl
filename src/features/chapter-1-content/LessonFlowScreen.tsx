@@ -3279,6 +3279,9 @@ export function LessonFlowScreen() {
     setFlashcardIndex(resumable ? r!.flashcardIndex : 0);
     setQuizIndex(resumable ? r!.quizIndex : 0);
     setConsecutiveCorrect(resumable ? r!.consecutiveCorrect : 0);
+    // peakStreak must reset too — otherwise a streak earned in module A inflates
+    // the next module's chest-reward multiplier (audit P2 #9). Mirror the init.
+    setPeakStreak(resumable ? (r!.peakStreak ?? 0) : 0);
     setShowStreakPopup(false);
     setShowQuizIntro(false);
     setShowWisdom(false);
@@ -3306,6 +3309,9 @@ export function LessonFlowScreen() {
     shouldTriggerDoNRef.current = false;
     completedRef.current = false;
     chestAnimationStartedRef.current = false;
+    // Re-arm the per-module "fun video" guard so module 2+ in the same session
+    // still plays its mid-quiz / post-infographic content video (audit P1 #1).
+    funVideoShownRef.current = false;
     pendingChestDropRef.current = null;
     // Reset the per-module profile-question guard so a user who skipped
     // the in-lesson prompt the first time gets another chance to answer

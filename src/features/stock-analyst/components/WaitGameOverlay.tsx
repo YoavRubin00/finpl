@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { X, RotateCw } from 'lucide-react-native';
@@ -31,6 +31,15 @@ export function WaitGameOverlay({ visible, onClose }: Props): React.ReactElement
   // the inset directly and pad the scroll content so the inner card's
   // "המשך" CTA clears the home indicator on every device.
   const insets = useSafeAreaInsets();
+  // Bound the scrollable game body to a concrete height. The sheet is
+  // `maxHeight:'92%'` + `bottom:0`, but its parents are all `flex:0`, so a
+  // percentage maxHeight on the ScrollView has no resolved height to size
+  // against — the body lays out at full content height and SPILLS below the
+  // sheet's bottom edge, off the screen (overflow defaults to visible). A
+  // window-derived cap makes the body scroll internally instead of clipping
+  // the game's "המשך" CTA off the bottom. 64 ≈ header height + breathing room.
+  const { height: winH } = useWindowDimensions();
+  const bodyMaxH = Math.round(winH * 0.92) - 64 - insets.bottom;
 
   const swapGame = useCallback(() => {
     tapHaptic();
@@ -99,7 +108,7 @@ export function WaitGameOverlay({ visible, onClose }: Props): React.ReactElement
 
           <Animated.View entering={FadeIn.duration(220)} style={{ flex: 0 }}>
             <ScrollView
-              style={s.scroll}
+              style={[s.scroll, { maxHeight: bodyMaxH }]}
               contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}
               showsVerticalScrollIndicator={false}
             >
@@ -198,7 +207,8 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   scroll: {
-    maxHeight: '100%',
+    // Concrete maxHeight is applied inline from window dimensions (see
+    // bodyMaxH) — a percentage here wouldn't resolve through the flex:0 chain.
   },
   scrollContent: {
     paddingBottom: 12,

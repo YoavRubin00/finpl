@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import type { Conversation as ConversationType } from '@elevenlabs/client';
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { fetchSignedUrl } from '../services/voiceSessionClient';
+import type { ComprehensionOverride } from '../moduleComprehension';
 
 /**
  * Drives the ElevenLabs Conversational AI session via the official SDK.
@@ -56,6 +57,7 @@ export function useElevenLabsConversation() {
   const setSharkText = useSharkVoiceStore((s) => s.setSharkText);
   const setError = useSharkVoiceStore((s) => s.setError);
   const setMuted = useSharkVoiceStore((s) => s.setMuted);
+  const addTurn = useSharkVoiceStore((s) => s.addTurn);
 
   const disconnect = useCallback(async () => {
     const conv = conversationRef.current;
@@ -71,7 +73,7 @@ export function useElevenLabsConversation() {
     setStatus('idle');
   }, [setStatus]);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (opts?: ComprehensionOverride) => {
     if (startingRef.current || conversationRef.current) return;
     if (Platform.OS !== 'web') {
       setError('שיחת הקול זמינה כרגע רק בגרסת ה-Web. בקרוב גם במובייל.');
@@ -93,8 +95,13 @@ export function useElevenLabsConversation() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { Conversation } = require('@elevenlabs/client') as typeof import('@elevenlabs/client');
+      // Per-module override (comprehension prompt/firstMessage/language +
+      // dynamic variables). The `as` cast bridges our `language: string` to the
+      // SDK's strict Language union (the value is a validated code like 'he').
       const conv = await Conversation.startSession({
         signedUrl,
+        ...(opts?.overrides ? { overrides: opts.overrides } : {}),
+        ...(opts?.dynamicVariables ? { dynamicVariables: opts.dynamicVariables } : {}),
         onConnect: () => {
           setStatus('listening');
         },
@@ -110,10 +117,12 @@ export function useElevenLabsConversation() {
           if (!cleaned) return;
           if (role === 'user') {
             setUserTranscript(cleaned);
+            addTurn('user', cleaned);
             // While the agent generates its reply we're effectively "thinking"
             setStatus('thinking');
           } else if (role === 'agent') {
             setSharkText(cleaned);
+            addTurn('shark', cleaned);
           }
         },
         onModeChange: ({ mode }) => {
@@ -141,7 +150,7 @@ export function useElevenLabsConversation() {
             setStatus('listening');
           }, AUDIO_SILENCE_MS);
         },
-      });
+      } as Parameters<typeof Conversation.startSession>[0]);
       conversationRef.current = conv;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'לא ניתן לפתוח חיבור לשירות הקול.';

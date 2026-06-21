@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { tapHaptic } from '../../utils/haptics';
 import { UnderwaterBubbles } from './components/UnderwaterBubbles';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useUpgradeModalStore } from '../../stores/useUpgradeModalStore';
 import { useSharkVoiceStore } from './useSharkVoiceStore';
 import { useElevenLabsConversation } from './hooks/useElevenLabsConversation';
@@ -18,6 +18,9 @@ import { SharkVoiceProvider } from './SharkVoiceProvider';
 
 const RTL = { writingDirection: 'rtl' as const };
 const TICK_SECONDS = 5;
+// Pro chat-call session cap (10 min). The brought-in screen used a server-backed
+// usage store (removed on dev); we cap locally per session instead.
+const CHAT_CALL_MAX_SECONDS = 600;
 
 function formatRemaining(seconds: number): string {
   const safe = Math.max(0, Math.floor(seconds));
@@ -38,10 +41,7 @@ export function SharkVoiceCallScreen(): React.ReactElement {
 }
 
 function SharkVoiceCallContent(): React.ReactElement {
-  const canUseSharkVoice = useSubscriptionStore((s) => s.canUseSharkVoice);
-  const getRemaining = useSubscriptionStore((s) => s.getSharkVoiceSecondsRemaining);
-  const recordUsage = useSubscriptionStore((s) => s.recordSharkVoiceUsage);
-  const isPro = useSubscriptionStore((s) => s.isPro());
+  const isPro = useIsPro();
   const showUpgradeModal = useUpgradeModalStore((s) => s.show);
 
   const status = useSharkVoiceStore((s) => s.status);
@@ -51,14 +51,14 @@ function SharkVoiceCallContent(): React.ReactElement {
   const { connect, disconnect, toggleMute } = useElevenLabsConversation();
 
   const [capModalVisible, setCapModalVisible] = useState(false);
-  const [remaining, setRemaining] = useState<number>(getRemaining());
+  const [remaining, setRemaining] = useState<number>(CHAT_CALL_MAX_SECONDS);
 
   const hasStartedRef = useRef(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // On mount: gate the screen, then connect.
   useEffect(() => {
-    if (!canUseSharkVoice()) {
+    if (!isPro) {
       setCapModalVisible(true);
       return;
     }
@@ -86,13 +86,14 @@ function SharkVoiceCallContent(): React.ReactElement {
     }
 
     tickRef.current = setInterval(() => {
-      recordUsage(TICK_SECONDS);
-      const left = getRemaining();
-      setRemaining(left);
-      if (left <= 0) {
-        disconnect();
-        setCapModalVisible(true);
-      }
+      setRemaining((prev) => {
+        const left = Math.max(0, prev - TICK_SECONDS);
+        if (left <= 0) {
+          void disconnect();
+          setCapModalVisible(true);
+        }
+        return left;
+      });
     }, TICK_SECONDS * 1000);
 
     return () => {
@@ -101,7 +102,7 @@ function SharkVoiceCallContent(): React.ReactElement {
         tickRef.current = null;
       }
     };
-  }, [status, disconnect, getRemaining, recordUsage]);
+  }, [status, disconnect]);
 
   // Always return to chat — the call is conceptually a chat session, not a
   // free-floating screen. Using `router.back()` can land on whatever tab the
@@ -125,37 +126,23 @@ function SharkVoiceCallContent(): React.ReactElement {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f6c3b8' }}>
+    <View style={{ flex: 1, backgroundColor: '#06182f' }}>
       <StatusBar barStyle="light-content" />
-      {/* Studio backdrop — full-bleed cover. The peach-tinted gradient
-          underneath catches any letterboxing on extreme aspect ratios so
-          the seams never show. */}
-      <LinearGradient
-        colors={['#fbd7ce', '#f6c3b8', '#e8a89a']}
-        locations={[0, 0.55, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
+      {/* Cinematic underwater backdrop — full-bleed cover (Higgsfield, 2026-06-21).
+          The deep-ocean fill underneath catches any letterboxing on extreme
+          aspect ratios so the seams never show. */}
       <ImageBackground
-        source={require('../../../assets/IMAGES/shark-voice-stage.png')}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        imageStyle={{ resizeMode: 'contain' }}
-        resizeMode="contain"
+        source={require('../../../assets/IMAGES/shark-voice-bg.jpg')}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        resizeMode="cover"
       />
-      {/* Soft dark vignette to keep top/bottom UI legible over the busy image. */}
+      {/* Soft dark vignette to keep top/bottom UI legible over the scene. */}
       <LinearGradient
-        colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.25)']}
-        locations={[0, 0.45, 1]}
+        colors={['rgba(2,12,28,0.45)', 'rgba(2,12,28,0)', 'rgba(2,12,28,0.6)']}
+        locations={[0, 0.4, 1]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
-      {/* Subtle ambient bubbles drifting upward — adds life over the static stage */}
+      {/* Ambient bubbles drifting upward — adds life over the scene */}
       <UnderwaterBubbles />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         {/* Top bar — close X (RTL: visually left) + remaining time */}
@@ -198,18 +185,18 @@ function SharkVoiceCallContent(): React.ReactElement {
           </Pressable>
         </View>
 
-        {/* Centerpiece — avatar pushed below center so the studio backdrop
-            stays the visual hero; the WebP is intentionally smaller now. */}
+        {/* Centerpiece — the captain sits in the god-ray center of the scene
+            and is the visual hero of the live call. */}
         <View
           style={{
             flex: 1,
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: 'center',
             gap: 16,
             paddingBottom: 24,
           }}
         >
-          <SharkAvatar size={Math.min(Dimensions.get('window').width * 0.5, 220)} />
+          <SharkAvatar size={Math.min(Dimensions.get('window').width * 0.62, 280)} />
           <Text
             style={[
               RTL,

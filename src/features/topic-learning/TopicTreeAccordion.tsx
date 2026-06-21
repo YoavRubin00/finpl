@@ -29,6 +29,7 @@ import { useContinuousRunStore } from './useContinuousRunStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
 import { ModuleReportCard } from './components/ModuleReportCard';
+import { ModuleSharkCallCard } from './components/ModuleSharkCallCard';
 import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleComprehensionStore';
 
 /** Base reward on topic-tree 70% completion. Lower than the legacy
@@ -611,7 +612,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             captured snapshot/report, handles the weekly quota on tap, and opens
             the deep-analysis-style report (with talk-to-Shark) in a modal. */}
         {modulePastThreshold && (
-          <ModuleReportCard moduleId={module.id} moduleTitle={module.title} />
+          <>
+            <ModuleSharkCallCard moduleId={module.id} moduleTitle={module.title} />
+            <ModuleReportCard moduleId={module.id} moduleTitle={module.title} />
+          </>
         )}
 
         {moduleCarousel && (

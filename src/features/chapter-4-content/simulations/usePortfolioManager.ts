@@ -157,7 +157,10 @@ export function usePortfolioManager() {
     eventTimerRef.current = setInterval(() => {
       firedCount++;
       fireNextEvent();
-      if (firedCount >= WORLD_EVENTS.length) {
+      // Fire ONE past the last event: that extra fireNextEvent() call is what
+      // flips isComplete=true and shows the results screen. With `>=` the loop
+      // stopped before it, leaving the UI stuck at N/N (audit P1 #4).
+      if (firedCount > WORLD_EVENTS.length) {
         if (eventTimerRef.current) {
           clearInterval(eventTimerRef.current);
           eventTimerRef.current = null;

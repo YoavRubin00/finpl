@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useConversation } from '@elevenlabs/react-native';
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { fetchConversationToken } from '../services/voiceSessionClient';
+import type { ComprehensionOverride } from '../moduleComprehension';
 
 /**
  * Native (iOS/Android) driver for the ElevenLabs Conversational AI session
@@ -93,7 +94,7 @@ export function useElevenLabsConversation() {
     },
   });
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (opts?: ComprehensionOverride) => {
     if (startingRef.current || startedRef.current) return;
     startingRef.current = true;
     setStatus('connecting');
@@ -109,7 +110,16 @@ export function useElevenLabsConversation() {
     }
 
     try {
-      await conversation.startSession({ conversationToken: token });
+      // Per-module override: inject the comprehension agent prompt/firstMessage/
+      // language + dynamic variables so the same agent runs the right check.
+      // The `as` cast bridges our `language: string` to the SDK's strict
+      // Language union (the value is a validated code like 'he').
+      await conversation.startSession({
+        conversationToken: token,
+        connectionType: 'webrtc',
+        ...(opts?.overrides ? { overrides: opts.overrides } : {}),
+        ...(opts?.dynamicVariables ? { dynamicVariables: opts.dynamicVariables } : {}),
+      } as Parameters<typeof conversation.startSession>[0]);
       startedRef.current = true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'לא ניתן לפתוח חיבור לשירות הקול.';

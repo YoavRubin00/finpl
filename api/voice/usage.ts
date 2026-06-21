@@ -8,7 +8,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * server-side aggregation/analytics and to clamp absurd reports.
  */
 
-const MAX_REPORT_SECONDS = 60;
+const MAX_REPORT_SECONDS = 45;
 
 interface UsageBody {
   seconds?: unknown;
