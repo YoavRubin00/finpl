@@ -48,7 +48,8 @@ export type ProGateFeature =
   | 'shark-voice'
   | 'analyst-quick'
   | 'analyst-deep'
-  | 'payslip';
+  | 'payslip'
+  | 'lesson-report';
 
 export type AppEvent =
   // ── Onboarding ─────────────────────────────────────────────────────────
@@ -128,6 +129,10 @@ export type AppEvent =
   | { name: 'bridge_redeem_failed'; props: { benefit_id: string; partner_name?: string; reason: string } }
   | { name: 'bridge_partner_url_opened'; props: { benefit_id: string; partner_name?: string } }
   | { name: 'bridge_partner_returned'; props: { benefit_id: string; partner_name?: string; partner_type?: string } }
+
+  // ── App-store rating prompt (in-app, active users, post-chest) ──────────
+  | { name: 'rate_prompt_shown'; props: { trigger: 'module_complete'; module_id: string; completed_modules: number } }
+  | { name: 'rate_prompt_cta_tapped'; props: { action: 'open_store' | 'later'; store?: 'ios' | 'android'; module_id?: string } }
 
   // ── Pro / Subscription / Pricing ───────────────────────────────────────
   | { name: 'pro_gate_shown'; props: { feature: ProGateFeature } }

@@ -10,6 +10,9 @@ import { useUpsertModuleProgress } from '../chapter-1-content/useProgress';
 import { ChestCelebrationModal } from './ChestCelebrationModal';
 import { InModuleProfileQuestion, type ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion';
 import { ModuleEndSignupGate } from '../auth/ModuleEndSignupGate';
+import { RateAppPromptModal } from '../retention-loops/RateAppPromptModal';
+import { openStoreReview } from '../../lib/openStoreReview';
+import { shouldShowRatePrompt } from '../retention-loops/rateAppPrompt';
 import { Mod01WalkthroughPromptModal } from './Mod01WalkthroughPromptModal';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStore';
@@ -26,6 +29,8 @@ import { useTopicProgressStore } from './useTopicProgressStore';
 import { useContinuousRunStore } from './useContinuousRunStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
+import { ModuleReportCard } from './components/ModuleReportCard';
+import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleComprehensionStore';
 
 /** Base reward on topic-tree 70% completion. Lower than the legacy
  *  LessonFlowScreen MODULE_COMPLETE_XP (30) because topics also yield
@@ -411,6 +416,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       : null;
 
     setChestState({ xp: totalXp, coins: totalCoins, isFinale: false, rarity, offerDoN, quitLabel });
+
+    // Snapshot the lesson's grading inputs NOW, while the session-only data
+    // (quizResults, voice transcript) is still in memory — the end-of-lesson
+    // "דוח סיכום שיעור" card reads this. Idempotent (first capture wins) and
+    // quota-free; the AI report itself is generated on demand from the snapshot.
+    try {
+      useModuleComprehensionStore.getState().captureInputs(module.id, module.title);
+    } catch { /* non-fatal */ }
     // Chest reveal analytics — split by rarity, DoN/quit-offer rolls,
     // and reward amounts. Pairs with chest_cta_tapped + chest_don_resolved
     // to understand the post-chest funnel (engagement vs bail).
@@ -456,20 +469,21 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const [profileQuestionKind, setProfileQuestionKind] = useState<ProfileQuestionKind | null>(null);
   const profileQTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (profileQTimerRef.current) clearTimeout(profileQTimerRef.current); }, []);
-  const maybeShowProfileQuestion = useCallback(() => {
+  const maybeShowProfileQuestion = useCallback((): boolean => {
     // Skip the pure onboarding modules — mod-0-1 collects knowledgeLevel via its
     // own inline flow; keep the first-run experience clean.
-    if (module.id === 'mod-0-1' || module.id === 'mod-0-1b') return;
+    if (module.id === 'mod-0-1' || module.id === 'mod-0-1b') return false;
     const profile = useAuthStore.getState().profile;
     const next: ProfileQuestionKind | null =
       !profile?.knowledgeLevel ? 'knowledgeLevel'
       : !profile?.learningTime ? 'learningTime'
       : !profile?.dailyGoalMinutes ? 'dailyGoal'
       : null;
-    if (!next) return;
+    if (!next) return false;
     // Delay so the chest modal is fully gone before this one fades in.
     if (profileQTimerRef.current) clearTimeout(profileQTimerRef.current);
     profileQTimerRef.current = setTimeout(() => setProfileQuestionKind(next), 450);
+    return true;
   }, [module.id]);
 
   // #8 Module-end signup gate — GUESTS ONLY, once per module (mod-0-2+), shown
@@ -488,6 +502,25 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       useTutorialStore.getState().markModuleEndGateShown(module.id);
       setSignupGateVisible(true);
     }, 450);
+  }, [module.id]);
+
+  // Rate-the-app prompt — LOWEST-priority post-chest modal (registered users
+  // only). Fires after a short beat ONLY when no profile question was scheduled
+  // AND shouldShowRatePrompt() passes (active user, cooldown, lifetime cap).
+  // Yoav 2026-06-21 — kept tasteful: in-app, once-ish, never nagging.
+  const [ratePromptVisible, setRatePromptVisible] = useState(false);
+  const rateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (rateTimerRef.current) clearTimeout(rateTimerRef.current); }, []);
+  const maybeShowRatePrompt = useCallback(() => {
+    if (!shouldShowRatePrompt()) return;
+    if (rateTimerRef.current) clearTimeout(rateTimerRef.current);
+    rateTimerRef.current = setTimeout(() => {
+      useTutorialStore.getState().markRatePromptShown();
+      setRatePromptVisible(true);
+      try {
+        track({ name: 'rate_prompt_shown', props: { trigger: 'module_complete', module_id: module.id, completed_modules: useCompletedModulesStore.getState().completedIds.length } });
+      } catch { /* non-fatal */ }
+    }, 500);
   }, [module.id]);
   const [showWalkthroughPrompt, setShowWalkthroughPrompt] = useState(false);
   const walkthroughPromptFiredRef = useRef(false);
@@ -594,6 +627,15 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onTopicPress={handleChipPress}
         />
 
+        {/* "דוח סיכום שיעור" — pinned at the BOTTOM of the map once the chest
+            has opened (modulePastThreshold is persisted, so it's here on every
+            re-tap too). The card self-gates: it renders nothing without a
+            captured snapshot/report, handles the weekly quota on tap, and opens
+            the deep-analysis-style report (with talk-to-Shark) in a modal. */}
+        {modulePastThreshold && (
+          <ModuleReportCard moduleId={module.id} moduleTitle={module.title} />
+        )}
+
         {moduleCarousel && (
           <CarouselSheet
             visible={carouselOpen}
@@ -618,6 +660,21 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onClose={() => setSignupGateVisible(false)}
         />
 
+        {/* Rate-the-app prompt — registered active users, post-chest, gated +
+            cooldown (rateAppPrompt.ts). Accept → store deep-link + never again. */}
+        <RateAppPromptModal
+          visible={ratePromptVisible}
+          onRate={() => {
+            setRatePromptVisible(false);
+            useTutorialStore.getState().markRated();
+            openStoreReview({ moduleId: module.id });
+          }}
+          onLater={() => {
+            setRatePromptVisible(false);
+            try { track({ name: 'rate_prompt_cta_tapped', props: { action: 'later', module_id: module.id } }); } catch { /* non-fatal */ }
+          }}
+        />
+
         {/* Single chest celebration at 70% (Yoav 2026-06-12). The 100%
             master chest was retired per user request. */}
         <ChestCelebrationModal
@@ -632,7 +689,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             // After the chest closes (never mid-sequence): guests get the signup
             // gate (#8), registered users get any pending staged profile question
             // (#6). Mutually exclusive so we never stack two modals.
-            if (isGuest) { maybeShowSignupGate(); } else { maybeShowProfileQuestion(); }
+            if (isGuest) { maybeShowSignupGate(); } else { if (!maybeShowProfileQuestion()) maybeShowRatePrompt(); }
             // The 70% chest keeps the accordion open so the user can
             // finish the remaining 30% — but when the chest fired at 100%
             // (e.g. a continuous run completed every chip before returning)
@@ -653,7 +710,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             // not skip the guest signup gate (#8) / pending profile question
             // (#6) — pre-release audit P2. The once-guards make this idempotent
             // vs onContinueModule, so no double-show.
-            if (isGuest) { maybeShowSignupGate(); } else { maybeShowProfileQuestion(); }
+            if (isGuest) { maybeShowSignupGate(); } else { if (!maybeShowProfileQuestion()) maybeShowRatePrompt(); }
             if (summary.pct >= 100) {
               onModuleCompleted?.();
             } else {

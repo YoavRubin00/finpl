@@ -64,6 +64,12 @@ interface TutorialState {
    *  question, never before/over it (Yoav 2026-06-17). Skip-safe: set on either
    *  outcome, so the chest is never blocked. */
   mod01KnowledgeResolved: boolean;
+  /** App-store rating prompt state (Yoav 2026-06-21). `ratePromptHandled` =
+   *  user rated OR opted out permanently. `lastRatePromptAt` drives the
+   *  cooldown; `ratePromptCount` caps total asks. Gating: see rateAppPrompt.ts. */
+  ratePromptHandled: boolean;
+  lastRatePromptAt: number | null;
+  ratePromptCount: number;
   _hydrated: boolean;
   completeTradingHubIntro: () => void;
   markTradingHubFirstEntryDone: () => void;
@@ -86,6 +92,10 @@ interface TutorialState {
   setPendingPostWalkthroughCTA: (value: boolean) => void;
   setPendingPostWalkthroughProTeaser: (value: boolean) => void;
   markMod01KnowledgeResolved: () => void;
+  /** Called when the rating modal actually opens — bumps count + stamps time. */
+  markRatePromptShown: () => void;
+  /** User tapped "rate" (or opted out) — never ask again. */
+  markRated: () => void;
   resetWalkthrough: () => void;
   reset: () => void;
 }
@@ -114,6 +124,9 @@ export const useTutorialStore = create<TutorialState>()(
       pendingPostWalkthroughCTA: false,
       pendingPostWalkthroughProTeaser: false,
       mod01KnowledgeResolved: false,
+      ratePromptHandled: false,
+      lastRatePromptAt: null,
+      ratePromptCount: 0,
       _hydrated: false,
       completeTradingHubIntro: () => set({ hasSeenTradingHubIntro: true }),
       markTradingHubFirstEntryDone: () => set({ tradingHubFirstEntryDone: true }),
@@ -136,11 +149,13 @@ export const useTutorialStore = create<TutorialState>()(
       setPendingPostWalkthroughCTA: (value: boolean) => set({ pendingPostWalkthroughCTA: value }),
       setPendingPostWalkthroughProTeaser: (value: boolean) => set({ pendingPostWalkthroughProTeaser: value }),
       markMod01KnowledgeResolved: () => set({ mod01KnowledgeResolved: true }),
+      markRatePromptShown: () => set((s) => ({ ratePromptCount: s.ratePromptCount + 1, lastRatePromptAt: Date.now() })),
+      markRated: () => set({ ratePromptHandled: true }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasSeenPearlTooltip: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
     }),
     {
-      name: "tutorial-store-v12",
+      name: "tutorial-store-v13",
       storage: createJSONStorage(() => zustandStorage),
       onRehydrateStorage: () => () => {
         useTutorialStore.setState({ _hydrated: true });
@@ -149,4 +164,4 @@ export const useTutorialStore = create<TutorialState>()(
   )
 );
 
-registerLocalStore('tutorial-store-v12', useTutorialStore, 'tutorial-store-v12');
+registerLocalStore('tutorial-store-v13', useTutorialStore, 'tutorial-store-v13');
