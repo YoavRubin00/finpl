@@ -13,7 +13,6 @@ import { ModuleEndSignupGate } from '../auth/ModuleEndSignupGate';
 import { RateAppPromptModal } from '../retention-loops/RateAppPromptModal';
 import { openStoreReview } from '../../lib/openStoreReview';
 import { shouldShowRatePrompt } from '../retention-loops/rateAppPrompt';
-import { Mod01WalkthroughPromptModal } from './Mod01WalkthroughPromptModal';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
@@ -456,8 +455,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const router = useRouter();
   const hasSeenAppWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const triggerWalkthrough = useTutorialStore((s) => s.triggerWalkthrough);
-  const completeAppWalkthrough = useTutorialStore((s) => s.completeAppWalkthrough);
-  const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
   const isGuest = useAuthStore((s) => s.isGuest);
 
   // #6 Graduate onboarding inside the topic-tree: collect the staged profile
@@ -522,47 +519,28 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       } catch { /* non-fatal */ }
     }, 500);
   }, [module.id]);
-  const [showWalkthroughPrompt, setShowWalkthroughPrompt] = useState(false);
-  const walkthroughPromptFiredRef = useRef(false);
-  // R8 follow-up (Yoav 2026-06-11): walkthrough fires ONLY after the
-  // first non-intro chip ("הכפתור המוזהב הראשון") is completed — not at
-  // a % threshold. The intro alone doesn't count: the user has only
-  // watched a teaser at that point and hasn't yet earned the "I built
-  // something" moment that justifies the tour offer.
+  const walkthroughAutoFiredRef = useRef(false);
+  // R8 follow-up (Yoav 2026-06-11): the tour launches ONLY after the first
+  // non-intro chip is completed — the intro alone doesn't earn the "I built
+  // something" moment.
   const completedNonIntroChipCount = useMemo(
     () => topics.filter((t) => t.kind !== 'intro' && isCompletedMap[t.id]).length,
     [topics, isCompletedMap],
   );
+  // AUTO-START the tour instead of asking "רוצה סיור?" (Yoav 2026-06-21). The
+  // yes/no prompt was friction right at mod-0-1's biggest drop-off (only ~31%
+  // reach the first chest). The tour has its own "דלג על הסיור" skip button, and
+  // both its complete + skip paths run routePostWalkthrough (guest register CTA +
+  // Pro teaser), so nothing downstream is lost.
   useEffect(() => {
     if (module.id !== 'mod-0-1') return;
     if (hasSeenAppWalkthrough) return;
-    if (walkthroughPromptFiredRef.current) return;
+    if (walkthroughAutoFiredRef.current) return;
     if (completedNonIntroChipCount < 1) return;
-    walkthroughPromptFiredRef.current = true;
-    setShowWalkthroughPrompt(true);
-    try { track({ name: 'walkthrough_prompt_shown', props: { module_id: module.id } }); } catch { /* non-fatal */ }
-  }, [module.id, completedNonIntroChipCount, hasSeenAppWalkthrough]);
-
-  const handleTakeTour = () => {
-    try { track({ name: 'walkthrough_prompt_choice', props: { module_id: module.id, choice: 'tour' } }); } catch { /* non-fatal */ }
-    setShowWalkthroughPrompt(false);
+    walkthroughAutoFiredRef.current = true;
     triggerWalkthrough();
-  };
-
-  const handleContinueLearning = () => {
-    try { track({ name: 'walkthrough_prompt_choice', props: { module_id: module.id, choice: 'continue' } }); } catch { /* non-fatal */ }
-    setShowWalkthroughPrompt(false);
-    // R8 U2 — keep momentum: mark walkthrough as seen so the overlay
-    // won't fire later, schedule the guest register CTA, but DO NOT
-    // push the paywall. /pricing will surface on the user's natural
-    // exit (gated downstream on hasSeenWalkthrough). NotificationPermission
-    // banner remains gated on hasSeenWalkthrough + hasCompletedFirstModule.
-    completeAppWalkthrough();
-    if (isGuest) {
-      try { setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ }
-    }
-    // Intentionally no router.replace — user stays in the learn map.
-  };
+    try { captureEvent('walkthrough_auto_started', { module_id: module.id }); } catch { /* non-fatal */ }
+  }, [module.id, completedNonIntroChipCount, hasSeenAppWalkthrough, triggerWalkthrough]);
 
   // Mod-0-1 onboarding banner — surfaces above the chip column ONLY
   // during the welcome window (= app walkthrough not yet seen +
@@ -776,12 +754,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           }}
         />
 
-        {/* R7 Epic B3 — mod-0-1-only walkthrough opt-in prompt. */}
-        <Mod01WalkthroughPromptModal
-          visible={showWalkthroughPrompt}
-          onTakeTour={handleTakeTour}
-          onContinueLearning={handleContinueLearning}
-        />
+        {/* Mod-0-1 tour now AUTO-STARTS after the first chip (Yoav 2026-06-21) —
+            no opt-in prompt. The tour overlay (app/_layout) has its own
+            "דלג על הסיור" skip. */}
 
         {/* R8 U4 — mid-module milestone toast (25%/50%). Floats above
             the chip grid for ~1.8s, then auto-dismisses. Non-blocking. */}
