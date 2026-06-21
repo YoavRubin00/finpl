@@ -74,6 +74,11 @@ interface TutorialState {
   ratePromptHandled: boolean;
   lastRatePromptAt: number | null;
   ratePromptCount: number;
+  /** One-shot: the prominent Captain-Shark notification-permission MODAL was
+   *  shown (allow OR "later"). Gates it to exactly once; the recurring thin
+   *  NotificationPermissionBanner only takes over AFTER this is true. Yoav
+   *  2026-06-21 ("make sure users get a one-time prompt to allow notifications").*/
+  notifPromptShown: boolean;
   _hydrated: boolean;
   completeTradingHubIntro: () => void;
   markTradingHubFirstEntryDone: () => void;
@@ -100,6 +105,8 @@ interface TutorialState {
   markRatePromptShown: () => void;
   /** User tapped "rate" (or opted out) — never ask again. */
   markRated: () => void;
+  /** Called when the one-time notification-permission modal is shown (either CTA). */
+  markNotifPromptShown: () => void;
   markFreeSharkCallUsed: () => void;
   resetWalkthrough: () => void;
   reset: () => void;
@@ -133,6 +140,7 @@ export const useTutorialStore = create<TutorialState>()(
       ratePromptHandled: false,
       lastRatePromptAt: null,
       ratePromptCount: 0,
+      notifPromptShown: false,
       _hydrated: false,
       completeTradingHubIntro: () => set({ hasSeenTradingHubIntro: true }),
       markTradingHubFirstEntryDone: () => set({ tradingHubFirstEntryDone: true }),
@@ -158,8 +166,9 @@ export const useTutorialStore = create<TutorialState>()(
       markMod01KnowledgeResolved: () => set({ mod01KnowledgeResolved: true }),
       markRatePromptShown: () => set((s) => ({ ratePromptCount: s.ratePromptCount + 1, lastRatePromptAt: Date.now() })),
       markRated: () => set({ ratePromptHandled: true }),
+      markNotifPromptShown: () => set({ notifPromptShown: true }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",

@@ -40,6 +40,10 @@ export function NotificationPermissionBanner() {
   const dismissBanner = useNotificationStore((s) => s.dismissBanner);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  // The prominent one-time permission MODAL owns the FIRST ask; this thin
+  // banner is the recurring 14-day fallback, so it only fires once the modal
+  // has already been shown. Yoav 2026-06-21.
+  const notifPromptShown = useTutorialStore((s) => s.notifPromptShown);
   // Hold the prompt back until the user has actually completed the first
   // module (mod-0-1) — same gate as the Tools Discovery banner. Asking for
   // notification permission before the user gets any value is the textbook
@@ -63,7 +67,8 @@ export function NotificationPermissionBanner() {
     !recentlyDismissed &&
     hasCompletedOnboarding &&
     hasSeenWalkthrough &&
-    hasCompletedFirstModule;
+    hasCompletedFirstModule &&
+    notifPromptShown;
 
   // Defer rendering until the global cooldown is clear, then mark shown so
   // the next banner waits its 10s slot.

@@ -24,6 +24,7 @@ import Animated, {
   cancelAnimation,
 } from "react-native-reanimated";
 import LottieView from "lottie-react-native";
+import Svg, { Circle } from "react-native-svg";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -63,6 +64,7 @@ import { useReferralStore } from "../social/useReferralStore";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
+import { NotificationPermissionPrompt } from "../notifications/NotificationPermissionPrompt";
 import { ToolsDiscoveryBanner } from "../../components/ui/ToolsDiscoveryBanner";
 import { BridgeCTABanner } from "../../components/ui/BridgeCTABanner";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
@@ -352,50 +354,43 @@ const PathConnector = React.memo(function PathConnector({
 
   return (
     <View style={{ height: CONNECTOR_H, width: "100%", position: "relative", marginTop: -16, marginBottom: -4 }}>
-      {/* Layer 0: Outer glow halo (done only), widest, faintest */}
-      {done && Array.from({ length: 80 }).map((_, i) => {
-        const t = i / 79;
-        const cx = interp(t);
-        const cy = t * CONNECTOR_H;
-        return (
-          <View
-            key={`glow-${i}`}
-            style={{
-              position: "absolute",
-              width: 14,
-              height: 14,
-              borderRadius: 7,
-              backgroundColor: glowColor,
-              left: cx - 7,
-              top: cy,
-              opacity: 0.18,
-            }}
-          />
-        );
-      })}
-      {/* Layer 1: Continuous trail (background fill) */}
-      {Array.from({ length: NUM_DOTS * 4 }).map((_, i) => {
-        const t = i / (NUM_DOTS * 4 - 1);
-        const cx = interp(t);
-        const cy = t * CONNECTOR_H;
-        const sz = done ? 10 : 6;
-        return (
-          <View
-            key={`trail-${i}`}
-            style={{
-              position: "absolute",
-              width: sz,
-              height: sz,
-              borderRadius: sz / 2,
-              backgroundColor: trailColor,
-              left: cx - sz / 2,
-              top: cy,
-              opacity: done ? 0.5 : 0.25,
-            }}
-          />
-        );
-      })}
-      {/* Layer 2: Main dots (prominent) */}
+      {/* Layers 0+1 (outer glow halo + continuous trail) rendered as ONE SVG
+          canvas instead of 80+64 absolutely-positioned native Views. Exact
+          same dot centers / sizes / opacities as before — circle cy is offset
+          by the radius so it matches the old `top: cy` + half-height of the
+          square View. Net: up to 144 native Views per connector → 1. This
+          connector repeats ~34× down the home screen, so this is the dominant
+          view-count win (perf audit 2026-06-20). Height has +16 slack so the
+          last dots aren't clipped (RN Views overflowed freely; SVG clips). */}
+      <Svg
+        width={CONTENT_W}
+        height={CONNECTOR_H + 16}
+        style={{ position: "absolute", top: 0, left: 0 }}
+        pointerEvents="none"
+      >
+        {/* Layer 0: Outer glow halo (done only), widest, faintest */}
+        {done && Array.from({ length: 80 }).map((_, i) => {
+          const t = i / 79;
+          const cx = interp(t);
+          const cy = t * CONNECTOR_H;
+          return (
+            <Circle key={`glow-${i}`} cx={cx} cy={cy + 7} r={7} fill={glowColor} opacity={0.18} />
+          );
+        })}
+        {/* Layer 1: Continuous trail (background fill) */}
+        {Array.from({ length: NUM_DOTS * 4 }).map((_, i) => {
+          const t = i / (NUM_DOTS * 4 - 1);
+          const cx = interp(t);
+          const cy = t * CONNECTOR_H;
+          const sz = done ? 10 : 6;
+          return (
+            <Circle key={`trail-${i}`} cx={cx} cy={cy + sz / 2} r={sz / 2} fill={trailColor} opacity={done ? 0.5 : 0.25} />
+          );
+        })}
+      </Svg>
+      {/* Layer 2: Main dots (prominent) — kept as native Views: only 16 per
+          connector, and the `done` dots carry a static shadow/elevation glow
+          that SVG can't replicate 1:1. Static shadows rasterize once → cheap. */}
       {Array.from({ length: NUM_DOTS }).map((_, i) => {
         const t = i / (NUM_DOTS - 1);
         const dotCenterX = interp(t);
@@ -2599,6 +2594,11 @@ export function DuoLearnScreen() {
           until the guest register CTA is handled (pendingPostWalkthroughCTA
           clears) so it lands after the register prompt, not competing. */}
       {!isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionBanner />}
+      {/* Prominent ONE-TIME Captain-Shark OS-permission prompt (soft-ask before
+          the OS hard-ask, so we don't burn iOS's single dialog on a likely
+          deny). Owns the FIRST ask; the banner above is the recurring 14-day
+          fallback (gated on notifPromptShown). Yoav 2026-06-21. */}
+      {!isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionPrompt />}
       {/* Tools discovery — only on this main learning screen (NOT in the
           lesson flow). Self-gated to 5s presence + cooldown + 1/day per
           calendar day. Yields slot to NotificationPermissionBanner. */}
