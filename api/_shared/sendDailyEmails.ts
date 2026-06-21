@@ -194,7 +194,11 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
 
       await resend.emails.send({
         from: fromAddress,
-        replyTo: 'support@finplay.me',
+        // Flip to the Resend-inbound address (e.g. unsubscribe@reply.finplay.me)
+        // ONLY once that inbound domain is verified — then replies hit
+        // api/email/inbound.ts (auto opt-out on "הסר", others forwarded to
+        // support). Defaults to support@ so nothing breaks before then.
+        replyTo: process.env.EMAIL_REPLY_TO ?? 'support@finplay.me',
         to: user.email,
         subject,
         html,
@@ -249,4 +253,18 @@ export async function unsubscribeUser(userId: string): Promise<void> {
     .update(userProfiles)
     .set({ dailyEmailEnabled: false })
     .where(eq(userProfiles.id, userId));
+}
+
+/** Marks a user opted-out by EMAIL (case-insensitive). Returns the number of
+ *  rows updated. Used by the inbound-reply automation (api/email/inbound.ts)
+ *  when someone REPLIES "הסר" to a retention email — which has no monitored
+ *  inbox otherwise. */
+export async function unsubscribeByEmail(email: string): Promise<number> {
+  const db = getDb();
+  const rows = await db
+    .update(userProfiles)
+    .set({ dailyEmailEnabled: false })
+    .where(sql`lower(${userProfiles.email}) = lower(${email})`)
+    .returning({ id: userProfiles.id });
+  return rows.length;
 }
