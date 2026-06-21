@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
+import { track } from '../../lib/analytics/events';
 
 // Energy units (formerly "hearts"). The store file keeps the `hearts`/`useHeart`
 // names in v1 to avoid churning ~6 call-sites; the full rename to
@@ -272,7 +273,17 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
 
       resetCombo: () => set({ comboStreak: 0 }),
 
-      flagDepleted: () => set({ depletedPromptVisible: true }),
+      flagDepleted: () => set((state) => {
+        // Fire `energy_depleted` once per false→true transition (NOT on every
+        // blocked action while already at 0) so the YOAVS weekly "ran out of
+        // energy" user count is clean. The out-of-energy modal's own bandit
+        // impression goes to the bandit server, not PostHog, so this is the
+        // single PostHog source for the metric. Yoav 2026-06-21.
+        if (!state.depletedPromptVisible) {
+          try { track({ name: 'energy_depleted' }); } catch { /* non-fatal */ }
+        }
+        return { depletedPromptVisible: true };
+      }),
       clearDepleted: () => set({ depletedPromptVisible: false }),
 
       clearPracticeFlag: () => {

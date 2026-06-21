@@ -196,6 +196,12 @@ export type AppEvent =
   // is the user's first-ever transition to a streak ≥ 2 — drives the
   // "holding a streak (≥ 2)" cohort the rest of the metric stack reads.
   | { name: 'streak_extended'; props: { prev_streak: number; new_streak: number; longest_streak: number; is_milestone: boolean; reached_two: boolean } }
+  // Fires when energy hits 0 and the out-of-energy modal opens (false→true
+  // transition only, not on every blocked action while already at 0). Powers
+  // the weekly "ran out of energy" user count on the YOAVS dashboard. The
+  // out-of-energy modal impression itself only goes to the bandit server, so
+  // this dedicated event is the single PostHog source. Yoav 2026-06-21.
+  | { name: 'energy_depleted'; props?: { source?: 'lesson' | 'chat' | string } }
 
   // ── Bandit (Thompson sampling experiments) ────────────────────────────
   // Fires once per component instance when useBandit() locks a variant.
