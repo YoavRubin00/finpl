@@ -95,7 +95,14 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 35,
-            "extractNativeLibs": false
+            "extractNativeLibs": false,
+            "packagingOptions": {
+              "pickFirst": [
+                "**/libc++_shared.so",
+                "**/libjsi.so",
+                "**/libfbjni.so"
+              ]
+            }
           }
         }
       ],
