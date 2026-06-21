@@ -5,7 +5,7 @@ import { InvestmentTrack, TaxGrinderConfig } from './taxGrinderTypes';
 const MONTHLY_DEPOSIT = 500;
 const ANNUAL_RETURN = 0.07;
 const REGULAR_TAX_RATE = 0.25;
-const EMPLOYER_BONUS_MONTHLY = 600;
+const EMPLOYER_BONUS_MONTHLY = 1500; // employer ~3x the employee in a standard hishtalmut fund (7.5% vs 2.5%)
 const MIN_YEARS = 6;
 const MAX_YEARS = 20;
 const DEFAULT_YEARS = 10;
@@ -14,7 +14,7 @@ const DEFAULT_YEARS = 10;
  * Pre-compute year-by-year data for an investment track.
  * Compounds monthly. For regular: 25% tax on gains at withdrawal.
  * For hishtalmut: 0% tax after 6 years.
- * Both tracks use the same monthly deposit for apples-to-apples tax comparison.
+ * Each caller passes its effective monthly inflow (regular = employee; hishtalmut = employee + employer match).
  */
 function computeTrackData(
   monthlyDeposit: number,
@@ -61,8 +61,8 @@ const regularTrack: InvestmentTrack = {
   color: '#EF4444',
 };
 
-/** Hishtalmut fund: same ₪500/mo, 0% tax, apples-to-apples comparison */
-const hishtalmutData = computeTrackData(MONTHLY_DEPOSIT, ANNUAL_RETURN, 0, MAX_YEARS);
+/** Hishtalmut: your 500/mo + employer match (actually deposited into the pot), 0% tax. */
+const hishtalmutData = computeTrackData(MONTHLY_DEPOSIT + EMPLOYER_BONUS_MONTHLY, ANNUAL_RETURN, 0, MAX_YEARS);
 
 const hishtalmutTrack: InvestmentTrack = {
   type: 'hishtalmut',

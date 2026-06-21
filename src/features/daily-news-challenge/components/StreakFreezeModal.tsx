@@ -101,7 +101,7 @@ const s = StyleSheet.create({
   closeBtn: {
     position: 'absolute',
     top: 10,
-    left: 10,
+    right: 10,
     width: 32,
     height: 32,
     borderRadius: 16,

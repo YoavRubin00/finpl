@@ -305,7 +305,7 @@ export function useRealEstate() {
   const score = useMemo<RealEstateScore | null>(() => {
     if (!state.isComplete) return null;
 
-    const totalInterest = state.totalPaid - currentLoanAmount - totalExtraExpenses;
+    const totalInterest = state.totalPaid - (currentLoanAmount - state.remainingLoan) - totalExtraExpenses;
     const netGainOrLoss = state.propertyValue - state.totalPaid - realEstateConfig.downPayment;
 
     // Grade based on interest-to-principal ratio
@@ -324,7 +324,7 @@ export function useRealEstate() {
       propertyFinalValue: Math.round(state.propertyValue),
       netGainOrLoss: Math.round(netGainOrLoss),
     };
-  }, [state.isComplete, state.totalPaid, state.propertyValue, totalExtraExpenses]);
+  }, [state.isComplete, state.totalPaid, state.propertyValue, state.remainingLoan, totalExtraExpenses]);
 
   // ── Reset ───────────────────────────────────────────────────────────
 

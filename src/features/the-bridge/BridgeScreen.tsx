@@ -220,6 +220,16 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const highlightedYRef = useRef<number | null>(null);
   const highlightScrolledRef = useRef(false);
 
+  // Stagger the benefit cards' entrance ONLY on the first mount of the screen.
+  // The cards are keyed by benefit.id, so switching category tabs remounts a
+  // fresh set and re-runs the 300ms+ staggered entrance every time — that's the
+  // "laggy tab switch" (content appears late instead of instantly). After the
+  // first batch animates in, we flip this and swap content with no `entering`.
+  const hasAnimatedCardsRef = useRef(false);
+  useEffect(() => {
+    hasAnimatedCardsRef.current = true;
+  }, []);
+
   // PostHog: full conversion funnel for the Bridge — every page step is an
   // event with the same property shape so the same insight can break down
   // by `category` (each tab = a separate "page" in the user's mental model),
@@ -663,9 +673,11 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
             <Animated.View
               key={benefit.id}
               entering={
-                i === 0
-                  ? ZoomIn.duration(400).delay(300)
-                  : FadeInDown.duration(400).delay(300 + i * 60)
+                hasAnimatedCardsRef.current
+                  ? undefined
+                  : i === 0
+                    ? ZoomIn.duration(400).delay(300)
+                    : FadeInDown.duration(400).delay(300 + i * 60)
               }
               onLayout={(e) => {
                 if (highlight && benefit.id === highlight && !highlightScrolledRef.current) {

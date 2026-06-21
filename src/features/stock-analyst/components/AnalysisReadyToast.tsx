@@ -185,7 +185,7 @@ const s = StyleSheet.create({
   dismiss: {
     position: 'absolute',
     top: 6,
-    left: 6,
+    right: 6,
     width: 24,
     height: 24,
     borderRadius: 12,

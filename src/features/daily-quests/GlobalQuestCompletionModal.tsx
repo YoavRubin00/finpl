@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     position: "absolute",
     top: 16,
-    left: 16,
+    right: 16,
     padding: 8,
   },
   closeText: {

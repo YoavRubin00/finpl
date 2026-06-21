@@ -61,7 +61,10 @@ function computeYearData(
 }
 
 const RETIREMENT_AGE = 67;
-const ANNUAL_RETURN = 0.05;
+// 0.07 nominal: a realistic-to-conservative long-run assumption (Israeli pension
+// ≈6-6.5%, S&P ≈10% nominal). At 0.05 the math inverted — the late starter won
+// (break-even was 5.13%), teaching the OPPOSITE of compound interest (Waren-verified).
+const ANNUAL_RETURN = 0.07;
 
 const netaWithData: Runner = {
   ...netaRunner,

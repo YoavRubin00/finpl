@@ -539,7 +539,7 @@ const s = StyleSheet.create({
   dismissX: {
     position: "absolute",
     top: 12,
-    left: 12,
+    right: 12,
     padding: 4,
     borderRadius: 10,
   },

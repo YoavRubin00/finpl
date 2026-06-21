@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     position: 'absolute',
     top: 12,
-    left: 16,
+    right: 16,
     width: 32,
     height: 32,
     borderRadius: 16,
