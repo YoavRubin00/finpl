@@ -16,9 +16,6 @@ import Animated, {
   withSequence,
   withTiming,
   withSpring,
-  withRepeat,
-  withDelay,
-  cancelAnimation,
   useReducedMotion,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
@@ -157,31 +154,13 @@ export function ChallengePage({
   // shakeX/shakeStyle were dead code (declared but never assigned a value
   // after the 2026 UX rework retired the wrong-answer shake) — removed too.
 
-  // Delayed pulse on the continue button — starts 800ms after the result
-  // appears so the eye finishes reading the panel before being invited
-  // onward. Bouncy press snap on tap.
+  // Continue-button scale value — used ONLY for the press snap now. The idle
+  // scale-breathing throb (withDelay→withRepeat) was retired 2026-06-22: it
+  // read as a "רעידה" on the button (Yoav). The button sits static until tapped.
   const continuePulse = useSharedValue(1);
   const continueStyle = useAnimatedStyle(() => ({
     transform: [{ scale: continuePulse.value }],
   }));
-  useEffect(() => {
-    if (!showResult || reduceMotion) {
-      cancelAnimation(continuePulse);
-      continuePulse.value = withTiming(1, { duration: 200 });
-      return;
-    }
-    continuePulse.value = withDelay(
-      800,
-      withRepeat(
-        withSequence(
-          withTiming(1.04, { duration: 800 }),
-          withTiming(1.0, { duration: 800 }),
-        ),
-        -1,
-        false,
-      ),
-    );
-  }, [showResult, reduceMotion, continuePulse]);
 
   // Per-chip press scale shared values held in fixed-shape refs at the
   // component's top level — must NEVER live inside a conditional render
@@ -385,7 +364,7 @@ export function ChallengePage({
         )}
 
         {showResult && (
-          <Animated.View entering={FadeInDown.duration(320).springify().damping(16)}>
+          <Animated.View entering={FadeInDown.duration(320)}>
             {/* Result panel — gradient + Finn avatar replaces the form-style
                 red/green flat panel. Peach (not yellow/red) for wrong, soft
                 mint for correct. Finn face is the emotional anchor. */}
@@ -482,10 +461,10 @@ export function ChallengePage({
                 onPress={() => {
                   tapHaptic();
                   playSound('btn_click_soft_2');
-                  // Bouncy press snap (Hay Day soft).
+                  // Soft press snap — no overshoot (calm, no wobble).
                   continuePulse.value = withSequence(
                     withTiming(0.92, { duration: 80 }),
-                    withSpring(1, { damping: 8, stiffness: 220 }),
+                    withSpring(1, { damping: 18, stiffness: 280 }),
                   );
                   onContinue();
                 }}
@@ -995,15 +974,15 @@ function ChipButton({
     transform: [{ scale: scale.value }],
   }));
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.94, { damping: 14, stiffness: 220 });
+    scale.value = withSpring(0.94, { damping: 18, stiffness: 280 });
   }, [scale]);
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+    scale.value = withSpring(1, { damping: 18, stiffness: 280 });
   }, [scale]);
   const emoji = chipEmoji(chip);
   return (
     <Animated.View
-      entering={FadeInDown.delay(idx * 80).springify().damping(14)}
+      entering={FadeInDown.delay(idx * 80).duration(280)}
       style={[styles.chipWrap, animStyle]}
     >
       <Pressable

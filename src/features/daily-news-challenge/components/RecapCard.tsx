@@ -106,7 +106,7 @@ export function RecapCard({
             pills below still surface the real XP/coins (which reflect
             correctness) and the perfect-day bonus card only appears for
             real `both`. */}
-        <Animated.View entering={FadeInUp.duration(360).springify().damping(16)} style={styles.heroRow}>
+        <Animated.View entering={FadeInUp.duration(360)} style={styles.heroRow}>
           <ExpoImage
             source={FINN_DANCING}
             style={styles.mascot}
