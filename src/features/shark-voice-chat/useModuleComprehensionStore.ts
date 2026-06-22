@@ -207,6 +207,9 @@ export const useModuleComprehensionStore = create<ComprehensionState & Comprehen
               performance: {
                 quizCorrect: inputs.quiz?.correct ?? 0,
                 quizTotal: inputs.quiz?.total ?? 0,
+                // Seeing a report means the module was finished (chest reached) —
+                // so the grader floors the score and never returns a bare 0.
+                completed: true,
               },
               transcript: inputs.transcript ?? [],
             }),

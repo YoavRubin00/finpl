@@ -1,5 +1,6 @@
 import type { Module } from '../chapter-1-content/types';
 import type { Topic, TopicKind } from './types';
+import { chestThresholdFor } from './types';
 import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
 import { getDilemma } from '../shark-dilemma/dilemmasData';
 import { getGameForModule, isSimReplacedByGame } from './moduleGameMap';
@@ -197,6 +198,22 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
     const chatTopic = buildTopic('chat', module.id, insertAt);
     out.splice(insertAt, 0, chatTopic);
     out.forEach((t, i) => { t.defaultOrder = i; });
+  }
+
+  // Yoav 2026-06-22: pin the quiz INSIDE the module's chest-threshold window
+  // (75% default / 50% mod-0-1) so reaching the chest comes AFTER the quiz on
+  // the canonical "המשך" path — the quiz is no longer a hard gate, just placed
+  // early. Mirrors the R5.15 sim/game move. defaultOrder steers the recommended
+  // order, not access (users can still tap any chip).
+  if (present.get('quiz')) {
+    const total = out.length;
+    const maxQuizIdx = Math.max(0, Math.ceil(chestThresholdFor(module.id) * total) - 1);
+    const qi = out.findIndex((t) => t.kind === 'quiz');
+    if (qi > maxQuizIdx) {
+      const [q] = out.splice(qi, 1);
+      out.splice(maxQuizIdx, 0, q);
+      out.forEach((t, i) => { t.defaultOrder = i; });
+    }
   }
 
   return out;

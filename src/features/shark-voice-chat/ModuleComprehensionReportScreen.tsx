@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
@@ -105,6 +106,15 @@ export function ModuleComprehensionReportScreen({
   const [followups, setFollowups] = useState<ConversationTurn[]>([]);
   const [followupLoading, setFollowupLoading] = useState(false);
   const [draft, setDraft] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Auto-scroll to the newest follow-up bubble so the answer is never left
+  // below the fold (the "cut-off screen" — user couldn't see the full reply).
+  useEffect(() => {
+    if (followups.length === 0 && !followupLoading) return;
+    const id = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    return () => clearTimeout(id);
+  }, [followups, followupLoading]);
 
   const askShark = async (raw: string) => {
     const q = raw.trim();
@@ -193,7 +203,10 @@ export function ModuleComprehensionReportScreen({
   const canSend = !followupLoading && draft.trim().length > 0;
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       {/* Header bar */}
       <View style={styles.topBar}>
         <Pressable onPress={onDone} hitSlop={12} accessibilityRole="button" accessibilityLabel="סגור" style={styles.closeBtn}>
@@ -203,7 +216,7 @@ export function ModuleComprehensionReportScreen({
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Sky panel — mirrors DeepAnalysisCard */}
         <View style={styles.panel}>
           <Animated.View entering={FadeIn.duration(300)} style={styles.headerRow}>
@@ -322,7 +335,7 @@ export function ModuleComprehensionReportScreen({
           </Pressable>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

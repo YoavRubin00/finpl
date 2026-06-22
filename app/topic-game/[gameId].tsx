@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
@@ -94,13 +94,19 @@ export default function TopicGameRoute(): React.ReactElement | null {
             <X size={22} color="#0c4a6e" strokeWidth={2.6} />
           </Pressable>
         </View>
-        {/* Yoav 2026-06-11: topic-game cards fit in one screen. Wrapping
-            in a ScrollView made price-slider (and others) scroll
-            unnecessarily; a flex View constrains the card to the
-            viewport so it lays out as designed. */}
-        <View style={styles.cardWrap}>
+        {/* Yoav 2026-06-22: a tall card (price-slider's "done" phase) was
+            overflowing past the bottom with no way to reach it. A ScrollView
+            whose content uses flexGrow:1 + center keeps short cards CENTERED
+            (no "unnecessary scroll" — the 2026-06-11 concern) yet lets a tall
+            card scroll instead of clipping. The slider's pan is horizontal, so
+            it doesn't fight the vertical scroll. */}
+        <ScrollView
+          style={styles.cardScroll}
+          contentContainerStyle={styles.cardWrap}
+          showsVerticalScrollIndicator={false}
+        >
           {card}
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -122,8 +128,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#e0f2fe',
   },
-  cardWrap: {
+  cardScroll: {
     flex: 1,
+  },
+  cardWrap: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 12,
     paddingBottom: 12,
   },

@@ -101,9 +101,12 @@ export interface ModuleTopicSummary {
   nextTopic: Topic | null;
 }
 
-/** 70% of resolved components done = module completed. Single point of
- *  truth; bumping this re-grades every module's completion gate. */
-export const TOPIC_COMPLETION_THRESHOLD = 0.7;
+/** 75% of resolved components done = module completed (chest opens). Single
+ *  point of truth; bumping this re-grades every module's completion gate.
+ *  Yoav 2026-06-22: raised 0.7 → 0.75 so the chest lands AFTER the quiz (the
+ *  quiz is now pinned inside this window by topicResolver, replacing the old
+ *  hard quiz-gate). */
+export const TOPIC_COMPLETION_THRESHOLD = 0.75;
 
 /** R8 T3.4 — chest rarity tiers, surface variable-reward dopamine.
  *  Brawl Stars / Clash Royale benchmarks: tiered chest rolls keep the
@@ -132,22 +135,22 @@ export const MYTHIC_DROP_RATE = 0.01;
 export const RARE_DROP_RATE = 0.12;
 
 /** R8 T3.1 — per-module first-chest threshold override map. The default
- *  70% gate is fine for most modules but feels far in chapter 0 where the
- *  user is still in onboarding and hasn't yet experienced a variable-reward
- *  drop. Lowering to 50% on the first two intro modules gives the user
- *  their first chest at ~3-4 min in instead of ~8-10 min — Brawl Stars
- *  "90-second variable reward" rule applied to a learning context.
+ *  75% gate is fine for most modules but feels far in the very first onboarding
+ *  module where the user is brand new and hasn't yet experienced a
+ *  variable-reward drop. Lowering to 50% on mod-0-1 only gives the user their
+ *  first chest at ~3-4 min in — Brawl Stars "90-second variable reward" rule
+ *  applied to a learning context. Yoav 2026-06-22: scoped to mod-0-1 ALONE
+ *  (mod-0-2 reverted to the 75% default).
  *
- *  IMPORTANT: only the 70% (first-chest) gate is overridden here. The
- *  master 100% chest still requires every chip to be done.
+ *  IMPORTANT: only the first-chest gate is overridden here. The master 100%
+ *  chest still requires every chip to be done.
  */
 export const MODULE_CHEST_THRESHOLD: Record<string, number> = {
   'mod-0-1': 0.5,
-  'mod-0-2': 0.5,
 };
 
 /** Resolve the first-chest threshold for a module. Falls back to the
- *  canonical 70% when there's no override. */
+ *  canonical 75% when there's no override. */
 export function chestThresholdFor(moduleId: string): number {
   return MODULE_CHEST_THRESHOLD[moduleId] ?? TOPIC_COMPLETION_THRESHOLD;
 }
