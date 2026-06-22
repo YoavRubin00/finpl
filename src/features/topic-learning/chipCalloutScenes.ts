@@ -32,11 +32,15 @@ export const CHIP_CALLOUT_WEBPS: ChipCalloutWebp[] = [
   { id: 'dancing', source: require('../../../assets/webp/fin-dancing-1.webp') },
   { id: 'victory', source: require('../../../assets/webp/fin-victory.webp') },
   { id: 'fire', source: require('../../../assets/webp/fin-fire-1.webp') },
-  // --- appended after Higgsfield generation (pool → 7) ---
-  // { id: 'chest',    source: require('../../../assets/webp/fin-chest-glow.webp') },
-  // { id: 'coins',    source: require('../../../assets/webp/fin-coins-diamonds.webp') },
-  // { id: 'diamond',  source: require('../../../assets/webp/fin-big-diamond.webp') },
-  // { id: 'duo-gold', source: require('../../../assets/webp/fin-daisy-treasure.webp') },
+  // --- "reach the chest" set: chest / diamonds / gold (Higgsfield, Element-locked
+  //     shark-finn-v2 + daisy-finplay; green-screen → transparent loop) ---
+  { id: 'chest', source: require('../../../assets/webp/fin-chest-glow.webp') },
+  { id: 'coins', source: require('../../../assets/webp/fin-coins-diamonds.webp') },
+  { id: 'diamond', source: require('../../../assets/webp/fin-big-diamond.webp') },
+  { id: 'daisy-treasure', source: require('../../../assets/webp/fin-daisy-treasure.webp') },
+  // --- "refresh between modules" set (Yoav 2026-06-22) ---
+  { id: 'meditation', source: require('../../../assets/webp/fin-meditation.webp') },
+  { id: 'shower', source: require('../../../assets/webp/fin-shower.webp') },
 ];
 
 /** Proximity band, derived from chips-remaining-to-chest (NOT raw pct). */
