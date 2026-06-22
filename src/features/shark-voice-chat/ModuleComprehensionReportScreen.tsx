@@ -205,8 +205,8 @@ export function ModuleComprehensionReportScreen({
         <View style={styles.panel}>
           <Animated.View entering={FadeIn.duration(300)} style={styles.headerRow}>
             <ExpoImage
-              source={require('../../../assets/webp/shark-call-talking-1.webp')}
-              style={{ width: 56, height: 56 }}
+              source={require('../../../assets/webp/fin-standard.webp')}
+              style={{ width: 56, height: 56, backgroundColor: 'transparent' }}
               contentFit="contain"
             />
             <View style={{ flex: 1 }}>
