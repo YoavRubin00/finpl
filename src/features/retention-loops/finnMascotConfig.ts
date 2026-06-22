@@ -43,10 +43,7 @@ export const FINN_TALKING: ImageSource = require("../../../assets/webp/fin-talki
 export const FINN_TABLET: ImageSource = require("../../../assets/webp/fin-tablet-1.webp");
 export const FINN_DANCING: ImageSource = require("../../../assets/webp/fin-dancing-1.webp");
 // Captain Shark watering the Knowledge Tree (profile retention mechanic).
-// TODO: swap to require("../../../assets/webp/fin-watering.webp") once the
-// dedicated watering WebP is generated (finplay-mascot-webp). Aliased to the
-// note-taking pose for now so the feature ships without a missing asset.
-export const FINN_WATERING: ImageSource = FINN_TABLET;
+export const FINN_WATERING: ImageSource = require("../../../assets/webp/fin-watering.webp");
 
 /** Maps state to WebP image source (for static contexts) */
 export function getFinnImage(state: FinnAnimationState): ImageSource {
