@@ -15,6 +15,7 @@
  *   fin-tablet-1.webp, taking notes (onboarding Q&A acknowledgement)
  *   fin-dancing-1.webp, celebration / victory moments (milestones, summaries)
  */
+import { Platform } from "react-native";
 import type { ImageSource } from "expo-image";
 
 export type FinnAnimationState =
@@ -43,7 +44,12 @@ export const FINN_TALKING: ImageSource = require("../../../assets/webp/fin-talki
 export const FINN_TABLET: ImageSource = require("../../../assets/webp/fin-tablet-1.webp");
 export const FINN_DANCING: ImageSource = require("../../../assets/webp/fin-dancing-1.webp");
 // Captain Shark watering the Knowledge Tree (profile retention mechanic).
-export const FINN_WATERING: ImageSource = require("../../../assets/webp/fin-watering.webp");
+// The animated webp loops on native (expo-image renders animated webp there).
+// expo-image on WEB does NOT render animated webp, so web falls back to a
+// static first-frame webp so the shark is still visible in the web preview.
+export const FINN_WATERING: ImageSource = Platform.OS === "web"
+  ? require("../../../assets/webp/fin-watering-static.webp")
+  : require("../../../assets/webp/fin-watering.webp");
 
 /** Maps state to WebP image source (for static contexts) */
 export function getFinnImage(state: FinnAnimationState): ImageSource {
