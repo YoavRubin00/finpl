@@ -122,14 +122,13 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
 
   if (module.interactiveIntro?.trim()) present.set('intro', true);
   if (module.flashcards?.length) present.set('cards', true);
-  // R5.5 redux (Yoav 2026-06-16): the standalone "סרטון הסבר" chip is BACK.
-  // After the 2026-06-11 retirement the embedded explainer video (e.g.
-  // ribit-darbit.mp4 in mod-1-1) effectively VANISHED — the cards loop never
-  // surfaced it and there was no chip to reach it. Gate the chip on a real
-  // videoUri flashcard so it only appears where a video actually exists; the
-  // cards chip filters videos out (cardFilter=non-video) so it's not shown
-  // twice. Currently: mod-1-1 + two chapter-0 modules.
-  if (module.flashcards?.some((fc) => typeof fc.videoUri === 'string' && fc.videoUri.length > 0)) {
+  // Standalone "סרטון הסבר" chip — ONLY for mod-1-1, whose video (ribit-darbit)
+  // carries real educational value (Yoav 2026-06-22: "כל הסרטונים חוץ מהסרטון
+  // של מודולה 1-1 ... תעשה בין כרטיסיות למידה ולא כציפ בפני עצמו"). For every
+  // other module the videoUri flashcard now plays INLINE inside the cards flow
+  // (the cards chip carries NO video filter for them — see DuoLearnScreen),
+  // so there is no separate tutorial-video chip and no double-showing.
+  if (module.id === 'mod-1-1' && module.flashcards?.some((fc) => typeof fc.videoUri === 'string' && fc.videoUri.length > 0)) {
     present.set('tutorial-video', true);
   }
   // Recall chip surfaces only when a real recall set exists in

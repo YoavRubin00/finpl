@@ -2339,13 +2339,15 @@ export function DuoLearnScreen() {
       'shark-dilemma': 'shark-dilemma',
     };
     const targetPhase = phaseForKind[topic.kind] ?? 'intro';
-    // Yoav 2026-06-16: tutorial-video chip restored — the explainer video
-    // gets its own chip (cardFilter=video plays ONLY the video cards), while
-    // the cards chip filters videos out (cardFilter=non-video) so the user
-    // never sees the same video twice. Any other kind carries no filter.
+    // mod-1-1 ONLY: the explainer video has its own chip (cardFilter=video plays
+    // ONLY the video cards), and its cards chip filters videos out so they're not
+    // shown twice. EVERY OTHER module plays its video INLINE within the cards flow
+    // (no filter on the cards chip) — Yoav 2026-06-22: videos with no educational
+    // value go between learning cards, not as a standalone chip.
+    const isMod11 = current.module.id === 'mod-1-1';
     const cardFilter =
       topic.kind === 'tutorial-video' ? '&cardFilter=video'
-      : topic.kind === 'cards' ? '&cardFilter=non-video'
+      : (topic.kind === 'cards' && isMod11) ? '&cardFilter=non-video'
       : '';
     isNavigatingRef.current = true;
     router.push(
