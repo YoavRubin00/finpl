@@ -4,6 +4,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { treeStageSource } from './components/GrowingTree';
+import { FINN_WATERING } from '../retention-loops/finnMascotConfig';
 import {
   useKnowledgeTreeStore,
   knowledgeTreeView,
@@ -34,12 +35,20 @@ export function KnowledgeTreeCard(): React.ReactElement {
       {/* bg on inner View — RN Pressable drops bg on Android otherwise */}
       <View style={styles.card}>
         <View style={styles.row}>
-          <ExpoImage
-            source={treeStageSource(view.displayStage)}
-            style={styles.thumb}
-            contentFit="contain"
-            accessible={false}
-          />
+          <View style={styles.miniScene}>
+            <ExpoImage
+              source={FINN_WATERING}
+              style={styles.miniShark}
+              contentFit="contain"
+              accessible={false}
+            />
+            <ExpoImage
+              source={treeStageSource(view.displayStage)}
+              style={styles.miniTree}
+              contentFit="contain"
+              accessible={false}
+            />
+          </View>
           <View style={styles.textBlock}>
             <Text style={styles.title}>עץ הידע</Text>
             <Text style={styles.sub}>
@@ -78,7 +87,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  thumb: { width: 54, height: 54 },
+  miniScene: { width: 116, height: 60, position: 'relative' },
+  miniShark: { position: 'absolute', left: 0, bottom: 6, width: 74, height: 35 },
+  miniTree: { position: 'absolute', right: 0, bottom: 0, width: 46, height: 46 },
   textBlock: { flex: 1, gap: 2 },
   title: {
     fontSize: 16,
