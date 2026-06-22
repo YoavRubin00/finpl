@@ -18,6 +18,12 @@ const HEART_REFILL_MS = 15 * 60 * 1000; // 15 minutes per energy unit (was 5h) �
 const MAX_PRACTICE_REFILLS_PER_DAY = 2; // ×PRACTICE_ENERGY_GRANT = +10/day
 const PRACTICE_ENERGY_GRANT = 5; // energy granted per practice/replay completion (was +1)
 
+/** Max energy a single passive-regen settlement grants (on app return). A long
+ *  absence gives this "welcome back" gift, NOT a full refill — energy stays a
+ *  real resource so the refill/Pro paywall keeps meaning (Yoav 2026-06-22:
+ *  "לא צריך למלא הכל, נגיד לתת 5 אנרגיה מתנה"). */
+export const WELCOME_BACK_ENERGY_GIFT = 5;
+
 // Monotonic counter so two identical back-to-back deltas (same type/amount/
 // source) still re-fire the EnergyAnimationProvider (object-identity selector
 // would otherwise miss the second). One store instance → module scope is fine.
@@ -31,7 +37,9 @@ function calcHeartRefills(lastLostAt: string | null, currentHearts: number): num
   if (!lastLostAt || currentHearts >= MAX_HEARTS) return 0;
   const elapsed = Math.max(0, Date.now() - new Date(lastLostAt).getTime());
   const refills = Math.floor(elapsed / HEART_REFILL_MS);
-  return Math.min(refills, MAX_HEARTS - currentHearts);
+  // Cap a single settlement to the welcome-back gift — returning after a long
+  // absence gives +WELCOME_BACK_ENERGY_GIFT, never a silent full refill.
+  return Math.min(refills, MAX_HEARTS - currentHearts, WELCOME_BACK_ENERGY_GIFT);
 }
 
 interface HeartsState {
@@ -83,7 +91,7 @@ interface HeartsActions {
   // `source` tiers the loss animation: 'penalty' (wrong answer) = dramatic
   // overlay; 'chat'/'analyst-tool' (usage cost) = subtle toast.
   useHeart: (isPro: boolean, source?: string) => boolean;
-  refillHearts: () => void;
+  refillHearts: () => number;
   restoreAllHearts: () => void;
   grantPracticeHeart: () => boolean;
   startPracticeForHeart: () => boolean;
@@ -175,12 +183,16 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
         return true;
       },
 
-      refillHearts: () => {
+      refillHearts: (): number => {
         const state = get();
         const refills = calcHeartRefills(state.lastHeartLostAt, state.hearts);
         if (refills > 0) {
-          set({ hearts: Math.min(state.hearts + refills, MAX_HEARTS) });
+          const next = Math.min(state.hearts + refills, MAX_HEARTS);
+          // Reset the regen clock to NOW so the capped gift can't re-dump the
+          // rest of the backlog on the next read (enforces the +5 cap).
+          set({ hearts: next, lastHeartLostAt: next >= MAX_HEARTS ? null : new Date().toISOString() });
         }
+        return refills;
       },
 
       restoreAllHearts: () => {

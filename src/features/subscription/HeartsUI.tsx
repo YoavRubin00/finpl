@@ -40,9 +40,11 @@ export function HeartsDisplay() {
     const units = useHeartsStore((s) => s.hearts);
     const isPro = useIsPro();
 
-    // Settle passive regen once on mount.
+    // Settle passive regen once on mount. A long absence grants the capped
+    // "welcome back" gift (not a full refill); fire the fill haptic Yoav liked.
     useEffect(() => {
-        useHeartsStore.getState().refillHearts();
+        const gifted = useHeartsStore.getState().refillHearts();
+        if (gifted > 0) { try { successHaptic(); } catch { /* non-fatal */ } }
     }, []);
 
     // Pro users have unlimited energy — stop advertising it (Yoav 18/06): hide
