@@ -27,7 +27,8 @@ export type FinnAnimationState =
   | "fire"
   | "talking"
   | "tablet"
-  | "dancing";
+  | "dancing"
+  | "watering";
 
 // ── WebP Images (static, contextual) ────────────────────────────────────────
 
@@ -41,6 +42,11 @@ export const FINN_FIRE: ImageSource = require("../../../assets/webp/fin-fire-1.w
 export const FINN_TALKING: ImageSource = require("../../../assets/webp/fin-talking-1.webp");
 export const FINN_TABLET: ImageSource = require("../../../assets/webp/fin-tablet-1.webp");
 export const FINN_DANCING: ImageSource = require("../../../assets/webp/fin-dancing-1.webp");
+// Captain Shark watering the Knowledge Tree (profile retention mechanic).
+// TODO: swap to require("../../../assets/webp/fin-watering.webp") once the
+// dedicated watering WebP is generated (finplay-mascot-webp). Aliased to the
+// note-taking pose for now so the feature ships without a missing asset.
+export const FINN_WATERING: ImageSource = FINN_TABLET;
 
 /** Maps state to WebP image source (for static contexts) */
 export function getFinnImage(state: FinnAnimationState): ImageSource {
@@ -54,6 +60,7 @@ export function getFinnImage(state: FinnAnimationState): ImageSource {
     case "talking": return FINN_TALKING;
     case "tablet": return FINN_TABLET;
     case "dancing": return FINN_DANCING;
+    case "watering": return FINN_WATERING;
     default: return FINN_STANDARD;
   }
 }

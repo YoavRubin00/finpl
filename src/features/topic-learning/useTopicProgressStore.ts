@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
+import { useKnowledgeTreeStore } from '../knowledge-tree/useKnowledgeTreeStore';
 import type { Topic, TopicProgressEntry, ModuleTopicSummary, ChestRarity } from './types';
 import {
   chestThresholdFor,
@@ -115,6 +116,10 @@ export const useTopicProgressStore = create<TopicProgressState>()(
             },
           });
         } catch { /* non-fatal */ }
+        // Water the Knowledge Tree — topic learning is a value action. The
+        // topic-tree path doesn't route through markDailyActivityCompleted, so
+        // we water directly here. Idempotent per IL day; non-fatal.
+        try { useKnowledgeTreeStore.getState().waterToday(); } catch { /* non-fatal */ }
       },
 
       isTopicCompleted: (topicId) => Boolean(get().completed[topicId]),
