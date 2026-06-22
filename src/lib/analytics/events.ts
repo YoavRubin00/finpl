@@ -111,7 +111,7 @@ export type AppEvent =
   | { name: 'pearl_skipped_to_next_module'; props: { module_id: string; current_chapter_id?: string } }
   | { name: 'pearl_cta_shown'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; effective_kind: 'referral' | 'trading' | 'whatsapp'; cta_variant?: string } }
   | { name: 'pearl_cta_tapped'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; destination_url?: string; cta_variant?: string } }
-  | { name: 'pearl_cta_dismissed'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; time_open_ms?: number } }
+  | { name: 'pearl_cta_dismissed'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; time_open_ms?: number; cta_variant?: string } }
   // In-app CTA nudge popups (bridge / invite) — Bar's cloud copy, A/B by cta_variant.
   | { name: 'cta_nudge_shown'; props: { surface: 'bridge_modal' | 'invite_modal'; cta_variant?: string } }
   | { name: 'cta_nudge_tapped'; props: { surface: 'bridge_modal' | 'invite_modal'; cta_variant?: string } }

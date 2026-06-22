@@ -127,7 +127,7 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
     tapHaptic();
     if (afterModuleId) {
       try {
-        track({ name: 'pearl_cta_dismissed', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'trading', time_open_ms: Date.now() - mountedAtRef.current } });
+        track({ name: 'pearl_cta_dismissed', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'trading', time_open_ms: Date.now() - mountedAtRef.current, cta_variant: cloudCta?.variant } });
       } catch { /* non-fatal */ }
     }
     onContinue?.();

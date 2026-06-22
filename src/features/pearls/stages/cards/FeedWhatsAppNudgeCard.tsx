@@ -111,7 +111,7 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
       try {
         track({
           name: 'pearl_cta_dismissed',
-          props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'whatsapp', time_open_ms: Date.now() - mountedAtRef.current },
+          props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'whatsapp', time_open_ms: Date.now() - mountedAtRef.current, cta_variant: cloudCta?.variant },
         });
       } catch { /* non-fatal */ }
     }
