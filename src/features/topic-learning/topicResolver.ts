@@ -105,14 +105,17 @@ export interface ResolveTopicsOptions {
  */
 /**
  * Decide whether a module should render as a topic-tree accordion or
- * fall through to the legacy LessonFlowScreen. R6 Epic 1 default is
- * topic-tree for everything — `learningMode === 'linear-flow'` is the
- * explicit opt-out. Modules with too few resolved topics (< 2) fall
- * back so we never surface an empty accordion.
+ * fall through to the legacy LessonFlowScreen. Default is topic-tree for
+ * EVERYTHING — `learningMode === 'linear-flow'` is the explicit opt-out.
+ * Yoav 2026-06-22: every module must run chip-by-chip ("תכניס את זה לכל
+ * המודולות"), so any module with ≥1 resolved topic uses the accordion (a
+ * module always resolves its content topic + the pinned chat chip, so this
+ * is ≥2 in practice). Only a genuinely EMPTY module (0 topics) falls back,
+ * so we never surface an empty accordion.
  */
 export function shouldUseTopicTree(module: Module): boolean {
   if (module.learningMode === 'linear-flow') return false;
-  return resolveTopics(module).length >= 2;
+  return resolveTopics(module).length >= 1;
 }
 
 export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): Topic[] {
