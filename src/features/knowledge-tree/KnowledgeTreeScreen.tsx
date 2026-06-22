@@ -51,25 +51,27 @@ export function KnowledgeTreeScreen(): React.ReactElement {
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* The tree — hero */}
-          <Animated.View entering={FadeIn.duration(400)} style={styles.treeWrap}>
-            <GrowingTree stageIndex={view.displayStage} size={260} />
+          {/* Scene — Captain Shark stands beside the REAL GrowingTree and waters
+              it: his can pours to the right, where the tree sits (slight overlap
+              so the water reaches it). The tree is the hero; the shark is smaller. */}
+          <Animated.View entering={FadeIn.duration(400)} style={styles.scene}>
+            <ExpoImage source={FINN_WATERING} style={styles.sharkBig} contentFit="contain" accessible={false} />
+            <GrowingTree stageIndex={view.displayStage} size={190} />
           </Animated.View>
 
-          {/* Forest stats */}
-          <Animated.View entering={FadeInDown.duration(400).delay(120)} style={styles.statsRow}>
-            <Stat value={String(wateredDays)} label="ימי השקיה" />
-            <View style={styles.statDivider} />
-            <Stat value={String(view.treesCompleted)} label="עצים גידלת" />
-          </Animated.View>
-
-          {/* Captain Shark watering + speech bubble */}
-          <Animated.View entering={FadeInDown.duration(400).delay(220)} style={styles.sharkRow}>
-            <ExpoImage source={FINN_WATERING} style={styles.shark} contentFit="contain" accessible={false} />
+          {/* Speech bubble */}
+          <Animated.View entering={FadeInDown.duration(400).delay(140)} style={styles.bubbleWrap}>
             <View style={styles.bubble}>
               <View style={styles.bubbleTail} />
               <Text style={styles.bubbleText}>{bubbleText}</Text>
             </View>
+          </Animated.View>
+
+          {/* Forest stats */}
+          <Animated.View entering={FadeInDown.duration(400).delay(220)} style={styles.statsRow}>
+            <Stat value={String(wateredDays)} label="ימי השקיה" />
+            <View style={styles.statDivider} />
+            <Stat value={String(view.treesCompleted)} label="עצים גידלת" />
           </Animated.View>
 
           {/* CTA — only when the tree hasn't been watered today */}
@@ -124,10 +126,15 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
-  treeWrap: {
+  scene: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
     marginTop: 8,
-    marginBottom: 8,
+    marginBottom: 14,
   },
+  sharkBig: { width: 138, height: 168, marginRight: -10, marginBottom: 6 },
+  bubbleWrap: { width: '100%', marginBottom: 16 },
   statsRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -145,16 +152,8 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 24, fontWeight: '900', color: '#065f46' },
   statLabel: { fontSize: 12, fontWeight: '700', color: '#059669', writingDirection: 'rtl' },
   statDivider: { width: 1, height: 32, backgroundColor: '#a7f3d0' },
-  sharkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    width: '100%',
-    marginBottom: 18,
-  },
-  shark: { width: 76, height: 76 },
   bubble: {
-    flex: 1,
+    width: '100%',
     backgroundColor: '#f0fdf4',
     borderRadius: 16,
     borderWidth: 1,
@@ -165,16 +164,17 @@ const styles = StyleSheet.create({
   },
   bubbleTail: {
     position: 'absolute',
-    left: -8,
-    top: '42%',
+    top: -8,
+    left: '50%',
+    marginLeft: -7,
     width: 0,
     height: 0,
-    borderTopWidth: 7,
-    borderBottomWidth: 7,
-    borderRightWidth: 9,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderRightColor: '#bbf7d0',
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderBottomWidth: 9,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#bbf7d0',
   },
   bubbleText: {
     fontSize: 14,
