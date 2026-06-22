@@ -307,14 +307,19 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     }
     // Fire the chip call-out on a genuine completion, EXCEPT:
     //  • the threshold-crossing chip — the ChestCelebrationModal owns that moment;
-    //  • the very FIRST chip — the mod-0-1 app tour auto-starts there and a
-    //    call-out collides with it (Yoav 2026-06-22);
+    //  • the very FIRST chip — the app tour auto-starts there and a call-out
+    //    collides with it (Yoav 2026-06-22);
+    //  • mod-0-1's SECOND chip too — the app walkthrough runs through it and the
+    //    flow must stay clean (Yoav 2026-06-22: "אל תשים נוטיפיקציה בסוף הציפ
+    //    השני במודולה 0-1, מתחיל הסיור"); so for mod-0-1 the call-out starts only
+    //    from the 3rd completion;
     //  • during a continuous run — it marks several chips at once, which would
     //    spew call-outs "one after another".
+    const calloutSkipBelow = module.id === 'mod-0-1' ? 2 : 1;
     if (
       summary.completed > prevCompletedRef.current &&
       !summary.isModuleDone &&
-      summary.completed > 1 &&
+      summary.completed > calloutSkipBelow &&
       !continuousRunActive
     ) {
       setCalloutSeq((s) => s + 1);
