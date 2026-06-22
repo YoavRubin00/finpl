@@ -15,6 +15,7 @@ import { openStoreReview } from '../../lib/openStoreReview';
 import { shouldShowRatePrompt } from '../retention-loops/rateAppPrompt';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStore';
+import { useHeartsStore } from '../subscription/useHeartsStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import type { Module } from '../chapter-1-content/types';
@@ -38,6 +39,9 @@ import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleCompre
  *  per-topic micro-XP in a future loop. Tunable from a single point. */
 const MODULE_TT_XP = 30;
 const MODULE_TT_COINS = 150;
+/** Energy (⚡) the 70% chest grants — real grantEnergy + a fly-out in the
+ *  ChestCelebrationModal (Yoav 2026-06-22: "בתיבה יקבלו גם 2 אנרגיה"). */
+const CHEST_ENERGY_REWARD = 2;
 /** R6 Epic 5 — second chest at 100%. Larger reward than the 70%
  *  threshold drop. Mirrors the "you actually finished EVERYTHING"
  *  framing the user gets in the modal copy. */
@@ -203,6 +207,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const [chestState, setChestState] = useState<{
     xp: number;
     coins: number;
+    energy: number;
     isFinale: boolean;
     /** R8 T3.4 — rarity rolled on this open. Drives Captain's Forecast
      *  copy, chest visuals (gold tint for mythic), and the ×3 reward
@@ -387,6 +392,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
 
     addXP(totalXp, 'daily_task');
     addCoins(totalCoins, 'lesson');
+    // Chest also grants real energy (Yoav 2026-06-22) — the fly-out lives in
+    // the ChestCelebrationModal. Non-fatal; capped by the store.
+    try { useHeartsStore.getState().grantEnergy(CHEST_ENERGY_REWARD, 'chest'); } catch { /* non-fatal */ }
     successHaptic();
     try { playSound('modal_open_3'); } catch { /* non-fatal */ }
 
@@ -411,7 +419,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       ? POST_QUIT_LABELS[Math.floor(Math.random() * POST_QUIT_LABELS.length)]
       : null;
 
-    setChestState({ xp: totalXp, coins: totalCoins, isFinale: false, rarity, offerDoN, quitLabel });
+    setChestState({ xp: totalXp, coins: totalCoins, energy: CHEST_ENERGY_REWARD, isFinale: false, rarity, offerDoN, quitLabel });
 
     // Snapshot the lesson's grading inputs NOW, while the session-only data
     // (quizResults, voice transcript) is still in memory — the end-of-lesson
@@ -659,6 +667,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           visible={chestState !== null}
           xp={chestState?.xp ?? MODULE_TT_XP}
           coins={chestState?.coins ?? MODULE_TT_COINS}
+          energy={chestState?.energy ?? CHEST_ENERGY_REWARD}
           isFinale={chestState?.isFinale ?? false}
           rarity={chestState?.rarity ?? 'common'}
           onContinueModule={() => {

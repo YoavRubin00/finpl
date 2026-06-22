@@ -13,6 +13,7 @@ import LottieView from 'lottie-react-native';
 import { ChevronLeft, Sparkles } from 'lucide-react-native';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { EnergyBatteryIcon } from '../../components/ui/EnergyBatteryIcon';
 import { DoubleOrNothingModal } from '../../components/ui/DoubleOrNothingModal';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import {
@@ -45,6 +46,9 @@ interface ChestCelebrationModalProps {
    *  happened upstream — this is just for display. */
   xp: number;
   coins: number;
+  /** Energy (⚡) awarded by the chest. The real grantEnergy already happened
+   *  upstream — this drives the display pill + fly-out (Yoav 2026-06-22). */
+  energy?: number;
   onContinueModule: () => void;
   onAdvanceToNextModule: () => void;
   /** Called after the user resolves the Double-or-Nothing prompt with
@@ -90,6 +94,7 @@ export function ChestCelebrationModal({
   visible,
   xp,
   coins,
+  energy = 0,
   onContinueModule,
   onAdvanceToNextModule,
   onDoNResolve,
@@ -107,6 +112,7 @@ export function ChestCelebrationModal({
   // Separate flags for coins / xp so each can unmount independently.
   const [flyingCoins, setFlyingCoins] = useState(false);
   const [flyingXp, setFlyingXp] = useState(false);
+  const [flyingEnergy, setFlyingEnergy] = useState(false);
   // R8 T3.4 — rarity particle burst (gold for mythic, cyan for rare).
   // Fires alongside the chest reveal lottie. Common chests skip this.
   const [rarityBurstActive, setRarityBurstActive] = useState(false);
@@ -165,6 +171,7 @@ export function ChestCelebrationModal({
       setDonMultiplier(1);
       setFlyingCoins(false);
       setFlyingXp(false);
+      setFlyingEnergy(false);
       setRarityBurstActive(false);
       setAdClaimed(false);
       wisdomFiredRef.current = false;
@@ -185,8 +192,9 @@ export function ChestCelebrationModal({
     if (!opened) return;
     if (!onDoNResolve) setFlyingCoins(true);
     setFlyingXp(true);
+    if (energy > 0) setFlyingEnergy(true);
     if (rarity !== 'common') setRarityBurstActive(true);
-  }, [opened, rarity, onDoNResolve]);
+  }, [opened, rarity, onDoNResolve, energy]);
 
   // R8 J5 — Wisdom + DoN now run as PARALLEL layers, not sequential.
   // DoN opens 700ms after chest reveal (reward pills mid-fade-in); the
@@ -451,6 +459,14 @@ export function ChestCelebrationModal({
                       <Text style={styles.multiplierBadgeLost} allowFontScaling={false}>×0</Text>
                     )}
                   </View>
+                  {energy > 0 && (
+                    <View style={styles.rewardPill}>
+                      <EnergyBatteryIcon size={22} />
+                      <Text style={styles.rewardValue} allowFontScaling={false}>
+                        {`+${energy}`}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </Animated.View>
             )}
@@ -563,6 +579,14 @@ export function ChestCelebrationModal({
             amount={xp}
             direction="up"
             onComplete={() => { if (mountedRef.current) setFlyingXp(false); }}
+          />
+        )}
+        {flyingEnergy && energy > 0 && (
+          <FlyingRewards
+            type="energy"
+            amount={energy}
+            direction="up"
+            onComplete={() => { if (mountedRef.current) setFlyingEnergy(false); }}
           />
         )}
       </View>
