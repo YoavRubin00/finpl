@@ -13,8 +13,13 @@
  *   • OTA-safe release (onto a binary WITHOUT the SDK): set this to `false`.
  *   • Native build that ships the SDK: set this to `true`.
  *
- * On `dev` this stays `true` (the next native build carries the SDK). The
- * OTA-stripped `master` release flips it to `false`. (Replaces the old manual
- * "strip live-voice" commit on the ota-release branch with a one-line toggle.)
+ * On `dev` this stays `true` (the next native build carries the SDK). For an
+ * OTA-stripped release onto OLD binaries, flip to `false`.
+ *
+ * 2026-06-22: the 1.3.7 store build SHIPS the SDK and ENABLES live-voice, so
+ * master is `true`. To keep the OLD (pre-SDK) binaries safe, that release also
+ * PINS runtimeVersion to "1.3.7" (app.json) — flag=true OTAs now only reach
+ * 1.3.7+ binaries, never the old exposdk:55.0.0 ones (which already got their
+ * final flag=false OTA).
  */
-export const LIVE_VOICE_AVAILABLE = false;
+export const LIVE_VOICE_AVAILABLE = true;
