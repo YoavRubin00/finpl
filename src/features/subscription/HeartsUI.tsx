@@ -18,9 +18,9 @@ import { useHeartsStore, MAX_HEARTS, MAX_ENERGY } from './useHeartsStore';
 import { getTimeUntilNextHeart } from './subscriptionConstants';
 import { EnergyBatteryIcon } from '../../components/ui/EnergyBatteryIcon';
 import { ENERGY } from '../energy/energyTheme';
-import { SHARK_LOW_NUDGE } from '../energy/energyScenes';
 import { ProUpsellCard } from './ProUpsellCard';
 import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 import { useEconomy, economyQueryKey } from '../../features/economy/useEconomy';
 import { fireEconomyDelta } from '../../features/economy/useEconomyUIStore';
 import { queryClient } from '../../lib/queryClient';
@@ -53,17 +53,18 @@ export function HeartsDisplay() {
     const level = isPro ? 1 : (MAX_ENERGY > 0 ? value / MAX_ENERGY : 0);
 
     return (
-        <View
+        <Pressable
+            onPress={() => { tapHaptic(); useHeartsStore.getState().openRefillModal(); }}
             style={styles.energyRow}
-            accessibilityRole="progressbar"
-            accessibilityLabel={isPro ? 'אנרגיה: אינסופית' : `אנרגיה: ${value} מתוך ${MAX_ENERGY}`}
-            accessibilityValue={isPro ? undefined : { min: 0, max: MAX_ENERGY, now: value }}
+            accessibilityRole="button"
+            accessibilityLabel={`אנרגיה: ${value} מתוך ${MAX_ENERGY}. הקישו למילוי`}
+            hitSlop={8}
         >
             <EnergyBatteryIcon size={20} level={level} />
             <Text style={styles.energyCount} allowFontScaling={false}>
-                {isPro ? '∞' : `${value}/${MAX_ENERGY}`}
+                {`${value}/${MAX_ENERGY}`}
             </Text>
-        </View>
+        </Pressable>
     );
 }
 
@@ -77,6 +78,11 @@ export function HeartsDisplay() {
 // stays generous (+8) since ads are the play-first-friendly free option.
 const ENERGY_REFILL_COIN_COST = 5000; // full battery (20), a real decision
 const ENERGY_AD_GRANT = 8;
+
+// Yoav 2026-06-22: dancing Captain Shark on the refill screen for an upbeat
+// "top up and let's go" vibe (was the static low-energy nudge shark).
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const DANCING_SHARK = require('../../../assets/webp/fin-dancing-1.webp');
 
 interface OutOfHeartsModalProps {
     visible: boolean;
@@ -107,7 +113,10 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const { payload: banditPayload, trackImpression, trackConversion, trackDismiss } = useBandit('hearts_depleted_nudge');
 
     useEffect(() => {
-        if (visible) trackImpression();
+        if (visible) {
+            trackImpression();
+            try { track({ name: 'energy_refill_modal_shown' }); } catch { /* non-fatal */ }
+        }
     }, [visible, trackImpression]);
 
     // Countdown timer
@@ -149,6 +158,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
 
     const handleUpgrade = useCallback(() => {
         tapHaptic();
+        try { track({ name: 'energy_refill_option_tapped', props: { option: 'pro' } }); } catch { /* non-fatal */ }
         onUpgrade();
     }, [onUpgrade]);
 
@@ -156,6 +166,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
 
     const handleAdRefill = useCallback(() => {
         tapHaptic();
+        try { track({ name: 'energy_refill_option_tapped', props: { option: 'ad' } }); } catch { /* non-fatal */ }
         showAd(() => {
             // Reward: top up energy (+8) instead of a single heart.
             const granted = useHeartsStore.getState().grantEnergy(ENERGY_AD_GRANT, 'ad', 12);
@@ -173,6 +184,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     // Buy a FULL energy refill with coins (deliberately pricey — not a casual bypass).
     const handleCoinRefill = useCallback(() => {
         tapHaptic();
+        try { track({ name: 'energy_refill_option_tapped', props: { option: 'shop' } }); } catch { /* non-fatal */ }
         const store = useHeartsStore.getState();
         if (store.getHearts() >= MAX_HEARTS) { onDismiss(); return; }
         const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
@@ -215,7 +227,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                             </View>
                         </View>
                         <Animated.View style={[styles.finnWrap, sharkStyle]}>
-                            <ExpoImage source={SHARK_LOW_NUDGE} accessible={false} style={{ width: 110, height: 110 }} contentFit="contain" />
+                            <ExpoImage source={DANCING_SHARK} accessible={false} style={{ width: 120, height: 120, backgroundColor: 'transparent' }} contentFit="contain" />
                         </Animated.View>
                     </View>
 

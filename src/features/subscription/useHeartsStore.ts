@@ -109,6 +109,9 @@ interface HeartsActions {
 
   /** Show / hide the GLOBAL out-of-energy modal (non-lesson depletion). */
   flagDepleted: () => void;
+  /** Open the refill modal ON DEMAND (user tapped the energy pill) WITHOUT
+   *  firing `energy_depleted` — that metric is reserved for real depletions. */
+  openRefillModal: () => void;
   clearDepleted: () => void;
 
   /** Mirror PRO status into the store so every energy mutation is inert for
@@ -284,6 +287,9 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
         }
         return { depletedPromptVisible: true };
       }),
+      // On-demand open (tap the energy pill) — no energy_depleted, that metric
+      // tracks real run-outs only. Yoav 2026-06-22.
+      openRefillModal: () => set({ depletedPromptVisible: true }),
       clearDepleted: () => set({ depletedPromptVisible: false }),
 
       clearPracticeFlag: () => {

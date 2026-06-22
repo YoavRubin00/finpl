@@ -202,6 +202,10 @@ export type AppEvent =
   // out-of-energy modal impression itself only goes to the bandit server, so
   // this dedicated event is the single PostHog source. Yoav 2026-06-21.
   | { name: 'energy_depleted'; props?: { source?: 'lesson' | 'chat' | string } }
+  // The energy-refill screen (out-of-energy modal). Impression + which of the
+  // three refill options the user tapped. Yoav 2026-06-22.
+  | { name: 'energy_refill_modal_shown'; props?: Record<string, never> }
+  | { name: 'energy_refill_option_tapped'; props: { option: 'ad' | 'shop' | 'pro' } }
 
   // ── Bandit (Thompson sampling experiments) ────────────────────────────
   // Fires once per component instance when useBandit() locks a variant.
