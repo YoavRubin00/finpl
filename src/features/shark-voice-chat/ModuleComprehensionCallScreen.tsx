@@ -31,6 +31,10 @@ import {
 
 const RTL = { writingDirection: 'rtl' as const };
 const CALL_SECONDS = 45;
+// Hard ceiling: past the 45s soft target we never cut the user off mid-answer —
+// we grace until they stop — but the call always ends by this cap (Yoav:
+// "extend up to a minute" if the user is still talking).
+const MAX_CALL_SECONDS = 60;
 
 interface Props {
   moduleId: string;
@@ -78,6 +82,7 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
   const connectedRef = useRef(false);
   const timerStartedRef = useRef(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
 
   // Connect once, primed with this module's comprehension questions.
   useEffect(() => {
@@ -112,21 +117,26 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
     onComplete();
   }, [disconnect, attachTranscript, generateReport, moduleId, onComplete]);
 
-  // Start the 45s countdown once the call is actually live (not while connecting).
+  // Start the countdown once the call is actually live (not while connecting).
+  // Soft target = CALL_SECONDS (45s). When it's up, we DON'T cut the user off
+  // mid-answer: if they're still speaking we grace until they stop, hard-capped
+  // at MAX_CALL_SECONDS (60s). Shark delivers the spoken sign-off itself.
   useEffect(() => {
     const active = status === 'listening' || status === 'thinking' || status === 'speaking';
     if (!active || timerStartedRef.current) return;
     timerStartedRef.current = true;
     progress.value = withTiming(0, { duration: CALL_SECONDS * 1000, easing: Easing.linear });
     tickRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        const next = prev - 1;
-        if (next <= 0) {
-          finish();
-          return 0;
-        }
-        return next;
-      });
+      elapsedRef.current += 1;
+      const elapsed = elapsedRef.current;
+      const userStillAnswering = useSharkVoiceStore.getState().status === 'listening';
+      // End at the 45s target — unless the user is mid-answer, then wait for
+      // them to finish — but never run past the 60s hard cap.
+      if (elapsed >= MAX_CALL_SECONDS || (elapsed >= CALL_SECONDS && !userStillAnswering)) {
+        finish();
+        return;
+      }
+      setSecondsLeft(Math.max(0, CALL_SECONDS - elapsed));
     }, 1000);
   }, [status, finish, progress]);
 

@@ -8,7 +8,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * server-side aggregation/analytics and to clamp absurd reports.
  */
 
-const MAX_REPORT_SECONDS = 45;
+// Soft target is 45s, but a call may run up to 60s when the user is still
+// answering (the client graces them rather than cutting mid-sentence).
+const MAX_REPORT_SECONDS = 60;
 
 interface UsageBody {
   seconds?: unknown;
