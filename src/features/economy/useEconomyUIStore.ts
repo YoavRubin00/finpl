@@ -78,7 +78,7 @@ function daysBetween(dateA: string, dateB: string): number {
  * and mirrored into the React Query cache on hydration so the header shows the
  * correct streak even for guests who can't read the server-side counter.
  */
-function deriveStreakFromDates(activeDates: string[], frozenDates: string[]): number {
+export function deriveStreakFromDates(activeDates: string[], frozenDates: string[]): number {
   const dateSet = new Set([...activeDates, ...frozenDates]);
   const today2 = todayISO();
   const yest2 = yesterdayISO();

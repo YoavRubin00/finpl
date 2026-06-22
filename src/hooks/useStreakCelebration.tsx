@@ -3,11 +3,10 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEconomyUIStore } from "../features/economy/useEconomyUIStore";
+import { useEconomyUIStore, deriveStreakFromDates } from "../features/economy/useEconomyUIStore";
 import { queryClient } from "../lib/queryClient";
 import { streakQueryKey } from "../features/economy/useStreak";
 import type { StreakState } from "../lib/api/streak";
@@ -34,7 +33,6 @@ export function StreakCelebrationProvider({
 }) {
   const [visible, setVisible] = useState(false);
   const [celebrationStreak, setCelebrationStreak] = useState(0);
-  const prevStreak = useRef<number | null>(null);
 
   const showStreakCelebration = useCallback(() => {
     const streakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
@@ -48,32 +46,37 @@ export function StreakCelebrationProvider({
     }, 2000);
   }, []);
 
-  // Detect streak increases by subscribing to UIStore activeDates changes.
-  // When completeDailyTask or awardLoginBonus fires, lastDailyTaskDate /
-  // activeDates update. We derive the new streak from the query cache.
+  // Detect streak increases by subscribing to UIStore activeDates changes
+  // (completeDailyTask / awardLoginBonus add today to activeDates).
+  //
+  // We derive the streak DIRECTLY from the activeDates we're handed — the
+  // documented local source of truth — instead of reading the React Query
+  // cache. The cache is updated asynchronously by three different writers:
+  // the server tick (async round-trip), completeDailyTask's mirror (which runs
+  // AFTER its set(), so the cache is stale at the instant activeDates changes),
+  // and awardLoginBonus (which never mirrors at all). So reading the cache here
+  // silently suppressed the popup whenever an in-app activity (e.g. the daily
+  // news challenge) was the first streak credit of the day and the server tick
+  // hadn't returned yet — comparing the stale cache against itself yields no
+  // increase (Yoav 2026-06-22: "ביצעתי אקטואליה והרצף לא קפץ"). Deriving from
+  // the (state, prevState) activeDates makes the trigger timing-independent.
   useEffect(() => {
-    const getStreak = () => {
-      const s = queryClient.getQueryData<StreakState | null>(streakQueryKey);
-      return s?.currentStreak ?? 0;
-    };
-    prevStreak.current = getStreak();
-
     const unsub = useEconomyUIStore.subscribe((state, prevState) => {
       if (state.activeDates === prevState.activeDates) return;
-      const currentStreak = getStreak();
-      if (prevStreak.current === null) {
-        prevStreak.current = currentStreak;
-        return;
-      }
-      // Streak increased — show celebration after a short delay
-      if (currentStreak > (prevStreak.current ?? 0) && currentStreak > 0) {
-        setCelebrationStreak(currentStreak);
+      const current = deriveStreakFromDates(state.activeDates, state.frozenDates);
+      const prev = deriveStreakFromDates(prevState.activeDates, prevState.frozenDates);
+      // Streak increased — show celebration after a short delay.
+      if (current > prev && current > 0) {
+        // For DISPLAY, prefer the server/authoritative streak if it's at least
+        // as high (cross-device), else the freshly-derived local value.
+        const cached =
+          queryClient.getQueryData<StreakState | null>(streakQueryKey)?.currentStreak ?? 0;
+        setCelebrationStreak(Math.max(current, cached));
         setTimeout(() => {
           setVisible(true);
           useNudgeQueueStore.getState().markStreakShown();
         }, 600);
       }
-      prevStreak.current = currentStreak;
     });
 
     return unsub;
