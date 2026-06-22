@@ -14,7 +14,7 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { FINN_STANDARD, getFinnImage } from '../retention-loops/finnMascotConfig';
+import { SHARK_CALL_TALKING, SHARK_CALL_IDLE } from '../retention-loops/finnMascotConfig';
 import { heavyHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useIntroAudio } from '../../hooks/useIntroAudio';
@@ -171,8 +171,8 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
           <ExpoImage
             ref={talkingImgRef}
             source={audioUri
-              ? (audioState === 'finished' ? FINN_STANDARD : getFinnImage('talking'))
-              : (phase < 2 ? getFinnImage('talking') : FINN_STANDARD)}
+              ? (audioState === 'finished' ? SHARK_CALL_IDLE : SHARK_CALL_TALKING)
+              : (phase < 2 ? SHARK_CALL_TALKING : SHARK_CALL_IDLE)}
             style={{ width: 96, height: 96 }}
             contentFit="contain"
             accessible={false}

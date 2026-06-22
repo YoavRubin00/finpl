@@ -41,6 +41,11 @@ export const FINN_FIRE: ImageSource = require("../../../assets/webp/fin-fire-1.w
 export const FINN_TALKING: ImageSource = require("../../../assets/webp/fin-talking-1.webp");
 export const FINN_TABLET: ImageSource = require("../../../assets/webp/fin-tablet-1.webp");
 export const FINN_DANCING: ImageSource = require("../../../assets/webp/fin-dancing-1.webp");
+// Live-voice "Captain Shark" talking/idle loops (made for the shark call) — used
+// in MODULE INTROS so the intro mascot matches the live-voice feature (Yoav
+// 2026-06-23). Not for general Finn contexts (chat / shop / tools keep Finn).
+export const SHARK_CALL_TALKING: ImageSource = require("../../../assets/webp/shark-call-talking-1.webp");
+export const SHARK_CALL_IDLE: ImageSource = require("../../../assets/webp/shark-call-listening.webp");
 /** Maps state to WebP image source (for static contexts) */
 export function getFinnImage(state: FinnAnimationState): ImageSource {
   switch (state) {

@@ -14,7 +14,7 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { FINN_STANDARD, FINN_TALKING } from '../retention-loops/finnMascotConfig';
+import { SHARK_CALL_TALKING, SHARK_CALL_IDLE } from '../retention-loops/finnMascotConfig';
 import { heavyHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useIntroAudio } from '../../hooks/useIntroAudio';
@@ -202,8 +202,8 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
         <ExpoImage
           ref={talkingImgRef}
           source={audioUri
-            ? (audioState === 'finished' ? FINN_STANDARD : FINN_TALKING)
-            : (phase < 2 ? FINN_TALKING : FINN_STANDARD)}
+            ? (audioState === 'finished' ? SHARK_CALL_IDLE : SHARK_CALL_TALKING)
+            : (phase < 2 ? SHARK_CALL_TALKING : SHARK_CALL_IDLE)}
           style={{ width: 120, height: 120 }}
           contentFit="contain"
           accessible={false}

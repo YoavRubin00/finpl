@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { Image as ExpoImage, type ImageSource } from 'expo-image';
 import { useReducedMotion } from 'react-native-reanimated';
 import { FINN_TALKING, FINN_STANDARD } from './finnMascotConfig';
 import type { IntroAudioState } from '../../hooks/useIntroAudio';
@@ -33,6 +33,10 @@ interface Props {
    *   - 'finished' → standard visible (swap)
    */
   audioState?: IntroAudioState;
+  /** Override the talking/idle webps (e.g. the live-voice shark in module
+   *  intros). Default to Finn (fin-talking-1 / fin-standard). */
+  talkingSource?: ImageSource;
+  standardSource?: ImageSource;
 }
 
 
@@ -45,6 +49,8 @@ export function FinnSpeakingAvatar({
   style,
   isPlayingAudio,
   audioState,
+  talkingSource = FINN_TALKING,
+  standardSource = FINN_STANDARD,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const initialPhase = reduceMotion || !active ? 'standard' : 'talking';
@@ -122,7 +128,7 @@ export function FinnSpeakingAvatar({
   return (
     <View style={[{ width: size, height: size }, style]}>
       <ExpoImage
-        source={FINN_STANDARD}
+        source={standardSource}
         style={{ width: size, height: size, position: 'absolute' }}
         contentFit="contain"
         accessible={false}
@@ -130,7 +136,7 @@ export function FinnSpeakingAvatar({
       />
       <ExpoImage
         ref={talkingImgRef}
-        source={FINN_TALKING}
+        source={talkingSource}
         style={{ width: size, height: size, position: 'absolute', opacity: talking ? 1 : 0 }}
         contentFit="contain"
         accessible={false}
