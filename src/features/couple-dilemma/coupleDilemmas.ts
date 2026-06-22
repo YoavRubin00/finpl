@@ -48,9 +48,10 @@ export const COUPLE_DILEMMAS = byId as Readonly<Record<string, CoupleDilemmaSegm
 export const MODULE_TO_COUPLE_DILEMMA: Readonly<Record<string, string>> = {
   // Chapter 0 — בסיס
   // After the 2026-05-30 chapter-0 swap, "מושגי יסוד פיננסיים" lives at
-  // mod-0-1 (was mod-0-2). The wine-receipt couple dilemma is anchored
-  // to that topic so it follows the content to mod-0-1.
-  'mod-0-1': 'cd-wine-receipt',       // מושגי יסוד — חשבון יין כדוגמת תזרים
+  // mod-0-1 (was mod-0-2). The wine-receipt couple dilemma was anchored to
+  // mod-0-1, then moved to the continuation module mod-0-1b (Yoav 2026-06-22:
+  // "תעביר את הדילמה הזוגית למודולת המשך") to keep mod-0-1's first run lean.
+  'mod-0-1b': 'cd-wine-receipt',      // מושגי יסוד המשך — חשבון יין כדוגמת תזרים
   'mod-0-4': 'cd-cafe-bill',          // כמה נכנס וכמה יוצא — הוצאות חוזרות זוגיות
   // Chapter 2 — הגנה ופיננסים
   'mod-2-13': 'cd-vacation-brochure', // קרן השתלמות — מצוטט בקריינות

@@ -189,8 +189,11 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // other kinds survived. Yoav: "שהצאט תמיד יהיה אחד לפני אחרון
   // במפת למידה היעודית של כל מודולה". Re-stamps defaultOrder on all
   // following chips so the sort downstream stays stable.
+  // EXCEPTION — mod-0-1b: chat is the LAST chip (after the quiz), per Yoav
+  // 2026-06-22 ("במודולה 0-1B תשים את שיחת הצאט להיות אחרונה ולא הקוויז").
   if (present.get('chat') && out.length >= 1) {
-    const insertAt = Math.max(0, out.length - 1);
+    const chatLast = module.id === 'mod-0-1b';
+    const insertAt = chatLast ? out.length : Math.max(0, out.length - 1);
     const chatTopic = buildTopic('chat', module.id, insertAt);
     out.splice(insertAt, 0, chatTopic);
     out.forEach((t, i) => { t.defaultOrder = i; });
