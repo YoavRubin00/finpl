@@ -173,8 +173,11 @@ type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" 
  *  infographic) — energy is spent only on real activity, not on watching. */
 const ACTIVE_SUBMODULE_PHASES: ReadonlySet<FlowPhase> = new Set<FlowPhase>([
   "flashcards", "podcast", "couple-dilemma", "interactive-recall", "quizzes", "sim", "shark-dilemma",
-  // Content sub-modules too (Yoav 18/06 — "every sub-module, not just activities"):
-  "video", "module-infographic",
+  // Content sub-modules too (Yoav 18/06 — "every sub-module, not just activities").
+  // EXCEPT the intro/explainer video — passive content shouldn't cost energy
+  // (Yoav 2026-06-22: "האינטרו, וסרטון אינטרו אם יש לא צריכים להוריד אנרגיה").
+  // 'intro' + 'hero' were never in this set, so they're already free.
+  "module-infographic",
 ]);
 
 /** "למידה רציפה" progress sync (Yoav 2026-06-11): maps a linear FlowPhase
