@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { successHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
@@ -86,6 +86,10 @@ interface TopicTreeAccordionProps {
   /** Forwarded to ModuleTopicLayout — registers the recommended ("next") chip's
    *  View ref so DuoLearnScreen can measure + scroll it into view on return. */
   onRecommendedChipRef?: (ref: View | null) => void;
+  /** Registers the View wrapping the end-of-module report + shark-call cards so
+   *  the parent can scroll them into view (with the next module below) when the
+   *  user taps "המשך" on the chest (Yoav 2026-06-22). */
+  onEndCardsRef?: (ref: View | null) => void;
 }
 
 /**
@@ -104,6 +108,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   onTopicSelected,
   onContinueAfterChest,
   onAdvanceToNextModule,
+  onEndCardsRef,
   onModuleCompleted,
   onRecommendedChipRef,
 }: TopicTreeAccordionProps): React.ReactElement {
@@ -126,14 +131,20 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     [module.id, topics, completedMap],
   );
 
-  // Chips still needed to open the 70% chest — drives the SharkChipCallout
-  // proximity copy. Read the per-module threshold (0.7 default / 0.5 for
-  // mod-0-1/mod-0-2) the same way the store does; never hardcode it.
+  // Chips still needed to open the chest — drives the SharkChipCallout
+  // proximity copy. Read the per-module threshold (0.75 default / 0.5 for
+  // mod-0-1) the same way the store does; never hardcode it.
   const chestRemaining = Math.max(
     0,
     Math.ceil(summary.total * chestThresholdFor(module.id)) - summary.completed,
   );
-  const isFirstChestModule = module.id === 'mod-0-1' || module.id === 'mod-0-2';
+  // "First chest" framing must reflect REALITY, not the module id — it used to
+  // fire for every user in mod-0-1/mod-0-2 even if they'd already opened chests
+  // elsewhere (Yoav 2026-06-22). modulesPastThreshold maps every module whose
+  // chest the user has earned; empty = they genuinely haven't opened one yet.
+  const noChestOpenedYet = useTopicProgressStore(
+    (s) => Object.keys(s.modulesPastThreshold).length === 0,
+  );
 
   const isCompletedMap = useMemo(() => {
     const out: Record<string, boolean> = {};
@@ -168,13 +179,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     onTopicSelected(topic);
   }, [onTopicSelected]);
 
-  // Yoav 2026-06-17: the 70% chest must also require the QUIZ to be answered —
-  // reaching 70% of the chips alone isn't "done" if the quiz chip is still
-  // open. If the module has no quiz chip at all, this doesn't gate (true).
-  const quizAnswered = useMemo(() => {
-    const quiz = topics.find((t) => t.kind === 'quiz');
-    return !quiz || Boolean(isCompletedMap[quiz.id]);
-  }, [topics, isCompletedMap]);
+  // Yoav 2026-06-22: the quiz is NO LONGER a hard gate for the chest. Instead
+  // topicResolver pins the quiz INSIDE the chest threshold window, so on the
+  // canonical path the quiz is reached before 75% naturally — but a user who
+  // skips it is no longer blocked from the chest. (Supersedes the 2026-06-17
+  // quiz-gate.)
 
   // Yoav 2026-06-17: mod-0-1 injects an inline knowledgeLevel onboarding
   // question right after its quiz — the chest must appear AFTER it. Hold the
@@ -189,6 +198,16 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // Threshold crossing side effects.
   const past70Ref = useRef<boolean>(false);
   const past100Ref = useRef<boolean>(false);
+  // The chest is fired by the effect below, which only runs while this accordion
+  // is mounted + re-rendering. When the crossing chip is a full-screen sim/quiz
+  // (e.g. insurance "מי נגד מי") the accordion is backgrounded as that chip
+  // completes, so the effect misses the exact 70% crossing and only catches up
+  // on the next re-render — the user saw the chest (and the report snapshot) land
+  // a chip LATE (Yoav 2026-06-22). Re-poke the effect whenever the accordion
+  // regains focus so the chest fires the moment we return from the chip. The
+  // atomic stampModuleThreshold below keeps it single-fire.
+  const [focusTick, setFocusTick] = useState(0);
+  useFocusEffect(useCallback(() => { setFocusTick((t) => t + 1); }, []));
   // R8 pre-release audit (Yoav + הסורק 2026-06-11): removed the
   // `seventyFiredThisMountRef` + `lastChestRollRef` workaround. They
   // dedup'd recordChestOpen() but the underlying TWO useEffects still
@@ -297,14 +316,19 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     }
     // Fire the chip call-out on a genuine completion, EXCEPT:
     //  • the threshold-crossing chip — the ChestCelebrationModal owns that moment;
-    //  • the very FIRST chip — the mod-0-1 app tour auto-starts there and a
-    //    call-out collides with it (Yoav 2026-06-22);
+    //  • the very FIRST chip — the app tour auto-starts there and a call-out
+    //    collides with it (Yoav 2026-06-22);
+    //  • mod-0-1's SECOND chip too — the app walkthrough runs through it and the
+    //    flow must stay clean (Yoav 2026-06-22: "אל תשים נוטיפיקציה בסוף הציפ
+    //    השני במודולה 0-1, מתחיל הסיור"); so for mod-0-1 the call-out starts only
+    //    from the 3rd completion;
     //  • during a continuous run — it marks several chips at once, which would
     //    spew call-outs "one after another".
+    const calloutSkipBelow = module.id === 'mod-0-1' ? 2 : 1;
     if (
       summary.completed > prevCompletedRef.current &&
       !summary.isModuleDone &&
-      summary.completed > 1 &&
+      summary.completed > calloutSkipBelow &&
       !continuousRunActive
     ) {
       setCalloutSeq((s) => s + 1);
@@ -341,7 +365,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // ref/store flag stays so analytics + future re-enable still work,
     // but no second modal fires.
     const seventyJustCrossed =
-      summary.isModuleDone && quizAnswered && mod01QuestionResolved &&
+      summary.isModuleDone && mod01QuestionResolved &&
       !past70Ref.current && !modulePastThreshold;
     if (!seventyJustCrossed) return;
 
@@ -452,7 +476,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-  }, [summary.isModuleDone, summary.pct, quizAnswered, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
+  }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
@@ -637,10 +661,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             captured snapshot/report, handles the weekly quota on tap, and opens
             the deep-analysis-style report (with talk-to-Shark) in a modal. */}
         {modulePastThreshold && (
-          <>
+          <View ref={onEndCardsRef}>
             <ModuleSharkCallCard moduleId={module.id} moduleTitle={module.title} />
             <ModuleReportCard moduleId={module.id} moduleTitle={module.title} />
-          </>
+          </View>
         )}
 
         {moduleCarousel && (
@@ -799,11 +823,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
 
         {/* Captain Shark chip-completion call-out (replaces the 25%/50%
             milestone toasts) — rotating webp + proximity copy + gentle
-            confetti on every chip completion, pulling toward the 70% chest. */}
+            confetti on every chip completion, pulling toward the chest. */}
         <SharkChipCallout
           seq={calloutSeq}
           remaining={chestRemaining}
-          isFirstChest={isFirstChestModule}
+          isFirstChest={noChestOpenedYet}
         />
       </View>
     </Animated.View>

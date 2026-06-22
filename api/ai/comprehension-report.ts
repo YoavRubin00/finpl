@@ -26,6 +26,8 @@ interface ReportRequestBody {
     quizCorrect?: number;
     quizTotal?: number;
     recallMistakes?: number;
+    /** Did the user finish the whole module (reach the chest)? Defaults true. */
+    completed?: boolean;
   };
   transcript?: Turn[];
 }
@@ -82,26 +84,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const keyPoints = asStringArray(body.keyPoints, 8);
     const turns = Array.isArray(body.transcript) ? body.transcript.slice(0, 40) : [];
 
-    const transcriptText =
-      turns
-        .map((t) => `${t.role === 'user' ? 'משתמש' : 'שארק'}: ${String(t.text ?? '').slice(0, 600)}`)
-        .join('\n') || '(לא נאמר דבר — המשתמש כמעט ולא דיבר)';
+    const hasTranscript = turns.length > 0;
+    const transcriptText = hasTranscript
+      ? turns
+          .map((t) => `${t.role === 'user' ? 'משתמש' : 'שארק'}: ${String(t.text ?? '').slice(0, 600)}`)
+          .join('\n')
+      : '(לא התקיימה שיחה קולית — הדוח מבוסס על כל פעילות המודולה: המושגים שנלמדו, ביצועי הקוויז, והשלמת המודולה)';
 
     const perf = body.performance ?? {};
-    const perfText = `קוויזים במודולה: ${perf.quizCorrect ?? 0}/${perf.quizTotal ?? 0} נכון. טעויות בתרגול: ${perf.recallMistakes ?? 0}.`;
+    const completed = perf.completed !== false; // a report means the module was finished
+    const quizTotal = Number(perf.quizTotal ?? 0);
+    const quizCorrect = Number(perf.quizCorrect ?? 0);
+    const quizRatio = quizTotal > 0 ? Math.max(0, Math.min(1, quizCorrect / quizTotal)) : null;
+    const perfText = [
+      completed ? 'המשתמש סיים את כל המודולה (הגיע לתיבה) — השלמה מלאה.' : 'המשתמש עדיין באמצע המודולה.',
+      quizTotal > 0
+        ? `ביצועי קוויז במודולה: ${quizCorrect}/${quizTotal} נכון.`
+        : 'לא נצברו נתוני קוויז במפורש במודולה הזו (לדרג לפי ההשלמה והחומר).',
+    ].join(' ');
 
     const systemPrompt = `אתה "קפטן שארק" מ-FinPlay, מאמן פיננסי חם ומעורר-השראה לבני דור Z בישראל.
-הרגע סיימת שיחת בדיקת-הבנה קצרה עם המשתמש על המודולה "${title}".
-המטרה: דוח שמרגיש כמו מאמן אישי שמאמין בך — מחמיא, ספציפי, ונותן ערך אמיתי, כך שהמשתמש *ירצה לחזור ולשחק עוד*.
+המשתמש הרגע **סיים את כל המודולה** "${title}" — זו הצלחה בפני עצמה. אתה כותב לו "דוח סיכום שיעור": סיכום חם ואישי של כל מה שלמד והפגין במודולה כולה.
+הדוח מבוסס על **כל פעילות המודולה** — המושגים שנלמדו, ביצועי הקוויז, ועצם השלמת המודולה — ובנוסף, אם התקיימה שיחת-הבנה קולית עם שארק, גם מה שנאמר בה. השיחה היא רק חלק אחד; גם בלעדיה יש דוח מלא ומשמעותי על כל השיעור.
 עקרונות (חשובים):
+- מי שסיים את המודולה כבר בנה בסיס מוצק. הציון משקף כמה החומר הוטמע, ומתחיל מבסיס טוב — **לעולם לא 0, לעולם לא בושה**. גם סיכום מעולה מקבל לפחות אמצע-הדרך.
 - חם ומעודד תמיד. חוגג ספציפית מה שהמשתמש כן תפס ("תפסת ש...") כדי שירגיש מסוגל — תחושת מסוגלות היא מה שמחזיר אותו.
 - ערך אמיתי: כל נקודת-שיפור היא צעד-הבא אחד, קטן וקונקרטי שקל לבצע — לא רשימת טעויות ולא "טעית ב...".
-- מנטליות צמיחה: ציון נמוך = "אתה בונה את זה, עוד סבב ואתה שם" — לעולם לא ביקורת, בושה או טון מאכזב.
+- מנטליות צמיחה: ציון בינוני = "אתה בונה את זה, עוד סבב ואתה שם" — לעולם לא ביקורת או טון מאכזב.
 - סיים בנימה שמושכת לסבב הבא: תן סיבה אחת מסקרנת/מתגמלת להמשיך ללמוד.
-- הוגנות: דרג לפי מה שבאמת נאמר בתמלול + הביצועים, אל תמציא ואל תזכה הבנה שלא הוצגה — אבל נסח כל ציון בעידוד. כשיש תמלול, התייחס ישירות למה שהמשתמש אמר ("כשאמרת ... ראיתי ש..."). אם אין תמלול עדיין, דרג לפי הקוויז/התרגול ונסח כהזמנה חמה לבדיקה הקולית.
+- הוגנות: דרג לפי הראיות (השלמה, קוויז, ותמלול אם יש). כשיש תמלול — התייחס ישירות למה שהמשתמש אמר ("כשאמרת ... ראיתי ש..."). **כשאין תמלול — אל תאמר שהמשתמש "לא דיבר"/"לא ענה"; פשוט סכם את החומר והביצועים של המודולה כולה**, והזמן בחום לנסות גם את בדיקת-ההבנה הקולית.
+- חובה: תמיד לפחות חוזקה אחת (strengthsHe) ולפחות צעד-שיפור אחד (improvementsHe), ושורת perConcept אחת לכל מושג ברשימת המושגים.
 - עברית, קול שארק, בלי אימוג'ים, בלי המילה "ז'רגון", בלי אנגלית מיותרת, גוף שני יחיד.
 החזר JSON תקין בלבד בסכמה:
-{"understandingScore": <0-100>, "verdictHe": "<משפט אחד חם שמסכם + מושך להמשך>", "strengthsHe": ["<מה תפסת טוב, ספציפי וגאה>", ...], "improvementsHe": ["<צעד-הבא אחד קטן ומזמין>", ...], "perConcept": [{"concept": "<שם המושג>", "graspPct": <0-100>}, ...]}
+{"understandingScore": <0-100>, "verdictHe": "<משפט אחד חם שמסכם את כל השיעור + מושך להמשך>", "strengthsHe": ["<מה תפסת טוב, ספציפי וגאה>", ...], "improvementsHe": ["<צעד-הבא אחד קטן ומזמין>", ...], "perConcept": [{"concept": "<שם המושג>", "graspPct": <0-100>}, ...]}
 strengthsHe: 1-3 פריטים גאים וספציפיים. improvementsHe: 1-2 פריטים, כל אחד צעד-הבא מזמין (לא טעות). perConcept: שורה לכל מושג מהרשימה.`;
 
     const userPrompt = `המושגים שהמודולה לימדה:
@@ -110,15 +125,14 @@ ${concepts.map((c) => `- ${c}`).join('\n') || '- (לא סופקו)'}
 מה נחשב הבנה טובה (רוּבריקה):
 ${keyPoints.map((k) => `- ${k}`).join('\n') || '- (לא סופקה)'}
 
-השאלות ששארק שאל:
-${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '(לא סופקו)'}
+${hasTranscript ? `השאלות ששארק שאל בשיחה:\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n') || '(לא סופקו)'}` : 'לא התקיימה שיחת-הבנה קולית במודולה הזו.'}
 
-${perfText}
+ביצועים במודולה: ${perfText}
 
-תמלול השיחה:
+תמלול השיחה הקולית:
 ${transcriptText}
 
-הפק עכשיו את דוח-ההבנה כ-JSON לפי הסכמה.`;
+הפק עכשיו את דוח-סיכום-השיעור (על כל המודולה) כ-JSON לפי הסכמה.`;
 
     const upstream = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
@@ -156,19 +170,49 @@ ${transcriptText}
       }
     }
 
+    // Completion floor: finishing the whole module is a real achievement, so a
+    // completed module can NEVER score 0. Base 50 for completion; the quiz nudges
+    // it up to 90. We only FLOOR the AI's score — never cap a higher one (e.g. a
+    // great voice transcript can still push past the floor).
+    const completionFloor = completed
+      ? quizRatio !== null
+        ? Math.round(45 + quizRatio * 45) // quiz 0%→45, 50%→67, 100%→90
+        : 50 // completed, no quiz signal → solid "you've got the base"
+      : 0;
+    const understandingScore = Math.max(clampPct(parsed.understandingScore), completionFloor);
+
+    // Never show an empty report. A finished module always gets at least one
+    // proud strength and one inviting next-step, plus a per-concept recap — so
+    // the screen shows real content even when the AI returns sparse arrays.
+    let strengthsHe = asStringArray(parsed.strengthsHe, 3);
+    if (strengthsHe.length === 0) {
+      strengthsHe = [`סיימת את כל "${title}" — הבסיס כבר אצלך, וזה הדבר הכי חשוב.`];
+    }
+    let improvementsHe = asStringArray(parsed.improvementsHe, 3);
+    if (improvementsHe.length === 0) {
+      improvementsHe = concepts[0]
+        ? [`סבב חזרה קצר על "${concepts[0]}" יקבע את זה אצלך עוד יותר חזק.`]
+        : ['סבב חזרה קצר על המודולה יחדד את מה שכבר תפסת.'];
+    }
+    let perConcept: PerConcept[] = Array.isArray(parsed.perConcept)
+      ? parsed.perConcept
+          .filter((p): p is PerConcept => !!p && typeof p.concept === 'string')
+          .map((p) => ({ concept: p.concept.trim().slice(0, 80), graspPct: clampPct(p.graspPct) }))
+          .slice(0, 8)
+      : [];
+    if (perConcept.length === 0 && concepts.length > 0) {
+      // Recap fallback: list every concept at the module's overall grasp level.
+      perConcept = concepts.slice(0, 8).map((c) => ({ concept: c.slice(0, 80), graspPct: understandingScore }));
+    }
+
     const report: ComprehensionReport = {
-      understandingScore: clampPct(parsed.understandingScore),
+      understandingScore,
       verdictHe:
         (typeof parsed.verdictHe === 'string' && parsed.verdictHe.trim()) ||
         'כיף שלמדת איתי! בוא נראה איפה אתה כבר זוהר — ומה ננצח יחד בסבב הבא.',
-      strengthsHe: asStringArray(parsed.strengthsHe, 3),
-      improvementsHe: asStringArray(parsed.improvementsHe, 3),
-      perConcept: Array.isArray(parsed.perConcept)
-        ? parsed.perConcept
-            .filter((p): p is PerConcept => !!p && typeof p.concept === 'string')
-            .map((p) => ({ concept: p.concept.trim().slice(0, 80), graspPct: clampPct(p.graspPct) }))
-            .slice(0, 8)
-        : [],
+      strengthsHe,
+      improvementsHe,
+      perConcept,
     };
 
     return res.status(200).json({ ok: true, report });

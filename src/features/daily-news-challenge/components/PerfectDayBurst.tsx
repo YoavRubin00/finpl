@@ -29,7 +29,7 @@ export function PerfectDayBurst({ show }: PerfectDayBurstProps): React.ReactElem
   return (
     <View style={styles.wrap} pointerEvents="none">
       {!reduceMotion && <ConfettiExplosion />}
-      <Animated.View entering={FadeInUp.duration(360).springify().damping(14)} style={styles.badgeRow}>
+      <Animated.View entering={FadeInUp.duration(360)} style={styles.badgeRow}>
         <View style={styles.finnWrap}>
           <ExpoImage
             source={FINN_DANCING}

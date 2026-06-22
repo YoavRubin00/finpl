@@ -243,7 +243,7 @@ function FeedbackCard({
       <View style={styles.riskCallout}>
         <Text style={[styles.riskCalloutLabel, RTL]}>למה זה חשוב?</Text>
         <Text style={[styles.riskCalloutBody, RTL]}>
-          שוק ההון מסוכן למי שלא מבין אותו. הדרך היחידה לנטרל את הסיכון היא ללמוד להכיר את הכלים, ואת זה בדיוק אתם עושים עכשיו.
+          שוק ההון מסוכן רק למי שלא מבין אותו, ואתם כבר לומדים.
         </Text>
       </View>
 

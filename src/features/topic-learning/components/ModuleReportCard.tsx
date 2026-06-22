@@ -64,7 +64,7 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
 
   const score = stored?.report.understandingScore ?? null;
   const subtitle = stored
-    ? `הבנה: ${score}/100 · לחץ לצפייה`
+    ? 'הסיכום האישי שלך מוכן · לחץ לצפייה'
     : generating
       ? 'מכין דוח…'
       : isPro
@@ -74,7 +74,7 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
 
   return (
     <Animated.View entering={FadeInDown.duration(320)}>
-      <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="דוח סיכום שיעור" style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
         <View style={styles.avatarWrap}>
           <Text style={styles.reportEmoji}>📋</Text>
         </View>
@@ -83,11 +83,16 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
           <Text style={[RTL, styles.subtitle]} numberOfLines={1}>{subtitle}</Text>
         </View>
         {generating ? (
-          <ActivityIndicator color="#0369a1" />
+          <ActivityIndicator color="#a16207" />
+        ) : stored && score !== null ? (
+          <View style={styles.scoreChip}>
+            <Text style={styles.scoreNum}>{score}</Text>
+            <Text style={styles.scoreMax}>/100</Text>
+          </View>
         ) : (
           <View style={styles.ctaChip}>
             <Text style={styles.ctaText}>{ctaText}</Text>
-            <ChevronLeft size={16} color="#0c4a6e" strokeWidth={2.6} />
+            <ChevronLeft size={16} color="#5c3a00" strokeWidth={2.8} />
           </View>
         )}
       </Pressable>
@@ -112,42 +117,51 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 10,
     marginHorizontal: 12,
-    padding: 12,
+    padding: 14,
     borderRadius: 18,
-    backgroundColor: '#bfdbfe',
-    borderWidth: 1,
-    borderColor: '#38bdf8',
-    shadowColor: '#0369a1',
-    shadowOpacity: 0.18,
+    backgroundColor: '#fffdf5',
+    borderWidth: 1.5,
+    borderColor: '#f0c000',
+    shadowColor: '#a16207',
+    shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
   cardPressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
   avatarWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#fff',
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#fef3c7',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#0ea5e9',
+    borderWidth: 1.5,
+    borderColor: '#f0c000',
   },
   reportEmoji: { fontSize: 26 },
-  title: { color: '#0c4a6e', fontSize: 15, fontWeight: '900' },
-  subtitle: { color: '#0369a1', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  title: { color: '#5c3a00', fontSize: 16, fontWeight: '900', textAlign: 'right' },
+  subtitle: { color: '#7c4a03', fontSize: 12, fontWeight: '700', textAlign: 'right', marginTop: 2 },
+  scoreChip: {
+    flexDirection: 'row-reverse',
+    alignItems: 'baseline',
+    gap: 1,
+    backgroundColor: '#f0c000',
+    borderRadius: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  scoreNum: { color: '#3a2400', fontSize: 18, fontWeight: '900' },
+  scoreMax: { color: '#7c4a03', fontSize: 11, fontWeight: '800' },
   ctaChip: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 2,
-    backgroundColor: '#fff',
+    backgroundColor: '#f0c000',
     borderRadius: 999,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#7dd3fc',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
-  ctaText: { color: '#0c4a6e', fontSize: 13, fontWeight: '800' },
+  ctaText: { color: '#3a2400', fontSize: 14, fontWeight: '900' },
   modalSafe: { flex: 1, backgroundColor: '#0b1735' },
 });

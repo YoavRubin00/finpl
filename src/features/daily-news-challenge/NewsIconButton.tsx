@@ -38,25 +38,17 @@ export function NewsIconButton({
   const reducedMotion = useReducedMotion();
   const shouldPulse = !newsCompleted && !reducedMotion;
 
-  const scale = useSharedValue(1);
   const glow = useSharedValue(0);
 
+  // The icon's idle scale-throb was retired 2026-06-22 (read as a "רעידה" on
+  // the entry icon, Yoav). Only the soft glow halo pulses now, so the entry
+  // point stays discoverable without the trembling.
   useEffect(() => {
     if (!shouldPulse) {
-      cancelAnimation(scale);
       cancelAnimation(glow);
-      scale.value = withTiming(1, { duration: 200 });
       glow.value = withTiming(0, { duration: 200 });
       return;
     }
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.06, { duration: 900 }),
-        withTiming(1, { duration: 900 }),
-      ),
-      -1,
-      false,
-    );
     glow.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 900 }),
@@ -65,11 +57,8 @@ export function NewsIconButton({
       -1,
       false,
     );
-  }, [shouldPulse, scale, glow]);
+  }, [shouldPulse, glow]);
 
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
   const glowStyle = useAnimatedStyle(() => ({
     opacity: (compact ? 0.18 : 0.22) * glow.value,
     transform: [{ scale: 0.85 + (compact ? 0.2 : 0.3) * glow.value }],
@@ -118,9 +107,7 @@ export function NewsIconButton({
           ]}
         />
       ) : null}
-      <Animated.View style={iconStyle}>
-        <Newspaper size={size} color={iconColor} strokeWidth={2.4} />
-      </Animated.View>
+      <Newspaper size={size} color={iconColor} strokeWidth={2.4} />
       {showUnreadDot ? (
         <View
           style={{

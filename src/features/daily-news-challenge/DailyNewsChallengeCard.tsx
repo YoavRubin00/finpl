@@ -115,7 +115,7 @@ export function DailyNewsChallengeCard({
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(320).springify().damping(18)} style={[animatedStyle, styles.cardWrap]}>
+    <Animated.View entering={FadeInDown.duration(320)} style={[animatedStyle, styles.cardWrap]}>
       {/* Gold pulse ring — only when fresh + daytime. Sits beneath the card
           so the gradient/content overlays it cleanly. Native shadow on iOS,
           web falls back to box-shadow via the same color. */}

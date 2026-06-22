@@ -36,8 +36,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!upstream.ok) {
+      // Surface the real ElevenLabs failure so a 502 isn't a black box. The body
+      // is ElevenLabs' own error JSON (e.g. {"detail":{"status":"agent_not_found"}})
+      // — non-secret, and the single fastest way to tell wrong-agent-id from
+      // wrong-workspace from plan-not-enabled. Logged + echoed as upstreamStatus.
+      const detail = await upstream.text().catch(() => '');
+      console.error(`[voice/session] ElevenLabs ${upstream.status}: ${detail.slice(0, 300)}`);
       return res.status(upstream.status === 401 ? 503 : 502).json({
         error: 'Voice service upstream error.',
+        upstreamStatus: upstream.status,
+        upstreamDetail: detail.slice(0, 300),
       });
     }
 

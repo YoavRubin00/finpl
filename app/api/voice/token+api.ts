@@ -40,8 +40,12 @@ export async function POST(request: Request): Promise<Response> {
     });
 
     if (!upstream.ok) {
+      // Echo ElevenLabs' real error (non-secret) so a 502 is diagnosable —
+      // agent_not_found vs wrong-workspace vs plan-not-enabled.
+      const detail = await upstream.text().catch(() => '');
+      console.error(`[voice/token] ElevenLabs ${upstream.status}: ${detail.slice(0, 300)}`);
       return Response.json(
-        { error: 'Voice service upstream error.' },
+        { error: 'Voice service upstream error.', upstreamStatus: upstream.status, upstreamDetail: detail.slice(0, 300) },
         { status: upstream.status === 401 ? 503 : 502 },
       );
     }

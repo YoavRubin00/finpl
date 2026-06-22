@@ -65,7 +65,7 @@ export function ChestsPage({
         />
 
         {bothChestsDone && (
-          <Animated.View entering={FadeInUp.delay(400).duration(360).springify().damping(16)}>
+          <Animated.View entering={FadeInUp.delay(400).duration(360)}>
             <ShareCard dateKey={dateKey} results={itemResults} streak={streak} />
           </Animated.View>
         )}
