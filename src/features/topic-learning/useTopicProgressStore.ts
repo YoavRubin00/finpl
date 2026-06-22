@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
-import { useKnowledgeTreeStore } from '../knowledge-tree/useKnowledgeTreeStore';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { CHIP_COMPLETE_XP, CHIP_COMPLETE_COINS } from '../../constants/economy';
 import type { Topic, TopicProgressEntry, ModuleTopicSummary, ChestRarity } from './types';
@@ -118,10 +117,6 @@ export const useTopicProgressStore = create<TopicProgressState>()(
             },
           });
         } catch { /* non-fatal */ }
-        // Water the Knowledge Tree — topic learning is a value action. The
-        // topic-tree path doesn't route through markDailyActivityCompleted, so
-        // we water directly here. Idempotent per IL day; non-fatal.
-        try { useKnowledgeTreeStore.getState().waterToday(); } catch { /* non-fatal */ }
         // Real per-chip reward (Yoav 2026-06-22: chips must grant actual XP +
         // gold, not just a rising-XP animation). Guarded by the first-completion
         // early-return above, so this fires exactly once per chip. Small by

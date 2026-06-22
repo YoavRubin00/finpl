@@ -9,7 +9,6 @@ import { useEconomyUIStore } from './useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { captureEvent, setPersonProperties } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
-import { useKnowledgeTreeStore } from '../knowledge-tree/useKnowledgeTreeStore';
 
 export const streakQueryKey = ['streak'] as const;
 
@@ -132,11 +131,6 @@ async function emitDailyActivitySignals(
 export function markDailyActivityCompleted(): void {
   // Local first: synchronous, drives the popup + activeDates calendar.
   try { useEconomyUIStore.getState().completeDailyTask(); } catch { /* non-fatal */ }
-  // Grow the profile "עץ הידע" (Knowledge Tree) — one watering per IL day.
-  // Idempotent in the store, so firing on every value action is safe. This is
-  // the value-action trigger (NOT the app-open tick), so the tree only grows
-  // on real activity, exactly as intended.
-  try { useKnowledgeTreeStore.getState().waterToday(); } catch { /* non-fatal */ }
   // Server next: async, persists across devices + powers notifications.
   // Server is already idempotent per dateIl, so fire-and-forget is safe.
   // Snapshot pre-call streak so we can detect a real "extension" after the

@@ -43,7 +43,6 @@ import { computeReferralTier } from "../social/referralData";
 import { getAvatarById } from "../avatars/avatarData";
 import { AvatarImage } from "../avatars/AvatarImage";
 import { EditProfileModal } from "./EditProfileModal";
-import { KnowledgeTreeCard } from "../knowledge-tree/KnowledgeTreeCard";
 import { ProfilingFlow } from "../onboarding/ProfilingFlow";
 import { useTheme } from "../../hooks/useTheme";
 import { ProBadge } from "../../components/ui/ProBadge";
@@ -155,7 +154,6 @@ export function ProfileScreen() {
   // Entrance animations
   const avatarStyle = useEntranceAnimation(fadeInScale, { delay: 0, spring: SPRING_BOUNCY });
   const streakStyle = useEntranceAnimation(fadeInUp, { delay: 100 });
-  const knowledgeTreeStyle = useEntranceAnimation(fadeInUp, { delay: 200 });
   const xpCardStyle = useEntranceAnimation(fadeInUp, { delay: 180 });
   const statsLeftStyle = useEntranceAnimation(slideInLeft, { delay: 260 });
   const statsRightStyle = useEntranceAnimation(slideInRight, { delay: 260 });
@@ -490,12 +488,6 @@ export function ProfileScreen() {
                 </View>
               </View>
             </AnimatedPressable>
-
-          {/* עץ הידע — daily-watering knowledge tree (retention). Sits under
-              the streak strip since both are daily-habit surfaces. */}
-          <Animated.View style={knowledgeTreeStyle}>
-            <KnowledgeTreeCard />
-          </Animated.View>
 
             {/* Profile info, moved below Invite Friends */}
             {profile && (
