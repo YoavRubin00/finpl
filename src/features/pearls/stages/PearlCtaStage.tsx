@@ -5,6 +5,7 @@ import { FeedTradingNudgeCard } from './cards/FeedTradingNudgeCard';
 import { FeedWhatsAppNudgeCard } from './cards/FeedWhatsAppNudgeCard';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { track } from '../../../lib/analytics/events';
+import { pickBarCta } from '../../bar-content/barCtaApi';
 
 export type PearlCtaKind = 'referral' | 'trading' | 'whatsapp';
 
@@ -68,6 +69,9 @@ export function PearlCtaStage({ isActive, onContinue, onTapCta, kind, afterModul
           chapter_id: chapterId,
           cta_kind: kind,
           effective_kind: effectiveKind,
+          // A/B variant from bar_content (empty until Bar populates CTA rows).
+          // Threaded so shown/tapped/dismissed all carry the same variant key.
+          cta_variant: pickBarCta(effectiveKind)?.variant,
         },
       });
     } catch { /* non-fatal */ }
