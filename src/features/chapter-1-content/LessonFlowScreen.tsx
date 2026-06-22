@@ -4820,7 +4820,10 @@ export function LessonFlowScreen() {
                                 }
                                 completeModule(mod.id);
                                 clearResume(mod.id);
-                                useEconomyUIStore.getState().completeDailyTask();
+                                // Unified streak credit (local popup + server sync
+                                // for notifications/cross-device), not a bare
+                                // completeDailyTask() which only updated local state.
+                                markDailyActivityCompleted();
                                 const durationSec = Math.round((Date.now() - moduleStartTimeRef.current) / 1000);
                                 if (durationSec >= 5 && durationSec <= 7200) {
                                   apiRecordModuleDuration(mod.id, durationSec)

@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { markDailyActivityCompleted } from "../economy/useStreak";
 import { DAILY_CHALLENGES } from "./arenaData";
 import type { ChallengeProgress } from "./types";
 
@@ -45,12 +46,14 @@ export const useArenaStore = create<ArenaState>()(
         economy.addCoins(challenge.coinReward);
 
         // If this is the first challenge completed today, also trigger the
-        // daily task streak logic (XP + base Coins + streak increment).
+        // daily task streak logic. Use the unified helper (local popup + server
+        // sync for notifications/cross-device) — a bare completeDailyTask() only
+        // updated local state, so an Arena-only day never reached the server.
         const anyCompletedToday = Object.values(get().progress).some(
           (p) => p.completedDate === today
         );
         if (!anyCompletedToday) {
-          economy.completeDailyTask();
+          markDailyActivityCompleted();
         }
 
         set((state) => ({
