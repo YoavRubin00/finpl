@@ -1359,6 +1359,11 @@ export function DuoLearnScreen() {
   // fully done the hero collapses into a compact "סיימת!" pill so it stops
   // being permanent clutter but still confirms the daily ritual is closed.
   const newsFullyDone = newsCompletedToday && (isPro ? newsProChestOpened : true);
+  // Yoav 2026-06-22: disable the Daily News Challenge ("אקטואליה פיננסית") HERO
+  // at the top of the learn map ("תבטל את האקטואליה הפיננסית שקופצת בחלק העליון
+  // של מפת הלמידה"). Data + sheet wiring stay so it can be re-enabled or
+  // surfaced elsewhere later.
+  const showNewsHero = false;
 
   // Swipe + dilemma daily-quest modals. Each used to live in /quest/* routes
   // that hosted the card standalone, but those routes broke after the Feed
@@ -2831,7 +2836,7 @@ export function DuoLearnScreen() {
               Done-state collapses: while there's something to do we show the
               full pulsing hero; once fully done it collapses to a compact
               "סיימת!" pill so it stops being permanent clutter. */}
-          {!isWalkthroughActive && newsChallenge ? (
+          {showNewsHero && !isWalkthroughActive && newsChallenge ? (
             newsFullyDone ? (
               <Pressable
                 onPress={handleNewsCardPress}
