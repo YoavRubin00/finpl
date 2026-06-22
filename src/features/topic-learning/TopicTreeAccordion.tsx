@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { successHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
@@ -189,6 +189,16 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // Threshold crossing side effects.
   const past70Ref = useRef<boolean>(false);
   const past100Ref = useRef<boolean>(false);
+  // The chest is fired by the effect below, which only runs while this accordion
+  // is mounted + re-rendering. When the crossing chip is a full-screen sim/quiz
+  // (e.g. insurance "מי נגד מי") the accordion is backgrounded as that chip
+  // completes, so the effect misses the exact 70% crossing and only catches up
+  // on the next re-render — the user saw the chest (and the report snapshot) land
+  // a chip LATE (Yoav 2026-06-22). Re-poke the effect whenever the accordion
+  // regains focus so the chest fires the moment we return from the chip. The
+  // atomic stampModuleThreshold below keeps it single-fire.
+  const [focusTick, setFocusTick] = useState(0);
+  useFocusEffect(useCallback(() => { setFocusTick((t) => t + 1); }, []));
   // R8 pre-release audit (Yoav + הסורק 2026-06-11): removed the
   // `seventyFiredThisMountRef` + `lastChestRollRef` workaround. They
   // dedup'd recordChestOpen() but the underlying TWO useEffects still
@@ -452,7 +462,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-  }, [summary.isModuleDone, summary.pct, quizAnswered, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
+  }, [summary.isModuleDone, summary.pct, quizAnswered, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
