@@ -64,7 +64,6 @@ import { useReferralStore } from "../social/useReferralStore";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
-import { NotificationPermissionPrompt } from "../notifications/NotificationPermissionPrompt";
 import { ToolsDiscoveryBanner } from "../../components/ui/ToolsDiscoveryBanner";
 import { BridgeCTABanner } from "../../components/ui/BridgeCTABanner";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
@@ -2591,16 +2590,13 @@ export function DuoLearnScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Unified notification-permission banner — the SAME "אתם מפספסים
-          התראות ממני" prompt shows for everyone post-walkthrough. Held back
-          until the guest register CTA is handled (pendingPostWalkthroughCTA
-          clears) so it lands after the register prompt, not competing. */}
+      {/* Unified notification-permission banner — the SINGLE thin top ask
+          (the prominent centered modal was retired, Yoav 2026-06-22: "באנר
+          עליון דק"). Held back until the guest register CTA is handled
+          (pendingPostWalkthroughCTA clears) so it lands after the register
+          prompt; fires once after the mod-0-1 chest, on the map between 0-1
+          and 0-1b, then recurs on the 14-day cooldown. */}
       {!isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionBanner />}
-      {/* Prominent ONE-TIME Captain-Shark OS-permission prompt (soft-ask before
-          the OS hard-ask, so we don't burn iOS's single dialog on a likely
-          deny). Owns the FIRST ask; the banner above is the recurring 14-day
-          fallback (gated on notifPromptShown). Yoav 2026-06-21. */}
-      {!isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionPrompt />}
       {/* Tools discovery — only on this main learning screen (NOT in the
           lesson flow). Self-gated to 5s presence + cooldown + 1/day per
           calendar day. Yields slot to NotificationPermissionBanner. */}
