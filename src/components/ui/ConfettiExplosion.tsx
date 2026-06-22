@@ -24,19 +24,21 @@ interface Particle {
   shape: "circle" | "square" | "star";
 }
 
-function generateParticles(): Particle[] {
-  return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-    const angle = (Math.PI * 2 * i) / PARTICLE_COUNT + (Math.random() - 0.5) * 0.8;
-    const distance = 100 + Math.random() * 180;
+function generateParticles(count: number, gentle: boolean): Particle[] {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.8;
+    // Gentle: shorter travel + smaller particles for a soft, non-dominant
+    // sprinkle (e.g. on every chip completion) vs the full chest-open burst.
+    const distance = gentle ? 50 + Math.random() * 90 : 100 + Math.random() * 180;
     const shapes: Particle["shape"][] = ["circle", "square", "star"];
     return {
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       startX: 0,
       startY: 0,
       endX: Math.cos(angle) * distance,
-      endY: Math.sin(angle) * distance - 40 - Math.random() * 60,
+      endY: Math.sin(angle) * distance - (gentle ? 24 : 40) - Math.random() * (gentle ? 30 : 60),
       rotation: Math.random() * 720 - 360,
-      size: 7 + Math.random() * 10,
+      size: gentle ? 4 + Math.random() * 6 : 7 + Math.random() * 10,
       delay: Math.random() * 200,
       shape: shapes[Math.floor(Math.random() * shapes.length)],
     };
@@ -92,16 +94,20 @@ function ConfettiParticle({ particle }: { particle: Particle }) {
 
 interface ConfettiExplosionProps {
   onComplete?: () => void;
+  /** Particle count. Default 30 (full burst); lower for a subtler effect. */
+  particleCount?: number;
+  /** Gentler look: smaller particles + shorter travel. Default false. */
+  gentle?: boolean;
 }
 
-export function ConfettiExplosion({ onComplete }: ConfettiExplosionProps) {
+export function ConfettiExplosion({ onComplete, particleCount = PARTICLE_COUNT, gentle = false }: ConfettiExplosionProps) {
   const reduceMotion = useReducedMotion();
   // Stable ref so changing onComplete identity never restarts the timer
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
-  // Generate particles once per mount
-  const particles = useMemo(() => generateParticles(), []);
+  // Generate particles once per mount (or when count/gentle change)
+  const particles = useMemo(() => generateParticles(particleCount, gentle), [particleCount, gentle]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

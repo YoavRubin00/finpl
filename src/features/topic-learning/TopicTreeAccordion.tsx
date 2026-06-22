@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
-import { mediumHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
+import { successHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { captureEvent } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
@@ -19,7 +19,7 @@ import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import type { Module } from '../chapter-1-content/types';
 import type { Topic, ChestRarity } from './types';
-import { CHEST_RARITY_BONUS } from './types';
+import { CHEST_RARITY_BONUS, chestThresholdFor } from './types';
 import { resolveTopics } from './topicResolver';
 import { getModuleTool, buildToolTopic } from './moduleToolMap';
 import { getModuleCarousel, buildCarouselTopic } from './moduleCarouselMap';
@@ -28,6 +28,7 @@ import { useTopicProgressStore } from './useTopicProgressStore';
 import { useContinuousRunStore } from './useContinuousRunStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
+import { SharkChipCallout } from './components/SharkChipCallout';
 import { ModuleReportCard } from './components/ModuleReportCard';
 import { ModuleSharkCallCard } from './components/ModuleSharkCallCard';
 import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleComprehensionStore';
@@ -118,6 +119,15 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     [module.id, topics, completedMap],
   );
 
+  // Chips still needed to open the 70% chest — drives the SharkChipCallout
+  // proximity copy. Read the per-module threshold (0.7 default / 0.5 for
+  // mod-0-1/mod-0-2) the same way the store does; never hardcode it.
+  const chestRemaining = Math.max(
+    0,
+    Math.ceil(summary.total * chestThresholdFor(module.id)) - summary.completed,
+  );
+  const isFirstChestModule = module.id === 'mod-0-1' || module.id === 'mod-0-2';
+
   const isCompletedMap = useMemo(() => {
     const out: Record<string, boolean> = {};
     topics.forEach((t) => { out[t.id] = Boolean(completedMap[t.id]); });
@@ -170,8 +180,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     module.id !== 'mod-0-1' || Boolean(knowledgeLevel) || mod01KnowledgeResolved;
 
   // Threshold crossing side effects.
-  const past25Ref = useRef<boolean>(false);
-  const past50Ref = useRef<boolean>(false);
   const past70Ref = useRef<boolean>(false);
   const past100Ref = useRef<boolean>(false);
   // R8 pre-release audit (Yoav + הסורק 2026-06-11): removed the
@@ -181,21 +189,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // one commit (both `addCoins` calls ran, only the master `setChestState`
   // persisted → silent double payout, single modal). The two effects are
   // now unified into one below; the refs are unnecessary.
-  // Single timer for the milestone toast. Without it, two crossings (25% then
-  // 50%) leave two dangling setTimeouts — the first nulls the second's toast
-  // early, and an unmount mid-toast set state on an unmounted component
-  // (Yoav 2026-06-11 QA). Clear-before-set + unmount cleanup fixes both.
-  const milestoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
-  }, []);
-  // R8 U4 — mid-module micro-celebration toast (25% / 50%).
-  // Hay Day / Duolingo rhythm: variable rewards every 1-2 milestones
-  // instead of 70%-only silence.
-  const [milestoneToast, setMilestoneToast] = useState<{
-    label: string;
-    emoji: string;
-  } | null>(null);
+  // Captain Shark chip-completion call-out (Yoav 2026-06-22). Replaces the old
+  // 25%/50% milestone toasts: a transient encouragement (rotating webp +
+  // proximity copy + gentle confetti) on EVERY real chip completion, pulling
+  // the user toward the 70% chest. `calloutSeq` increments once per genuine
+  // completion; `prevCompletedRef` is the hydration-seeded baseline so the
+  // initial pct/completed catch-up doesn't fire it.
+  const prevCompletedRef = useRef<number | null>(null);
+  const [calloutSeq, setCalloutSeq] = useState(0);
   // Chest display state — driven from either the 70% or 100% useEffects
   // so the same ChestCelebrationModal can host both reveals. null = not
   // showing.
@@ -265,48 +266,32 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     if (!progressHydrated) return;
     past70Ref.current = modulePastThreshold;
     past100Ref.current = moduleFullyComplete;
-    // R8 U4 — seed 25/50% refs from current pct so re-mount after
-    // crossing doesn't replay the toast. Also covers users who land
-    // past 25% from a deep link / hot reload.
-    if (summary.pct >= 25) past25Ref.current = true;
-    if (summary.pct >= 50) past50Ref.current = true;
+    // Seed the call-out baseline from the hydrated completed-count so the
+    // initial catch-up (0 → real value) doesn't fire a spurious call-out on
+    // cold start / deep link / hot reload.
+    prevCompletedRef.current = summary.completed;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progressHydrated]);
 
-  // R8 U4 — mid-module milestone crossings: 25% + 50%. Light celebration
-  // only (toast + haptic + sound, NO modal) so it doesn't compete with
-  // the 70% chest gravity. Dismisses itself after 1800ms.
-  // Architect P2 (2026-06-11): consolidated from two parallel useEffects
-  // into one — both watched the same summary.pct + summary.isModuleDone
-  // and only one threshold can cross per commit, so a single effect with
-  // an if/else is simpler and avoids running both bodies in the rare case
-  // pct jumps from <25 directly to >=50.
+  // Chip-completion call-out trigger (folds in the old 25%/50% toasts). Fires
+  // once per genuine chip completion via the SharkChipCallout below. Gated by
+  // hydration (so the initial catch-up is silent) and SKIPPED on the
+  // completion that crosses the threshold — that moment belongs to the
+  // ChestCelebrationModal, not a call-out. Only one threshold band can change
+  // per commit, and summary.completed counts real learning topics only (the
+  // display-only carousel/tool chips aren't in `topics`), so a single guarded
+  // increment is correct.
   useEffect(() => {
-    // Pre-hydration silence: refs aren't seeded yet, so any crossing seen
-    // here would be hydration catching up, not real user progress.
     if (!progressHydrated) return;
-    if (summary.isModuleDone) return;
-    let toast: { label: string; emoji: string } | null = null;
-    if (summary.pct >= 50 && !past50Ref.current) {
-      past50Ref.current = true;
-      // Also flip past25 so we don't fire a late 25% toast if the user
-      // hit 50% in one jump.
-      past25Ref.current = true;
-      mediumHaptic();
-      try { playSound('btn_click_soft_3'); } catch { /* non-fatal */ }
-      toast = { label: 'אמצע הדרך!', emoji: '🌊' };
-    } else if (summary.pct >= 25 && !past25Ref.current) {
-      past25Ref.current = true;
-      tapHaptic();
-      try { playSound('btn_click_soft_4'); } catch { /* non-fatal */ }
-      toast = { label: 'התחלת מעולה! ¼ הדרך', emoji: '✨' };
+    if (prevCompletedRef.current === null) {
+      prevCompletedRef.current = summary.completed;
+      return;
     }
-    if (toast) {
-      setMilestoneToast(toast);
-      if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
-      milestoneTimerRef.current = setTimeout(() => setMilestoneToast(null), 1800);
+    if (summary.completed > prevCompletedRef.current && !summary.isModuleDone) {
+      setCalloutSeq((s) => s + 1);
     }
-  }, [summary.pct, summary.isModuleDone, playSound, progressHydrated]);
+    prevCompletedRef.current = summary.completed;
+  }, [summary.completed, summary.isModuleDone, progressHydrated]);
 
   // R8 pre-release audit (Yoav + הסורק 2026-06-11): UNIFIED chest drop
   // effect. Previously two separate useEffects (70% + 100%) raced when a
@@ -762,57 +747,17 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             no opt-in prompt. The tour overlay (app/_layout) has its own
             "דלג על הסיור" skip. */}
 
-        {/* R8 U4 — mid-module milestone toast (25%/50%). Floats above
-            the chip grid for ~1.8s, then auto-dismisses. Non-blocking. */}
-        {milestoneToast && (
-          <Animated.View
-            entering={FadeInDown.duration(280)}
-            exiting={FadeOut.duration(220)}
-            style={milestoneStyles.toast}
-            pointerEvents="none"
-          >
-            <Text style={milestoneStyles.toastEmoji} allowFontScaling={false}>
-              {milestoneToast.emoji}
-            </Text>
-            <Text style={milestoneStyles.toastLabel} allowFontScaling={false}>
-              {milestoneToast.label}
-            </Text>
-          </Animated.View>
-        )}
+        {/* Captain Shark chip-completion call-out (replaces the 25%/50%
+            milestone toasts) — rotating webp + proximity copy + gentle
+            confetti on every chip completion, pulling toward the 70% chest. */}
+        <SharkChipCallout
+          seq={calloutSeq}
+          remaining={chestRemaining}
+          isFirstChest={isFirstChestModule}
+        />
       </View>
     </Animated.View>
   );
-});
-
-const milestoneStyles = StyleSheet.create({
-  toast: {
-    position: 'absolute',
-    top: 12,
-    alignSelf: 'center',
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0c4a6e',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
-    shadowColor: '#0c4a6e',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
-    zIndex: 30,
-  },
-  toastEmoji: {
-    fontSize: 18,
-  },
-  toastLabel: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
-    writingDirection: 'rtl',
-    textAlign: 'right',
-  },
 });
 
 const welcomeStyles = StyleSheet.create({
