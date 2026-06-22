@@ -17,4 +17,4 @@
  * OTA-stripped `master` release flips it to `false`. (Replaces the old manual
  * "strip live-voice" commit on the ota-release branch with a one-line toggle.)
  */
-export const LIVE_VOICE_AVAILABLE = true;
+export const LIVE_VOICE_AVAILABLE = false;
