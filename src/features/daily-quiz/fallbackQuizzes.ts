@@ -16,7 +16,7 @@ const FALLBACK_QUIZZES: Record<QuizCategory, DailyQuiz[]> = {
       historicalExample: 'ב-2006 [[עקום תשואות]] התהפך, ותוך שנתיים פרץ משבר הסאבפריים. גם ב-2019 הוא התהפך, ותוך שנה הגיעה קריסת הקורונה.',
       xpReward: 50,
       coinReward: 25,
-      sourceValue: '4.50%',
+      sourceValue: '3.75%',
       sourceLabel: 'ריבית בנק ישראל',
     },
     {
@@ -33,7 +33,7 @@ const FALLBACK_QUIZZES: Record<QuizCategory, DailyQuiz[]> = {
       historicalExample: 'ב-2022 ה-Fed העלה [[ריבית]] מ-0% ל-4.5% תוך 9 חודשים, אבל ה[[אינפלציה]] התחילה לרדת רק באביב 2023, עיכוב של חצי שנה.',
       xpReward: 50,
       coinReward: 25,
-      sourceValue: '4.50%',
+      sourceValue: '3.75%',
       sourceLabel: 'ריבית בנק ישראל',
     },
     {
@@ -62,12 +62,12 @@ const FALLBACK_QUIZZES: Record<QuizCategory, DailyQuiz[]> = {
       question: 'מהו [[Carry Trade]] ולמה הוא מחזק את השקל?',
       options: ['לווים במטבע בריבית נמוכה ומשקיעים בישראל ב[[ריבית]] גבוהה', 'קונים שקלים כי הכלכלה חזקה', 'בנק ישראל מכריח משקיעים לקנות שקלים'],
       correctAnswerIndex: 0,
-      explanation: 'ב-[[Carry Trade]], משקיעים לווים ביפן ([[ריבית]] נמוכה) ומשקיעים בישראל ([[ריבית]] 4.5%). הביקוש לשקלים מחזק אותו.',
+      explanation: 'ב-[[Carry Trade]], משקיעים לווים ביפן ([[ריבית]] נמוכה) ומשקיעים בישראל ([[ריבית]] 3.75%). הביקוש לשקלים מחזק אותו.',
       citation: 'פערי ה[[ריבית]] בין ישראל ליפן מושכים עסקאות [[Carry Trade]], משקיעים זרים מזרימים מיליארדים לאג"ח שקליות',
       historicalExample: 'ב-2018 טורקיה העלתה [[ריבית]] ל-24% כדי למשוך [[Carry Trade]]. כשהסיכון גבר, הכסף ברח בבת אחת והלירה קרסה 40%.',
       xpReward: 50,
       coinReward: 25,
-      sourceValue: '4.50%',
+      sourceValue: '3.75%',
       sourceLabel: 'ריבית בנק ישראל',
     },
     {
@@ -101,7 +101,7 @@ const FALLBACK_QUIZZES: Record<QuizCategory, DailyQuiz[]> = {
       historicalExample: 'ב-2021 כלל טיילור הצביע על [[ריבית]] של 3-4% בארה"ב, אבל הFed השאיר 0%. התוצאה: [[אינפלציה]] של 9.1% ב-2022.',
       xpReward: 50,
       coinReward: 25,
-      sourceValue: '4.50%',
+      sourceValue: '3.75%',
       sourceLabel: 'ריבית בנק ישראל',
     },
     {
@@ -152,7 +152,7 @@ const FALLBACK_QUIZZES: Record<QuizCategory, DailyQuiz[]> = {
       historicalExample: 'ב-2013 ברננקי (Fed) רק רמז על צמצום QE ("Taper Tantrum"), האג"ח צנחו. ב-2019 פאוול אמר "patience", השוק זינק. מילים מזיזות שווקים.',
       xpReward: 50,
       coinReward: 25,
-      sourceValue: '4.50%',
+      sourceValue: '3.75%',
       sourceLabel: 'ריבית בנק ישראל',
     },
     {
