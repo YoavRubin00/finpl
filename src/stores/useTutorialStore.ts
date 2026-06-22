@@ -42,6 +42,10 @@ interface TutorialState {
    *  comprehension call (offered on mod-0-2). After this the live call is
    *  Pro-only; the cheap text report stays available weekly. */
   hasUsedFreeSharkCall: boolean;
+  /** One-time privacy consent for the live shark voice call — the call streams
+   *  mic audio to a third party (ElevenLabs) + the AI, so we disclose and get
+   *  explicit approval before the first call. Persisted; shown once. */
+  hasAcceptedSharkVoicePrivacy: boolean;
   /** One-shot guard for the in-pearl-topper "פנינה = תוכן בונוס, אפשר לדלג
    *  ולחזור מתי שבא לך" tooltip. Shows the first time the user enters a
    *  pearl in their lifetime, marks itself seen on tap-"הבנתי", and never
@@ -108,6 +112,7 @@ interface TutorialState {
   /** Called when the one-time notification-permission modal is shown (either CTA). */
   markNotifPromptShown: () => void;
   markFreeSharkCallUsed: () => void;
+  markSharkVoicePrivacyAccepted: () => void;
   resetWalkthrough: () => void;
   reset: () => void;
 }
@@ -130,6 +135,7 @@ export const useTutorialStore = create<TutorialState>()(
       moduleEndGateShown: {},
       hasSeenMod05BridgeCTA: false,
       hasUsedFreeSharkCall: false,
+      hasAcceptedSharkVoicePrivacy: false,
       hasSeenPearlTooltip: false,
       appWalkthroughStep: 0,
       walkthroughGlowTab: null,
@@ -157,6 +163,7 @@ export const useTutorialStore = create<TutorialState>()(
       markModuleEndGateShown: (moduleId: string) => set((s) => ({ moduleEndGateShown: { ...s.moduleEndGateShown, [moduleId]: true } })),
       markMod05BridgeCTASeen: () => set({ hasSeenMod05BridgeCTA: true }),
       markFreeSharkCallUsed: () => set({ hasUsedFreeSharkCall: true }),
+      markSharkVoicePrivacyAccepted: () => set({ hasAcceptedSharkVoicePrivacy: true }),
       markPearlTooltipSeen: () => set({ hasSeenPearlTooltip: true }),
       setAppWalkthroughStep: (step: number) => set({ appWalkthroughStep: step }),
       setWalkthroughGlowTab: (tab: string | null) => set({ walkthroughGlowTab: tab }),
@@ -168,7 +175,7 @@ export const useTutorialStore = create<TutorialState>()(
       markRated: () => set({ ratePromptHandled: true }),
       markNotifPromptShown: () => set({ notifPromptShown: true }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",

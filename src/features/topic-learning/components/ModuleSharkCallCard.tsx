@@ -1,25 +1,37 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
+import React, { useState, Suspense } from 'react';
+import { View, Text, Pressable, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image as ExpoImage } from 'expo-image';
 import LottieView from 'lottie-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Phone, ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { tapHaptic } from '../../../utils/haptics';
 import { useIsPro } from '../../subscription/useSubscription';
-import { useUpgradeModalStore } from '../../../stores/useUpgradeModalStore';
 import { useTutorialStore } from '../../../stores/useTutorialStore';
-import { ModuleComprehensionCallScreen } from '../../shark-voice-chat/ModuleComprehensionCallScreen';
 import { ModuleComprehensionReportScreen } from '../../shark-voice-chat/ModuleComprehensionReportScreen';
+import { SharkVoicePrivacyConsentModal } from '../../shark-voice-chat/components/SharkVoicePrivacyConsentModal';
 
 const RTL = { writingDirection: 'rtl' as const };
 const PRO_LOTTIE = require('../../../../assets/lottie/Pro Animation 3rd.json');
+const SHARK_TALKING = require('../../../../assets/webp/shark-call-talking-1.webp');
+
+// The live-call screen pulls the native ElevenLabs/WebRTC SDK at module load.
+// Lazy-load it so this always-mounted card never evaluates that native import
+// until the user actually starts a call — keeps the accordion crash-safe (and
+// OTA-safe) on binaries built without the native module.
+const ModuleComprehensionCallScreen = React.lazy(() =>
+  import('../../shark-voice-chat/ModuleComprehensionCallScreen').then((m) => ({
+    default: m.ModuleComprehensionCallScreen,
+  })),
+);
 
 interface Props {
   moduleId: string;
   moduleTitle: string;
 }
 
-type Phase = 'closed' | 'call' | 'report';
+type Phase = 'closed' | 'consent' | 'call' | 'report';
 
 /**
  * "שיחה עם שארק · 45 שניות" card pinned beside the report card at the bottom of
@@ -34,20 +46,33 @@ export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.Rea
   const isPro = useIsPro();
   const hasUsedFreeSharkCall = useTutorialStore((s) => s.hasUsedFreeSharkCall);
   const markFreeSharkCallUsed = useTutorialStore((s) => s.markFreeSharkCallUsed);
+  const hasAcceptedSharkVoicePrivacy = useTutorialStore((s) => s.hasAcceptedSharkVoicePrivacy);
+  const markSharkVoicePrivacyAccepted = useTutorialStore((s) => s.markSharkVoicePrivacyAccepted);
 
   const [phase, setPhase] = useState<Phase>('closed');
 
   const eligible = isPro || (moduleId === 'mod-0-2' && !hasUsedFreeSharkCall);
 
+  // Consume the single free trial (mod-0-2 only; Pro is unlimited), then open
+  // the live call. Called either directly (already-consented) or from consent.
+  const startCall = () => {
+    if (!isPro) markFreeSharkCallUsed();
+    setPhase('call');
+  };
+
   const onPress = () => {
     tapHaptic();
     if (!eligible) {
-      useUpgradeModalStore.getState().show('shark-voice');
+      // Not Pro (and no free trial left) → straight to the Pro conversion screen.
+      router.push('/pricing?source=pro_gate_shark-voice' as never);
       return;
     }
-    // Consume the single free trial on start (mod-0-2 only; Pro is unlimited).
-    if (!isPro) markFreeSharkCallUsed();
-    setPhase('call');
+    // First-ever call → one-time voice-privacy consent before connecting.
+    if (!hasAcceptedSharkVoicePrivacy) {
+      setPhase('consent');
+      return;
+    }
+    startCall();
   };
 
   return (
@@ -58,12 +83,12 @@ export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.Rea
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       >
         <View style={styles.iconWrap}>
-          <Phone size={22} color="#0c4a6e" strokeWidth={2.4} />
+          <ExpoImage source={SHARK_TALKING} style={{ width: 44, height: 44 }} contentFit="contain" accessible={false} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[RTL, styles.title]} numberOfLines={1}>שיחה עם שארק · 45 שניות</Text>
+          <Text style={[RTL, styles.title]} numberOfLines={1}>שיחה עם שארק</Text>
           <Text style={[RTL, styles.subtitle]} numberOfLines={1}>
-            {eligible ? 'בדיקת הבנה קולית — שארק שואל, אתה עונה' : 'פיצ׳ר Pro · נסה שיחה חיה עם שארק'}
+            {eligible ? 'בדיקת הבנה קולית — שארק שואל, אתה עונה' : 'פיצ׳ר Pro · שארק יבדוק האם הבנתם את מה שלמדתם'}
           </Text>
         </View>
         {eligible ? (
@@ -80,17 +105,25 @@ export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.Rea
       </Pressable>
 
       <Modal
-        visible={phase !== 'closed'}
+        visible={phase === 'call' || phase === 'report'}
         animationType="slide"
         presentationStyle="fullScreen"
         onRequestClose={() => setPhase('closed')}
       >
         {phase === 'call' ? (
-          <ModuleComprehensionCallScreen
-            moduleId={moduleId}
-            moduleTitle={moduleTitle}
-            onComplete={() => setPhase('report')}
-          />
+          <Suspense
+            fallback={
+              <View style={[styles.modalSafe, styles.modalLoading]}>
+                <ActivityIndicator size="large" color="#67e8f9" />
+              </View>
+            }
+          >
+            <ModuleComprehensionCallScreen
+              moduleId={moduleId}
+              moduleTitle={moduleTitle}
+              onComplete={() => setPhase('report')}
+            />
+          </Suspense>
         ) : phase === 'report' ? (
           <SafeAreaView style={styles.modalSafe} edges={['top', 'bottom']}>
             <ModuleComprehensionReportScreen
@@ -101,6 +134,15 @@ export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.Rea
           </SafeAreaView>
         ) : null}
       </Modal>
+
+      <SharkVoicePrivacyConsentModal
+        visible={phase === 'consent'}
+        onAccept={() => {
+          markSharkVoicePrivacyAccepted();
+          startCall();
+        }}
+        onDecline={() => setPhase('closed')}
+      />
     </Animated.View>
   );
 }
@@ -159,4 +201,5 @@ const styles = StyleSheet.create({
   },
   proText: { color: '#fde68a', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
   modalSafe: { flex: 1, backgroundColor: '#0b1735' },
+  modalLoading: { alignItems: 'center', justifyContent: 'center' },
 });

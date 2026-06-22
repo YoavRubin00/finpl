@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
 import { tapHaptic } from '../../../utils/haptics';
@@ -74,12 +73,7 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
     <Animated.View entering={FadeInDown.duration(320)}>
       <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
         <View style={styles.avatarWrap}>
-          <ExpoImage
-            source={require('../../../../assets/webp/shark-call-talking-1.webp')}
-            style={{ width: 44, height: 44 }}
-            contentFit="contain"
-            accessible={false}
-          />
+          <Text style={styles.reportEmoji}>📋</Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[RTL, styles.title]} numberOfLines={1}>דוח סיכום שיעור</Text>
@@ -137,6 +131,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#0ea5e9',
   },
+  reportEmoji: { fontSize: 26 },
   title: { color: '#0c4a6e', fontSize: 15, fontWeight: '900' },
   subtitle: { color: '#0369a1', fontSize: 12, fontWeight: '700', marginTop: 2 },
   ctaChip: {
