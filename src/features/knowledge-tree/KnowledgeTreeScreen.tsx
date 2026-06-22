@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -28,6 +28,17 @@ export function KnowledgeTreeScreen(): React.ReactElement {
   const view = knowledgeTreeView(wateredDays);
   const watered = isWateredToday(lastWateredDate);
 
+  // Responsive "watering scene" sizing. The watering webp is wide (Captain
+  // Shark on the left + a long water arc); the real GrowingTree sits at the
+  // arc's landing point on the right, so the water lands on the tree and the
+  // shark never covers it. Proportions match the approved design comp.
+  const { width: screenW } = useWindowDimensions();
+  const sceneW = Math.min(screenW - 40, 430);
+  const sceneH = sceneW * 0.70;
+  const sharkW = sceneW * 0.77;
+  const sharkH = sharkW * (192 / 432); // watering webp aspect ratio
+  const treeSize = sceneW * 0.35;
+
   const bubbleText = watered
     ? view.isFull
       ? 'יפה! העץ שלך פרח במלואו 🌳 כל הכבוד — מחר מתחיל עץ חדש.'
@@ -51,12 +62,22 @@ export function KnowledgeTreeScreen(): React.ReactElement {
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* Scene — Captain Shark stands beside the REAL GrowingTree and waters
-              it: his can pours to the right, where the tree sits (slight overlap
-              so the water reaches it). The tree is the hero; the shark is smaller. */}
-          <Animated.View entering={FadeIn.duration(400)} style={styles.scene}>
-            <ExpoImage source={FINN_WATERING} style={styles.sharkBig} contentFit="contain" accessible={false} />
-            <GrowingTree stageIndex={view.displayStage} size={190} />
+          {/* Scene — Captain Shark (left) waters the REAL GrowingTree (right):
+              his long water arc lands on the tree's base, with a clear gap so he
+              never covers it. Absolute-positioned to match the design comp. */}
+          <Animated.View
+            entering={FadeIn.duration(400)}
+            style={{ width: sceneW, height: sceneH, alignSelf: 'center', marginTop: 6, marginBottom: 12 }}
+          >
+            <ExpoImage
+              source={FINN_WATERING}
+              style={{ position: 'absolute', left: sceneW * 0.014, bottom: sceneH * 0.1, width: sharkW, height: sharkH }}
+              contentFit="contain"
+              accessible={false}
+            />
+            <View style={{ position: 'absolute', right: sceneW * 0.03, bottom: sceneH * 0.06 }}>
+              <GrowingTree stageIndex={view.displayStage} size={treeSize} />
+            </View>
           </Animated.View>
 
           {/* Speech bubble */}
@@ -126,14 +147,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
-  scene: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 14,
-  },
-  sharkBig: { width: 138, height: 168, marginRight: -10, marginBottom: 6 },
   bubbleWrap: { width: '100%', marginBottom: 16 },
   statsRow: {
     flexDirection: 'row-reverse',

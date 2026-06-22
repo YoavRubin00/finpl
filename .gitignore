@@ -11,6 +11,11 @@ dist/
 # it out of git AND the build (also listed in .easignore). NEVER save generated
 # marketing media under assets/ (that bundles into the .aab/.ipa).
 marketing-output/
+
+# Temp scratch folders for generated/inspected assets (mascot QC, previews, etc.)
+_tmp_mascot/
+_tmp*/
+
 # In-repo marketing REFERENCE media (CAPTAIN SHARK / DAISY source PNGs + a 49MB
 # "finplay app screen share.mp4") — committed by past marketing work, never
 # imported by app code (Metro doesn't bundle them) and already in .easignore.
