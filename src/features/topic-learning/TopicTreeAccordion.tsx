@@ -30,6 +30,9 @@ import { useContinuousRunStore } from './useContinuousRunStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
 import { SharkChipCallout } from './components/SharkChipCallout';
+import { SharkToolCTA } from '../../components/ui/SharkCTAModals';
+import { useToolNudgeStore } from '../notifications/useToolNudgeStore';
+import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { ModuleReportCard } from './components/ModuleReportCard';
 import { ModuleSharkCallCard } from './components/ModuleSharkCallCard';
 import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleComprehensionStore';
@@ -524,6 +527,24 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       } catch { /* non-fatal */ }
     }, 500);
   }, [module.id]);
+
+  // Tool-of-the-day nudge after the 70% accordion chest (Yoav 2026-06-22) —
+  // mirrors the legacy LessonFlowScreen path so the daily tool ("כלי של היום")
+  // surfaces on the topic-tree path too, not only after the old chest. Skips
+  // onboarding modules; once/day via useToolNudgeStore; SharkToolCTA self-gates
+  // on the nudge-queue 'tools' cooldown and records its own impression.
+  const [showToolCTA, setShowToolCTA] = useState(false);
+  const maybeShowToolNudge = useCallback((): boolean => {
+    if (module.id === 'mod-0-1' || module.id === 'mod-0-1b') return false;
+    try {
+      if (useToolNudgeStore.getState().isShownToday()) return false;
+      if (!useNudgeQueueStore.getState().canShow('tools')) return false;
+    } catch { return false; }
+    try { useToolNudgeStore.getState().markShown(); } catch { /* non-fatal */ }
+    setShowToolCTA(true);
+    return true;
+  }, [module.id]);
+
   const walkthroughAutoFiredRef = useRef(false);
   // R8 follow-up (Yoav 2026-06-11): the tour launches ONLY after the first
   // non-intro chip is completed — the intro alone doesn't earn the "I built
@@ -676,7 +697,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             // After the chest closes (never mid-sequence): guests get the signup
             // gate (#8), registered users get any pending staged profile question
             // (#6). Mutually exclusive so we never stack two modals.
-            if (isGuest) { maybeShowSignupGate(); } else { if (!maybeShowProfileQuestion()) maybeShowRatePrompt(); }
+            if (isGuest) { maybeShowSignupGate(); } else if (!maybeShowProfileQuestion() && !maybeShowToolNudge()) { maybeShowRatePrompt(); }
             // The 70% chest keeps the accordion open so the user can
             // finish the remaining 30% — but when the chest fired at 100%
             // (e.g. a continuous run completed every chip before returning)
@@ -697,7 +718,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             // not skip the guest signup gate (#8) / pending profile question
             // (#6) — pre-release audit P2. The once-guards make this idempotent
             // vs onContinueModule, so no double-show.
-            if (isGuest) { maybeShowSignupGate(); } else { if (!maybeShowProfileQuestion()) maybeShowRatePrompt(); }
+            if (isGuest) { maybeShowSignupGate(); } else if (!maybeShowProfileQuestion() && !maybeShowToolNudge()) { maybeShowRatePrompt(); }
             if (summary.pct >= 100) {
               onModuleCompleted?.();
             } else {
@@ -761,6 +782,15 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             setChestState(null);
             router.replace('/(tabs)/index' as never);
           }}
+        />
+
+        {/* Tool-of-the-day nudge after the chest (mirrors the legacy flow).
+            Self-gates on the nudge-queue 'tools' cooldown; once/day via the
+            maybeShowToolNudge trigger above. */}
+        <SharkToolCTA
+          visible={showToolCTA}
+          onOpenTool={(route) => { setShowToolCTA(false); router.push(route as never); }}
+          onDismiss={() => setShowToolCTA(false)}
         />
 
         {/* Mod-0-1 tour now AUTO-STARTS after the first chip (Yoav 2026-06-21) —
