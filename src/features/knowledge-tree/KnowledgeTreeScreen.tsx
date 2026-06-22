@@ -33,11 +33,11 @@ export function KnowledgeTreeScreen(): React.ReactElement {
   // arc's landing point on the right, so the water lands on the tree and the
   // shark never covers it. Proportions match the approved design comp.
   const { width: screenW } = useWindowDimensions();
-  const sceneW = Math.min(screenW - 40, 430);
-  const sceneH = sceneW * 0.70;
+  const sceneW = Math.min(screenW - 40, 470);
+  const sceneH = sceneW * 0.72;
   const sharkW = sceneW * 0.77;
-  const sharkH = sharkW * (192 / 432); // watering webp aspect ratio
-  const treeSize = sceneW * 0.35;
+  const sharkH = sharkW * (180 / 384); // animated watering webp aspect ratio
+  const treeSize = sceneW * 0.49; // the tree is the hero — keep it large
 
   const bubbleText = watered
     ? view.isFull
@@ -71,11 +71,11 @@ export function KnowledgeTreeScreen(): React.ReactElement {
           >
             <ExpoImage
               source={FINN_WATERING}
-              style={{ position: 'absolute', left: sceneW * 0.014, bottom: sceneH * 0.1, width: sharkW, height: sharkH }}
+              style={{ position: 'absolute', left: sceneW * 0.01, bottom: sceneH * 0.18, width: sharkW, height: sharkH }}
               contentFit="contain"
               accessible={false}
             />
-            <View style={{ position: 'absolute', right: sceneW * 0.03, bottom: sceneH * 0.06 }}>
+            <View style={{ position: 'absolute', right: sceneW * 0.04, bottom: sceneH * 0.03 }}>
               <GrowingTree stageIndex={view.displayStage} size={treeSize} />
             </View>
           </Animated.View>
