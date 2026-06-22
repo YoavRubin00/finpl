@@ -287,11 +287,22 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       prevCompletedRef.current = summary.completed;
       return;
     }
-    if (summary.completed > prevCompletedRef.current && !summary.isModuleDone) {
+    // Fire the chip call-out on a genuine completion, EXCEPT:
+    //  • the threshold-crossing chip — the ChestCelebrationModal owns that moment;
+    //  • the very FIRST chip — the mod-0-1 app tour auto-starts there and a
+    //    call-out collides with it (Yoav 2026-06-22);
+    //  • during a continuous run — it marks several chips at once, which would
+    //    spew call-outs "one after another".
+    if (
+      summary.completed > prevCompletedRef.current &&
+      !summary.isModuleDone &&
+      summary.completed > 1 &&
+      !continuousRunActive
+    ) {
       setCalloutSeq((s) => s + 1);
     }
     prevCompletedRef.current = summary.completed;
-  }, [summary.completed, summary.isModuleDone, progressHydrated]);
+  }, [summary.completed, summary.isModuleDone, progressHydrated, continuousRunActive]);
 
   // R8 pre-release audit (Yoav + הסורק 2026-06-11): UNIFIED chest drop
   // effect. Previously two separate useEffects (70% + 100%) raced when a

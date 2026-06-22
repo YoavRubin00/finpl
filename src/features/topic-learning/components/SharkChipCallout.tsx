@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
+import { ChevronLeft } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeOut, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import LottieView from '../../../components/ui/SafeLottieView';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
@@ -69,6 +70,9 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
   const rotationRef = useRef<number[]>([]);
   const cursorRef = useRef(0);
   const lastSeqRef = useRef(0);
+  // True while a toast OR pop-up is on screen — absorbs new triggers so only
+  // ONE call-out shows at a time (no webps "opening one after another").
+  const showingRef = useRef(false);
 
   useEffect(() => {
     const n = CHIP_CALLOUT_WEBPS.length;
@@ -78,6 +82,9 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
 
   useEffect(() => {
     if (seq <= 0 || seq === lastSeqRef.current) return;
+    // Only ONE call-out at a time — absorb triggers that arrive while one is
+    // still on screen so webps don't open one after another (Yoav 2026-06-22).
+    if (showingRef.current) { lastSeqRef.current = seq; return; }
     lastSeqRef.current = seq;
     if (CHIP_CALLOUT_WEBPS.length === 0) return;
     if (cursorRef.current >= rotationRef.current.length) {
@@ -88,18 +95,20 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
     cursorRef.current += 1;
     setShownMessage(calloutMessage(remaining, isFirstChest));
     setConfettiKey((k) => k + 1);
+    showingRef.current = true;
     try { successHaptic(); } catch { /* non-fatal */ }
     if (remaining <= POPUP_THRESHOLD) {
       setPopupVisible(true); // stays until the user taps "המשך"
     } else {
       setToastVisible(true);
-      safeTimeout(() => setToastVisible(false), reduceMotion ? TOAST_MS_RM : TOAST_MS);
+      safeTimeout(() => { setToastVisible(false); showingRef.current = false; }, reduceMotion ? TOAST_MS_RM : TOAST_MS);
     }
   }, [seq, remaining, isFirstChest, reduceMotion, safeTimeout]);
 
   const handleContinue = useCallback(() => {
     try { tapHaptic(); } catch { /* non-fatal */ }
     setPopupVisible(false);
+    showingRef.current = false;
   }, []);
 
   const webp = CHIP_CALLOUT_WEBPS[webpIndex] ?? CHIP_CALLOUT_WEBPS[0];
@@ -170,6 +179,7 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.continueText} allowFontScaling={false}>המשך</Text>
+              <ChevronLeft size={18} color="#ffffff" />
             </Pressable>
           </Animated.View>
         </View>
@@ -267,14 +277,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 6,
   },
+  // Matches the flashcards' "המשך" button (LessonFlowScreen): sky-blue
+  // #0ea5e9 fill, 3px #0284c7 bottom border, white 16/800 text + ChevronLeft.
   continueBtn: {
     marginTop: 4,
-    backgroundColor: '#2563eb',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#0ea5e9',
     borderRadius: 16,
     paddingVertical: 14,
-    paddingHorizontal: 48,
-    borderBottomWidth: 4,
-    borderBottomColor: '#1d4ed8',
+    paddingHorizontal: 40,
+    borderBottomWidth: 3,
+    borderBottomColor: '#0284c7',
   },
   continuePressed: {
     opacity: 0.9,
@@ -282,8 +298,8 @@ const styles = StyleSheet.create({
   },
   continueText: {
     color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
     writingDirection: 'rtl',
   },
 });
