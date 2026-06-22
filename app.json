@@ -95,27 +95,12 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 35,
-            "extractNativeLibs": false,
-            "packagingOptions": {
-              "pickFirst": [
-                "**/libc++_shared.so",
-                "**/libjsi.so",
-                "**/libfbjni.so"
-              ]
-            }
+            "extractNativeLibs": false
           }
         }
       ],
       "./plugins/with-modular-podfile",
-      "expo-web-browser",
-      "@livekit/react-native-expo-plugin",
-      [
-        "@config-plugins/react-native-webrtc",
-        {
-          "microphonePermission": "FinPlay משתמשת במיקרופון כדי שתוכל/י לנהל שיחת קול חיה עם קפטן שארק לבדיקת הבנה.",
-          "cameraPermission": "FinPlay אינה מצלמת — ההרשאה נדרשת רק עבור רכיב שיחות הקול."
-        }
-      ]
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},
@@ -143,8 +128,7 @@
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.CAMERA"
+        "android.permission.FOREGROUND_SERVICE"
       ],
       "intentFilters": [
         {

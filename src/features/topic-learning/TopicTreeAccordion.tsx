@@ -28,9 +28,6 @@ import { useTopicProgressStore } from './useTopicProgressStore';
 import { useContinuousRunStore } from './useContinuousRunStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
-import { ModuleReportCard } from './components/ModuleReportCard';
-import { ModuleSharkCallCard } from './components/ModuleSharkCallCard';
-import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleComprehensionStore';
 
 /** Base reward on topic-tree 70% completion. Lower than the legacy
  *  LessonFlowScreen MODULE_COMPLETE_XP (30) because topics also yield
@@ -417,13 +414,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
 
     setChestState({ xp: totalXp, coins: totalCoins, isFinale: false, rarity, offerDoN, quitLabel });
 
-    // Snapshot the lesson's grading inputs NOW, while the session-only data
-    // (quizResults, voice transcript) is still in memory — the end-of-lesson
-    // "דוח סיכום שיעור" card reads this. Idempotent (first capture wins) and
-    // quota-free; the AI report itself is generated on demand from the snapshot.
-    try {
-      useModuleComprehensionStore.getState().captureInputs(module.id, module.title);
-    } catch { /* non-fatal */ }
     // Chest reveal analytics — split by rarity, DoN/quit-offer rolls,
     // and reward amounts. Pairs with chest_cta_tapped + chest_don_resolved
     // to understand the post-chest funnel (engagement vs bail).
@@ -605,18 +595,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           nodeOffsetX={nodeOffsetX}
           onTopicPress={handleChipPress}
         />
-
-        {/* "דוח סיכום שיעור" — pinned at the BOTTOM of the map once the chest
-            has opened (modulePastThreshold is persisted, so it's here on every
-            re-tap too). The card self-gates: it renders nothing without a
-            captured snapshot/report, handles the weekly quota on tap, and opens
-            the deep-analysis-style report (with talk-to-Shark) in a modal. */}
-        {modulePastThreshold && (
-          <>
-            <ModuleSharkCallCard moduleId={module.id} moduleTitle={module.title} />
-            <ModuleReportCard moduleId={module.id} moduleTitle={module.title} />
-          </>
-        )}
 
         {moduleCarousel && (
           <CarouselSheet
