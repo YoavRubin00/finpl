@@ -342,12 +342,6 @@ export function ProfileScreen() {
             </Animated.View>
           </Pressable>
 
-
-          {/* עץ הידע — daily-watering knowledge tree (retention). Sits under
-              the streak strip since both are daily-habit surfaces. */}
-          <Animated.View style={knowledgeTreeStyle}>
-            <KnowledgeTreeCard />
-          </Animated.View>
           {/* ChampionCard moved into a popup — opened by tapping the avatar
               above. The XP/coins/level summary is already in the
               GlobalWealthHeader, so we don't need it inline here. */}
@@ -496,6 +490,12 @@ export function ProfileScreen() {
                 </View>
               </View>
             </AnimatedPressable>
+
+          {/* עץ הידע — daily-watering knowledge tree (retention). Sits under
+              the streak strip since both are daily-habit surfaces. */}
+          <Animated.View style={knowledgeTreeStyle}>
+            <KnowledgeTreeCard />
+          </Animated.View>
 
             {/* Profile info, moved below Invite Friends */}
             {profile && (
