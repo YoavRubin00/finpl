@@ -5,6 +5,7 @@ export type XPSource =
   | "challenge_complete"
   | "onboarding"
   | "daily_task"
+  | "chip_complete"
   | "sim_complete"
   | "chest_reward"
   | "clash_win"

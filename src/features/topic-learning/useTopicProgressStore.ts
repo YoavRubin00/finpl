@@ -4,6 +4,8 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
 import { useKnowledgeTreeStore } from '../knowledge-tree/useKnowledgeTreeStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { CHIP_COMPLETE_XP, CHIP_COMPLETE_COINS } from '../../constants/economy';
 import type { Topic, TopicProgressEntry, ModuleTopicSummary, ChestRarity } from './types';
 import {
   chestThresholdFor,
@@ -120,6 +122,15 @@ export const useTopicProgressStore = create<TopicProgressState>()(
         // topic-tree path doesn't route through markDailyActivityCompleted, so
         // we water directly here. Idempotent per IL day; non-fatal.
         try { useKnowledgeTreeStore.getState().waterToday(); } catch { /* non-fatal */ }
+        // Real per-chip reward (Yoav 2026-06-22: chips must grant actual XP +
+        // gold, not just a rising-XP animation). Guarded by the first-completion
+        // early-return above, so this fires exactly once per chip. Small by
+        // design — the 70% chest stays the headline payout. Non-fatal.
+        try {
+          const economy = useEconomyUIStore.getState();
+          economy.addXP(CHIP_COMPLETE_XP, 'chip_complete');
+          economy.addCoins(CHIP_COMPLETE_COINS, 'lesson');
+        } catch { /* non-fatal */ }
       },
 
       isTopicCompleted: (topicId) => Boolean(get().completed[topicId]),

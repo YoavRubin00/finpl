@@ -50,3 +50,12 @@ export const STREAK_7_BONUS_XP = 50;
 
 /** Bonus XP at 30-day streak milestone (recurring every 30 days). */
 export const STREAK_30_BONUS_XP = 200;
+
+/**
+ * Per-chip (topic) completion micro-reward in the topic-tree accordion.
+ * Deliberately small — the 70% chest is the headline payout (30 XP / 150 coins),
+ * and ~10 chips/module keeps this to roughly +50 XP / +250 coins per module.
+ * Yoav 2026-06-22: chips must grant REAL XP + gold, not just a rising-XP animation.
+ */
+export const CHIP_COMPLETE_XP = 5;
+export const CHIP_COMPLETE_COINS = 25;
