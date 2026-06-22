@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -30,6 +30,7 @@ import { SIM4, RTL, SHADOW_LIGHT, SHADOW_STRONG } from "../chapter-4-content/sim
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { BackButton } from "../../components/ui/BackButton";
 import { GlowCard } from "../../components/ui/GlowCard";
+import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 
 // Stitch Premium Blue Theme
 const STITCH_BLUE = {
@@ -150,6 +151,39 @@ export function SettingsScreen() {
   // Chat tone
   const companionId: CompanionId = profile?.companionId ?? "warren-buffett";
   const [showChatPicker, setShowChatPicker] = useState(false);
+
+  // Microphone permission for the live Captain Shark voice call — surfaced here
+  // so the user can grant / manage it from inside the app, in real time.
+  const [micStatus, setMicStatus] = useState<"granted" | "denied" | "undetermined" | "unknown">("unknown");
+  const refreshMic = useCallback(async () => {
+    try {
+      const p = await getRecordingPermissionsAsync();
+      setMicStatus(p.granted ? "granted" : p.canAskAgain ? "undetermined" : "denied");
+    } catch {
+      setMicStatus("unknown");
+    }
+  }, []);
+  useEffect(() => {
+    void refreshMic();
+  }, [refreshMic]);
+  const handleMicPress = useCallback(async () => {
+    try {
+      const p = await getRecordingPermissionsAsync();
+      if (!p.granted) {
+        if (p.canAskAgain) {
+          // Live OS prompt — grant straight from inside the app.
+          await requestRecordingPermissionsAsync();
+        } else {
+          // Previously denied → the OS won't re-prompt; open device settings.
+          Linking.openSettings();
+        }
+      }
+    } catch {
+      Linking.openSettings();
+    } finally {
+      await refreshMic();
+    }
+  }, [refreshMic]);
 
   // Toggle states
   const streakEnabled = preferences.streak;
@@ -588,6 +622,26 @@ export function SettingsScreen() {
                       accessibilityLabel="צלילי מקשים"
                       accessibilityRole="switch"
                     />
+                  }
+                />
+                <Divider />
+                <SettingsRow
+                  icon={<Text style={{ fontSize: 20 }}>🎙️</Text>}
+                  label="מיקרופון — שיחה עם שארק"
+                  subtitle={
+                    micStatus === "granted"
+                      ? "מאושר — אפשר לדבר עם שארק"
+                      : micStatus === "denied"
+                        ? "חסום — הקש לפתיחת הגדרות המכשיר"
+                        : "אפשר גישה כדי לדבר עם שארק"
+                  }
+                  onPress={() => { void handleMicPress(); }}
+                  right={
+                    micStatus === "granted" ? (
+                      <Text style={{ fontSize: 18, color: STITCH_BLUE.success, fontWeight: "900" }}>✓</Text>
+                    ) : (
+                      <ChevronLeft size={20} color={STITCH_BLUE.textSecondary} />
+                    )
                   }
                 />
                 <Divider />
