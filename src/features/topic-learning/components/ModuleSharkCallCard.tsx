@@ -11,6 +11,7 @@ import { useIsPro } from '../../subscription/useSubscription';
 import { useTutorialStore } from '../../../stores/useTutorialStore';
 import { ModuleComprehensionReportScreen } from '../../shark-voice-chat/ModuleComprehensionReportScreen';
 import { SharkVoicePrivacyConsentModal } from '../../shark-voice-chat/components/SharkVoicePrivacyConsentModal';
+import { LIVE_VOICE_AVAILABLE } from '../../shark-voice-chat/liveVoiceConfig';
 
 const RTL = { writingDirection: 'rtl' as const };
 const PRO_LOTTIE = require('../../../../assets/lottie/Pro Animation 3rd.json');
@@ -42,7 +43,7 @@ type Phase = 'closed' | 'consent' | 'call' | 'report';
  *
  * Non-eligible free users still see the card as a GO PRO upsell (Lottie).
  */
-export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.ReactElement {
+export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.ReactElement | null {
   const isPro = useIsPro();
   const hasUsedFreeSharkCall = useTutorialStore((s) => s.hasUsedFreeSharkCall);
   const markFreeSharkCallUsed = useTutorialStore((s) => s.markFreeSharkCallUsed);
@@ -74,6 +75,10 @@ export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.Rea
     }
     startCall();
   };
+
+  // OTA-safety: on a binary without the native live-voice SDK this flag is
+  // false → hide the call card entirely so its lazy native import never runs.
+  if (!LIVE_VOICE_AVAILABLE) return null;
 
   return (
     <Animated.View entering={FadeInDown.delay(60).duration(320)}>
