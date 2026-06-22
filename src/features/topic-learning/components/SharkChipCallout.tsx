@@ -150,7 +150,9 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
         onRequestClose={handleContinue}
         statusBarTranslucent
       >
-        <View style={styles.popupBackdrop}>
+        {/* Tap ANYWHERE on the screen continues, not just the button
+            (Yoav 2026-06-22). accessible=false so SR reads the labeled button. */}
+        <Pressable style={styles.popupBackdrop} onPress={handleContinue} accessible={false}>
           {!reduceMotion && (
             <View style={styles.popupLottie} pointerEvents="none">
               <LottieView source={CONFETTI_LOTTIE} autoPlay loop={false} style={StyleSheet.absoluteFill} />
@@ -159,7 +161,6 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
           <Animated.View
             entering={reduceMotion ? undefined : FadeInUp.duration(320)}
             style={styles.popupCard}
-            accessibilityViewIsModal
           >
             <ExpoImage
               source={webp.source}
@@ -171,18 +172,24 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
             <Text style={styles.popupTitle} allowFontScaling={false}>
               {shownMessage}
             </Text>
+            {/* The blue fill lives on an INNER View — a function-style Pressable
+                (style={({pressed})=>…}) DROPS backgroundColor on Android, leaving
+                white-on-white text (exactly what Yoav saw). */}
             <Pressable
               onPress={handleContinue}
               accessibilityRole="button"
               accessibilityLabel="המשך"
-              style={({ pressed }) => [styles.continueBtn, pressed && styles.continuePressed]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.continueText} allowFontScaling={false}>המשך</Text>
-              <ChevronLeft size={18} color="#ffffff" />
+              {({ pressed }) => (
+                <View style={[styles.continueBtn, pressed && styles.continuePressed]}>
+                  <Text style={styles.continueText} allowFontScaling={false}>המשך</Text>
+                  <ChevronLeft size={18} color="#ffffff" />
+                </View>
+              )}
             </Pressable>
           </Animated.View>
-        </View>
+        </Pressable>
       </Modal>
     </>
   );

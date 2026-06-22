@@ -47,13 +47,16 @@ interface Props {
 function scoreColor(score: number): string {
   if (score >= 75) return '#16a34a';
   if (score >= 45) return '#e9a200';
-  return '#ef4444';
+  // Growth-mindset (דואו): a low score is "early", not a failure — use the
+  // brand sky-blue, never an alarming red that shames the user.
+  return '#0ea5e9';
 }
 function scoreLabel(score: number): string {
-  if (score >= 85) return 'שליטה מצוינת';
-  if (score >= 70) return 'הבנה טובה';
-  if (score >= 45) return 'בדרך הנכונה';
-  return 'שווה לחזור על זה';
+  if (score >= 85) return 'שליטה מצוינת!';
+  if (score >= 70) return 'הבנה ממש טובה';
+  if (score >= 45) return 'בדרך הנכונה — ממשיכים!';
+  // Encouraging + pull to play again (was the harsh "שווה לחזור על זה").
+  return 'התחלה טובה — עוד סבב ואתה שם!';
 }
 
 /* ───────────────── collapsible section (mirrors DeepAnalysisCard) ──────── */
@@ -205,8 +208,8 @@ export function ModuleComprehensionReportScreen({
         <View style={styles.panel}>
           <Animated.View entering={FadeIn.duration(300)} style={styles.headerRow}>
             <ExpoImage
-              source={require('../../../assets/webp/shark-call-talking-1.webp')}
-              style={{ width: 56, height: 56 }}
+              source={require('../../../assets/webp/fin-standard.webp')}
+              style={{ width: 56, height: 56, backgroundColor: 'transparent' }}
               contentFit="contain"
             />
             <View style={{ flex: 1 }}>

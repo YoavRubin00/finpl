@@ -9,6 +9,7 @@ import { useUsageStore } from '../../subscription/useUsageStore';
 import { useUpgradeModalStore } from '../../../stores/useUpgradeModalStore';
 import { useModuleComprehensionStore } from '../../shark-voice-chat/useModuleComprehensionStore';
 import { ModuleComprehensionReportScreen } from '../../shark-voice-chat/ModuleComprehensionReportScreen';
+import { LIVE_VOICE_AVAILABLE } from '../../shark-voice-chat/liveVoiceConfig';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -39,6 +40,12 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
   const generating = useModuleComprehensionStore((s) => s.generatingModuleId === moduleId);
 
   const [open, setOpen] = useState(false);
+
+  // The comprehension report is part of the live-voice feature family (AI
+  // backend + voice transcript). It's gated off in OTA builds (flag=false) so
+  // production never sees the unfinished report; visible on dev (flag=true)
+  // while the feature is completed for the next native build.
+  if (!LIVE_VOICE_AVAILABLE) return null;
 
   // Nothing to show until we have a snapshot to grade (or an existing report).
   if (!stored && !inputs) return null;
