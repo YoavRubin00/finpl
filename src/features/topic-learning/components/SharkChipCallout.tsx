@@ -1,25 +1,34 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import Animated, { FadeInDown, FadeOut, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOut, FadeInUp, useReducedMotion } from 'react-native-reanimated';
+import LottieView from '../../../components/ui/SafeLottieView';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { useTimeoutCleanup } from '../../../hooks/useTimeoutCleanup';
-import { successHaptic } from '../../../utils/haptics';
+import { successHaptic, tapHaptic } from '../../../utils/haptics';
 import { CHIP_CALLOUT_WEBPS, calloutMessage } from '../chipCalloutScenes';
+
+// Celebration confetti Lottie for the near-chest pop-up (Yoav 2026-06-22:
+// "שיהיה נעים, עם לואו ובצבעים בהירים").
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const CONFETTI_LOTTIE = require('../../../../assets/lottie/Confetti Effects Lottie Animation.json');
 
 interface SharkChipCalloutProps {
   /** Increments once per REAL chip completion (hydration-gated, and NOT on the
-   *  completion that crosses the chest threshold — that's the modal's moment).
-   *  A change drives one transient call-out. */
+   *  completion that crosses the chest threshold — that's the chest modal's
+   *  moment). A change drives one transient call-out. */
   seq: number;
-  /** Chips still needed to open the 70% chest — drives the proximity copy. */
+  /** Chips still needed to open the 70% chest — drives the proximity copy AND
+   *  the tier: <=2 → the bright "המשך" pop-up; >=3 → a light auto-dismiss toast. */
   remaining: number;
   /** mod-0-1 / mod-0-2 (50% threshold) → "first chest" framing. */
   isFirstChest: boolean;
 }
 
-const VISIBLE_MS = 1800;
-const VISIBLE_MS_RM = 700; // reduced-motion: shorter, no confetti
+const TOAST_MS = 1800;
+const TOAST_MS_RM = 700; // reduced-motion: shorter, no confetti
+/** remaining <= this → escalate to the full bright pop-up with a Continue button. */
+const POPUP_THRESHOLD = 2;
 
 /** Fisher-Yates — app runtime, so Math.random is fine here. */
 function shuffle(arr: number[]): number[] {
@@ -32,11 +41,14 @@ function shuffle(arr: number[]): number[] {
 }
 
 /**
- * Transient Captain Shark encouragement shown at the end of each chip:
- * a rotating mascot webp (never the same one twice in a row) + a proximity
- * line ("עוד 2 צ'יפים והתיבה נפתחת!") + gentle confetti. Replaces the old
- * 25%/50% milestone toasts (folded in). Presentational — the accordion owns
- * the once-per-completion trigger via `seq`.
+ * Captain Shark chip-completion encouragement, two tiers (Yoav 2026-06-22):
+ *  • early chips (remaining >= 3): a light, BRIGHT, auto-dismissing toast —
+ *    rotating mascot webp + proximity line + gentle confetti, no button.
+ *  • approaching the chest (remaining <= 2): a pleasant BRIGHT pop-up modal —
+ *    rotating webp + a confetti Lottie + the proximity line + a "המשך" button
+ *    the user taps to continue.
+ * Webps never repeat back-to-back (shuffled rotation). Presentational — the
+ * accordion owns the once-per-completion trigger via `seq`.
  */
 export const SharkChipCallout = React.memo(function SharkChipCallout({
   seq,
@@ -46,9 +58,11 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
   const reduceMotion = useReducedMotion();
   const safeTimeout = useTimeoutCleanup();
 
-  const [visible, setVisible] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [popupVisible, setPopupVisible] = useState(false);
   const [webpIndex, setWebpIndex] = useState(0);
   const [confettiKey, setConfettiKey] = useState(0);
+  const [shownMessage, setShownMessage] = useState('');
 
   // Non-repeating rotation over the webp pool, reshuffled when exhausted so
   // the user keeps seeing a fresh mascot each completion.
@@ -65,56 +79,108 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
   useEffect(() => {
     if (seq <= 0 || seq === lastSeqRef.current) return;
     lastSeqRef.current = seq;
-    const pool = CHIP_CALLOUT_WEBPS;
-    if (pool.length === 0) return;
+    if (CHIP_CALLOUT_WEBPS.length === 0) return;
     if (cursorRef.current >= rotationRef.current.length) {
       rotationRef.current = shuffle(rotationRef.current);
       cursorRef.current = 0;
     }
     setWebpIndex(rotationRef.current[cursorRef.current] ?? 0);
     cursorRef.current += 1;
-    setVisible(true);
+    setShownMessage(calloutMessage(remaining, isFirstChest));
     setConfettiKey((k) => k + 1);
     try { successHaptic(); } catch { /* non-fatal */ }
-    safeTimeout(() => setVisible(false), reduceMotion ? VISIBLE_MS_RM : VISIBLE_MS);
-  }, [seq, reduceMotion, safeTimeout]);
+    if (remaining <= POPUP_THRESHOLD) {
+      setPopupVisible(true); // stays until the user taps "המשך"
+    } else {
+      setToastVisible(true);
+      safeTimeout(() => setToastVisible(false), reduceMotion ? TOAST_MS_RM : TOAST_MS);
+    }
+  }, [seq, remaining, isFirstChest, reduceMotion, safeTimeout]);
 
-  if (!visible) return null;
+  const handleContinue = useCallback(() => {
+    try { tapHaptic(); } catch { /* non-fatal */ }
+    setPopupVisible(false);
+  }, []);
 
   const webp = CHIP_CALLOUT_WEBPS[webpIndex] ?? CHIP_CALLOUT_WEBPS[0];
   if (!webp) return null;
-  const message = calloutMessage(remaining, isFirstChest);
 
   return (
-    <View style={styles.wrap} pointerEvents="none">
-      {!reduceMotion && <ConfettiExplosion key={confettiKey} gentle particleCount={12} />}
-      <Animated.View
-        entering={reduceMotion ? undefined : FadeInDown.duration(280)}
-        exiting={reduceMotion ? undefined : FadeOut.duration(220)}
-        style={styles.card}
-        accessibilityLiveRegion="polite"
-        accessibilityRole="text"
-        accessibilityLabel={message}
+    <>
+      {/* ── Tier 1: light bright toast (early chips, remaining >= 3) ── */}
+      {toastVisible && (
+        <View style={styles.toastWrap} pointerEvents="none">
+          {!reduceMotion && <ConfettiExplosion key={`t${confettiKey}`} gentle particleCount={12} />}
+          <Animated.View
+            entering={reduceMotion ? undefined : FadeInDown.duration(280)}
+            exiting={reduceMotion ? undefined : FadeOut.duration(220)}
+            style={styles.toastCard}
+            accessibilityLiveRegion="polite"
+            accessibilityRole="text"
+            accessibilityLabel={shownMessage}
+          >
+            <ExpoImage
+              source={webp.source}
+              style={styles.toastMascot}
+              contentFit="contain"
+              accessible={false}
+              pointerEvents="none"
+            />
+            <Text style={styles.toastLabel} allowFontScaling={false}>
+              {shownMessage}
+            </Text>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* ── Tier 2: bright "approaching the chest" pop-up (remaining <= 2) ── */}
+      <Modal
+        visible={popupVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleContinue}
+        statusBarTranslucent
       >
-        <ExpoImage
-          source={webp.source}
-          style={styles.mascot}
-          contentFit="contain"
-          accessible={false}
-          pointerEvents="none"
-        />
-        <Text style={styles.label} allowFontScaling={false}>
-          {message}
-        </Text>
-      </Animated.View>
-    </View>
+        <View style={styles.popupBackdrop}>
+          {!reduceMotion && (
+            <View style={styles.popupLottie} pointerEvents="none">
+              <LottieView source={CONFETTI_LOTTIE} autoPlay loop={false} style={StyleSheet.absoluteFill} />
+            </View>
+          )}
+          <Animated.View
+            entering={reduceMotion ? undefined : FadeInUp.duration(320)}
+            style={styles.popupCard}
+            accessibilityViewIsModal
+          >
+            <ExpoImage
+              source={webp.source}
+              style={styles.popupMascot}
+              contentFit="contain"
+              accessible={false}
+              pointerEvents="none"
+            />
+            <Text style={styles.popupTitle} allowFontScaling={false}>
+              {shownMessage}
+            </Text>
+            <Pressable
+              onPress={handleContinue}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={({ pressed }) => [styles.continueBtn, pressed && styles.continuePressed]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.continueText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
+    </>
   );
 });
 
 const styles = StyleSheet.create({
-  // Bounded top band so the gentle confetti centers near the pill (not the
-  // middle of a tall accordion section). Overlay, never intercepts taps.
-  wrap: {
+  // ── Toast (bright, top-anchored, non-blocking) ──
+  toastWrap: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -123,35 +189,101 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 40,
   },
-  card: {
+  toastCard: {
     position: 'absolute',
     top: 12,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#0c4a6e',
+    backgroundColor: '#ffffff',
     paddingVertical: 8,
     paddingHorizontal: 16,
     paddingStart: 8,
     borderRadius: 999,
+    borderWidth: 2,
+    borderColor: '#38bdf8',
     shadowColor: '#0c4a6e',
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.18,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
+    elevation: 8,
     maxWidth: '92%',
   },
-  mascot: {
+  toastMascot: {
     width: 52,
     height: 52,
-    backgroundColor: 'transparent', // Gmail/Android black-box fix for transparent webp
+    backgroundColor: 'transparent', // black-box fix for transparent webp
   },
-  label: {
-    color: '#ffffff',
+  toastLabel: {
+    color: '#0c4a6e',
     fontSize: 14,
     fontWeight: '800',
     writingDirection: 'rtl',
     textAlign: 'right',
     flexShrink: 1,
+  },
+
+  // ── Pop-up (bright, blocking, Continue button) ──
+  popupBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(8, 47, 73, 0.45)',
+    paddingHorizontal: 28,
+  },
+  popupLottie: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+  },
+  popupCard: {
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#f7fbff',
+    borderRadius: 28,
+    paddingTop: 22,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    borderWidth: 2,
+    borderColor: '#7dd3fc',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 16,
+    zIndex: 3,
+  },
+  popupMascot: {
+    width: 150,
+    height: 150,
+    backgroundColor: 'transparent',
+  },
+  popupTitle: {
+    color: '#0c4a6e',
+    fontSize: 22,
+    fontWeight: '900',
+    writingDirection: 'rtl',
+    textAlign: 'center',
+    paddingHorizontal: 6,
+  },
+  continueBtn: {
+    marginTop: 4,
+    backgroundColor: '#2563eb',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderBottomWidth: 4,
+    borderBottomColor: '#1d4ed8',
+  },
+  continuePressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  continueText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '900',
+    writingDirection: 'rtl',
   },
 });
