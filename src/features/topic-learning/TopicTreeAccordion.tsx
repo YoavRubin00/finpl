@@ -86,6 +86,10 @@ interface TopicTreeAccordionProps {
   /** Forwarded to ModuleTopicLayout — registers the recommended ("next") chip's
    *  View ref so DuoLearnScreen can measure + scroll it into view on return. */
   onRecommendedChipRef?: (ref: View | null) => void;
+  /** Registers the View wrapping the end-of-module report + shark-call cards so
+   *  the parent can scroll them into view (with the next module below) when the
+   *  user taps "המשך" on the chest (Yoav 2026-06-22). */
+  onEndCardsRef?: (ref: View | null) => void;
 }
 
 /**
@@ -104,6 +108,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   onTopicSelected,
   onContinueAfterChest,
   onAdvanceToNextModule,
+  onEndCardsRef,
   onModuleCompleted,
   onRecommendedChipRef,
 }: TopicTreeAccordionProps): React.ReactElement {
@@ -126,14 +131,20 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     [module.id, topics, completedMap],
   );
 
-  // Chips still needed to open the 70% chest — drives the SharkChipCallout
-  // proximity copy. Read the per-module threshold (0.7 default / 0.5 for
-  // mod-0-1/mod-0-2) the same way the store does; never hardcode it.
+  // Chips still needed to open the chest — drives the SharkChipCallout
+  // proximity copy. Read the per-module threshold (0.75 default / 0.5 for
+  // mod-0-1) the same way the store does; never hardcode it.
   const chestRemaining = Math.max(
     0,
     Math.ceil(summary.total * chestThresholdFor(module.id)) - summary.completed,
   );
-  const isFirstChestModule = module.id === 'mod-0-1' || module.id === 'mod-0-2';
+  // "First chest" framing must reflect REALITY, not the module id — it used to
+  // fire for every user in mod-0-1/mod-0-2 even if they'd already opened chests
+  // elsewhere (Yoav 2026-06-22). modulesPastThreshold maps every module whose
+  // chest the user has earned; empty = they genuinely haven't opened one yet.
+  const noChestOpenedYet = useTopicProgressStore(
+    (s) => Object.keys(s.modulesPastThreshold).length === 0,
+  );
 
   const isCompletedMap = useMemo(() => {
     const out: Record<string, boolean> = {};
@@ -168,13 +179,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     onTopicSelected(topic);
   }, [onTopicSelected]);
 
-  // Yoav 2026-06-17: the 70% chest must also require the QUIZ to be answered —
-  // reaching 70% of the chips alone isn't "done" if the quiz chip is still
-  // open. If the module has no quiz chip at all, this doesn't gate (true).
-  const quizAnswered = useMemo(() => {
-    const quiz = topics.find((t) => t.kind === 'quiz');
-    return !quiz || Boolean(isCompletedMap[quiz.id]);
-  }, [topics, isCompletedMap]);
+  // Yoav 2026-06-22: the quiz is NO LONGER a hard gate for the chest. Instead
+  // topicResolver pins the quiz INSIDE the chest threshold window, so on the
+  // canonical path the quiz is reached before 75% naturally — but a user who
+  // skips it is no longer blocked from the chest. (Supersedes the 2026-06-17
+  // quiz-gate.)
 
   // Yoav 2026-06-17: mod-0-1 injects an inline knowledgeLevel onboarding
   // question right after its quiz — the chest must appear AFTER it. Hold the
@@ -356,7 +365,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // ref/store flag stays so analytics + future re-enable still work,
     // but no second modal fires.
     const seventyJustCrossed =
-      summary.isModuleDone && quizAnswered && mod01QuestionResolved &&
+      summary.isModuleDone && mod01QuestionResolved &&
       !past70Ref.current && !modulePastThreshold;
     if (!seventyJustCrossed) return;
 
@@ -467,7 +476,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-  }, [summary.isModuleDone, summary.pct, quizAnswered, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
+  }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
@@ -652,10 +661,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             captured snapshot/report, handles the weekly quota on tap, and opens
             the deep-analysis-style report (with talk-to-Shark) in a modal. */}
         {modulePastThreshold && (
-          <>
+          <View ref={onEndCardsRef}>
             <ModuleSharkCallCard moduleId={module.id} moduleTitle={module.title} />
             <ModuleReportCard moduleId={module.id} moduleTitle={module.title} />
-          </>
+          </View>
         )}
 
         {moduleCarousel && (
@@ -814,11 +823,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
 
         {/* Captain Shark chip-completion call-out (replaces the 25%/50%
             milestone toasts) — rotating webp + proximity copy + gentle
-            confetti on every chip completion, pulling toward the 70% chest. */}
+            confetti on every chip completion, pulling toward the chest. */}
         <SharkChipCallout
           seq={calloutSeq}
           remaining={chestRemaining}
-          isFirstChest={isFirstChestModule}
+          isFirstChest={noChestOpenedYet}
         />
       </View>
     </Animated.View>

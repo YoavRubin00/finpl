@@ -903,6 +903,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onPearlReady,
   onInvestorQuizPress,
   onRecommendedChipRef,
+  onEndCardsRef,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -984,6 +985,9 @@ const ChapterSection = React.memo(function ChapterSection({
    *  TopicTreeAccordion → ModuleTopicLayout) so the parent can measure +
    *  scroll it into view on return. */
   onRecommendedChipRef?: (ref: View | null) => void;
+  /** Registers the View wrapping the end-of-module report + shark-call cards so
+   *  the parent can scroll them into view on the chest's "המשך". */
+  onEndCardsRef?: (ref: View | null) => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -1172,6 +1176,7 @@ const ChapterSection = React.memo(function ChapterSection({
                   onAdvanceToNextModule={onTopicTreeAdvanceToNextModule}
                   onModuleCompleted={onTopicTreeModuleCompleted}
                   onRecommendedChipRef={onRecommendedChipRef}
+                  onEndCardsRef={onEndCardsRef}
                 />
               )}
               {showQuestBox && questPathNodeProps && (
@@ -1768,6 +1773,12 @@ export function DuoLearnScreen() {
   const registerRecommendedChipRef = useCallback((ref: View | null) => {
     recommendedChipRef.current = ref;
   }, []);
+  // Ref to the end-of-module report + shark-call cards block, so the chest's
+  // "המשך" can land the user on them with the next module in view below.
+  const endCardsRef = useRef<View | null>(null);
+  const registerEndCardsRef = useCallback((ref: View | null) => {
+    endCardsRef.current = ref;
+  }, []);
 
   const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
@@ -2363,7 +2374,36 @@ export function DuoLearnScreen() {
   // CTA rename ("סיים את כל המודולה שיוביל למפת המודולה הפתוחה, עם
   // מה שהמשתמש עוד לא סיים", NOT to the pearl that comes after it).
   const handleTopicTreeContinueAfterChest = useCallback(() => {
-    /* intentionally empty — see comment above */
+    // Keep the accordion OPEN, and land the user so they SEE the module they
+    // just finished — the report + shark-call cards — with the NEXT module
+    // sitting in view below them (Yoav 2026-06-22). Measure the cards block and
+    // scroll it to ~42% down the viewport: end-of-module above, cards
+    // centred-ish, next node below. Retry across a few frames since the cards
+    // mount the same commit the chest closes (so the first measure can miss).
+    const { height } = Dimensions.get('window');
+    const tryScroll = (): boolean => {
+      const node = endCardsRef.current;
+      const scroller = scrollRef.current;
+      if (!node || !scroller || typeof node.measureLayout !== 'function') return false;
+      const innerGetter = scroller as unknown as { getInnerViewNode?: () => unknown };
+      const inner = innerGetter.getInnerViewNode?.();
+      const relativeTo = typeof inner === 'number' ? inner : findNodeHandle(scroller);
+      if (relativeTo == null) return false;
+      try {
+        node.measureLayout(
+          relativeTo,
+          (_x: number, y: number) => {
+            scrollRef.current?.scrollTo({ y: Math.max(0, y - height * 0.42), animated: true });
+          },
+          () => {},
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    requestAnimationFrame(() => { if (!tryScroll()) setTimeout(tryScroll, 140); });
+    setTimeout(tryScroll, 340);
   }, []);
 
   // Chest CTA: "המשך" — Yoav 2026-06-11: NO LONGER auto-starts the next
@@ -2882,6 +2922,7 @@ export function DuoLearnScreen() {
                 onTopicTreeAdvanceToNextModule={handleTopicTreeAdvanceToNextModule}
                 onPearlReady={registerPearlRef}
                 onRecommendedChipRef={registerRecommendedChipRef}
+                onEndCardsRef={registerEndCardsRef}
               />
             );
 
