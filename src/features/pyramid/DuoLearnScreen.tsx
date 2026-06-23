@@ -2122,7 +2122,7 @@ export function DuoLearnScreen() {
       }
     };
     const raf = requestAnimationFrame(() => scrollToRecommended(false));
-    const delays = [120, 280, 500];
+    const delays = [50, 130, 280];
     const timers = delays.map((d, i) =>
       setTimeout(() => scrollToRecommended(i === delays.length - 1), d),
     );
@@ -2412,23 +2412,15 @@ export function DuoLearnScreen() {
     setTimeout(tryScroll, 340);
   }, []);
 
-  // Chest CTA: "המשך" — Yoav 2026-06-11: NO LONGER auto-starts the next
-  // module. Instead it closes the accordion and returns the user to the
-  // GENERAL map, scrolled so Finn (Captain Shark) is pointing at the next
-  // module and any PEARL sitting between the two is visible — the user
-  // decides when to start it ("כפתור המשך לא מתחיל את המודולה הבאה, אלא
-  // לוקח למסך הלמידה הכללי ששארק מצביע על המודולה הבאה ... שיש פנינה
-  // לבצע"). The next module becomes the map's active node automatically
-  // (the current one is now completed), so Finn + the active-node glow
-  // land on it.
+  // "המשך" after chest — keep accordion OPEN, scroll end-of-module cards
+  // (report + shark call) near the top (~20% from top) so the next module
+  // node is visible in the lower portion. The user sees what they completed
+  // and can tap the next module when ready, instead of being auto-navigated.
   const handleTopicTreeAdvanceToNextModule = useCallback(() => {
     const current = topicTreeModule;
     if (!current) return;
     const ch = ALL_CHAPTERS.find((c) => c.id === current.chapterId);
     if (!ch) return;
-    const idx = ch.modules.findIndex((m) => m.id === current.module.id);
-    const next = idx >= 0 ? ch.modules[idx + 1] : undefined;
-    setTopicTreeModule(null);
     // mod-0-1b → non-Pro users still see the pricing screen once before
     // mod-0-2 becomes reachable (business gate, unchanged). This is the one
     // case that still navigates away rather than just scrolling the map.
@@ -2437,24 +2429,40 @@ export function DuoLearnScreen() {
       && !isPro
       && !useUsageStore.getState().hasSeenMod01bPaywall
     ) {
+      setTopicTreeModule(null);
       useUsageStore.getState().markMod01bPaywallSeen();
       try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b_topic_tree' }); } catch { /* non-fatal */ }
       const returnTo = '/lesson/mod-0-2?chapterId=chapter-0';
       router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
     }
-    if (next) {
-      // Scroll the general map to the next module. Offset upward so the PEARL
-      // (rendered between this module and the next) plus Finn beside the next
-      // node land in view, instead of pinning the node to the very top.
-      const chIdx = ALL_CHAPTERS.findIndex((c) => c.id === current.chapterId);
-      const mIdx = idx + 1;
-      const moduleY = calcModuleScrollY(chIdx, mIdx);
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({ y: Math.max(0, moduleY - 240), animated: true });
-      });
-    }
-  }, [topicTreeModule, router, isPro, calcModuleScrollY]);
+    // Keep accordion open and land on the end cards at ~20% from top —
+    // next module node sits in the lower portion naturally.
+    const { height } = Dimensions.get('window');
+    const tryScroll = (): boolean => {
+      const node = endCardsRef.current;
+      const scroller = scrollRef.current;
+      if (!node || !scroller || typeof node.measureLayout !== 'function') return false;
+      const innerGetter = scroller as unknown as { getInnerViewNode?: () => unknown };
+      const inner = innerGetter.getInnerViewNode?.();
+      const relativeTo = typeof inner === 'number' ? inner : findNodeHandle(scroller);
+      if (relativeTo == null) return false;
+      try {
+        node.measureLayout(
+          relativeTo,
+          (_x: number, y: number) => {
+            scrollRef.current?.scrollTo({ y: Math.max(0, y - height * 0.20), animated: true });
+          },
+          () => {},
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    requestAnimationFrame(() => { if (!tryScroll()) setTimeout(tryScroll, 140); });
+    setTimeout(tryScroll, 340);
+  }, [topicTreeModule, router, isPro]);
 
   // Generic module-completed handler — invoked when the user picks
   // "next module" inside the chest. Closes the accordion.
