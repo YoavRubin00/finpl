@@ -1,5 +1,5 @@
-import React, { useState, Suspense } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import LottieView from 'lottie-react-native';
@@ -26,14 +26,18 @@ const STAR_DECOR = [
 ];
 
 // The live-call screen pulls the native ElevenLabs/WebRTC SDK at module load.
-// Lazy-load it so this always-mounted card never evaluates that native import
-// until the user actually starts a call — keeps the accordion crash-safe (and
-// OTA-safe) on binaries built without the native module.
-const ModuleComprehensionCallScreen = React.lazy(() =>
-  import('../../shark-voice-chat/ModuleComprehensionCallScreen').then((m) => ({
-    default: m.ModuleComprehensionCallScreen,
-  })),
-);
+// Defer that native import to call-time via a render-time require() — the same
+// proven pattern as app/shark-voice.tsx. React.lazy's dynamic import resolved to
+// `undefined` in the production Hermes bundle ("Lazy element type must resolve to
+// a class or function" crash) the first time a call was actually started. On
+// flag=false (OTA) bundles the card returns null before CallScreenHost ever
+// renders, so the native module is never evaluated there.
+function CallScreenHost(props: { moduleId: string; moduleTitle: string; onComplete: () => void }): React.ReactElement {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { ModuleComprehensionCallScreen } =
+    require('../../shark-voice-chat/ModuleComprehensionCallScreen') as typeof import('../../shark-voice-chat/ModuleComprehensionCallScreen');
+  return <ModuleComprehensionCallScreen {...props} />;
+}
 
 interface Props {
   moduleId: string;
@@ -145,19 +149,11 @@ export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.Rea
         onRequestClose={() => setPhase('closed')}
       >
         {phase === 'call' ? (
-          <Suspense
-            fallback={
-              <View style={[styles.modalSafe, styles.modalLoading]}>
-                <ActivityIndicator size="large" color="#67e8f9" />
-              </View>
-            }
-          >
-            <ModuleComprehensionCallScreen
-              moduleId={moduleId}
-              moduleTitle={moduleTitle}
-              onComplete={() => setPhase('report')}
-            />
-          </Suspense>
+          <CallScreenHost
+            moduleId={moduleId}
+            moduleTitle={moduleTitle}
+            onComplete={() => setPhase('report')}
+          />
         ) : phase === 'report' ? (
           <SafeAreaView style={styles.modalSafe} edges={['top', 'bottom']}>
             <ModuleComprehensionReportScreen
@@ -237,5 +233,4 @@ const styles = StyleSheet.create({
   },
   proText: { color: '#facc15', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
   modalSafe: { flex: 1, backgroundColor: '#0b1735' },
-  modalLoading: { alignItems: 'center', justifyContent: 'center' },
 });
