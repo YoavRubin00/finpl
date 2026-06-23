@@ -92,10 +92,12 @@ function PostWalkthroughRegisterCTA(): React.JSX.Element {
 // /pricing screen or any other surface).
 export function PostWalkthroughRegisterCTAGate(): React.JSX.Element | null {
   const pending = useTutorialStore((s) => s.pendingPostWalkthroughCTA);
+  const firstChestPending = useTutorialStore((s) => s.pendingPostWalkthroughFirstChest);
   const isGuest = useAuthStore((s) => s.isGuest);
   const pathname = usePathname();
 
-  if (!pending || !isGuest) return null;
+  // Hold the register CTA until the first-chest onboarding moment is dismissed.
+  if (!pending || !isGuest || firstChestPending) return null;
   // expo-router exposes the rewritten path; /(tabs) screens surface as `/`
   // or as the underlying tab path (`/index`, `/learn`, …). We accept the
   // tab root + any tab subpath so the modal can fire on the user's actual

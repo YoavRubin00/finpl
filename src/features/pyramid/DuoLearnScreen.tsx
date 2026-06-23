@@ -2819,7 +2819,13 @@ export function DuoLearnScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
                 {/* תחנת הכוח — always-visible energy power-station band, pinned above the
             scrolling lesson path (so it never shifts the path's auto-scroll math). */}
-        <EnergyStationCard onStartLesson={() => { try { scrollRef.current?.scrollTo({ y: calcResumeScrollY(), animated: true }); } catch { /* non-fatal */ } }} />
+        {/* Hidden during the first-session onboarding so the brand-new user
+            focuses on the golden first chip, not the energy meter (Yoav
+            2026-06-23). Reappears the moment the walkthrough completes
+            (hasSeenAppWalkthrough → true). */}
+        {!isWalkthroughActive && (
+          <EnergyStationCard onStartLesson={() => { try { scrollRef.current?.scrollTo({ y: calcResumeScrollY(), animated: true }); } catch { /* non-fatal */ } }} />
+        )}
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}

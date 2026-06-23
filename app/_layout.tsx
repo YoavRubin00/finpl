@@ -114,6 +114,7 @@ import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudge
 import { GlobalCrowdQuestionGate } from "../src/components/ui/GlobalCrowdQuestionGate";
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
 import { PostWalkthroughProTeaserGate } from "../src/features/subscription/PostWalkthroughProTeaser";
+import { PostWalkthroughFirstChestGate } from "../src/features/onboarding/PostWalkthroughFirstChest";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
@@ -695,6 +696,11 @@ function RootLayoutInner() {
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
               {allowAutoPopups && <GlobalCrowdQuestionGate />}
+              {/* First-chest onboarding moment — shown to EVERY new user the
+                  moment the walkthrough completes, BEFORE the register/Pro CTAs
+                  (their gates wait on pendingPostWalkthroughFirstChest). Tap to
+                  open → coins+XP → shark bubble → המשך hands off to register/Pro. */}
+              <PostWalkthroughFirstChestGate />
               {/* Post-walkthrough register CTA for Guests. The gate handles
                   all conditions internally: pendingPostWalkthroughCTA flag
                   set by AppWalkthroughOverlay on completion + isGuest +

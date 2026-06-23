@@ -83,14 +83,17 @@ interface FeatureRow {
 //  - "משחקי פיד" — feature removed entirely (commit 42286b7)
 //  - "ארנה"      — superseded by "סימולציות פרימיום" content lock
 //  - "פריטי פרימיום מהחנות" — cosmetic, weak conversion driver
-// Intentionally NOT added: shark voice call (feature not yet shipped).
+// Live shark voice call ("סיכום שיעור לייב") — added 2026-06-23 now that it
+// ships: 1 free trial for everyone, unlimited (all modules) on Pro.
 const FEATURES: FeatureRow[] = [
   // The line Yoav specifically asked for — "Financial Tools, limited vs full"
   { label: "כלים פיננסיים מתקדמים", free: "גישה מוגבלת", pro: "גישה מלאה" },
   // AI chat is the real value driver (lifeline + analyst + insights)
   { label: "צ'אט AI עם שארק", free: "2 הודעות ביום", pro: "ללא הגבלה" },
-  // Content lock — the 7 Pro-only simulations in proGates.ts
-  { label: "7 סימולציות פרימיום", free: false, pro: true },
+  // Live shark voice "lesson summary" call — 1 free trial for all, all modules on Pro.
+  { label: "סיכום שיעור לייב", free: "1 חינם", pro: "כל המודולות" },
+  // Content lock — Pro-only exclusive lessons (was "7 סימולציות פרימיום").
+  { label: "שיעורים בלעדיים", free: false, pro: true },
   // The most viscerally felt daily friction
   { label: "אנרגיה", free: "20", pro: "אינסוף ♾️" },
   // Universal Pro signal — everyone understands the value
