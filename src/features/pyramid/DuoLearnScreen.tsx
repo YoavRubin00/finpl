@@ -121,7 +121,6 @@ import { MondialMailBadge } from "../mondial/MondialMailBadge";
 import { MondialCarouselSheet } from "../mondial/MondialCarouselSheet";
 import { useMondialStore } from "../mondial/useMondialStore";
 import { MONDIAL_LAUNCH_DATE, localDateISO } from "../mondial/mondialCarouselData";
-import { DailyChallengeProgressCard } from "../daily-challenge/DailyChallengeProgressCard";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -2875,9 +2874,6 @@ export function DuoLearnScreen() {
               </View>
             )
           ) : null}
-
-          {/* אתגר השארק — daily challenge progress tracker */}
-          <DailyChallengeProgressCard />
 
           {/* Chapter sections */}
           {(() => {
