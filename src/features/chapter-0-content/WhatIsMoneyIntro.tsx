@@ -14,7 +14,7 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { FINN_HAPPY, FINN_TALKING, FINN_DANCING } from '../retention-loops/finnMascotConfig';
+import { FINN_HAPPY, SHARK_CALL_TALKING, FINN_DANCING } from '../retention-loops/finnMascotConfig';
 import { heavyHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 
@@ -162,7 +162,7 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
           </Animated.View>
           <Animated.View style={[{ position: 'absolute', width: 120, height: 120 }, talkingStyle]}>
             <ExpoImage
-              source={FINN_TALKING}
+              source={SHARK_CALL_TALKING}
               style={{ width: 120, height: 120 }}
               contentFit="contain"
               accessible={false}

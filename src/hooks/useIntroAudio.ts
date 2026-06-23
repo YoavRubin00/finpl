@@ -103,6 +103,14 @@ export function useIntroAudio(
   const playerRef = useRef<AudioPlayer | null>(null);
   const retriedRef = useRef(false);
 
+  // Bundled (chapter-0) intro audio has nothing to prefetch, so `audioReady` is
+  // irrelevant to it. Freeze the effect's "ready" input to a constant `true` for
+  // bundled clips: otherwise a late audioReady flip (false→true, ~0.5s after the
+  // bundled player already started) re-runs the effect, tears the playing player
+  // down and rebuilds it → the voice restarts from 0 (Yoav 2026-06-23). Non-
+  // bundled keeps the real audioReady so the prefetch→cached-path swap still works.
+  const effectiveReady = audioUri && BUNDLED_INTRO_AUDIO[audioUri] !== undefined ? true : audioReady;
+
   useEffect(() => {
     if (!audioUri) {
       setState('idle');
@@ -228,7 +236,7 @@ export function useIntroAudio(
       }, 6000);
     };
 
-    if (audioReady === false && bundled === undefined) {
+    if (effectiveReady === false && bundled === undefined) {
       // Prefetch still in flight. Defer createAudioPlayer briefly so the
       // local cached file (which getCachedAudioPath will return once the
       // download completes) can be used. If the prefetch resolves before
@@ -255,7 +263,7 @@ export function useIntroAudio(
       }
       playerRef.current = null;
     };
-  }, [audioUri, audioReady]);
+  }, [audioUri, effectiveReady]);
 
   return state;
 }

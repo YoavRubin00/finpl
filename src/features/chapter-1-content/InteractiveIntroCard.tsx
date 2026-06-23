@@ -18,6 +18,8 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { heavyHaptic } from "../../utils/haptics";
 // FINN_STANDARD imported via FinnSpeakingAvatar internally
 import { FinnSpeakingAvatar } from "../retention-loops/FinnSpeakingAvatar";
+// Module intros show the live-voice "Captain Shark" loops (Yoav 2026-06-23).
+import { SHARK_CALL_TALKING, SHARK_CALL_IDLE } from "../retention-loops/finnMascotConfig";
 import { useIntroAudio } from "../../hooks/useIntroAudio";
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
@@ -117,7 +119,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
               shadowOffset: { width: 0, height: 4 },
               elevation: 6,
             }}>
-              <FinnSpeakingAvatar text={displayText} size={120} audioState={audioUri ? audioState : undefined} />
+              <FinnSpeakingAvatar text={displayText} size={120} audioState={audioUri ? audioState : undefined} talkingSource={SHARK_CALL_TALKING} standardSource={SHARK_CALL_IDLE} />
             </View>
           </Animated.View>
         )}
@@ -182,7 +184,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
         ) : (
           /* Finn character, below text card (default) */
           <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginTop: 14, marginBottom: 10 }]}>
-            <FinnSpeakingAvatar text={displayText} size={140} audioState={audioUri ? audioState : undefined} />
+            <FinnSpeakingAvatar text={displayText} size={140} audioState={audioUri ? audioState : undefined} talkingSource={SHARK_CALL_TALKING} standardSource={SHARK_CALL_IDLE} />
           </Animated.View>
         )}
       </View>
