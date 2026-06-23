@@ -5472,7 +5472,7 @@ export function LessonFlowScreen() {
             <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(56,189,248,0.15)" }}>
               <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 90, height: 90, marginBottom: 16 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>
-                חכו, יש רק {minutesWord}{"\n"}לסיום המודולה!
+                חכו, יש רק {minutesWord}{"\n"}לסיום השיעור!
               </Text>
               <Text style={{ ...RTL_STYLE, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 24 }}>
                 כמעט סיימתם, אל תצאו עכשיו

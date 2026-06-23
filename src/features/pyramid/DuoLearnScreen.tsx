@@ -3046,7 +3046,7 @@ export function DuoLearnScreen() {
                   />
                 ) : (
                   <View style={{ alignItems: 'center', gap: 8 }}>
-                    <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a', writingDirection: 'rtl' }}>מודולה הושלמה!</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a', writingDirection: 'rtl' }}>שיעור הושלם!</Text>
                   </View>
                 )}
               </View>

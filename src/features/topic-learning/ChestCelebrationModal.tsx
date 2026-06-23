@@ -364,7 +364,7 @@ export function ChestCelebrationModal({
             <Text style={[styles.subheading, RTL_CENTER]} allowFontScaling={false}>
               {isFinale
                 ? 'סיימת את כל הרכיבים. תיבת המאסטר נפתחת.'
-                : 'סיימת 70% מהמודולה. הגיע הזמן לפרס.'}
+                : 'סיימת 70% מהשיעור. הגיע הזמן לפרס.'}
             </Text>
             {/* Mystery reveal (Yoav 17/06): the rarity badge is now gated on
                 `opened` so rare/mythic is HIDDEN until the user taps — the chest
@@ -525,11 +525,11 @@ export function ChestCelebrationModal({
                 <Pressable
                   onPress={handleContinue}
                   accessibilityRole="button"
-                  accessibilityLabel="סיים את כל המודולה"
+                  accessibilityLabel="סיים את כל השיעור"
                   style={[styles.cta, styles.ctaSecondary]}
                 >
                   <Text style={[styles.ctaSecondaryText, RTL]} allowFontScaling={false}>
-                    סיים את כל המודולה
+                    סיים את כל השיעור
                   </Text>
                 </Pressable>
               )}

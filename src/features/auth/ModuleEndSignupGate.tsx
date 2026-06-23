@@ -59,7 +59,7 @@ export function ModuleEndSignupGate({ visible, moduleId, onClose }: Props): Reac
         >
           <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 88, height: 88, marginBottom: 12 }} contentFit="contain" />
           <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
-            עוד מודולה בכיס 🎉
+            עוד שיעור בכיס 🎉
           </Text>
           <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
             הירשמו כדי לשמור את ההתקדמות ולחזור אליה בכל מכשיר
