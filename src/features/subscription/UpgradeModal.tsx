@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Text, Modal, StyleSheet, View, Pressable } from "react-native";
-import { X } from "lucide-react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import { Image as ExpoImage } from "expo-image";
+import { X, Heart, Zap, Ban, ChevronLeft, type LucideIcon } from "lucide-react-native";
+import Animated, { FadeIn, FadeOut, FadeInUp } from "react-native-reanimated";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
+import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { heavyHaptic } from "../../utils/haptics";
 import { track } from "../../lib/analytics/events";
@@ -56,6 +57,14 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
     body: `ב‑Free מקבלים ${BASIC_LIMITS["lesson-report"]} דוח סיכום שיעור בשבוע.\nב‑PRO מקבלים דוח הבנה איכותי אחרי כל שיעור — עם נקודות לשיפור ושיחה עם קפטן שארק על הדוח.`,
   },
 };
+
+// PRO perks, icon-driven (no emojis) so the chips read as native app UI rather
+// than a sticker row. lucide icons + sky-blue tint match the app's component set.
+const PRO_BENEFITS: { Icon: LucideIcon; label: string }[] = [
+  { Icon: Heart, label: "לבבות אינסופיים" },
+  { Icon: Zap, label: "גישה מלאה" },
+  { Icon: Ban, label: "ללא פרסומות" },
+];
 
 /** Standalone usage, must be placed once in app/_layout.tsx */
 export function GlobalUpgradeModal() {
@@ -125,8 +134,8 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
   return (
     <Modal transparent animationType="none" visible={visible} statusBarTranslucent onRequestClose={onDismiss} accessibilityViewIsModal>
       <Animated.View
-        entering={FadeIn.duration(120)}
-        exiting={FadeOut.duration(80)}
+        entering={FadeIn.duration(140)}
+        exiting={FadeOut.duration(100)}
         style={styles.overlay}
       >
         <Pressable
@@ -135,59 +144,56 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
           accessibilityLabel="סגור על ידי נגיעה ברקע"
           accessibilityRole="button"
         />
-        <LinearGradient
-          colors={["#0a2540", "#0e3a5c", "#0a2540"]}
-          style={styles.card}
-        >
+        <Animated.View entering={FadeInUp.duration(300)} style={styles.card}>
           {/* Close button */}
           <Pressable onPress={() => handleDismiss('close_x')} style={styles.closeBtn} hitSlop={12} accessibilityLabel="סגור" accessibilityRole="button">
-            <X size={20} color="#64748b" />
+            <X size={20} color="#0c4a6e" />
           </Pressable>
 
-          {/* Crown */}
-          <Text
-            style={styles.crownEmoji}
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-            allowFontScaling={false}
-          >👑</Text>
+          {/* Captain Shark mascot — the app's CTA mascot, replaces the old crown emoji */}
+          <ExpoImage
+            source={FINN_HAPPY}
+            style={styles.mascot}
+            contentFit="contain"
+            accessible={false}
+            pointerEvents="none"
+          />
 
           {/* Title */}
-          <Text style={styles.title} accessibilityRole="header">{title}</Text>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={false}>{title}</Text>
 
           {/* Body */}
-          <Text style={styles.body}>{body}</Text>
+          <Text style={styles.body} allowFontScaling={false}>{body}</Text>
 
           {/* PRO benefits row */}
           <View style={styles.benefitsRow}>
-            {["👑 לבבות אינסופיים", "⚡ גישה מלאה", "🚫 ללא פרסומות"].map((b) => (
-              <View key={b} style={styles.benefitChipWrap}>
-                <Text style={styles.benefitChip}>{b}</Text>
+            {PRO_BENEFITS.map(({ Icon, label }) => (
+              <View key={label} style={styles.benefitChip}>
+                <Icon size={13} color="#0369a1" />
+                <Text style={styles.benefitChipText} allowFontScaling={false}>{label}</Text>
               </View>
             ))}
           </View>
 
-          {/* CTA */}
+          {/* CTA — bg on an INNER View so a function/animated-style Pressable can't
+              drop backgroundColor on Android (the white-on-white bug). */}
           <AnimatedPressable
             onPress={handleUpgrade}
             style={styles.cta}
             accessibilityRole="button"
             accessibilityLabel="שדרג ל-PRO"
           >
-            <LinearGradient
-              colors={["#0a2540", "#164e63", "#0a2540"]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={styles.ctaGradient}
-            >
-              <Text style={styles.ctaText}>שדרג ל-PRO</Text>
-            </LinearGradient>
+            <View style={styles.ctaInner}>
+              <Text style={styles.ctaText} allowFontScaling={false}>שדרג ל-PRO</Text>
+              <ChevronLeft size={18} color="#ffffff" />
+            </View>
           </AnimatedPressable>
 
           {/* Dismiss */}
           <AnimatedPressable onPress={() => handleDismiss('continue_text')} style={styles.dismiss} accessibilityRole="button" accessibilityLabel="המשך מאיפה שהפסקתי">
-            <Text style={styles.dismissText}>המשך מאיפה שהפסקתי</Text>
+            <Text style={styles.dismissText} allowFontScaling={false}>המשך מאיפה שהפסקתי</Text>
           </AnimatedPressable>
-        </LinearGradient>
+        </Animated.View>
       </Animated.View>
     </Modal>
   );
@@ -196,48 +202,48 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.85)",
+    backgroundColor: "rgba(8,47,73,0.55)",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,
   },
   card: {
     width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#f7fbff",
     borderRadius: 28,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.25)",
+    borderWidth: 2,
+    borderColor: "#7dd3fc",
     paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 28,
+    paddingTop: 18,
+    paddingBottom: 22,
     alignItems: "center",
-    shadowColor: "#22d3ee",
-    shadowOpacity: 0.2,
+    shadowColor: "#0ea5e9",
+    shadowOpacity: 0.3,
     shadowRadius: 24,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 16,
   },
-  crownEmoji: {
-    fontSize: 88,
-    marginTop: 8,
-    marginBottom: 8,
-    textAlign: "center",
+  mascot: {
+    width: 124,
+    height: 124,
+    marginTop: 4,
+    marginBottom: 4,
+    backgroundColor: "transparent", // black-box fix for transparent webp
   },
   title: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: "900",
-    color: "#ffffff",
+    color: "#0c4a6e",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 8,
     writingDirection: "rtl",
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   body: {
     fontSize: 14,
-    color: "#cbd5e1",
+    color: "#0369a1",
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 21,
     marginBottom: 16,
     writingDirection: "rtl",
   },
@@ -249,33 +255,39 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     width: "100%",
   },
-  benefitChipWrap: {
-    backgroundColor: "rgba(34,211,238,0.12)",
+  benefitChip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(14,165,233,0.10)",
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.2)",
+    borderColor: "rgba(14,165,233,0.22)",
   },
-  benefitChip: {
-    color: "#22d3ee",
+  benefitChipText: {
+    color: "#0369a1",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
+    writingDirection: "rtl",
   },
   cta: {
     width: "100%",
     borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 12,
-    shadowColor: "#22d3ee",
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    marginBottom: 8,
   },
-  ctaGradient: {
-    paddingVertical: 16,
+  ctaInner: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#0ea5e9",
+    borderRadius: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 4,
+    borderBottomColor: "#0284c7",
   },
   ctaText: {
     color: "#ffffff",
@@ -290,7 +302,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(2,132,199,0.10)",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
@@ -302,5 +314,6 @@ const styles = StyleSheet.create({
     color: "#64748b",
     fontSize: 13,
     writingDirection: "rtl",
+    textAlign: "center",
   },
 });
