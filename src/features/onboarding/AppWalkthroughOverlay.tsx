@@ -176,6 +176,7 @@ export function AppWalkthroughOverlay() {
   const isPro = useIsPro();
   const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
   const setPendingPostWalkthroughProTeaser = useTutorialStore((s) => s.setPendingPostWalkthroughProTeaser);
+  const setPendingPostWalkthroughFirstChest = useTutorialStore((s) => s.setPendingPostWalkthroughFirstChest);
 
   // Filter out Bridge step for minors (legal protection, no real-money features)
   const activeSteps = isMinor ? STEPS.filter((s) => s.screenSignal !== "bridge") : STEPS;
@@ -232,6 +233,11 @@ export function AppWalkthroughOverlay() {
   const routePostWalkthrough = useCallback((via: 'completed' | 'skipped') => {
     setActiveScreen(null);
 
+    // First-chest onboarding moment — shown to EVERY new user. Its gate
+    // (PostWalkthroughFirstChestGate) suppresses the register / Pro CTAs until
+    // the user taps המשך, so the chest is always the first thing they see.
+    try { setPendingPostWalkthroughFirstChest(true); } catch { /* non-fatal */ }
+
     // Arm the post-walkthrough modals. Guests → register-CTA first (the Pro
     // teaser is armed afterwards, when that CTA resolves — see
     // PostWalkthroughRegisterCTA). Registered non-Pro → the soft Pro teaser
@@ -255,7 +261,7 @@ export function AppWalkthroughOverlay() {
     } catch {
       // No-op — already on a safe route.
     }
-  }, [isGuest, isPro, router, setActiveScreen, setPendingPostWalkthroughCTA, setPendingPostWalkthroughProTeaser]);
+  }, [isGuest, isPro, router, setActiveScreen, setPendingPostWalkthroughCTA, setPendingPostWalkthroughProTeaser, setPendingPostWalkthroughFirstChest]);
 
   const handleNext = useCallback(() => {
     try {

@@ -98,10 +98,12 @@ function PostWalkthroughProTeaser(): React.JSX.Element {
 export function PostWalkthroughProTeaserGate(): React.JSX.Element | null {
   const pending = useTutorialStore((s) => s.pendingPostWalkthroughProTeaser);
   const registerPending = useTutorialStore((s) => s.pendingPostWalkthroughCTA);
+  const firstChestPending = useTutorialStore((s) => s.pendingPostWalkthroughFirstChest);
   const isPro = useIsPro();
   const pathname = usePathname();
 
-  if (!pending || isPro || registerPending) return null;
+  // Hold the Pro teaser until the first-chest moment (and register CTA) clear.
+  if (!pending || isPro || registerPending || firstChestPending) return null;
   const onLearnMap = pathname === "/" || pathname === "" || (pathname?.startsWith("/") && !pathname.startsWith("/pricing") && !pathname.startsWith("/(auth)") && !pathname.startsWith("/lesson") && !pathname.startsWith("/bridge"));
   if (!onLearnMap) return null;
 

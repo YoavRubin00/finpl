@@ -67,6 +67,11 @@ interface TutorialState {
    *  monetization moment (volume) without blocking the path to the first
    *  module. One-shot: cleared on either CTA. */
   pendingPostWalkthroughProTeaser: boolean;
+  /** Set when the walkthrough completes, for ALL new users. Gates the one-shot
+   *  "first chest" onboarding moment (tap-open → coins+XP → shark speech bubble
+   *  → המשך) that fires BEFORE the register CTA / Pro teaser. Cleared on המשך,
+   *  which then hands off to the existing register→Pro chain. Persisted; one-shot. */
+  pendingPostWalkthroughFirstChest: boolean;
   /** mod-0-1's inline knowledgeLevel question was resolved (answered OR
    *  skipped). Gates the mod-0-1 70% chest so it appears AFTER the onboarding
    *  question, never before/over it (Yoav 2026-06-17). Skip-safe: set on either
@@ -104,6 +109,7 @@ interface TutorialState {
   setWalkthroughActiveScreen: (screen: WalkthroughScreen) => void;
   setPendingPostWalkthroughCTA: (value: boolean) => void;
   setPendingPostWalkthroughProTeaser: (value: boolean) => void;
+  setPendingPostWalkthroughFirstChest: (value: boolean) => void;
   markMod01KnowledgeResolved: () => void;
   /** Called when the rating modal actually opens — bumps count + stamps time. */
   markRatePromptShown: () => void;
@@ -142,6 +148,7 @@ export const useTutorialStore = create<TutorialState>()(
       walkthroughActiveScreen: null,
       pendingPostWalkthroughCTA: false,
       pendingPostWalkthroughProTeaser: false,
+      pendingPostWalkthroughFirstChest: false,
       mod01KnowledgeResolved: false,
       ratePromptHandled: false,
       lastRatePromptAt: null,
@@ -170,12 +177,13 @@ export const useTutorialStore = create<TutorialState>()(
       setWalkthroughActiveScreen: (screen: WalkthroughScreen) => set({ walkthroughActiveScreen: screen }),
       setPendingPostWalkthroughCTA: (value: boolean) => set({ pendingPostWalkthroughCTA: value }),
       setPendingPostWalkthroughProTeaser: (value: boolean) => set({ pendingPostWalkthroughProTeaser: value }),
+      setPendingPostWalkthroughFirstChest: (value: boolean) => set({ pendingPostWalkthroughFirstChest: value }),
       markMod01KnowledgeResolved: () => set({ mod01KnowledgeResolved: true }),
       markRatePromptShown: () => set((s) => ({ ratePromptCount: s.ratePromptCount + 1, lastRatePromptAt: Date.now() })),
       markRated: () => set({ ratePromptHandled: true }),
       markNotifPromptShown: () => set({ notifPromptShown: true }),
-      resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, _hydrated: false }),
+      resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",
