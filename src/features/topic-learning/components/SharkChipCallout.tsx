@@ -24,6 +24,12 @@ interface SharkChipCalloutProps {
   remaining: number;
   /** mod-0-1 / mod-0-2 (50% threshold) → "first chest" framing. */
   isFirstChest: boolean;
+  /** Fired when the user dismisses the BLOCKING pop-up (remaining <= 2) via
+   *  "המשך" / backdrop. The parent re-pokes the gold-chip auto-scroll: while a
+   *  <Modal> is presented, scrollTo on the ScrollView behind it is dropped, so
+   *  the accordion only lands on the next chip AFTER the modal is gone. The
+   *  non-blocking toast tier doesn't need this. */
+  onPopupContinue?: () => void;
 }
 
 const TOAST_MS = 1800;
@@ -55,6 +61,7 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
   seq,
   remaining,
   isFirstChest,
+  onPopupContinue,
 }: SharkChipCalloutProps) {
   const reduceMotion = useReducedMotion();
   const safeTimeout = useTimeoutCleanup();
@@ -109,7 +116,9 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
     try { tapHaptic(); } catch { /* non-fatal */ }
     setPopupVisible(false);
     showingRef.current = false;
-  }, []);
+    // Modal is gone now → let the parent land the user on the next gold chip.
+    onPopupContinue?.();
+  }, [onPopupContinue]);
 
   const webp = CHIP_CALLOUT_WEBPS[webpIndex] ?? CHIP_CALLOUT_WEBPS[0];
   if (!webp) return null;

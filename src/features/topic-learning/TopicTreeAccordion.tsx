@@ -90,6 +90,10 @@ interface TopicTreeAccordionProps {
    *  the parent can scroll them into view (with the next module below) when the
    *  user taps "המשך" on the chest (Yoav 2026-06-22). */
   onEndCardsRef?: (ref: View | null) => void;
+  /** Fired when the SharkChipCallout's blocking "near-chest" pop-up is
+   *  dismissed — the parent re-pokes the gold-chip auto-scroll, which a
+   *  presented <Modal> had swallowed (Yoav 2026-06-23). */
+  onChipCalloutContinue?: () => void;
 }
 
 /**
@@ -111,6 +115,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   onEndCardsRef,
   onModuleCompleted,
   onRecommendedChipRef,
+  onChipCalloutContinue,
 }: TopicTreeAccordionProps): React.ReactElement {
   const topics = useMemo(
     () => resolveTopics(module, { simFirst }),
@@ -828,6 +833,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           seq={calloutSeq}
           remaining={chestRemaining}
           isFirstChest={noChestOpenedYet}
+          onPopupContinue={onChipCalloutContinue}
         />
       </View>
     </Animated.View>
