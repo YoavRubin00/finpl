@@ -9,6 +9,7 @@ import type { Conversation as ConversationType } from '@elevenlabs/client';
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { fetchSignedUrl } from '../services/voiceSessionClient';
 import type { ComprehensionOverride } from '../moduleComprehension';
+import { captureEvent } from '../../../lib/posthog';
 
 /**
  * Drives the ElevenLabs Conversational AI session via the official SDK.
@@ -82,11 +83,18 @@ export function useElevenLabsConversation() {
     startingRef.current = true;
     setStatus('connecting');
     setError(null);
+    captureEvent('shark_voice_connect_attempt', { platform: Platform.OS, transport: 'websocket' });
 
     let signedUrl: string;
     try {
       signedUrl = await fetchSignedUrl();
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'session-fetch failed';
+      captureEvent('shark_voice_error', {
+        step: 'session-fetch',
+        message: message.slice(0, 300),
+        platform: Platform.OS,
+      });
       setError('לא הצלחנו להתחיל את השיחה. נסה שוב בעוד רגע.');
       startingRef.current = false;
       return;
@@ -103,12 +111,18 @@ export function useElevenLabsConversation() {
         ...(opts?.overrides ? { overrides: opts.overrides } : {}),
         ...(opts?.dynamicVariables ? { dynamicVariables: opts.dynamicVariables } : {}),
         onConnect: () => {
+          captureEvent('shark_voice_connected', { platform: Platform.OS, transport: 'websocket' });
           setStatus('listening');
         },
         onDisconnect: () => {
           setStatus('idle');
         },
         onError: (message) => {
+          captureEvent('shark_voice_error', {
+            step: 'runtime-error',
+            message: String(message ?? '').slice(0, 300),
+            platform: Platform.OS,
+          });
           setError(message || 'שגיאה בשירות הקול.');
         },
         onMessage: ({ message, role }) => {
@@ -154,6 +168,11 @@ export function useElevenLabsConversation() {
       conversationRef.current = conv;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'לא ניתן לפתוח חיבור לשירות הקול.';
+      captureEvent('shark_voice_error', {
+        step: 'start-session',
+        message: message.slice(0, 300),
+        platform: Platform.OS,
+      });
       setError(message);
       startingRef.current = false;
     }

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { useConversation } from '@elevenlabs/react-native';
+import { setAudioModeAsync } from 'expo-audio';
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { fetchConversationToken } from '../services/voiceSessionClient';
 import type { ComprehensionOverride } from '../moduleComprehension';
+import { captureEvent } from '../../../lib/posthog';
+import { captureException } from '../../../lib/sentry';
 
 /**
  * Native (iOS/Android) driver for the ElevenLabs Conversational AI session
@@ -47,6 +51,7 @@ export function useElevenLabsConversation() {
 
   const conversation = useConversation({
     onConnect: () => {
+      captureEvent('shark_voice_connected', { platform: Platform.OS, transport: 'webrtc' });
       setStatus('listening');
     },
     onDisconnect: () => {
@@ -61,6 +66,11 @@ export function useElevenLabsConversation() {
           : message instanceof Error
             ? message.message
             : 'שגיאה בשירות הקול.';
+      captureEvent('shark_voice_error', {
+        step: 'runtime-error',
+        message: String(text).slice(0, 300),
+        platform: Platform.OS,
+      });
       setError(text || 'שגיאה בשירות הקול.');
     },
     onMessage: ({ message, source }: { message: string; source: 'user' | 'ai' }) => {
@@ -99,14 +109,32 @@ export function useElevenLabsConversation() {
     startingRef.current = true;
     setStatus('connecting');
     setError(null);
+    captureEvent('shark_voice_connect_attempt', { platform: Platform.OS, transport: 'webrtc' });
 
     let token: string;
     try {
       token = await fetchConversationToken();
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'token-fetch failed';
+      captureEvent('shark_voice_error', {
+        step: 'token-fetch',
+        message: message.slice(0, 300),
+        platform: Platform.OS,
+      });
       setError('לא הצלחנו להתחיל את השיחה. נסה שוב בעוד רגע.');
       startingRef.current = false;
       return;
+    }
+
+    // iOS: the live SDK (WebRTC/LiveKit) needs the AVAudioSession in
+    // play-and-record. expo-audio's default leaves it in `.playback` (lesson
+    // narration), so WebRTC's record activation throws "Session activation
+    // failed" (ExpoModulesCore) and the call dies before it opens. Flip to
+    // play+record BEFORE startSession. Best-effort — never block the connect.
+    try {
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+    } catch {
+      /* non-fatal — fall through and let the SDK try */
     }
 
     try {
@@ -123,22 +151,35 @@ export function useElevenLabsConversation() {
       startedRef.current = true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'לא ניתן לפתוח חיבור לשירות הקול.';
+      captureEvent('shark_voice_error', {
+        step: 'start-session',
+        message: message.slice(0, 300),
+        platform: Platform.OS,
+      });
+      if (err instanceof Error) captureException(err, { feature: 'shark-voice', step: 'start-session' });
       setError(message);
       startingRef.current = false;
     }
   }, [conversation, setError, setStatus]);
 
   const disconnect = useCallback(async () => {
+    const wasStarted = startedRef.current;
     startingRef.current = false;
-    if (!startedRef.current) {
-      setStatus('idle');
-      return;
-    }
     startedRef.current = false;
+    if (wasStarted) {
+      try {
+        await conversation.endSession();
+      } catch {
+        // Best-effort cleanup
+      }
+    }
+    // Restore the default playback-only session — we flipped it to play+record
+    // for the call, and lesson narration expects the original mode back.
+    // Best-effort + idempotent.
     try {
-      await conversation.endSession();
+      await setAudioModeAsync({ playsInSilentMode: false, allowsRecording: false });
     } catch {
-      // Best-effort cleanup
+      /* non-fatal */
     }
     setStatus('idle');
   }, [conversation, setStatus]);
