@@ -129,7 +129,7 @@ export function FinnSpeakingAvatar({
     <View style={[{ width: size, height: size }, style]}>
       <ExpoImage
         source={standardSource}
-        style={{ width: size, height: size, position: 'absolute' }}
+        style={{ width: size, height: size, position: 'absolute', opacity: talking ? 0 : 1 }}
         contentFit="contain"
         accessible={false}
         autoplay

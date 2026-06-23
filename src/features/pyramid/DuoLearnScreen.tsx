@@ -655,11 +655,11 @@ function ModuleNode({
           {/* Speech bubble above + offset to the right of Finn so it doesn't
               cover the active module node directly below (user feedback —
               the bubble was sitting on top of the module the player was
-              about to tap). Shifts right by 40px and lifts another 22px. */}
+              about to tap). Shifts right by 20px and lifts another 22px. */}
           <Animated.View
             entering={FadeInDown.delay(200).duration(400)}
             style={[styles.speechBubbleBelow, {
-              left: Math.max(0, Math.min(charLeft + CHAR_SIZE / 2 - 70 + 40, CONTENT_W - 140)),
+              left: Math.max(0, Math.min(charLeft + CHAR_SIZE / 2 - 70 + 20, CONTENT_W - 140)),
               top: 10 - 54,
             }]}
           >
@@ -1311,6 +1311,11 @@ export function DuoLearnScreen() {
   const router = useRouter();
   const isWalkthroughActive = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
+  // Energy band is hidden ONLY on a brand-new user's very first landing — before
+  // they complete a single chip. It returns the moment the first chip is done
+  // (and on every later screen). Yoav 2026-06-23 (was hidden through all of
+  // onboarding, too broad).
+  const hasCompletedFirstTopic = useTopicProgressStore((s) => Object.keys(s.completed).length > 0);
   // Hold the notification-permission banner back until the guest register CTA
   // has been handled (flag clears) so the push ask lands AFTER the register
   // prompt. For registered users the flag is never armed → no-op.
@@ -2818,11 +2823,11 @@ export function DuoLearnScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
                 {/* תחנת הכוח — always-visible energy power-station band, pinned above the
             scrolling lesson path (so it never shifts the path's auto-scroll math). */}
-        {/* Hidden during the first-session onboarding so the brand-new user
-            focuses on the golden first chip, not the energy meter (Yoav
-            2026-06-23). Reappears the moment the walkthrough completes
-            (hasSeenAppWalkthrough → true). */}
-        {!isWalkthroughActive && (
+        {/* Hidden ONLY on the brand-new user's very first landing (before the
+            first chip is completed) so they focus on the golden chip, not the
+            energy meter. Returns the moment they finish their first chip and on
+            every later screen (Yoav 2026-06-23). */}
+        {!(isWalkthroughActive && !hasCompletedFirstTopic) && (
           <EnergyStationCard onStartLesson={() => { try { scrollRef.current?.scrollTo({ y: calcResumeScrollY(), animated: true }); } catch { /* non-fatal */ } }} />
         )}
         <ScrollView
