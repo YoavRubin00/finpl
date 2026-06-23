@@ -11,6 +11,7 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useShallow } from 'zustand/react/shallow';
 
 import { FINN_HAPPY, FINN_CHALLENGE } from '../retention-loops/finnMascotConfig';
 import { useDailyChallengesStore } from '../daily-challenges/use-daily-challenges-store';
@@ -23,14 +24,18 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
 function useTodayGamePlays(): Record<GameKey, number> {
   const today = israelDayKey();
-  return useDailyChallengesStore((s) => ({
+  // Zustand v5: a selector returning a fresh object every call triggers the
+  // useSyncExternalStore "getSnapshot should be cached" infinite-loop crash
+  // (boot crash on the learn map). useShallow returns a stable reference when
+  // the values are unchanged.
+  return useDailyChallengesStore(useShallow((s) => ({
     'higher-lower': s.higherLowerPlays[today] ?? 0,
     'bullshit-swipe': s.bullshitSwipePlays[today] ?? 0,
     'budget-ninja': s.budgetNinjaPlays[today] ?? 0,
     'price-slider': s.priceSliderPlays[today] ?? 0,
     'cashout-rush': s.cashoutRushPlays[today] ?? 0,
     'fomo-killer': s.fomoKillerPlays[today] ?? 0,
-  }));
+  })));
 }
 
 export function DailyChallengeProgressCard(): React.ReactElement {
