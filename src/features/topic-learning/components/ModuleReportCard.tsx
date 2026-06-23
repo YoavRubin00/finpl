@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ActivityIndicator } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
@@ -9,6 +10,7 @@ import { useUsageStore } from '../../subscription/useUsageStore';
 import { useUpgradeModalStore } from '../../../stores/useUpgradeModalStore';
 import { useModuleComprehensionStore } from '../../shark-voice-chat/useModuleComprehensionStore';
 import { ModuleComprehensionReportScreen } from '../../shark-voice-chat/ModuleComprehensionReportScreen';
+import { SHARK_CALL_IDLE } from '../../retention-loops/finnMascotConfig';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -76,14 +78,14 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
     <Animated.View entering={FadeInDown.duration(320)}>
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="דוח סיכום שיעור" style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
         <View style={styles.avatarWrap}>
-          <Text style={styles.reportEmoji}>📋</Text>
+          <ExpoImage source={SHARK_CALL_IDLE} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[RTL, styles.title]} numberOfLines={1}>דוח סיכום שיעור</Text>
           <Text style={[RTL, styles.subtitle]} numberOfLines={1}>{subtitle}</Text>
         </View>
         {generating ? (
-          <ActivityIndicator color="#a16207" />
+          <ActivityIndicator color="#0369a1" />
         ) : stored && score !== null ? (
           <View style={styles.scoreChip}>
             <Text style={styles.scoreNum}>{score}</Text>
@@ -92,7 +94,7 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
         ) : (
           <View style={styles.ctaChip}>
             <Text style={styles.ctaText}>{ctaText}</Text>
-            <ChevronLeft size={16} color="#5c3a00" strokeWidth={2.8} />
+            <ChevronLeft size={16} color="#ffffff" strokeWidth={2.8} />
           </View>
         )}
       </Pressable>
@@ -119,11 +121,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     padding: 14,
     borderRadius: 18,
-    backgroundColor: '#fffdf5',
+    backgroundColor: '#bfdbfe',
     borderWidth: 1.5,
-    borderColor: '#f0c000',
-    shadowColor: '#a16207',
-    shadowOpacity: 0.2,
+    borderColor: '#38bdf8',
+    shadowColor: '#0369a1',
+    shadowOpacity: 0.18,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
@@ -133,35 +135,35 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 16,
-    backgroundColor: '#fef3c7',
+    backgroundColor: 'rgba(3,105,161,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#f0c000',
+    borderColor: '#bae6fd',
   },
-  reportEmoji: { fontSize: 26 },
-  title: { color: '#5c3a00', fontSize: 16, fontWeight: '900', textAlign: 'right' },
-  subtitle: { color: '#7c4a03', fontSize: 12, fontWeight: '700', textAlign: 'right', marginTop: 2 },
+  sharkAvatar: { width: 44, height: 44 },
+  title: { color: '#0c4a6e', fontSize: 16, fontWeight: '900', textAlign: 'right' },
+  subtitle: { color: '#0369a1', fontSize: 12, fontWeight: '700', textAlign: 'right', marginTop: 2 },
   scoreChip: {
     flexDirection: 'row-reverse',
     alignItems: 'baseline',
     gap: 1,
-    backgroundColor: '#f0c000',
+    backgroundColor: '#0369a1',
     borderRadius: 14,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-  scoreNum: { color: '#3a2400', fontSize: 18, fontWeight: '900' },
-  scoreMax: { color: '#7c4a03', fontSize: 11, fontWeight: '800' },
+  scoreNum: { color: '#ffffff', fontSize: 18, fontWeight: '900' },
+  scoreMax: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '800' },
   ctaChip: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 2,
-    backgroundColor: '#f0c000',
+    backgroundColor: '#0369a1',
     borderRadius: 999,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
-  ctaText: { color: '#3a2400', fontSize: 14, fontWeight: '900' },
+  ctaText: { color: '#ffffff', fontSize: 14, fontWeight: '900' },
   modalSafe: { flex: 1, backgroundColor: '#0b1735' },
 });
