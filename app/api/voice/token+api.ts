@@ -40,12 +40,13 @@ export async function POST(request: Request): Promise<Response> {
     });
 
     if (!upstream.ok) {
-      // Echo ElevenLabs' real error (non-secret) so a 502 is diagnosable —
-      // agent_not_found vs wrong-workspace vs plan-not-enabled.
+      // Log the real ElevenLabs failure SERVER-SIDE only — the body echoes the
+      // configured agent_id back, which can be a misconfigured secret, so it
+      // must NEVER be returned to the client. Status code alone is safe.
       const detail = await upstream.text().catch(() => '');
       console.error(`[voice/token] ElevenLabs ${upstream.status}: ${detail.slice(0, 300)}`);
       return Response.json(
-        { error: 'Voice service upstream error.', upstreamStatus: upstream.status, upstreamDetail: detail.slice(0, 300) },
+        { error: 'Voice service upstream error.', upstreamStatus: upstream.status },
         { status: upstream.status === 401 ? 503 : 502 },
       );
     }
