@@ -904,6 +904,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onInvestorQuizPress,
   onRecommendedChipRef,
   onEndCardsRef,
+  onChipCalloutContinue,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -988,6 +989,9 @@ const ChapterSection = React.memo(function ChapterSection({
   /** Registers the View wrapping the end-of-module report + shark-call cards so
    *  the parent can scroll them into view on the chest's "המשך". */
   onEndCardsRef?: (ref: View | null) => void;
+  /** Bubbled from the SharkChipCallout's blocking pop-up dismissal so the
+   *  parent can re-poke the gold-chip auto-scroll. */
+  onChipCalloutContinue?: () => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -1177,6 +1181,7 @@ const ChapterSection = React.memo(function ChapterSection({
                   onModuleCompleted={onTopicTreeModuleCompleted}
                   onRecommendedChipRef={onRecommendedChipRef}
                   onEndCardsRef={onEndCardsRef}
+                  onChipCalloutContinue={onChipCalloutContinue}
                 />
               )}
               {showQuestBox && questPathNodeProps && (
@@ -1783,6 +1788,15 @@ export function DuoLearnScreen() {
   const registerRecommendedChipRef = useCallback((ref: View | null) => {
     recommendedChipRef.current = ref;
   }, []);
+  // Bumped when the SharkChipCallout's blocking "near-chest" pop-up is
+  // dismissed. The gold-chip auto-scroll below depends on it, so dismissing the
+  // pop-up re-runs that scroll once the <Modal> is gone — a scrollTo issued
+  // while the modal was up gets swallowed (Yoav 2026-06-23).
+  const [chipCalloutDismissTick, setChipCalloutDismissTick] = useState(0);
+  const handleChipCalloutContinue = useCallback(
+    () => setChipCalloutDismissTick((t) => t + 1),
+    [],
+  );
   // Ref to the end-of-module report + shark-call cards block, so the chest's
   // "המשך" can land the user on them with the next module in view below.
   const endCardsRef = useRef<View | null>(null);
@@ -2131,7 +2145,9 @@ export function DuoLearnScreen() {
       setTimeout(() => scrollToRecommended(i === delays.length - 1), d),
     );
     return () => { cancelAnimationFrame(raf); timers.forEach(clearTimeout); };
-  }, [topicTreeModule, calcModuleScrollY, completedMap, isWalkthroughActive]);
+    // chipCalloutDismissTick: re-runs the scroll after the near-chest pop-up
+    // closes (the in-modal scrollTo was dropped) so the user lands on the gold chip.
+  }, [topicTreeModule, calcModuleScrollY, completedMap, isWalkthroughActive, chipCalloutDismissTick]);
 
   // Auto-scroll on initial mount — prefer last-completed module so the user
   // lands on "where I finished last time" with the next lesson right below.
@@ -2218,10 +2234,21 @@ export function DuoLearnScreen() {
         // and marks the intro topic done. The accordion remains the
         // post-intro target — we set topicTreeModule now so it's already
         // expanded on return.
-        const introDone = useTopicProgressStore.getState()
-          .isTopicCompleted(`${mod.id}:intro`);
+        // auto-intro runs ONLY on a true first engagement: no chip completed
+        // yet AND the module isn't already finished. A started/finished module
+        // must just OPEN with its blue chips (review or finish the rest) —
+        // never replay the intro. The old guard keyed on the intro chip ALONE,
+        // which never exists for modules without an interactiveIntro, so the
+        // push fired on every re-open of a finished module (Yoav 2026-06-23:
+        // "מודולה שכבר סיימתי... מתאפסת... נכנס ישר לאינטרו"). Reward stays
+        // idempotent (markTopicCompleted early-returns) so re-doing pays nothing.
+        const progress = useTopicProgressStore.getState();
+        const anyChipDone = resolveTopics(mod).some((t) => progress.isTopicCompleted(t.id));
+        const moduleAlreadyCompleted =
+          useCompletedModulesStore.getState().completedIds.includes(mod.id);
+        const firstEngagement = !anyChipDone && !moduleAlreadyCompleted;
         setTopicTreeModule({ module: mod, chapterId });
-        if (!introDone) {
+        if (firstEngagement) {
           router.push(
             `/lesson/${mod.id}?chapterId=${chapterId}&startPhase=intro&returnTo=topic-tree` as never,
           );
@@ -2947,6 +2974,7 @@ export function DuoLearnScreen() {
                 onPearlReady={registerPearlRef}
                 onRecommendedChipRef={registerRecommendedChipRef}
                 onEndCardsRef={registerEndCardsRef}
+                onChipCalloutContinue={handleChipCalloutContinue}
               />
             );
 
