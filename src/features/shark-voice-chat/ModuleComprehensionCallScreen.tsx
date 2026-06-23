@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { X } from 'lucide-react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { tapHaptic } from '../../utils/haptics';
@@ -84,12 +85,35 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
 
-  // Connect once, primed with this module's comprehension questions.
+  // Connect once, primed with this module's comprehension questions. The live
+  // SDK needs the mic but does NOT reliably trigger the OS/browser permission
+  // prompt itself — so we request it EXPLICITLY here, before connecting. Without
+  // this the call silently fails to open with no mic prompt at all (the reported
+  // bug). If permission is permanently denied we surface a guide-to-settings msg.
   useEffect(() => {
     if (connectedRef.current) return;
     connectedRef.current = true;
     const comp = getModuleComprehension(moduleId) ?? buildComprehensionForModule(moduleId, moduleTitle);
-    void connect(buildComprehensionOverride(comp, userName));
+    const override = buildComprehensionOverride(comp, userName);
+
+    void (async () => {
+      try {
+        let perm = await getRecordingPermissionsAsync();
+        if (!perm.granted && perm.canAskAgain) {
+          perm = await requestRecordingPermissionsAsync(); // fires the OS/browser prompt
+        }
+        if (!perm.granted) {
+          useSharkVoiceStore
+            .getState()
+            .setError('כדי לדבר עם שארק צריך הרשאת מיקרופון. אפשרו אותה בהגדרות → מיקרופון (או בהגדרות המכשיר) ונסו שוב.');
+          return;
+        }
+      } catch {
+        // If the permission check itself throws, fall through and let the SDK try.
+      }
+      await connect(override);
+    })();
+
     return () => {
       void disconnect();
       clearSession();
