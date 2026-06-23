@@ -17,7 +17,6 @@ import Animated, {
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useIsPro } from "../subscription/useSubscription";
 import { useNotificationStore } from "../notifications/useNotificationStore";
 import { useBannerCooldownStore } from "../notifications/useBannerCooldownStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
@@ -173,9 +172,7 @@ export function AppWalkthroughOverlay() {
   const [contentKey, setContentKey] = useState(0);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === "minor");
   const isGuest = useAuthStore((s) => s.isGuest);
-  const isPro = useIsPro();
   const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
-  const setPendingPostWalkthroughProTeaser = useTutorialStore((s) => s.setPendingPostWalkthroughProTeaser);
   const setPendingPostWalkthroughFirstChest = useTutorialStore((s) => s.setPendingPostWalkthroughFirstChest);
 
   // Filter out Bridge step for minors (legal protection, no real-money features)
@@ -238,30 +235,29 @@ export function AppWalkthroughOverlay() {
     // the user taps המשך, so the chest is always the first thing they see.
     try { setPendingPostWalkthroughFirstChest(true); } catch { /* non-fatal */ }
 
-    // Arm the post-walkthrough modals. Guests → register-CTA first (the Pro
-    // teaser is armed afterwards, when that CTA resolves — see
-    // PostWalkthroughRegisterCTA). Registered non-Pro → the soft Pro teaser
-    // directly. Both gates live in app/_layout.tsx and render once we land on
-    // /(tabs). Pro users get nothing.
+    // Arm the post-walkthrough register CTA — GUESTS ONLY. The Pro teaser is no
+    // longer armed here (Yoav 2026-06-23): it moved to the user's REAL first
+    // chest (mod-0-1's 70% chest, see TopicTreeAccordion) — a warm
+    // post-activation moment — after the cold post_walkthrough slot was measured
+    // at ~0% conversion while adding friction in the activation window. The
+    // register gate lives in app/_layout.tsx and renders once we land on /(tabs).
     if (isGuest) {
       try { setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ }
-    } else if (!isPro) {
-      try { setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ }
     }
 
     try {
-      // The HARD paywall stays out of this slot (removed 2026-06-11 — it fired
-      // before any value, ~38% hit it mid-mod-0-1, cratering first-module
-      // completion; it now lives at post_mod_0_1b / post_mod_0_4). What returns
-      // here (2026-06-17) is only a SOFT, dismissible Pro teaser (armed above),
-      // restoring the post_walkthrough monetization moment without blocking the
-      // path to the first module.
+      // NO Pro paywall fires in this slot anymore. The HARD paywall was removed
+      // 2026-06-11 (it fired pre-value, ~38% hit it mid-mod-0-1, cratering
+      // first-module completion; now at post_mod_0_1b / post_mod_0_4). The SOFT
+      // teaser that briefly lived here (2026-06-17) moved 2026-06-23 to the
+      // user's first REAL chest (mod-0-1's 70% chest) — keeping this
+      // post-walkthrough slot clear so nothing blocks the path to the first chest.
       void via;
       router.replace("/(tabs)" as never);
     } catch {
       // No-op — already on a safe route.
     }
-  }, [isGuest, isPro, router, setActiveScreen, setPendingPostWalkthroughCTA, setPendingPostWalkthroughProTeaser, setPendingPostWalkthroughFirstChest]);
+  }, [isGuest, router, setActiveScreen, setPendingPostWalkthroughCTA, setPendingPostWalkthroughFirstChest]);
 
   const handleNext = useCallback(() => {
     try {
