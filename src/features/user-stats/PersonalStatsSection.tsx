@@ -21,10 +21,10 @@ interface StatDef {
 
 const STAT_DEFS: StatDef[] = [
   { key: "activeDays",       emoji: "📅", label: "ימי פעילות",   accent: STITCH.primaryCyan },
-  { key: "avgModulesPerDay", emoji: "📚", label: "מודולות ביום", accent: "#7c3aed" },
+  { key: "avgModulesPerDay", emoji: "📚", label: "שיעורים ביום", accent: "#7c3aed" },
   { key: "avgGamesPerDay",   emoji: "🎮", label: "משחקים ביום",  accent: "#16a34a" },
   { key: "quizAccuracy",     emoji: "🎯", label: "דיוק בקוויז",  accent: "#ea580c" },
-  { key: "avgModuleTime",    emoji: "⏱️", label: "זמן למודולה",  accent: "#ca8a04" },
+  { key: "avgModuleTime",    emoji: "⏱️", label: "זמן לשיעור",  accent: "#ca8a04" },
   { key: "avgDailyTime",     emoji: "🕐", label: "זמן יומי",     accent: "#dc2626" },
   { key: "peakHour",         emoji: "🌟", label: "שעת שיא",      accent: "#8b5cf6" },
   { key: "dilemmaAccuracy",  emoji: "🤔", label: "דיוק דילמות",  accent: "#0284c7" },

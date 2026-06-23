@@ -343,7 +343,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         <Pressable
           onPress={onStartContinuous}
           accessibilityRole="button"
-          accessibilityLabel="למידה רציפה — למד את כל המודולה ברצף, בלי לעצור"
+          accessibilityLabel="למידה רציפה — למד את כל השיעור ברצף, בלי לעצור"
           hitSlop={8}
           style={({ pressed }) => [
             styles.autopilotKey,

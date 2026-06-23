@@ -260,7 +260,7 @@ export const PremiumLearningCard = React.memo(function PremiumLearningCard({ ite
           <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 90, height: 90 }} contentFit="contain" />
           <Text style={[styles.ctaTitle, RTL]}>רוצה ללמוד עוד?</Text>
           <Text style={[styles.ctaSub, RTL]}>
-            התחל את המודולה המלאה של {item.moduleTitle}
+            התחל את השיעור המלא של {item.moduleTitle}
           </Text>
           <View style={{ alignSelf: 'stretch', width: '100%', marginTop: 8 }}>
             <FeedStartButton label="להתחיל ללמוד!" onPress={handleStartModule} accessibilityLabel="התחל ללמוד" />

@@ -221,7 +221,7 @@ export function TopicChatScreen(): React.ReactElement {
     return (
       <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
         <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={rtl.text} allowFontScaling={false}>המודולה לא נמצאה</Text>
+          <Text style={rtl.text} allowFontScaling={false}>השיעור לא נמצא</Text>
         </SafeAreaView>
       </View>
     );

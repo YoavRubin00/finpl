@@ -180,7 +180,7 @@ export function ModuleComprehensionReportScreen({
           contentFit="contain"
         />
         <Text style={[RTL, styles.loadingText]}>
-          {errored ? 'לא הצלחנו להפיק סיכום הפעם — אבל כל הכבוד שסיימת!' : 'אין עדיין דוח למודולה הזו.'}
+          {errored ? 'לא הצלחנו להפיק סיכום הפעם — אבל כל הכבוד שסיימת!' : 'אין עדיין דוח לשיעור הזה.'}
         </Text>
         {errored ? (
           <Pressable

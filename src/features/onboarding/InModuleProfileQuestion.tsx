@@ -37,7 +37,7 @@ const DAILY_OPTIONS: Option<DailyGoalMinutes>[] = [
 ];
 
 const TITLES: Record<ProfileQuestionKind, string> = {
-  knowledgeLevel: "איך הרגשת עם המודולה?",
+  knowledgeLevel: "איך הרגשת עם השיעור?",
   learningTime: "מתי הכי קל לך ללמוד?",
   dailyGoal: "כמה דקות ביום בא לך להתחייב?",
 };
