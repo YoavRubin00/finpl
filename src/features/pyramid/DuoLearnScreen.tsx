@@ -2115,7 +2115,10 @@ export function DuoLearnScreen() {
     // final pass, instead of estimating early and visibly hopping. measureLayout
     // is order-independent, so it lands on the right chip even if the index
     // estimate drifts (Yoav 2026-06-20: "עדיין לא נפתח על הציפ הנכון").
+    let landed = false;
+    let timers: ReturnType<typeof setTimeout>[] = [];
     const scrollToRecommended = (isLast: boolean) => {
+      if (landed) return;
       const chip = recommendedChipRef.current;
       const scroller = scrollRef.current;
       const estimate = () => scrollRef.current?.scrollTo({ y: targetY, animated: true });
@@ -2131,6 +2134,10 @@ export function DuoLearnScreen() {
         chip.measureLayout(
           relativeTo,
           (_x: number, y: number) => {
+            // Measured the real gold-chip node → land on it and STOP retrying,
+            // so a later pass never yanks a user who already began scrolling.
+            landed = true;
+            timers.forEach(clearTimeout);
             scrollRef.current?.scrollTo({ y: Math.max(0, y - VIEWPORT_TOP_PAD), animated: true });
           },
           () => { if (isLast) estimate(); },
@@ -2140,8 +2147,12 @@ export function DuoLearnScreen() {
       }
     };
     const raf = requestAnimationFrame(() => scrollToRecommended(false));
-    const delays = [50, 130, 280];
-    const timers = delays.map((d, i) =>
+    // More passes over a longer window so a SLOW cold-remount return (heavy
+    // accordion still laying out) still lands via MEASURE on the gold chip on
+    // EVERY chip completion, not only near-chest (Yoav 2026-06-23: "בכל סיום
+    // ציפ נוחתים על הציפ המוזהב הבא"). Stops the moment a measure succeeds.
+    const delays = [50, 130, 280, 500, 800];
+    timers = delays.map((d, i) =>
       setTimeout(() => scrollToRecommended(i === delays.length - 1), d),
     );
     return () => { cancelAnimationFrame(raf); timers.forEach(clearTimeout); };
