@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { useConversation } from '@elevenlabs/react-native';
+// Type-only import: `@elevenlabs/react-native` pulls the native LiveKit/WebRTC
+// SDK, whose module factory throws at EVALUATION in the production Hermes
+// bundle. A static `import` here poisons the call-screen module graph so
+// `require('ModuleComprehensionCallScreen')` resolves to `undefined` (the prod
+// crash). Load the hook via require() inside the body — Metro caches the module
+// after first eval, and this hook only mounts behind the LIVE_VOICE_AVAILABLE +
+// Pro gates, so the SDK still evaluates only when a call actually starts. Same
+// idiom as useElevenLabsConversation.web.ts.
+import type { useConversation as UseConversationType } from '@elevenlabs/react-native';
 import { setAudioModeAsync } from 'expo-audio';
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { fetchConversationToken } from '../services/voiceSessionClient';
@@ -48,6 +56,13 @@ export function useElevenLabsConversation() {
   const setSharkText = useSharkVoiceStore((s) => s.setSharkText);
   const setError = useSharkVoiceStore((s) => s.setError);
   const setMuted = useSharkVoiceStore((s) => s.setMuted);
+
+  // Runtime-load the SDK hook (see the type-only import note above). Cheap cache
+  // hit after first eval; keeps the native SDK out of the module-eval graph.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useConversation } = require('@elevenlabs/react-native') as {
+    useConversation: typeof UseConversationType;
+  };
 
   const conversation = useConversation({
     onConnect: () => {
