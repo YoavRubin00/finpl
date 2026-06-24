@@ -1,14 +1,14 @@
-// Soft, dismissible Pro teaser shown to NON-Pro users right after they open
-// their first REAL chest (mod-0-1's 70% chest). A friendly 7-day-free-trial
-// card the user can dismiss, NOT a full-screen blocker (the early hard paywall
-// cratered first-module completion). The hard paywall still fires later at
-// post_mod_0_1b / post_mod_0_4.
+// Soft, dismissible Pro teaser shown to NON-Pro users right after they finish
+// the in-app walkthrough. Restores the `paywall_viewed{post_walkthrough}`
+// monetization moment (volume) that was removed in commit 3a57bd3 — but as a
+// friendly 7-day-free-trial card the user can dismiss, NOT a full-screen
+// blocker (the early hard paywall cratered first-module completion). The hard
+// paywall still fires later at post_mod_0_1b / post_mod_0_4.
 //
-// Trigger moved here 2026-06-23 (Yoav): the flag was previously armed right
-// after the walkthrough (a COLD slot inside the activation window that
-// converted ~0%). It is now armed at the first real chest (TopicTreeAccordion)
-// — a warm post-activation moment. The gate below still renders this once the
-// user lands on /(tabs), never overlapping the register CTA.
+// Flag is armed in AppWalkthroughOverlay (registered non-Pro) or after the
+// guest register CTA resolves (PostWalkthroughRegisterCTA). The gate below
+// renders this once the user lands on /(tabs), never overlapping the register
+// CTA. Mirrors PostWalkthroughRegisterCTAGate.
 
 import React, { useEffect } from "react";
 import { Modal, Pressable, Text } from "react-native";
@@ -27,28 +27,26 @@ function PostWalkthroughProTeaser(): React.JSX.Element {
   const clearFlag = useTutorialStore((s) => s.setPendingPostWalkthroughProTeaser);
 
   useEffect(() => {
-    // Warm Pro-teaser view, fired once the gate mounts this on the learn map
-    // after the user's first real chest. `post_first_chest` keeps it cleanly
-    // separable from the dead cold `post_walkthrough` metric in the funnel.
+    // Restores the post_walkthrough paywall-view metric (124/week → 0 regression).
     try {
       captureEvent("paywall_viewed", {
-        paywall: "post_first_chest",
-        source: "post_first_chest",
+        paywall: "post_walkthrough",
+        source: "post_walkthrough",
         via: "soft_teaser",
       });
     } catch { /* non-fatal */ }
   }, []);
 
   const dismiss = (trigger: "backdrop" | "skip_button" | "system_back") => {
-    try { captureEvent("paywall_dismissed", { paywall: "post_first_chest", source: "post_first_chest", trigger }); } catch { /* non-fatal */ }
+    try { captureEvent("paywall_dismissed", { paywall: "post_walkthrough", source: "post_walkthrough", trigger }); } catch { /* non-fatal */ }
     clearFlag(false);
   };
 
   const startTrial = () => {
     tapHaptic();
-    try { captureEvent("paywall_cta_clicked", { paywall: "post_first_chest", source: "post_first_chest", via: "soft_teaser" }); } catch { /* non-fatal */ }
+    try { captureEvent("paywall_cta_clicked", { paywall: "post_walkthrough", source: "post_walkthrough", via: "soft_teaser" }); } catch { /* non-fatal */ }
     clearFlag(false);
-    router.push(`/pricing?source=post_first_chest&returnTo=${encodeURIComponent("/(tabs)")}` as never);
+    router.push(`/pricing?source=post_walkthrough&returnTo=${encodeURIComponent("/(tabs)")}` as never);
   };
 
   return (

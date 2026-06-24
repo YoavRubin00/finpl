@@ -20,10 +20,11 @@ const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as cons
 function PostWalkthroughRegisterCTA(): React.JSX.Element {
   const router = useRouter();
   const clearFlag = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
-  // The Pro teaser is NO LONGER chained here (Yoav 2026-06-23). It moved to the
-  // user's first REAL chest (mod-0-1's 70% chest, see TopicTreeAccordion), so
-  // guests get it there too — on their natural exit after activation — instead
-  // of stacked right after this register CTA.
+  // Chain the soft Pro teaser to fire AFTER this register CTA resolves, so the
+  // two never stack. The ProTeaser gate (app/_layout.tsx) then shows it once
+  // the user is back on /(tabs) and still non-Pro — restoring the
+  // post_walkthrough monetization moment for guests too.
+  const armProTeaser = useTutorialStore((s) => s.setPendingPostWalkthroughProTeaser);
 
   useEffect(() => {
     try { captureEvent("register_cta_shown", { source: "post_walkthrough" }); } catch { /* non-fatal */ }
@@ -32,12 +33,14 @@ function PostWalkthroughRegisterCTA(): React.JSX.Element {
   const dismissAsGuest = (trigger: "backdrop" | "skip_button" | "system_back") => {
     try { captureEvent("register_cta_dismissed", { source: "post_walkthrough", trigger }); } catch { /* non-fatal */ }
     clearFlag(false);
+    try { armProTeaser(true); } catch { /* non-fatal */ }
   };
 
   const acceptRegister = () => {
     tapHaptic();
     try { captureEvent("register_cta_accepted", { source: "post_walkthrough" }); } catch { /* non-fatal */ }
     clearFlag(false);
+    try { armProTeaser(true); } catch { /* non-fatal */ }
     router.replace(`/(auth)/register?returnTo=${encodeURIComponent("/(tabs)")}` as never);
   };
 

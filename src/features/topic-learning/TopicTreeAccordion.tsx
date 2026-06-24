@@ -481,18 +481,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-
-    // Warm Pro moment (Yoav 2026-06-23): arm the soft Pro teaser the first time
-    // the user opens their REAL first chest — mod-0-1's 70% chest. This REPLACES
-    // the COLD post_walkthrough teaser (removed today): analytics showed that
-    // slot sat inside the activation window (~29% reach the first chest) and
-    // converted ~0%, so it was pure friction. The teaser gate (app/_layout.tsx)
-    // shows it once the user is back on the learn map — their natural exit from
-    // mod-0-1 — never interrupting the chest reward. Non-Pro filtering lives in
-    // the gate; the 70% chest fires once per user, so we never re-arm on replay.
-    if (module.id === 'mod-0-1') {
-      try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ }
-    }
   }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
