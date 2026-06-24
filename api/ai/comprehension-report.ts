@@ -107,8 +107,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 המשתמש הרגע **סיים את כל המודולה** "${title}" — זו הצלחה בפני עצמה. אתה כותב לו "דוח סיכום שיעור": סיכום חם ואישי של כל מה שלמד והפגין במודולה כולה.
 הדוח מבוסס על **כל פעילות המודולה** — המושגים שנלמדו, ביצועי הקוויז, ועצם השלמת המודולה — ובנוסף, אם התקיימה שיחת-הבנה קולית עם שארק, גם מה שנאמר בה. השיחה היא רק חלק אחד; גם בלעדיה יש דוח מלא ומשמעותי על כל השיעור.
 עקרונות (חשובים):
-- מי שסיים את המודולה כבר בנה בסיס מוצק. הציון משקף כמה החומר הוטמע, ומתחיל מבסיס טוב — **לעולם לא 0, לעולם לא בושה**. גם סיכום מעולה מקבל לפחות אמצע-הדרך.
-- חם ומעודד תמיד. חוגג ספציפית מה שהמשתמש כן תפס ("תפסת ש...") כדי שירגיש מסוגל — תחושת מסוגלות היא מה שמחזיר אותו.
+- understandingScore הוא הערכה **כנה** של כמה החומר באמת הוטמע, בטווח המלא 0-100 (לפי הראיות: קוויז, תמליל אם יש, ומידת ההבנה שהוצגה). דרג בכנות — הבנה חזקה מקבלת ציון גבוה, הבנה חלקית מקבלת ציון נמוך יותר. **אל תעגן את כולם על אותו מספר גבוה**, ואל תיתן 0 (סיום המודולה הוא תמיד בסיס אמיתי). (הערה: השכבה שמעליך כבר ממירה את הציון לטווח-תצוגה נדיב, אז תפקידך רק לדרג נכון את ההבנה — אל "תנפח" בעצמך.)
+- הטון בכל מקרה חם ומעודד, גם כשהציון בינוני. חוגג ספציפית מה שהמשתמש כן תפס ("תפסת ש...") כדי שירגיש מסוגל — תחושת מסוגלות היא מה שמחזיר אותו.
 - ערך אמיתי: כל נקודת-שיפור היא צעד-הבא אחד, קטן וקונקרטי שקל לבצע — לא רשימת טעויות ולא "טעית ב...".
 - מנטליות צמיחה: ציון בינוני = "אתה בונה את זה, עוד סבב ואתה שם" — לעולם לא ביקורת או טון מאכזב.
 - סיים בנימה שמושכת לסבב הבא: תן סיבה אחת מסקרנת/מתגמלת להמשיך ללמוד.
@@ -170,16 +170,17 @@ ${transcriptText}
       }
     }
 
-    // Completion floor: finishing the whole module is a real achievement, so a
-    // completed module can NEVER score 0. Base 50 for completion; the quiz nudges
-    // it up to 90. We only FLOOR the AI's score — never cap a higher one (e.g. a
-    // great voice transcript can still push past the floor).
-    const completionFloor = completed
-      ? quizRatio !== null
-        ? Math.round(45 + quizRatio * 45) // quiz 0%→45, 50%→67, 100%→90
-        : 50 // completed, no quiz signal → solid "you've got the base"
-      : 0;
-    const understandingScore = Math.max(clampPct(parsed.understandingScore), completionFloor);
+    // The AI returns an HONEST 0-100 read of how well the material was grasped
+    // (full range — weak answers can score low internally). We map it into a
+    // GENEROUS display band so a finished module always reads high and
+    // encouraging, yet still VARIES with the real understanding — replacing the
+    // old `max(ai, 45 + quiz*45)` floor that pinned everyone at 90 (the quiz is
+    // ~always 100% by module-end). Applied to BOTH the headline and every
+    // per-concept bar so they stay consistent. Map (completed): raw 0→70, 50→85,
+    // 100→100; not-completed (defensive) shows the raw read. Coefficients tunable.
+    const toDisplay = (r: number): number =>
+      completed ? clampPct(Math.round(70 + clampPct(r) * 0.3)) : clampPct(r);
+    const understandingScore = toDisplay(parsed.understandingScore as number);
 
     // Never show an empty report. A finished module always gets at least one
     // proud strength and one inviting next-step, plus a per-concept recap — so
@@ -197,7 +198,7 @@ ${transcriptText}
     let perConcept: PerConcept[] = Array.isArray(parsed.perConcept)
       ? parsed.perConcept
           .filter((p): p is PerConcept => !!p && typeof p.concept === 'string')
-          .map((p) => ({ concept: p.concept.trim().slice(0, 80), graspPct: clampPct(p.graspPct) }))
+          .map((p) => ({ concept: p.concept.trim().slice(0, 80), graspPct: toDisplay(p.graspPct as number) }))
           .slice(0, 8)
       : [];
     if (perConcept.length === 0 && concepts.length > 0) {
