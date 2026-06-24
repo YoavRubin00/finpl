@@ -95,8 +95,12 @@ export function useGoogleAuth() {
 
   const verifyWithServer = async (googleToken: string): Promise<VerifyResult | null> => {
     try {
+      // 5s was too aggressive: a cold Vercel function + Google tokeninfo
+      // round-trip routinely exceeds it on mobile networks, aborting a
+      // perfectly valid sign-in → surfaces as error_code "verify_returned_null"
+      // (the #1 Google failure in PostHog). 12s covers the cold-start tail.
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      const timeout = setTimeout(() => controller.abort(), 12000);
       const res = await fetch(`${getApiBase()}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
