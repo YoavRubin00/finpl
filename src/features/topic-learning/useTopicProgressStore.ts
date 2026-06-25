@@ -117,15 +117,18 @@ export const useTopicProgressStore = create<TopicProgressState>()(
             },
           });
         } catch { /* non-fatal */ }
-        // Real per-chip reward (Yoav 2026-06-22: chips must grant actual XP +
-        // gold, not just a rising-XP animation). Guarded by the first-completion
-        // early-return above, so this fires exactly once per chip. Small by
-        // design — the 70% chest stays the headline payout. Non-fatal.
-        try {
-          const economy = useEconomyUIStore.getState();
-          economy.addXP(CHIP_COMPLETE_XP, 'chip_complete');
-          economy.addCoins(CHIP_COMPLETE_COINS, 'lesson');
-        } catch { /* non-fatal */ }
+        // Per-chip reward — but NOT during the continuous auto-flow (Yoav
+        // 2026-06-25): chips there complete in quick succession, so the per-chip
+        // coin/XP fly-out became "too much dopamine". In auto-flow the rewards
+        // live ONLY at the chest + the 100% bonus. Chip-by-chip map taps keep the
+        // per-chip pop. Guarded by the first-completion early-return above.
+        if (via !== 'continuous') {
+          try {
+            const economy = useEconomyUIStore.getState();
+            economy.addXP(CHIP_COMPLETE_XP, 'chip_complete');
+            economy.addCoins(CHIP_COMPLETE_COINS, 'lesson');
+          } catch { /* non-fatal */ }
+        }
       },
 
       isTopicCompleted: (topicId) => Boolean(get().completed[topicId]),
