@@ -481,13 +481,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-    // Warm Pro moment (Yoav 2026-06-25): arm the soft Pro teaser the first time the
-    // user opens mod-0-1's REAL first chest. The ProTeaserGate filters Pro users;
-    // for guests, dismissing it chains to the register CTA → order = chest → Pro →
-    // register. (Replaces the old arming at walkthrough completion.)
-    if (module.id === 'mod-0-1') {
-      try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ }
-    }
   }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
@@ -722,6 +715,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onContinueModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }
             setChestState(null);
+            // Arm the soft Pro teaser AFTER the mod-0-1 chest CLOSES (Yoav 2026-06-25:
+            // הקריאה לפרו צריכה להגיע אחרי פתיחת התיבה, לא לפני) → chest → Pro → register.
+            if (module.id === 'mod-0-1') { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
             // After the chest closes (never mid-sequence): guests get the signup
             // gate (#8), registered users get any pending staged profile question
             // (#6). Mutually exclusive so we never stack two modals.
@@ -742,6 +738,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           // count as a fake 'finish_module' CTA in the conversion funnel.
           onDismiss={() => {
             setChestState(null);
+            // Arm the Pro teaser only after the chest closes (same as the CTA path).
+            if (module.id === 'mod-0-1') { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
             // Same as the CTA path: a hardware-back dismiss of the chest must
             // not skip the guest signup gate (#8) / pending profile question
             // (#6) — pre-release audit P2. The once-guards make this idempotent

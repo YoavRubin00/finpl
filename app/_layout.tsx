@@ -640,7 +640,12 @@ function RootLayoutInner() {
         // נפתח לו מפת הלמידה של המודולה, שכרטיסיות הלמידה זוהרות").
         // Returning user that already finished mod-0-1 → land on the
         // learn map as before.
-        const target = isMod01Complete
+        // Yoav 2026-06-25: in the new flow ProfilingFlow.enterFirstModule already
+        // navigates to /(tabs) AND fires the walkthrough. Do NOT redirect into the
+        // lesson here when a walkthrough is pending — otherwise mod-0-1's intro
+        // mounts + plays its audio BEHIND the tour. Land on the map; the welcome
+        // chest auto-starts the lesson later.
+        const target = (isMod01Complete || walkthroughTriggered)
           ? "/(tabs)"
           : "/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree";
         router.replace(target as never);
@@ -648,7 +653,7 @@ function RootLayoutInner() {
         router.replace("/(tabs)");
       }
     }
-  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete]);
+  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete, walkthroughTriggered]);
 
   if (!hydrated || !bootComplete || !navState?.key || !fontsLoaded) {
     return <LoadingWisdom />;

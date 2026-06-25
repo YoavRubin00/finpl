@@ -136,6 +136,7 @@ import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
 import LottieView from "lottie-react-native";
 import { FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, FINN_DANCING, getFinnImage } from "../retention-loops/finnMascotConfig";
+import { EnergyStationCard } from "../energy/EnergyStationCard";
 import { InteractiveRecallScreen } from "../sentence-exercise/InteractiveRecallScreen";
 import { SharkDilemmaCard } from "../shark-dilemma/SharkDilemmaCard";
 import { VideoSharkDilemmaCard } from "../shark-dilemma/VideoSharkDilemmaCard";
@@ -2267,13 +2268,12 @@ export function LessonFlowScreen() {
 
   const handleIntroStart = useCallback(() => {
     if (!mod) return;
-    // mod-0-1 onboarding (Yoav 2026-06-11): after the coin drag, do NOT
-    // start the flashcards phase (audio + image prefetch wait). Bounce
-    // STRAIGHT to the learn map with the module's topic tree expanded.
-    // The user picks the next chip ("הכפתור המוזהב") manually — this is
-    // the moment we hand them the wheel. No transient loading overlay,
-    // no flashcard audio preroll ("בלי השהיה").
-    if (mod.id === 'mod-0-1') {
+    // mod-0-1 LEGACY (non-auto-flow) onboarding: bounce to the map after the
+    // intro so the user picks the next chip manually. Under the new auto-flow
+    // (returnTo==='topic-tree', Yoav 2026-06-25) we do NOT bounce — the intro
+    // flows straight into the cards / sentence-completion IN-LESSON, like every
+    // other module, so the first lesson is continuous ("מקושר וברצף, לא בנפרד").
+    if (mod.id === 'mod-0-1' && returnTo !== 'topic-tree') {
       router.replace(
         `/(tabs)/learn?completedPhase=intro&completedModuleId=${encodeURIComponent(mod.id)}&expandedModule=${encodeURIComponent(mod.id)}&onboardingPhase=welcome` as never,
       );
@@ -2286,7 +2286,7 @@ export function LessonFlowScreen() {
     } else {
       setPendingPostIntroPhase(target);
     }
-  }, [mod, imagesReady, router]);
+  }, [mod, imagesReady, router, returnTo]);
 
   // Mark "in-lesson" so the Daily Bridge nudge (and any other session-level
   // CTA) knows not to interrupt the user mid-module.
@@ -3306,15 +3306,8 @@ export function LessonFlowScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // Auto-flow progress-to-chest (segmented bar at the lesson top): fills to FULL
-  // exactly at the chest threshold (50% mod-0-1 / 75% others), NOT whole-module.
-  const ttCompletedMap = useTopicProgressStore((s) => s.completed);
-  const autoFlowProgress = useMemo(() => {
-    if (!mod) return { done: 0, toChest: 0 };
-    const t = resolveTopics(mod);
-    const toChest = Math.ceil(chestThresholdFor(mod.id) * t.length);
-    return { done: t.filter((x) => ttCompletedMap[x.id]).length, toChest };
-  }, [mod, ttCompletedMap]);
+  // Progress-to-chest bar removed 2026-06-25 — the non-blocking "עוד X לתיבה"
+  // callouts are enough; the segmented bar added clutter ("מספיק ההודעות שקופצות").
   const [showRegisterNudge, setShowRegisterNudge] = useState(false);
   // mod-0-1 dedicated continue CTA — replaces the entire post-chest modal queue
   // for the first lesson so the user lands on a single "המשך" button.
@@ -4370,16 +4363,6 @@ export function LessonFlowScreen() {
           </View>
         </View>
 
-        {/* Auto-flow "progress to chest" bar — segmented, fills to FULL at the
-            chest threshold (not whole-module). 🎁 marks the goal. */}
-        {autoFlow && autoFlowProgress.toChest > 0 && (
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, paddingTop: 2, paddingBottom: 6 }}>
-            {Array.from({ length: autoFlowProgress.toChest }).map((_, i) => (
-              <View key={i} style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: i < autoFlowProgress.done ? '#0ea5e9' : '#e2e8f0' }} />
-            ))}
-            <Text style={{ fontSize: 18, marginStart: 4 }} allowFontScaling={false}>🎁</Text>
-          </View>
-        )}
         {/* Streak text, fire lottie + label, absolute so it doesn't push content down */}
         {showStreakPopup && consecutiveCorrect >= 3 && (
           <Animated.View
@@ -5579,18 +5562,22 @@ export function LessonFlowScreen() {
 
       {/* Energy intro — one-shot at mod-0-1b's first chip (first encounter with energy). */}
       <Modal visible={showEnergyIntro} transparent animationType="fade" onRequestClose={() => setShowEnergyIntro(false)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(8, 20, 40, 0.75)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }}>
-          <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(167,139,250,0.25)" }}>
-            <EnergyBatteryIcon size={84} level={1} showBolt />
-            <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginTop: 16, marginBottom: 8 }}>
+        <View style={{ flex: 1, backgroundColor: "rgba(15, 23, 42, 0.45)", justifyContent: "center", alignItems: "center", paddingHorizontal: 22 }}>
+          <View style={{ backgroundColor: "#f7fbff", borderRadius: 28, paddingVertical: 20, paddingHorizontal: 12, width: "100%", maxWidth: 360, alignItems: "center", borderWidth: 2, borderColor: "#ddd6fe", shadowColor: "#a855f7", shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 14 }}>
+            {/* The real, live energy band — Captain Shark + the bar — copied from the
+                learn map (EnergyStationCard). Renders null for Pro (infinite energy). */}
+            <View style={{ width: "100%" }}>
+              <EnergyStationCard />
+            </View>
+            <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#1e1b4b", textAlign: "center", marginTop: 6, marginBottom: 6, paddingHorizontal: 10 }}>
               זה האנרגיה שלך
             </Text>
-            <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 24, lineHeight: 22 }}>
+            <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#475569", textAlign: "center", marginBottom: 18, lineHeight: 22, paddingHorizontal: 10 }}>
               אתה מבזבז בלמידה, ויכול להרוויח אותה מהתמדה ורצף תשובות נכונות
             </Text>
             <Pressable
               onPress={() => { tapHaptic(); setShowEnergyIntro(false); }}
-              style={{ backgroundColor: "#7c3aed", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#6d28d9" }}
+              style={{ backgroundColor: "#7c3aed", borderRadius: 16, paddingVertical: 16, marginHorizontal: 10, alignSelf: "stretch", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#6d28d9" }}
               accessibilityRole="button"
               accessibilityLabel="המשך"
             >

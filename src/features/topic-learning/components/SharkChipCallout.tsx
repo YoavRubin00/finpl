@@ -35,10 +35,12 @@ interface SharkChipCalloutProps {
   onPopupContinue?: () => void;
 }
 
-const TOAST_MS = 1800;
-const TOAST_MS_RM = 700; // reduced-motion: shorter, no confetti
-/** remaining <= this → escalate to the full bright pop-up with a Continue button. */
-const POPUP_THRESHOLD = 2;
+const TOAST_MS = 2000;
+const TOAST_MS_RM = 800; // reduced-motion: shorter, no confetti
+// Non-blocking only (Yoav 2026-06-25): every call-out is a light auto-dismiss
+// toast — no blocking "המשך" pop-up tier — so the chip flow never stalls. The
+// card is a Pressable so a tap dismisses it early.
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /** Fisher-Yates — app runtime, so Math.random is fine here. */
 function shuffle(arr: number[]): number[] {
@@ -71,7 +73,6 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
   const safeTimeout = useTimeoutCleanup();
 
   const [toastVisible, setToastVisible] = useState(false);
-  const [popupVisible, setPopupVisible] = useState(false);
   const [webpIndex, setWebpIndex] = useState(0);
   const [confettiKey, setConfettiKey] = useState(0);
   const [shownMessage, setShownMessage] = useState('');
@@ -108,19 +109,17 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
     setConfettiKey((k) => k + 1);
     showingRef.current = true;
     try { successHaptic(); } catch { /* non-fatal */ }
-    if (remaining <= POPUP_THRESHOLD) {
-      setPopupVisible(true); // stays until the user taps "המשך"
-    } else {
-      setToastVisible(true);
-      safeTimeout(() => { setToastVisible(false); showingRef.current = false; }, reduceMotion ? TOAST_MS_RM : TOAST_MS);
-    }
+    // Always a light non-blocking toast (no blocking modal) — auto-dismisses, and
+    // the card itself is tap-to-dismiss (Yoav 2026-06-25: "שלא ייצרו חיכוך ...
+    // ויעלמו אחרי 2 שניות / לחיצה").
+    setToastVisible(true);
+    safeTimeout(() => { setToastVisible(false); showingRef.current = false; }, reduceMotion ? TOAST_MS_RM : TOAST_MS);
   }, [seq, remaining, isFirstChest, message, reduceMotion, safeTimeout]);
 
-  const handleContinue = useCallback(() => {
+  const dismissToast = useCallback(() => {
     try { tapHaptic(); } catch { /* non-fatal */ }
-    setPopupVisible(false);
+    setToastVisible(false);
     showingRef.current = false;
-    // Modal is gone now → let the parent land the user on the next gold chip.
     onPopupContinue?.();
   }, [onPopupContinue]);
 
@@ -129,17 +128,19 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
 
   return (
     <>
-      {/* ── Tier 1: light bright toast (early chips, remaining >= 3) ── */}
+      {/* Light, non-blocking toast — appears on the chip transition, auto-dismisses
+          (~2s) and is tap-to-dismiss. No blocking modal tier (Yoav 2026-06-25:
+          "שלא ייצרו חיכוך"). box-none lets taps fall through to the lesson. */}
       {toastVisible && (
-        <View style={styles.toastWrap} pointerEvents="none">
+        <View style={styles.toastWrap} pointerEvents="box-none">
           {!reduceMotion && <ConfettiExplosion key={`t${confettiKey}`} gentle particleCount={12} />}
-          <Animated.View
+          <AnimatedPressable
+            onPress={dismissToast}
             entering={reduceMotion ? undefined : FadeInDown.duration(280)}
             exiting={reduceMotion ? undefined : FadeOut.duration(220)}
             style={styles.toastCard}
-            accessibilityLiveRegion="polite"
-            accessibilityRole="text"
-            accessibilityLabel={shownMessage}
+            accessibilityRole="button"
+            accessibilityLabel={`${shownMessage}. הקישו לסגירה`}
           >
             <ExpoImage
               source={webp.source}
@@ -151,59 +152,9 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
             <Text style={styles.toastLabel} allowFontScaling={false}>
               {shownMessage}
             </Text>
-          </Animated.View>
+          </AnimatedPressable>
         </View>
       )}
-
-      {/* ── Tier 2: bright "approaching the chest" pop-up (remaining <= 2) ── */}
-      <Modal
-        visible={popupVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={handleContinue}
-        statusBarTranslucent
-      >
-        {/* Tap ANYWHERE on the screen continues, not just the button
-            (Yoav 2026-06-22). accessible=false so SR reads the labeled button. */}
-        <Pressable style={styles.popupBackdrop} onPress={handleContinue} accessible={false}>
-          {!reduceMotion && (
-            <View style={styles.popupLottie} pointerEvents="none">
-              <LottieView source={CONFETTI_LOTTIE} autoPlay loop={false} style={StyleSheet.absoluteFill} />
-            </View>
-          )}
-          <Animated.View
-            entering={reduceMotion ? undefined : FadeInUp.duration(320)}
-            style={styles.popupCard}
-          >
-            <ExpoImage
-              source={webp.source}
-              style={styles.popupMascot}
-              contentFit="contain"
-              accessible={false}
-              pointerEvents="none"
-            />
-            <Text style={styles.popupTitle} allowFontScaling={false}>
-              {shownMessage}
-            </Text>
-            {/* The blue fill lives on an INNER View — a function-style Pressable
-                (style={({pressed})=>…}) DROPS backgroundColor on Android, leaving
-                white-on-white text (exactly what Yoav saw). */}
-            <Pressable
-              onPress={handleContinue}
-              accessibilityRole="button"
-              accessibilityLabel="המשך"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              {({ pressed }) => (
-                <View style={[styles.continueBtn, pressed && styles.continuePressed]}>
-                  <Text style={styles.continueText} allowFontScaling={false}>המשך</Text>
-                  <ChevronLeft size={18} color="#ffffff" />
-                </View>
-              )}
-            </Pressable>
-          </Animated.View>
-        </Pressable>
-      </Modal>
     </>
   );
 });
@@ -221,7 +172,7 @@ const styles = StyleSheet.create({
   },
   toastCard: {
     position: 'absolute',
-    top: 12,
+    top: 64,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
