@@ -8,6 +8,7 @@ import { FillBlankCard } from "./FillBlankCard";
 import { TimelineOrderCard, type TimelineOrderCardState } from "./TimelineOrderCard";
 import { getRecallSet } from "./sentenceData";
 import { useInteractiveRecall } from "./useInteractiveRecall";
+import { isEnergyEnabledForModule } from "../subscription/useHeartsStore";
 
 interface UnitColors {
   bg: string;
@@ -33,7 +34,7 @@ export function InteractiveRecallScreen({
   onProgress,
 }: InteractiveRecallScreenProps) {
   const set = getRecallSet(moduleId);
-  const recall = useInteractiveRecall(set);
+  const recall = useInteractiveRecall(set, isEnergyEnabledForModule(moduleId));
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const { playSound } = useSoundEffect();

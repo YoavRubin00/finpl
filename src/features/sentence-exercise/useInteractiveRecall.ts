@@ -95,6 +95,9 @@ export interface UseInteractiveRecallApi {
 
 export function useInteractiveRecall(
   set: InteractiveRecallSet | undefined,
+  // When false (e.g. mod-0-1, energy off), wrong answers never spend a heart —
+  // the same gate the LessonFlowScreen quiz/dilemma use (Yoav 2026-06-25).
+  energyEnabled: boolean = true,
 ): UseInteractiveRecallApi {
   const isPro = useIsPro();
   const [state, setState] = useState<InteractiveRecallState>(() =>
@@ -149,7 +152,9 @@ export function useInteractiveRecall(
   const applyWrong = useCallback(
     (prompt: RecallPrompt): RecallAttemptResult => {
       // Deduct an energy unit on every wrong answer, and reset the combo streak.
-      useHeartsStore.getState().useHeart(isPro);
+      // Inert when energy is disabled for this module (mod-0-1): useHeart(true)
+      // is a no-op, matching the quiz/dilemma gating.
+      useHeartsStore.getState().useHeart(isPro || !energyEnabled);
       useHeartsStore.getState().resetCombo();
       setState((prev) => {
         const prevWrongs = prev.wrongCount[prompt.id] ?? 0;
@@ -166,7 +171,7 @@ export function useInteractiveRecall(
       });
       return { correct: false, completesPrompt: false, finishesSet: false };
     },
-    [isPro],
+    [isPro, energyEnabled],
   );
 
   const attemptFillBlank = useCallback(

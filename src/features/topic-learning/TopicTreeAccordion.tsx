@@ -434,7 +434,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // (was 100% — onDoNResolve was wired unconditionally and the modal
     // opened the DoN flow on every chest). Rolled here once at chest-trigger
     // time so the modal can read a stable boolean.
-    const offerDoN = Math.random() < 0.25;
+    // No double-or-nothing during onboarding (mod-0-1 / mod-0-1b) — Yoav 2026-06-25:
+    // the first chests stay clean (no gamble prompt), like quitLabel below.
+    const offerDoN = module.id !== 'mod-0-1' && module.id !== 'mod-0-1b' && Math.random() < 0.25;
 
     // Yoav 2026-06-12: playful "I'm bailing to Netflix" CTA — 30% of chest
     // opens, mod-0-2 onwards (mod-0-1 + mod-0-1b stay clean during onboarding).
@@ -715,12 +717,17 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onContinueModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }
             setChestState(null);
-            // Arm the soft Pro teaser AFTER the mod-0-1 chest CLOSES (Yoav 2026-06-25:
-            // הקריאה לפרו צריכה להגיע אחרי פתיחת התיבה, לא לפני) → chest → Pro → register.
-            if (module.id === 'mod-0-1') { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
-            // After the chest closes (never mid-sequence): guests get the signup
-            // gate (#8), registered users get any pending staged profile question
-            // (#6). Mutually exclusive so we never stack two modals.
+            // Post-chest CTAs after the mod-0-1 chest CLOSES (Yoav 2026-06-25):
+            // GUESTS → register CTA DIRECTLY (the Pro-teaser→register chain was
+            // unreliable, and maybeShowSignupGate skips mod-0-1 so guests had NO
+            // register path); registered non-Pro → the soft Pro teaser (its gate
+            // filters Pro users). Armed only now that the chest is closed.
+            if (module.id === 'mod-0-1') {
+              if (isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ } }
+              else { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
+            }
+            // Guests get the signup gate (#8, skipped for mod-0-1), registered
+            // users any pending staged profile question (#6). Mutually exclusive.
             if (isGuest) { maybeShowSignupGate(); } else if (!maybeShowProfileQuestion() && !maybeShowToolNudge()) { maybeShowRatePrompt(); }
             // The 70% chest keeps the accordion open so the user can
             // finish the remaining 30% — but when the chest fired at 100%
@@ -738,12 +745,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           // count as a fake 'finish_module' CTA in the conversion funnel.
           onDismiss={() => {
             setChestState(null);
-            // Arm the Pro teaser only after the chest closes (same as the CTA path).
-            if (module.id === 'mod-0-1') { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
-            // Same as the CTA path: a hardware-back dismiss of the chest must
-            // not skip the guest signup gate (#8) / pending profile question
-            // (#6) — pre-release audit P2. The once-guards make this idempotent
-            // vs onContinueModule, so no double-show.
+            // Same post-chest CTAs as the continue path (mod-0-1): guests →
+            // register CTA, registered non-Pro → Pro teaser. Armed only after close.
+            if (module.id === 'mod-0-1') {
+              if (isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ } }
+              else { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
+            }
             if (isGuest) { maybeShowSignupGate(); } else if (!maybeShowProfileQuestion() && !maybeShowToolNudge()) { maybeShowRatePrompt(); }
             if (summary.pct >= 100) {
               onModuleCompleted?.();

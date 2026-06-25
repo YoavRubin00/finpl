@@ -104,6 +104,7 @@ import { HigherLowerCard } from "../finfeed/minigames/higher-lower/HigherLowerCa
 import { PriceSliderCard } from "../finfeed/minigames/price-slider/PriceSliderCard";
 import { BudgetNinjaCard } from "../finfeed/minigames/budget-ninja/BudgetNinjaCard";
 import { CashoutRushCard } from "../finfeed/minigames/cashout-rush/CashoutRushCard";
+import { getGameForModule } from "../topic-learning/moduleGameMap";
 import { MacroEventCard } from "../macro-events/MacroEventCard";
 import { macroEventsData } from "../macro-events/macroEventsData";
 // Inter-module CONTENT components (Feed-derived; rendered when a module
@@ -170,7 +171,7 @@ import type { LessonContext } from "../chat/buildChatPrompt";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "mid-quiz-video" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "mid-quiz-video" | "sim-intro" | "sim" | "game" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
 /** Active learning sub-modules that cost −1 energy on completion (Yoav 18/06).
  *  Excludes passive phases (intro / video / hero / summary / interstitials /
@@ -199,6 +200,7 @@ const TT_PHASE_TO_KIND: Partial<Record<FlowPhase, TopicKind>> = {
   'interactive-recall': 'recall',
   quizzes: 'quiz',
   sim: 'sim',
+  game: 'game',
   'module-infographic': 'infographic',
   'post-infographic-video': 'post-video',
   podcast: 'podcast',
@@ -2778,16 +2780,11 @@ export function LessonFlowScreen() {
       const chestReady = crossedChest && mod01QuestionResolved;
       const shouldExit = chestReady || moduleComplete;
       if (!shouldExit) {
-        // mod-0-1b's FIRST chip → one-shot energy intro (energy is off in mod-0-1,
-        // so this is the first encounter). Shown instead of the chip callout here.
-        const energyIntroNow = mod.id === 'mod-0-1b' && !!topic && summary.completed === 1
-          && !useTutorialStore.getState().hasSeenEnergyIntro;
-        if (energyIntroNow) {
-          setShowEnergyIntro(true);
-          useTutorialStore.getState().markEnergyIntroSeen();
-        } else if (topic && summary.completed < chipsToChest) {
-          // Fire the "עוד X לתיבה" callout (pop+confetti) once per real chip — only
-          // BEFORE the chest (post-chest the chest is already open, count is moot).
+        // Fire the "עוד X לתיבה" callout (pop+confetti) once per real chip — only
+        // BEFORE the chest (post-chest the chest is open, so the count is moot).
+        // (mod-0-1b's energy intro now fires on MODULE ENTRY — see the mount effect
+        // above — not here, so it no longer depends on the fragile completed===1.)
+        if (topic && summary.completed < chipsToChest) {
           setCalloutRemaining(Math.max(1, chipsToChest - summary.completed));
           setCalloutSeq((s) => s + 1);
         }
@@ -3129,6 +3126,7 @@ export function LessonFlowScreen() {
       "mid-quiz-video": "other",
       "sim-intro": "sim",
       sim: "sim",
+      game: "other",
       "module-infographic": "other",
       "post-infographic-video": "other",
       "shark-dilemma": "other",
@@ -3272,7 +3270,7 @@ export function LessonFlowScreen() {
     if (!prev || prev === phase || isReplay || isPro || !energyOn) return;
     if (ACTIVE_SUBMODULE_PHASES.has(prev) && !chargedSubmodulesRef.current.has(prev)) {
       chargedSubmodulesRef.current.add(prev);
-      const ok = useHeartsStore.getState().useHeart(isPro);
+      const ok = useHeartsStore.getState().useHeart(isPro || !energyOn);
       try { captureEvent('energy_spent', { source: 'submodule', phase: prev }); } catch { /* non-fatal */ }
       if (!ok || useHeartsStore.getState().getHearts() <= 0) setShowOutOfHearts(true);
     }
@@ -3290,6 +3288,15 @@ export function LessonFlowScreen() {
   const [showEnergyIntro, setShowEnergyIntro] = useState(false);
   const [complimentSeq, setComplimentSeq] = useState(0);
   const [complimentMsg, setComplimentMsg] = useState<string | null>(null);
+  // Energy intro (Yoav 2026-06-25): fire ONCE on ENTRY to mod-0-1b — the first
+  // module where energy is on — for non-Pro users. Mount-based, replacing the
+  // seam's fragile completed===1 window that kept missing. One-shot via the flag.
+  useEffect(() => {
+    if (mod?.id !== 'mod-0-1b' || isPro) return;
+    if (useTutorialStore.getState().hasSeenEnergyIntro) return;
+    setShowEnergyIntro(true);
+    useTutorialStore.getState().markEnergyIntroSeen();
+  }, [mod?.id, isPro]);
   // C (Yoav 2026-06-25): on a post-chest RE-ENTRY (module already past its chest
   // threshold but not yet 100%, in auto-flow), greet the choice to keep going with
   // a varied inline Captain Shark compliment — "מיד לאחר ההחלטה, כחלק מרצף הלמידה".
@@ -3949,6 +3956,18 @@ export function LessonFlowScreen() {
   }, [mod]);
 
   const handleInteractiveRecallComplete = useCallback(() => {
+    mediumHaptic();
+    // If this module has an inter-module game, play it IN-LESSON between recall
+    // and the quiz (Yoav 2026-06-25 — recall→game→quiz must flow continuously,
+    // not leave the game as a skipped map chip). Otherwise straight to the quiz.
+    if (mod && getGameForModule(mod.id)) {
+      setPhase("game");
+    } else {
+      setPhase("quizzes");
+      safeTimeout(() => setShowQuizIntro(true), 50);
+    }
+  }, [mod]);
+  const handleGameComplete = useCallback(() => {
     mediumHaptic();
     setPhase("quizzes");
     safeTimeout(() => setShowQuizIntro(true), 50);
@@ -4803,6 +4822,29 @@ export function LessonFlowScreen() {
             <SimulatorLoader moduleId={mod.id} onComplete={handleSimComplete} />
             {/* Skip button removed, users complete sims naturally */}
           </Animated.View>
+        )}
+
+        {/* ── Game phase (inter-module mini-game, IN-LESSON between recall and
+            quiz — Yoav 2026-06-25). Mirrors app/topic-game/[gameId].tsx. ── */}
+        {phase === "game" && mod && (
+          <Animated.ScrollView
+            entering={FadeIn.duration(300)}
+            style={{ flex: 1, marginHorizontal: -16 }}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 12, paddingBottom: 12 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {(() => {
+              switch (getGameForModule(mod.id)) {
+                case 'budget-ninja': return <BudgetNinjaCard isActive onContinue={handleGameComplete} />;
+                case 'bullshit-swipe': return <BullshitSwipeCard isActive bypassDailyGate onContinue={handleGameComplete} />;
+                case 'cashout-rush': return <CashoutRushCard isActive onContinue={handleGameComplete} />;
+                case 'fomo-killer': return <FomoKillerCard isActive onContinue={handleGameComplete} />;
+                case 'higher-lower': return <HigherLowerCard isActive onComplete={handleGameComplete} />;
+                case 'price-slider': return <PriceSliderCard isActive onContinue={handleGameComplete} />;
+                default: return null;
+              }
+            })()}
+          </Animated.ScrollView>
         )}
 
         {/* ── Module infographic phase (before chest) ── */}
