@@ -33,6 +33,7 @@ import { heavyHaptic, mediumHaptic, successHaptic, tapHaptic } from '../../utils
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
+import { useRouter } from 'expo-router';
 import { FINN_HAPPY } from '../retention-loops/finnMascotConfig';
 import { captureEvent } from '../../lib/posthog';
 
@@ -51,6 +52,7 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const addXP = useEconomyUIStore((s) => s.addXP);
   const clearFlag = useTutorialStore((s) => s.setPendingPostWalkthroughFirstChest);
+  const router = useRouter();
 
   const [opened, setOpened] = useState(false);
   const grantedRef = useRef(false);
@@ -100,8 +102,12 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
   const handleContinue = useCallback(() => {
     tapHaptic();
     try { captureEvent('first_chest_continue', {}); } catch { /* non-fatal */ }
-    clearFlag(false); // hands off to the register / Pro chain
-  }, [clearFlag]);
+    clearFlag(false);
+    // Auto-start mod-0-1 in the continuous auto-flow (Yoav 2026-06-25): the welcome
+    // chest leads STRAIGHT into the first lesson (intro→…→chest), no map detour.
+    // Pro/register now fire AFTER the mod-0-1 chest, not here.
+    try { router.push('/lesson/mod-0-1?startPhase=intro&returnTo=topic-tree&chapterId=chapter-0' as never); } catch { /* non-fatal */ }
+  }, [clearFlag, router]);
 
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => { /* block back — must open + continue */ }}>

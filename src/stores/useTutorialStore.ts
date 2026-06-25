@@ -77,6 +77,10 @@ interface TutorialState {
    *  question, never before/over it (Yoav 2026-06-17). Skip-safe: set on either
    *  outcome, so the chest is never blocked. */
   mod01KnowledgeResolved: boolean;
+  /** One-shot: the energy-intro popup was shown at mod-0-1b's first chip. Energy
+   *  is OFF in mod-0-1, so mod-0-1b is the user's first encounter with it, and we
+   *  explain it once there (Yoav 2026-06-25). */
+  hasSeenEnergyIntro: boolean;
   /** App-store rating prompt state (Yoav 2026-06-21). `ratePromptHandled` =
    *  user rated OR opted out permanently. `lastRatePromptAt` drives the
    *  cooldown; `ratePromptCount` caps total asks. Gating: see rateAppPrompt.ts. */
@@ -111,6 +115,7 @@ interface TutorialState {
   setPendingPostWalkthroughProTeaser: (value: boolean) => void;
   setPendingPostWalkthroughFirstChest: (value: boolean) => void;
   markMod01KnowledgeResolved: () => void;
+  markEnergyIntroSeen: () => void;
   /** Called when the rating modal actually opens — bumps count + stamps time. */
   markRatePromptShown: () => void;
   /** User tapped "rate" (or opted out) — never ask again. */
@@ -150,6 +155,7 @@ export const useTutorialStore = create<TutorialState>()(
       pendingPostWalkthroughProTeaser: false,
       pendingPostWalkthroughFirstChest: false,
       mod01KnowledgeResolved: false,
+      hasSeenEnergyIntro: false,
       ratePromptHandled: false,
       lastRatePromptAt: null,
       ratePromptCount: 0,
@@ -179,6 +185,7 @@ export const useTutorialStore = create<TutorialState>()(
       setPendingPostWalkthroughProTeaser: (value: boolean) => set({ pendingPostWalkthroughProTeaser: value }),
       setPendingPostWalkthroughFirstChest: (value: boolean) => set({ pendingPostWalkthroughFirstChest: value }),
       markMod01KnowledgeResolved: () => set({ mod01KnowledgeResolved: true }),
+      markEnergyIntroSeen: () => set({ hasSeenEnergyIntro: true }),
       markRatePromptShown: () => set((s) => ({ ratePromptCount: s.ratePromptCount + 1, lastRatePromptAt: Date.now() })),
       markRated: () => set({ ratePromptHandled: true }),
       markNotifPromptShown: () => set({ notifPromptShown: true }),

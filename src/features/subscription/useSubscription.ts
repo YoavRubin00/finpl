@@ -1,4 +1,5 @@
 // src/features/subscription/useSubscription.ts
+import { Platform } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSubscription, syncSubscription, type SubscriptionState } from '../../lib/api/subscription';
 import { checkProEntitlement, RC_ENTITLEMENT_PRO } from '../../services/revenueCat';

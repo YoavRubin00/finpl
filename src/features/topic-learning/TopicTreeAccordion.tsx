@@ -190,13 +190,15 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // skips it is no longer blocked from the chest. (Supersedes the 2026-06-17
   // quiz-gate.)
 
-  // mod-0-1 chest is NO LONGER gated on the knowledgeLevel question (Yoav
-  // 2026-06-24). The old gate (added 2026-06-17) held the chest until the inline
-  // question resolved — but d035a760 pushed the quiz (and thus the question,
-  // which fires right after it) PAST the 70% point, so users hit 70% BEFORE the
-  // question and the chest was suppressed (mod-0-1 first-chest activation halved
-  // on 1.3.6+, confirmed in PostHog). The question moved to mod-0-1b (after 2
-  // chips); the mod-0-1 chest now fires at 70% like every other module.
+  // Yoav 2026-06-17: mod-0-1 injects an inline knowledgeLevel onboarding
+  // question right after its quiz — the chest must appear AFTER it. Hold the
+  // mod-0-1 chest until that question is resolved: knowledgeLevel is set
+  // (answered) OR the skip-safe flag fired (LessonFlowScreen onDone, on answer
+  // OR "דלג"). Never blocks — the flag always fires. Other modules: always true.
+  const knowledgeLevel = useAuthStore((s) => s.profile?.knowledgeLevel);
+  const mod01KnowledgeResolved = useTutorialStore((s) => s.mod01KnowledgeResolved);
+  const mod01QuestionResolved =
+    module.id !== 'mod-0-1' || Boolean(knowledgeLevel) || mod01KnowledgeResolved;
 
   // Threshold crossing side effects.
   const past70Ref = useRef<boolean>(false);
@@ -368,7 +370,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // ref/store flag stays so analytics + future re-enable still work,
     // but no second modal fires.
     const seventyJustCrossed =
-      summary.isModuleDone &&
+      summary.isModuleDone && mod01QuestionResolved &&
       !past70Ref.current && !modulePastThreshold;
     if (!seventyJustCrossed) return;
 
@@ -479,19 +481,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-
-    // Warm Pro moment (Yoav 2026-06-23): arm the soft Pro teaser the first time
-    // the user opens their REAL first chest — mod-0-1's 70% chest. This REPLACES
-    // the COLD post_walkthrough teaser (removed today): analytics showed that
-    // slot sat inside the activation window (~29% reach the first chest) and
-    // converted ~0%, so it was pure friction. The teaser gate (app/_layout.tsx)
-    // shows it once the user is back on the learn map — their natural exit from
-    // mod-0-1 — never interrupting the chest reward. Non-Pro filtering lives in
-    // the gate; the 70% chest fires once per user, so we never re-arm on replay.
+    // Warm Pro moment (Yoav 2026-06-25): arm the soft Pro teaser the first time the
+    // user opens mod-0-1's REAL first chest. The ProTeaserGate filters Pro users;
+    // for guests, dismissing it chains to the register CTA → order = chest → Pro →
+    // register. (Replaces the old arming at walkthrough completion.)
     if (module.id === 'mod-0-1') {
       try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ }
     }
-  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
+  }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
@@ -584,27 +581,19 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     return true;
   }, [module.id]);
 
-  const walkthroughAutoFiredRef = useRef(false);
-  // R8 follow-up (Yoav 2026-06-11): the tour launches ONLY after the first
-  // non-intro chip is completed — the intro alone doesn't earn the "I built
-  // something" moment.
+  // Used only by the welcome banner below — the auto-walkthrough trigger that
+  // consumed this was removed 2026-06-25 (the tour now fires right after
+  // onboarding, before the first lesson — see ProfilingFlow.enterFirstModule).
   const completedNonIntroChipCount = useMemo(
     () => topics.filter((t) => t.kind !== 'intro' && isCompletedMap[t.id]).length,
     [topics, isCompletedMap],
   );
-  // AUTO-START the tour instead of asking "רוצה סיור?" (Yoav 2026-06-21). The
-  // yes/no prompt was friction right at mod-0-1's biggest drop-off (only ~31%
-  // reach the first chest). The tour has its own "דלג על הסיור" skip button, and
-  // both its complete + skip paths run routePostWalkthrough (guest register CTA +
-  // Pro teaser), so nothing downstream is lost.
+  // Auto-walkthrough trigger removed 2026-06-25 — the tour now fires immediately
+  // after onboarding (ProfilingFlow.enterFirstModule), before the first lesson, so
+  // it never pops mid auto-flow (the user no longer returns to the map between
+  // chips). Kept as a guarded no-op so the deps stay referenced for a clean revert.
   useEffect(() => {
-    if (module.id !== 'mod-0-1') return;
-    if (hasSeenAppWalkthrough) return;
-    if (walkthroughAutoFiredRef.current) return;
-    if (completedNonIntroChipCount < 1) return;
-    walkthroughAutoFiredRef.current = true;
-    triggerWalkthrough();
-    try { captureEvent('walkthrough_auto_started', { module_id: module.id }); } catch { /* non-fatal */ }
+    void [module.id, completedNonIntroChipCount, hasSeenAppWalkthrough, triggerWalkthrough];
   }, [module.id, completedNonIntroChipCount, hasSeenAppWalkthrough, triggerWalkthrough]);
 
   // Mod-0-1 onboarding banner — surfaces above the chip column ONLY

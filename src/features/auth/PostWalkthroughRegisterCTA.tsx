@@ -1,6 +1,6 @@
-// Modal shown to Guest users immediately after they complete the in-app
-// walkthrough (the post-mod-0-1 tour ending at the Bridge). The flag is set
-// in AppWalkthroughOverlay.handleNext at walkthrough completion; the gate
+// Modal shown to Guest users AFTER the Pro teaser, once the mod-0-1 chest has
+// opened (chest → Pro → register, Yoav 2026-06-25). The flag is armed when the
+// Pro teaser is dismissed (PostWalkthroughProTeaser); the gate
 // in app/_layout.tsx renders this once the user lands on /(tabs). Fires
 // register_cta_{shown,accepted,dismissed} with source: 'post_walkthrough'
 // so the PostHog funnel can be sliced separately from the mid-lesson CTA.
@@ -20,10 +20,8 @@ const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as cons
 function PostWalkthroughRegisterCTA(): React.JSX.Element {
   const router = useRouter();
   const clearFlag = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
-  // The Pro teaser is NO LONGER chained here (Yoav 2026-06-23). It moved to the
-  // user's first REAL chest (mod-0-1's 70% chest, see TopicTreeAccordion), so
-  // guests get it there too — on their natural exit after activation — instead
-  // of stacked right after this register CTA.
+  // Pro teaser now fires BEFORE this register CTA (chest → Pro → register, Yoav
+  // 2026-06-25), so this CTA no longer arms it — see PostWalkthroughProTeaser.
 
   useEffect(() => {
     try { captureEvent("register_cta_shown", { source: "post_walkthrough" }); } catch { /* non-fatal */ }

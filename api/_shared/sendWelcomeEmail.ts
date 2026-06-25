@@ -32,9 +32,7 @@ export async function sendWelcomeEmail({
     // Route the WhatsApp CTA through /api/email/wa-click so the tap is tracked
     // (whatsapp_cta_tapped, source:'welcome_email') before redirecting to the
     // group — lets us compare email vs in-game community acquisition.
-    // Strip a trailing /api if the Vercel env var includes it (misconfig) — else
-    // every link becomes a double /api/api/... → 404. Canonical base has NO /api.
-    const baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'https://finpl.vercel.app').replace(/\/+$/, '').replace(/\/api$/, '');
+    const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? 'https://finpl.vercel.app';
     const { subject, html, text } = buildWelcomeEmailHtml({
       name: displayName ?? 'חבר/ה',
       whatsappUrl: `${baseUrl}/api/email/wa-click?u=${encodeURIComponent(userId)}`,

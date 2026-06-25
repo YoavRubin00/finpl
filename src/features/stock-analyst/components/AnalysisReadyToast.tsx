@@ -64,18 +64,25 @@ export function AnalysisReadyToast({ visible, onReveal }: Props): React.ReactEle
           }}
           accessibilityRole="button"
           accessibilityLabel="הניתוח מוכן — לחץ כדי לראות"
-          style={({ pressed }) => [s.card, pressed && s.cardPressed]}
+          // Background/border/shadow live on the inner `s.card` View, NOT on this
+          // function-style Pressable: on Android a function `style` drops
+          // backgroundColor (RN bug), which made the card render see-through on
+          // the dark navy screen. Same fix as ForceUpdateScreen. The Pressable
+          // now only carries the press feedback (opacity + scale).
+          style={({ pressed }) => (pressed ? s.cardPressed : null)}
         >
-          <View style={s.accent} />
-          <View style={s.row}>
-            <View style={s.avatarWrap}>
-              <ExpoImage source={FINN_HAPPY} style={s.avatar} contentFit="contain" accessible={false} />
+          <View style={s.card}>
+            <View style={s.accent} />
+            <View style={s.row}>
+              <View style={s.avatarWrap}>
+                <ExpoImage source={FINN_HAPPY} style={s.avatar} contentFit="contain" accessible={false} />
+              </View>
+              <View style={s.textBlock}>
+                <Text style={s.title} numberOfLines={1}>הניתוח מוכן! 🎯</Text>
+                <Text style={s.body} numberOfLines={2}>לחץ כדי לראות את הניתוח המלא</Text>
+              </View>
+              <ChevronLeft size={20} color="#0c4a6e" strokeWidth={2.6} />
             </View>
-            <View style={s.textBlock}>
-              <Text style={s.title} numberOfLines={1}>הניתוח מוכן! 🎯</Text>
-              <Text style={s.body} numberOfLines={2}>לחץ כדי לראות את הניתוח המלא</Text>
-            </View>
-            <ChevronLeft size={20} color="#0c4a6e" strokeWidth={2.6} />
           </View>
         </Pressable>
         {/* Secondary X to dismiss WITHOUT auto-revealing — for now this just

@@ -24,6 +24,9 @@ interface SharkChipCalloutProps {
   remaining: number;
   /** mod-0-1 / mod-0-2 (50% threshold) → "first chest" framing. */
   isFirstChest: boolean;
+  /** Optional override copy. When set, REPLACES the computed proximity line —
+   *  lets this toast double as a Captain Shark compliment (continue / 100%). */
+  message?: string;
   /** Fired when the user dismisses the BLOCKING pop-up (remaining <= 2) via
    *  "המשך" / backdrop. The parent re-pokes the gold-chip auto-scroll: while a
    *  <Modal> is presented, scrollTo on the ScrollView behind it is dropped, so
@@ -61,6 +64,7 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
   seq,
   remaining,
   isFirstChest,
+  message,
   onPopupContinue,
 }: SharkChipCalloutProps) {
   const reduceMotion = useReducedMotion();
@@ -100,7 +104,7 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
     }
     setWebpIndex(rotationRef.current[cursorRef.current] ?? 0);
     cursorRef.current += 1;
-    setShownMessage(calloutMessage(remaining, isFirstChest));
+    setShownMessage(message ?? calloutMessage(remaining, isFirstChest));
     setConfettiKey((k) => k + 1);
     showingRef.current = true;
     try { successHaptic(); } catch { /* non-fatal */ }
@@ -110,7 +114,7 @@ export const SharkChipCallout = React.memo(function SharkChipCallout({
       setToastVisible(true);
       safeTimeout(() => { setToastVisible(false); showingRef.current = false; }, reduceMotion ? TOAST_MS_RM : TOAST_MS);
     }
-  }, [seq, remaining, isFirstChest, reduceMotion, safeTimeout]);
+  }, [seq, remaining, isFirstChest, message, reduceMotion, safeTimeout]);
 
   const handleContinue = useCallback(() => {
     try { tapHaptic(); } catch { /* non-fatal */ }

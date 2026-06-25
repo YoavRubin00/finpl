@@ -117,10 +117,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
   // variant (independent per-user, but all from the same posterior snapshot).
   const banditStats = await loadBanditStats(db);
 
-  // Strip a trailing /api if the Vercel env var includes it (misconfig) — else
-  // every link becomes a double /api/api/... → 404. Canonical base has NO /api;
-  // each link appends its own /api/<route>. Root fix is the Vercel env var.
-  const baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'https://finpl.vercel.app').replace(/\/+$/, '').replace(/\/api$/, '');
+  const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? 'https://finpl.vercel.app';
   const fromAddress = process.env.EMAIL_FROM ?? 'FinPlay <onboarding@resend.dev>';
   const weekAgoIso = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 

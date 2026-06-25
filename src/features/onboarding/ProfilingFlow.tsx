@@ -10,6 +10,7 @@ import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { useRouter, type Href } from "expo-router";
+import { useTutorialStore } from "../../stores/useTutorialStore";
 import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp, ChevronRight } from "lucide-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SkiaInteractiveChart } from "../../components/ui/SkiaInteractiveChart";
@@ -1975,7 +1976,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
           <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
             {"היי, אני קפטן שארק"}
           </Text>
-          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"בואו נתחיל לשחק עם\nהכסף שלכם."}</Text>
+          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"מתחילים לשחק עם\nהכסף שלך."}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", width: "100%" }]}>
@@ -1988,9 +1989,9 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
             }}
             style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
             accessibilityRole="button"
-            accessibilityLabel="בואו נתחיל"
+            accessibilityLabel="מתחילים"
           >
-            <Text style={introStyles.ctaText}>בואו נתחיל</Text>
+            <Text style={introStyles.ctaText}>מתחילים</Text>
           </Pressable>
 
           {/* Disclaimer right under the primary button */}
@@ -2690,15 +2691,14 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       avatarId: collected.avatarId ?? null,
       ownedAvatars: [],
     });
-    // Drop the user straight into the first module (mod-0-1) for a hands-on
-    // first taste before the walkthrough offers a tour. The walkthrough only
-    // fires once they're in a tab, so navigating to lesson keeps it suppressed.
-    // Bridges onboarding_completed → lesson_started so we can SEE where the
-    // post-onboarding drop happens (board 2026-06-18: only ~34% reach a lesson;
-    // this event splits "abandoned at streak celebration" vs "route/lesson
-    // didn't fire" vs "real drop").
+    // New-user flow (Yoav 2026-06-25): land on the learn MAP and fire the
+    // walkthrough IMMEDIATELY (tour the tabs), instead of dropping into the lesson
+    // first. Skip/finish the tour → welcome chest → its "המשך" auto-starts mod-0-1
+    // in the continuous auto-flow. The tour tours the tabs, so it needs a tab
+    // route, not /lesson. (Replaces the old "after the first chip" trigger.)
     try { captureEvent('onboarding_enter_first_module', { target: 'mod-0-1', chapter_id: 'chapter-0' }); } catch { /* non-fatal */ }
-    router.replace("/lesson/mod-0-1?chapterId=chapter-0" as Href);
+    try { useTutorialStore.getState().triggerWalkthrough(); } catch { /* non-fatal */ }
+    router.replace("/(tabs)" as Href);
   }
 
   function editSummaryStep(target: EditableStep) {

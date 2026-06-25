@@ -30,10 +30,11 @@ export type SharkExpression =
   | 'empathic'
   | 'victory';
 
-// Short hold only — its job is to absorb sub-frame flickers between
-// the SDK firing `listening` and the next audio chunk arriving. The
-// real silence detection lives in `useElevenLabsConversation.ts`.
-const TALKING_HOLD_MS = 300;
+// Short hold only — smooths a 1–2 frame flicker on the speaking→listening
+// edge. The precise "is he making sound" detection now lives in the hook's
+// output-volume loop (`useElevenLabsConversation.web.ts`), which already
+// debounces word-gaps, so this can be small to keep the mouth in tight sync.
+const TALKING_HOLD_MS = 120;
 // How long each talking variant shows before advancing to the next. Long
 // enough to read as a deliberate gesture, short enough that a multi-sentence
 // reply visibly varies.

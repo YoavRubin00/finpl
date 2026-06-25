@@ -24,6 +24,16 @@ const PRACTICE_ENERGY_GRANT = 5; // energy granted per practice/replay completio
  *  "לא צריך למלא הכל, נגיד לתת 5 אנרגיה מתנה"). */
 export const WELCOME_BACK_ENERGY_GIFT = 5;
 
+/** Energy is fully OFF for the very first module (mod-0-1) so a brand-new user
+ *  meets the lesson with zero lives/energy friction; it switches ON from
+ *  mod-0-1b onward (Yoav 2026-06-25). Gates both the spend (`useHeart` call
+ *  sites) and the תחנת הכוח UI on the learn map. */
+const ENERGY_DISABLED_MODULE_IDS = new Set<string>(['mod-0-1']);
+export function isEnergyEnabledForModule(moduleId: string | null | undefined): boolean {
+  // Default ENABLED for unknown/undefined ids — only the listed modules are off.
+  return !ENERGY_DISABLED_MODULE_IDS.has(moduleId ?? '');
+}
+
 // Monotonic counter so two identical back-to-back deltas (same type/amount/
 // source) still re-fire the EnergyAnimationProvider (object-identity selector
 // would otherwise miss the second). One store instance → module scope is fine.
