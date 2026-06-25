@@ -39,19 +39,23 @@ function cleanTranscriptText(text: string): string {
     .trim();
 }
 
-// After this many ms without an audio chunk arriving we declare the agent
-// done speaking and flip back to "listening". TTS streams chunks at
-// 20–100ms intervals during active speech, so a real inter-sentence gap
-// of 600–800ms is unusual mid-turn. 900ms is generous for natural pauses
-// but tight enough that the WebP stops looking "stuck talking" after
-// the agent's reply ends.
-const AUDIO_SILENCE_MS = 900;
+// Frame-accurate "is the shark actually making sound right now" detection.
+// We poll the SDK's real OUTPUT audio level (`getOutputVolume()`, 0–1) instead
+// of guessing from audio-chunk ARRIVAL timing — chunks are buffered ahead of
+// playback, so their timing lags/leads the actual voice. The volume is the
+// ground truth, so the talking animation matches exactly when he speaks.
+const OUTPUT_POLL_MS = 40; // ~25fps — imperceptible attack latency
+// Above this output level = sound is playing. Below the noise floor = silent.
+const OUTPUT_SPEAKING_THRESHOLD = 0.025;
+// Keep "speaking" through dips shorter than this so word-gaps don't flicker,
+// but a real sentence pause (longer) correctly shows him not talking.
+const OUTPUT_RELEASE_MS = 160;
 
 export function useElevenLabsConversation() {
   const conversationRef = useRef<ConversationHandle | null>(null);
   const startingRef = useRef(false);
-  const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastAudioAtRef = useRef<number>(0);
+  const volumeLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastLoudAtRef = useRef<number>(0);
 
   const setStatus = useSharkVoiceStore((s) => s.setStatus);
   const setUserTranscript = useSharkVoiceStore((s) => s.setUserTranscript);
@@ -64,6 +68,10 @@ export function useElevenLabsConversation() {
     const conv = conversationRef.current;
     conversationRef.current = null;
     startingRef.current = false;
+    if (volumeLoopRef.current) {
+      clearInterval(volumeLoopRef.current);
+      volumeLoopRef.current = null;
+    }
     if (conv) {
       try {
         await conv.endSession();
@@ -140,32 +148,39 @@ export function useElevenLabsConversation() {
           }
         },
         onModeChange: ({ mode }) => {
-          if (mode === 'speaking') {
-            setStatus('speaking');
-            return;
-          }
-          // SDK fires "listening" during brief mid-turn audio gaps (silence
-          // between sentences, breaths). Ignore those — only flip back when
-          // the silence timer below has confirmed sustained quiet.
-          const now = Date.now();
-          const elapsed = now - lastAudioAtRef.current;
-          if (elapsed < AUDIO_SILENCE_MS) return;
-          if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
-          setStatus('listening');
-        },
-        onAudio: () => {
-          // Every audio chunk = "still talking". Keep us in speaking state and
-          // reset the silence timer. Only when no chunks arrive for the full
-          // AUDIO_SILENCE_MS window do we acknowledge the turn is over.
-          lastAudioAtRef.current = Date.now();
-          setStatus('speaking');
-          if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
-          speakingTimeoutRef.current = setTimeout(() => {
-            setStatus('listening');
-          }, AUDIO_SILENCE_MS);
+          // Instant attack: trust the SDK's "speaking" the moment it fires so
+          // the mouth opens with zero perceived lag. The RELEASE (when he stops)
+          // is owned by the output-volume loop below for frame-accurate sync, so
+          // we deliberately IGNORE the SDK's "listening" here (it also fires
+          // during mid-sentence breaths, which would cut the animation short).
+          if (mode === 'speaking') setStatus('speaking');
         },
       } as Parameters<typeof Conversation.startSession>[0]);
       conversationRef.current = conv;
+
+      // Frame-accurate talking sync: poll the agent's real OUTPUT volume and
+      // drive speaking↔listening off actual sound. Attack is instant (volume
+      // crosses the threshold); release waits OUTPUT_RELEASE_MS of quiet so
+      // word-gaps don't flicker. Only manages speaking/listening — when he's
+      // silent we leave the status untouched, so the user-turn "thinking" state
+      // set in onMessage is preserved.
+      lastLoudAtRef.current = Date.now();
+      volumeLoopRef.current = setInterval(() => {
+        if (conversationRef.current !== conv) return;
+        let vol = 0;
+        try {
+          vol = conv.getOutputVolume();
+        } catch {
+          return; // SDK shape changed / not ready — skip this tick
+        }
+        const status = useSharkVoiceStore.getState().status;
+        if (vol > OUTPUT_SPEAKING_THRESHOLD) {
+          lastLoudAtRef.current = Date.now();
+          if (status !== 'speaking') setStatus('speaking');
+        } else if (status === 'speaking' && Date.now() - lastLoudAtRef.current > OUTPUT_RELEASE_MS) {
+          setStatus('listening');
+        }
+      }, OUTPUT_POLL_MS);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'לא ניתן לפתוח חיבור לשירות הקול.';
       captureEvent('shark_voice_error', {

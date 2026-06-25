@@ -5,10 +5,10 @@
 // blocker (the early hard paywall cratered first-module completion). The hard
 // paywall still fires later at post_mod_0_1b / post_mod_0_4.
 //
-// Flag is armed in AppWalkthroughOverlay (registered non-Pro) or after the
-// guest register CTA resolves (PostWalkthroughRegisterCTA). The gate below
-// renders this once the user lands on /(tabs), never overlapping the register
-// CTA. Mirrors PostWalkthroughRegisterCTAGate.
+// Flag is armed when the mod-0-1 chest opens (TopicTreeAccordion, Yoav
+// 2026-06-25). The gate below renders this once the user lands on /(tabs); for
+// guests, dismissing it arms the register CTA next (chest → Pro → register).
+// Mirrors PostWalkthroughRegisterCTAGate.
 
 import React, { useEffect } from "react";
 import { Modal, Pressable, Text } from "react-native";
@@ -16,6 +16,7 @@ import { Image as ExpoImage } from "expo-image";
 import { useRouter, usePathname } from "expo-router";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useIsPro } from "./useSubscription";
+import { useAuthStore } from "../auth/useAuthStore";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { captureEvent } from "../../lib/posthog";
 import { tapHaptic } from "../../utils/haptics";
@@ -25,6 +26,11 @@ const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as cons
 function PostWalkthroughProTeaser(): React.JSX.Element {
   const router = useRouter();
   const clearFlag = useTutorialStore((s) => s.setPendingPostWalkthroughProTeaser);
+  // Chain the register CTA to fire AFTER this Pro teaser, for guests only (chest →
+  // Pro → register, Yoav 2026-06-25). The RegisterCTA gate then shows it once the
+  // user is back on /(tabs) and still a guest.
+  const armRegister = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
+  const isGuest = useAuthStore((s) => s.isGuest);
 
   useEffect(() => {
     // Restores the post_walkthrough paywall-view metric (124/week → 0 regression).
@@ -40,12 +46,16 @@ function PostWalkthroughProTeaser(): React.JSX.Element {
   const dismiss = (trigger: "backdrop" | "skip_button" | "system_back") => {
     try { captureEvent("paywall_dismissed", { paywall: "post_walkthrough", source: "post_walkthrough", trigger }); } catch { /* non-fatal */ }
     clearFlag(false);
+    if (isGuest) { try { armRegister(true); } catch { /* non-fatal */ } }
   };
 
   const startTrial = () => {
     tapHaptic();
     try { captureEvent("paywall_cta_clicked", { paywall: "post_walkthrough", source: "post_walkthrough", via: "soft_teaser" }); } catch { /* non-fatal */ }
     clearFlag(false);
+    // Still a guest after taking the trial → queue the register CTA for their
+    // return from /pricing (account is separate from subscription).
+    if (isGuest) { try { armRegister(true); } catch { /* non-fatal */ } }
     router.push(`/pricing?source=post_walkthrough&returnTo=${encodeURIComponent("/(tabs)")}` as never);
   };
 

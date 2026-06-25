@@ -13,6 +13,9 @@ import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
 import { useContinuousRunStore } from "../topic-learning/useContinuousRunStore";
 import { resolveTopics } from "../topic-learning/topicResolver";
 import type { TopicKind } from "../topic-learning/types";
+import { chestThresholdFor } from "../topic-learning/types";
+import { SharkChipCallout } from "../topic-learning/components/SharkChipCallout";
+import { pickContinueCompliment } from "../topic-learning/moduleCompliments";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
@@ -74,7 +77,7 @@ import { recordModuleDuration as apiRecordModuleDuration } from "../../lib/api/u
 import { userStatsQueryKey } from "../user-stats/useUserStats";
 import { useWisdomStore } from "../wisdom-flashes/useWisdomStore";
 import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
-import { useHeartsStore, MAX_ENERGY } from "../subscription/useHeartsStore";
+import { useHeartsStore, MAX_ENERGY, isEnergyEnabledForModule } from "../subscription/useHeartsStore";
 import { useUsageStore } from "../subscription/useUsageStore";
 import { queryClient } from "../../lib/queryClient";
 import type { SubscriptionState } from "../../lib/api/subscription";
@@ -2087,6 +2090,9 @@ export function LessonFlowScreen() {
     ttProgress?: string;
   }>();
   const isReplay = replay === '1';
+  // Energy is OFF for mod-0-1 (brand-new users meet the first lesson with zero
+  // lives friction); ON from mod-0-1b onward. Gates every in-lesson spend below.
+  const energyOn = isEnergyEnabledForModule(id);
   const router = useRouter();
   /** Return to the learn map. Under the root <Stack> the map is still mounted
    *  beneath this lesson, so dismissTo POPS back to it — no remount / "flash",
@@ -2100,13 +2106,12 @@ export function LessonFlowScreen() {
   }, [router]);
   /** Safe back: go back if possible, otherwise fall back to tabs home */
   function safeGoBack() {
-    // Yoav 2026-06-11: topic-tree chip exits skip the "stay another
-    // minute" confirm — each chip is a small unit, no progress is lost
-    // when leaving mid-card ("רשום לו את ההודעה של נשאר עוד דקה הטובה"
-    // shouldn't fire here). The legacy linear flow keeps the guard
-    // because it's a longer, contiguous session.
+    // Show the "stay another minute" confirm during a long contiguous session:
+    // the legacy linear flow, OR the new auto-flow (Yoav 2026-06-25 — auto-flow
+    // chains the chips into one long session again, so leaving mid-flow DOES lose
+    // real momentum; the per-chip skip from 2026-06-11 no longer applies here).
     if (
-      returnTo !== 'topic-tree'
+      (returnTo !== 'topic-tree' || autoFlow)
       && (phase === "flashcards" || phase === "interactive-recall" || phase === "quizzes" || phase === "sim")
     ) {
       setShowExitConfirm(true);
@@ -2724,23 +2729,88 @@ export function LessonFlowScreen() {
   // always deep-link to a concrete user-facing phase.
   const tt_initialPhaseRef = useRef<FlowPhase | null>(returnTo === 'topic-tree' ? phase : null);
   const tt_exitFiredRef = useRef(false);
+  // Auto-flow (Yoav 2026-06-25): instead of bouncing to the map after EVERY
+  // chip, flow straight to the next chip (the pre-chips continuous momentum)
+  // and only return to the map when the chip just finished crosses the chest
+  // threshold — so the chest + debrief + next module fire there. Map = opt-in.
+  // Replays still return per-chip. AUTO_FLOW_ENABLED is a kill-switch.
+  const AUTO_FLOW_ENABLED = true;
+  const autoFlow = AUTO_FLOW_ENABLED && returnTo === 'topic-tree' && !isReplay;
+  // Mirror the accordion's mod-0-1 chest gate so auto-flow returns for the chest
+  // only AFTER the inline knowledgeLevel question (shown right after the quiz by
+  // advanceQuiz) is resolved — keeping the order quiz → question → chest (Yoav 25.6).
+  const mod01KnowledgeResolved = useTutorialStore((s) => s.mod01KnowledgeResolved);
+  const profileKnowledgeLevel = useAuthStore((s) => s.profile?.knowledgeLevel);
+  const mod01QuestionResolved = id !== 'mod-0-1' || Boolean(profileKnowledgeLevel) || mod01KnowledgeResolved;
   useEffect(() => {
     if (returnTo !== 'topic-tree') return;
     if (tt_exitFiredRef.current) return;
     if (!tt_initialPhaseRef.current) return;
     if (phase === tt_initialPhaseRef.current) return;
-    // Phase advanced — fire the exit. Use replace to drop this lesson route
-    // from history so router.back() inside the next user navigation doesn't
-    // land them back at a half-finished lesson.
-    tt_exitFiredRef.current = true;
+    // The chip we were tracking just completed (the phase machine already
+    // advanced to `phase` via its own next-handler).
     const completed = tt_initialPhaseRef.current;
     // R5.5: flashcards phase covers two chips — 'cards' and
-    // 'tutorial-video' — disambiguated by cardFilter. Pass it as
-    // completedKind so the consumer marks the right topic done.
+    // 'tutorial-video' — disambiguated by cardFilter.
     const completedKind =
       completed === 'flashcards' && cardFilter === 'video' ? 'tutorial-video'
       : completed === 'flashcards' && cardFilter === 'non-video' ? 'cards'
       : '';
+
+    if (autoFlow && mod) {
+      // Mark the completed chip, then keep flowing unless the chest threshold
+      // is crossed (count-based 50% mod-0-1 / 75% others).
+      const markKind = completedKind ? (completedKind as TopicKind) : TT_PHASE_TO_KIND[completed];
+      const topics = resolveTopics(mod);
+      const topic = markKind ? topics.find((t) => t.kind === markKind) : undefined;
+      if (topic) useTopicProgressStore.getState().markTopicCompleted(topic, 'continuous');
+      const summary = useTopicProgressStore.getState().summaryForModule(mod.id, topics);
+      // Exit only when the chest would actually fire — threshold crossed AND
+      // (mod-0-1) the inline knowledgeLevel question resolved. So the auto-flow
+      // runs quiz → knowledgeLevel question → chest, in that order.
+      const chipsToChest = Math.ceil(chestThresholdFor(mod.id) * topics.length);
+      // The chest opens ONLY on the chip that first CROSSES the threshold (count-
+      // based), gated for mod-0-1 by the knowledgeLevel question. AFTER the chest
+      // the auto-flow KEEPS going chip-to-chip (no per-chip map detour) all the way
+      // to 100% (Yoav 2026-06-25) — the user opted in by tapping "continue".
+      const crossedChest = summary.completed - 1 < chipsToChest && summary.completed >= chipsToChest;
+      const moduleComplete = summary.total > 0 && summary.completed >= summary.total;
+      const chestReady = crossedChest && mod01QuestionResolved;
+      const shouldExit = chestReady || moduleComplete;
+      if (!shouldExit) {
+        // mod-0-1b's FIRST chip → one-shot energy intro (energy is off in mod-0-1,
+        // so this is the first encounter). Shown instead of the chip callout here.
+        const energyIntroNow = mod.id === 'mod-0-1b' && !!topic && summary.completed === 1
+          && !useTutorialStore.getState().hasSeenEnergyIntro;
+        if (energyIntroNow) {
+          setShowEnergyIntro(true);
+          useTutorialStore.getState().markEnergyIntroSeen();
+        } else if (topic && summary.completed < chipsToChest) {
+          // Fire the "עוד X לתיבה" callout (pop+confetti) once per real chip — only
+          // BEFORE the chest (post-chest the chest is already open, count is moot).
+          setCalloutRemaining(Math.max(1, chipsToChest - summary.completed));
+          setCalloutSeq((s) => s + 1);
+        }
+        // Keep flowing — pre-chest chips, the pending knowledgeLevel question, OR
+        // post-chest chips on the way to 100%. Track the new phase to re-fire.
+        tt_initialPhaseRef.current = phase;
+        return;
+      }
+      // 100% → bonus gold + XP. RewardAnimationProvider (app-root) auto-detects the
+      // economy bump and flies the reward to the home header (Yoav 2026-06-25:
+      // "שתעוף לו במסך הבית זהב+XP"). Fires once — only the chip that reaches 100%.
+      if (moduleComplete) {
+        try {
+          useEconomyUIStore.getState().addCoins(50, 'lesson');
+          useEconomyUIStore.getState().addXP(50, 'lesson_complete');
+        } catch { /* non-fatal */ }
+      }
+      // Chest crossed OR module 100% → fall through to return to the map; the
+      // accordion (un-suppressed on unmount) fires the chest debrief there.
+    }
+
+    // Return to the map: chip-mode after every chip, or auto-flow at the chest.
+    tt_exitFiredRef.current = true;
     // Premium return (Yoav 2026-06-11): under the root <Stack> the topic-tree
     // map is still mounted beneath this lesson. Signal the completion to the
     // map's store and router.back() — popping this lesson so the user lands on
@@ -2761,7 +2831,17 @@ export function LessonFlowScreen() {
       const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}${kindParam}`;
       router.replace(path as never);
     }
-  }, [phase, returnTo, id, router, cardFilter]);
+  }, [phase, returnTo, id, router, cardFilter, autoFlow, mod, mod01QuestionResolved]);
+
+  // While an auto-flow run is mounted, flag its module so the TopicTreeAccordion
+  // beneath suppresses its OWN threshold chest (it would otherwise pop OVER the
+  // running lesson). Cleared on unmount → the accordion fires its single chest
+  // on the map when we return at the threshold.
+  useEffect(() => {
+    if (!autoFlow || !id) return;
+    useContinuousRunStore.getState().setActive(id);
+    return () => { useContinuousRunStore.getState().clear(); };
+  }, [autoFlow, id]);
 
   // "למידה רציפה" per-phase progress sync (Yoav 2026-06-11). When the
   // continuous "autopilot" flow is active (ttProgress=1, no topic-tree
@@ -3189,7 +3269,7 @@ export function LessonFlowScreen() {
   useEffect(() => {
     const prev = prevPhaseRef.current;
     prevPhaseRef.current = phase;
-    if (!prev || prev === phase || isReplay || isPro) return;
+    if (!prev || prev === phase || isReplay || isPro || !energyOn) return;
     if (ACTIVE_SUBMODULE_PHASES.has(prev) && !chargedSubmodulesRef.current.has(prev)) {
       chargedSubmodulesRef.current.add(prev);
       const ok = useHeartsStore.getState().useHeart(isPro);
@@ -3203,6 +3283,38 @@ export function LessonFlowScreen() {
   const [showChapterComplete, setShowChapterComplete] = useState(false);
   const [showFinnBridgeNudge, setShowFinnBridgeNudge] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  // Auto-flow "עוד X לתיבה" chip-callout (pop+confetti, preserved). Driven by the
+  // seam: bumped once per chip completion (NOT the chest-crossing one).
+  const [calloutSeq, setCalloutSeq] = useState(0);
+  const [calloutRemaining, setCalloutRemaining] = useState(3);
+  const [showEnergyIntro, setShowEnergyIntro] = useState(false);
+  const [complimentSeq, setComplimentSeq] = useState(0);
+  const [complimentMsg, setComplimentMsg] = useState<string | null>(null);
+  // C (Yoav 2026-06-25): on a post-chest RE-ENTRY (module already past its chest
+  // threshold but not yet 100%, in auto-flow), greet the choice to keep going with
+  // a varied inline Captain Shark compliment — "מיד לאחר ההחלטה, כחלק מרצף הלמידה".
+  useEffect(() => {
+    if (!autoFlow || !mod) return;
+    const t = resolveTopics(mod);
+    const sum = useTopicProgressStore.getState().summaryForModule(mod.id, t);
+    const chipsToChest = Math.ceil(chestThresholdFor(mod.id) * t.length);
+    const pastChest = chipsToChest > 0 && sum.completed >= chipsToChest;
+    const done = sum.total > 0 && sum.completed >= sum.total;
+    if (pastChest && !done) {
+      setComplimentMsg(pickContinueCompliment());
+      setComplimentSeq((s) => s + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Auto-flow progress-to-chest (segmented bar at the lesson top): fills to FULL
+  // exactly at the chest threshold (50% mod-0-1 / 75% others), NOT whole-module.
+  const ttCompletedMap = useTopicProgressStore((s) => s.completed);
+  const autoFlowProgress = useMemo(() => {
+    if (!mod) return { done: 0, toChest: 0 };
+    const t = resolveTopics(mod);
+    const toChest = Math.ceil(chestThresholdFor(mod.id) * t.length);
+    return { done: t.filter((x) => ttCompletedMap[x.id]).length, toChest };
+  }, [mod, ttCompletedMap]);
   const [showRegisterNudge, setShowRegisterNudge] = useState(false);
   // mod-0-1 dedicated continue CTA — replaces the entire post-chest modal queue
   // for the first lesson so the user lands on a single "המשך" button.
@@ -3791,7 +3903,7 @@ export function LessonFlowScreen() {
     useHeartsStore.getState().resetCombo();
     const quiz = mod.quizzes[quizIndex];
     if (isReplay) return;
-    const heartUsed = useHeartsStore.getState().useHeart(isPro);
+    const heartUsed = useHeartsStore.getState().useHeart(isPro || !energyOn);
     if (heartUsed) {
       // Loss animation fires globally via the useHeart() store signal.
       heavyHaptic();
@@ -4134,7 +4246,7 @@ export function LessonFlowScreen() {
       // Skipped on replay to encourage practice without punishment.
       if (!isReplay) {
         const isProNow = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true;
-        for (let i = 0; i < result.unwiseCount; i++) useHeartsStore.getState().useHeart(isProNow);
+        for (let i = 0; i < result.unwiseCount; i++) useHeartsStore.getState().useHeart(isProNow || !energyOn);
         // This path used to deplete SILENTLY (no CTA). If the unwise choices
         // drained energy to 0, surface the out-of-energy modal here too so the
         // watch-ad/refill/upgrade options always appear on depletion.
@@ -4258,6 +4370,16 @@ export function LessonFlowScreen() {
           </View>
         </View>
 
+        {/* Auto-flow "progress to chest" bar — segmented, fills to FULL at the
+            chest threshold (not whole-module). 🎁 marks the goal. */}
+        {autoFlow && autoFlowProgress.toChest > 0 && (
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, paddingTop: 2, paddingBottom: 6 }}>
+            {Array.from({ length: autoFlowProgress.toChest }).map((_, i) => (
+              <View key={i} style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: i < autoFlowProgress.done ? '#0ea5e9' : '#e2e8f0' }} />
+            ))}
+            <Text style={{ fontSize: 18, marginStart: 4 }} allowFontScaling={false}>🎁</Text>
+          </View>
+        )}
         {/* Streak text, fire lottie + label, absolute so it doesn't push content down */}
         {showStreakPopup && consecutiveCorrect >= 3 && (
           <Animated.View
@@ -5448,6 +5570,35 @@ export function LessonFlowScreen() {
           </Pressable>
         </Modal>
       )}
+
+      {/* Auto-flow chip-completion callout ("עוד X לתיבה", pop+confetti). */}
+      <SharkChipCallout seq={calloutSeq} remaining={calloutRemaining} isFirstChest={chestThresholdFor(id ?? '') <= 0.5} />
+
+      {/* Captain Shark compliment when the user continues past the chest (toast). */}
+      <SharkChipCallout seq={complimentSeq} remaining={99} isFirstChest={false} message={complimentMsg ?? undefined} />
+
+      {/* Energy intro — one-shot at mod-0-1b's first chip (first encounter with energy). */}
+      <Modal visible={showEnergyIntro} transparent animationType="fade" onRequestClose={() => setShowEnergyIntro(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(8, 20, 40, 0.75)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }}>
+          <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(167,139,250,0.25)" }}>
+            <EnergyBatteryIcon size={84} level={1} showBolt />
+            <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginTop: 16, marginBottom: 8 }}>
+              זה האנרגיה שלך
+            </Text>
+            <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "rgba(255,255,255,0.7)", textAlign: "center", marginBottom: 24, lineHeight: 22 }}>
+              אתה מבזבז בלמידה, ויכול להרוויח אותה מהתמדה ורצף תשובות נכונות
+            </Text>
+            <Pressable
+              onPress={() => { tapHaptic(); setShowEnergyIntro(false); }}
+              style={{ backgroundColor: "#7c3aed", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#6d28d9" }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+            >
+              <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff" }}>המשך</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Exit interception modal, Duolingo-style */}
       {showExitConfirm && (() => {

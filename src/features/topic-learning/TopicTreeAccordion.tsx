@@ -481,6 +481,13 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
+    // Warm Pro moment (Yoav 2026-06-25): arm the soft Pro teaser the first time the
+    // user opens mod-0-1's REAL first chest. The ProTeaserGate filters Pro users;
+    // for guests, dismissing it chains to the register CTA → order = chest → Pro →
+    // register. (Replaces the old arming at walkthrough completion.)
+    if (module.id === 'mod-0-1') {
+      try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ }
+    }
   }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
@@ -574,27 +581,19 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     return true;
   }, [module.id]);
 
-  const walkthroughAutoFiredRef = useRef(false);
-  // R8 follow-up (Yoav 2026-06-11): the tour launches ONLY after the first
-  // non-intro chip is completed — the intro alone doesn't earn the "I built
-  // something" moment.
+  // Used only by the welcome banner below — the auto-walkthrough trigger that
+  // consumed this was removed 2026-06-25 (the tour now fires right after
+  // onboarding, before the first lesson — see ProfilingFlow.enterFirstModule).
   const completedNonIntroChipCount = useMemo(
     () => topics.filter((t) => t.kind !== 'intro' && isCompletedMap[t.id]).length,
     [topics, isCompletedMap],
   );
-  // AUTO-START the tour instead of asking "רוצה סיור?" (Yoav 2026-06-21). The
-  // yes/no prompt was friction right at mod-0-1's biggest drop-off (only ~31%
-  // reach the first chest). The tour has its own "דלג על הסיור" skip button, and
-  // both its complete + skip paths run routePostWalkthrough (guest register CTA +
-  // Pro teaser), so nothing downstream is lost.
+  // Auto-walkthrough trigger removed 2026-06-25 — the tour now fires immediately
+  // after onboarding (ProfilingFlow.enterFirstModule), before the first lesson, so
+  // it never pops mid auto-flow (the user no longer returns to the map between
+  // chips). Kept as a guarded no-op so the deps stay referenced for a clean revert.
   useEffect(() => {
-    if (module.id !== 'mod-0-1') return;
-    if (hasSeenAppWalkthrough) return;
-    if (walkthroughAutoFiredRef.current) return;
-    if (completedNonIntroChipCount < 1) return;
-    walkthroughAutoFiredRef.current = true;
-    triggerWalkthrough();
-    try { captureEvent('walkthrough_auto_started', { module_id: module.id }); } catch { /* non-fatal */ }
+    void [module.id, completedNonIntroChipCount, hasSeenAppWalkthrough, triggerWalkthrough];
   }, [module.id, completedNonIntroChipCount, hasSeenAppWalkthrough, triggerWalkthrough]);
 
   // Mod-0-1 onboarding banner — surfaces above the chip column ONLY

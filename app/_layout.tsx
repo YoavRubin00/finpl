@@ -711,12 +711,15 @@ function RootLayoutInner() {
                   register CTA (never stacks) + learn-map pathname. Restores the
                   paywall_viewed{post_walkthrough} moment without blocking. */}
               <PostWalkthroughProTeaserGate />
-              {/* Force-update gate. Mounted unconditionally — internal fetch
-                  decides whether to block based on remote config. Rendered
-                  AFTER other modals so its full-screen Modal sits on top of
-                  every other overlay when active. Self-contained: no boot
-                  order changes required, no parent gating. */}
-              <ForceUpdateGate />
+              {/* Force-update gate. Internal fetch decides whether to block
+                  based on remote config; rendered AFTER other modals so its
+                  full-screen Modal sits on top of every other overlay when
+                  active. Gated on hasCompletedOnboarding so a forced-update
+                  config can't hard-block users mid-onboarding — the blocking
+                  modal was ~4× over-represented among intro-step drop-offs.
+                  The gate fires the moment they finish onboarding instead.
+                  Same onboarding exemption as TermsReconsentGate below. */}
+              {hasCompletedOnboarding && <ForceUpdateGate />}
               {/* Terms re-consent gate. Blocks existing users whose accepted
                   terms version is older than CURRENT_TERMS_VERSION. New users
                   in onboarding flow are exempted (they accept latest on signup).

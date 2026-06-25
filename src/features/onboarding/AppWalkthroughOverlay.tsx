@@ -238,16 +238,12 @@ export function AppWalkthroughOverlay() {
     // the user taps המשך, so the chest is always the first thing they see.
     try { setPendingPostWalkthroughFirstChest(true); } catch { /* non-fatal */ }
 
-    // Arm the post-walkthrough modals. Guests → register-CTA first (the Pro
-    // teaser is armed afterwards, when that CTA resolves — see
-    // PostWalkthroughRegisterCTA). Registered non-Pro → the soft Pro teaser
-    // directly. Both gates live in app/_layout.tsx and render once we land on
-    // /(tabs). Pro users get nothing.
-    if (isGuest) {
-      try { setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ }
-    } else if (!isPro) {
-      try { setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ }
-    }
+    // Pro teaser + register CTA MOVED to AFTER the mod-0-1 chest (Yoav 2026-06-25):
+    // they no longer fire here at walkthrough completion. The Pro teaser is armed
+    // in TopicTreeAccordion's chest effect; dismissing it chains to the register
+    // CTA for guests — so the order is chest → Pro → register. The post-walkthrough
+    // beat here is now just the welcome chest. (isGuest/isPro/setters retained in
+    // deps for a clean revert.)
 
     try {
       // The HARD paywall stays out of this slot (removed 2026-06-11 — it fired
