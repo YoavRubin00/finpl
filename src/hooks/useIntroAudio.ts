@@ -98,6 +98,10 @@ export function isBundledIntroAudio(uri: string | undefined): boolean {
 export function useIntroAudio(
   audioUri: string | undefined,
   audioReady?: boolean,
+  // When true (e.g. an energy-intro modal is covering the intro in mod-0-1b),
+  // HOLD the voice — don't build/play the player until it flips false. Overrides
+  // the bundled shortcut below (Yoav 2026-06-25). The effect re-runs when changed.
+  paused?: boolean,
 ): IntroAudioState {
   const [state, setState] = useState<IntroAudioState>(audioUri ? 'loading' : 'idle');
   const playerRef = useRef<AudioPlayer | null>(null);
@@ -236,6 +240,11 @@ export function useIntroAudio(
       }, 6000);
     };
 
+    // Held by the caller (e.g. the energy-intro modal in mod-0-1b) — DON'T start
+    // the voice yet. Overrides the bundled shortcut. The effect re-runs when
+    // `paused` flips false (after cleanup tears down any prior player) → start().
+    if (paused) return;
+
     if (effectiveReady === false && bundled === undefined) {
       // Prefetch still in flight. Defer createAudioPlayer briefly so the
       // local cached file (which getCachedAudioPath will return once the
@@ -263,7 +272,7 @@ export function useIntroAudio(
       }
       playerRef.current = null;
     };
-  }, [audioUri, effectiveReady]);
+  }, [audioUri, effectiveReady, paused]);
 
   return state;
 }

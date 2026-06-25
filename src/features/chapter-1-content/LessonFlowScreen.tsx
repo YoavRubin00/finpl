@@ -3285,16 +3285,21 @@ export function LessonFlowScreen() {
   // seam: bumped once per chip completion (NOT the chest-crossing one).
   const [calloutSeq, setCalloutSeq] = useState(0);
   const [calloutRemaining, setCalloutRemaining] = useState(3);
-  const [showEnergyIntro, setShowEnergyIntro] = useState(false);
+  // Init TRUE on the FIRST render for mod-0-1b (non-Pro, unseen) so the intro
+  // audio's `audioPaused` is true from frame 0 — otherwise the intro card's audio
+  // effect (a child) runs before a mount effect would and the voice blips before
+  // the energy-intro modal covers it (Yoav 2026-06-25).
+  const [showEnergyIntro, setShowEnergyIntro] = useState(
+    () => mod?.id === 'mod-0-1b' && !isPro && !useTutorialStore.getState().hasSeenEnergyIntro,
+  );
   const [complimentSeq, setComplimentSeq] = useState(0);
   const [complimentMsg, setComplimentMsg] = useState<string | null>(null);
-  // Energy intro (Yoav 2026-06-25): fire ONCE on ENTRY to mod-0-1b — the first
-  // module where energy is on — for non-Pro users. Mount-based, replacing the
-  // seam's fragile completed===1 window that kept missing. One-shot via the flag.
+  // Energy intro shows on ENTRY to mod-0-1b (the state is initialised true above
+  // for the first encounter). This effect only RECORDS the one-shot so it never
+  // re-shows. (Mount-based — the old seam-based completed===1 trigger kept missing.)
   useEffect(() => {
     if (mod?.id !== 'mod-0-1b' || isPro) return;
     if (useTutorialStore.getState().hasSeenEnergyIntro) return;
-    setShowEnergyIntro(true);
     useTutorialStore.getState().markEnergyIntroSeen();
   }, [mod?.id, isPro]);
   // C (Yoav 2026-06-25): on a post-chest RE-ENTRY (module already past its chest
@@ -3957,16 +3962,15 @@ export function LessonFlowScreen() {
 
   const handleInteractiveRecallComplete = useCallback(() => {
     mediumHaptic();
-    // If this module has an inter-module game, play it IN-LESSON between recall
-    // and the quiz (Yoav 2026-06-25 — recall→game→quiz must flow continuously,
-    // not leave the game as a skipped map chip). Otherwise straight to the quiz.
-    if (mod && getGameForModule(mod.id)) {
-      setPhase("game");
-    } else {
-      setPhase("quizzes");
-      safeTimeout(() => setShowQuizIntro(true), 50);
-    }
-  }, [mod]);
+    // HOTFIX 2026-06-25: reverted the recall→game in-lesson routing — it caused a
+    // WHITE-SCREEN STUCK for mod-0-1 (which has a higher-lower game): 'game' isn't
+    // in RESTORABLE_PHASES and the game card wasn't verified inside the lesson
+    // layout. Recall → quiz (round-1 behavior); the game stays a separate map chip
+    // until the in-lesson game render is confirmed on device. The dormant 'game'
+    // phase render below is unreachable for now.
+    setPhase("quizzes");
+    safeTimeout(() => setShowQuizIntro(true), 50);
+  }, []);
   const handleGameComplete = useCallback(() => {
     mediumHaptic();
     setPhase("quizzes");
@@ -4619,6 +4623,7 @@ export function LessonFlowScreen() {
                 chartImageUri={mod.introImage?.uri}
                 audioUri={mod.introAudio?.uri}
                 audioReady={audioReady}
+                audioPaused={showEnergyIntro}
               />
             ) : mod.introVariant === 'short' && MODULE_INTRO_CONFIGS[mod.id] ? (
               <ModuleIntroShort
@@ -4627,6 +4632,7 @@ export function LessonFlowScreen() {
                 config={MODULE_INTRO_CONFIGS[mod.id]}
                 audioUri={mod.introAudio?.uri}
                 audioReady={audioReady}
+                audioPaused={showEnergyIntro}
               />
             ) : mod.introVariant === 'short' ? (
               <WhatIsMoneyIntro
@@ -4638,6 +4644,7 @@ export function LessonFlowScreen() {
                 introText={mod.interactiveIntro}
                 audioUri={mod.introAudio?.uri}
                 audioReady={audioReady}
+                audioPaused={showEnergyIntro}
                 introImageUri={mod.introImage?.uri}
                 onStart={handleIntroStart}
                 unitColors={unitColors}
