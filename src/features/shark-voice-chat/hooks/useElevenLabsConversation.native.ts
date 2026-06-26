@@ -199,11 +199,15 @@ export function useElevenLabsConversation() {
         // Best-effort cleanup
       }
     }
-    // Restore the default playback-only session — we flipped it to play+record
-    // for the call, and lesson narration expects the original mode back.
-    // Best-effort + idempotent.
+    // Restore the app's DEFAULT playback session — we flipped it to play+record
+    // for the call. The global default (app/_layout) is playsInSilentMode:true
+    // on the MAIN speaker. Restoring playsInSilentMode:false here was a bug that
+    // muted lesson narration on a silent-switched iPhone, and omitting
+    // shouldRouteThroughEarpiece left the session routed to the earpiece — so
+    // the NEXT module's intro played out the quiet top speaker. Restore the real
+    // default so narration stays loud on the main speaker. Best-effort.
     try {
-      await setAudioModeAsync({ playsInSilentMode: false, allowsRecording: false });
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false, shouldRouteThroughEarpiece: false });
     } catch {
       /* non-fatal */
     }

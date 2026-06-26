@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { captureEvent } from '../lib/posthog';
 import { getCachedAudioPath, prefetchModuleAudio } from './useModulePrefetch';
 
@@ -191,6 +191,15 @@ export function useIntroAudio(
 
     const start = () => {
       if (cancelled) return;
+      // iOS earpiece guard (Yoav 2026-06-26): a prior shark voice call leaves
+      // the shared audio session in .playAndRecord, which iOS routes to the
+      // quiet EARPIECE — so the intro/module narration came out the small top
+      // speaker instead of the loud bottom one. Re-assert .playback on the MAIN
+      // speaker right before narrating (allowsRecording:false flips the category
+      // back). Best-effort; never blocks playback.
+      if (Platform.OS === 'ios') {
+        setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false, shouldRouteThroughEarpiece: false }).catch(() => { /* non-fatal */ });
+      }
       // Kick off the robust, RETRYING download (RETRY_DELAYS_MS handles
       // Vercel Blob's intermittent on-device http_403). Idempotent — no-op if
       // already cached. Skipped for bundled assets — nothing to download.

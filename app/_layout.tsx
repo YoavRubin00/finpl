@@ -299,6 +299,14 @@ function RootLayoutInner() {
       playsInSilentMode: true,
       interruptionMode: "doNotMix",
       shouldPlayInBackground: false,
+      // Force media playback (intro / module narration) onto the MAIN speaker.
+      // allowsRecording:false keeps the category at .playback — never
+      // .playAndRecord, which iOS routes to the quiet earpiece. The explicit
+      // shouldRouteThroughEarpiece:false is a belt-and-suspenders default in
+      // case anything flips the category (Yoav 2026-06-26: Captain Shark's
+      // narration was coming out the small top speaker, not the loud bottom one).
+      allowsRecording: false,
+      shouldRouteThroughEarpiece: false,
     }).catch(() => { /* fail silently, not supported on web / older OS */ });
   }, []);
 
