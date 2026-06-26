@@ -3312,14 +3312,16 @@ export function LessonFlowScreen() {
   );
   const [complimentSeq, setComplimentSeq] = useState(0);
   const [complimentMsg, setComplimentMsg] = useState<string | null>(null);
-  // Energy intro shows on ENTRY to mod-0-1b (the state is initialised true above
-  // for the first encounter). This effect only RECORDS the one-shot so it never
-  // re-shows. (Mount-based — the old seam-based completed===1 trigger kept missing.)
-  useEffect(() => {
-    if (mod?.id !== 'mod-0-1b' || isPro) return;
-    if (useTutorialStore.getState().hasSeenEnergyIntro) return;
-    useTutorialStore.getState().markEnergyIntroSeen();
-  }, [mod?.id, isPro]);
+  // Energy intro shows on ENTRY to mod-0-1b (state initialised true above for the
+  // first encounter). The one-shot is RECORDED on DISMISS (not on mount): stamping
+  // on mount marked it "seen" even when the modal never actually showed / was
+  // dismissed (transient mount / isPro race), so it stopped re-appearing for users
+  // who never actually saw it (Yoav 2026-06-26). Now it persists until the user
+  // really closes it.
+  const dismissEnergyIntro = useCallback(() => {
+    setShowEnergyIntro(false);
+    try { useTutorialStore.getState().markEnergyIntroSeen(); } catch { /* non-fatal */ }
+  }, []);
   // C (Yoav 2026-06-25): on a post-chest RE-ENTRY (module already past its chest
   // threshold but not yet 100%, in auto-flow), greet the choice to keep going with
   // a varied inline Captain Shark compliment — "מיד לאחר ההחלטה, כחלק מרצף הלמידה".
@@ -5628,7 +5630,7 @@ export function LessonFlowScreen() {
       <SharkChipCallout seq={complimentSeq} remaining={99} isFirstChest={false} message={complimentMsg ?? undefined} />
 
       {/* Energy intro — one-shot at mod-0-1b's first chip (first encounter with energy). */}
-      <Modal visible={showEnergyIntro} transparent animationType="fade" onRequestClose={() => setShowEnergyIntro(false)}>
+      <Modal visible={showEnergyIntro} transparent animationType="fade" onRequestClose={dismissEnergyIntro}>
         <View style={{ flex: 1, backgroundColor: "rgba(15, 23, 42, 0.45)", justifyContent: "center", alignItems: "center", paddingHorizontal: 22 }}>
           <View style={{ backgroundColor: "#f7fbff", borderRadius: 28, paddingVertical: 20, paddingHorizontal: 12, width: "100%", maxWidth: 360, alignItems: "center", borderWidth: 2, borderColor: "#ddd6fe", shadowColor: "#a855f7", shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 14 }}>
             {/* The real, live energy band — Captain Shark + the bar — copied from the
@@ -5643,7 +5645,7 @@ export function LessonFlowScreen() {
               אתה מבזבז בלמידה, ויכול להרוויח אותה מהתמדה ורצף תשובות נכונות
             </Text>
             <Pressable
-              onPress={() => { tapHaptic(); setShowEnergyIntro(false); }}
+              onPress={() => { tapHaptic(); dismissEnergyIntro(); }}
               style={{ backgroundColor: "#7c3aed", borderRadius: 16, paddingVertical: 16, marginHorizontal: 10, alignSelf: "stretch", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#6d28d9" }}
               accessibilityRole="button"
               accessibilityLabel="המשך"

@@ -751,6 +751,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             // register path); registered non-Pro → the soft Pro teaser (its gate
             // filters Pro users). Armed only now that the chest is closed.
             if (module.id === 'mod-0-1') {
+              // Clear the stale welcome-chest one-shot so the SOFT register CTA isn't
+              // blocked by it (welcome chest is pre-mod-0-1, this is post — they never
+              // overlap, but its gate waits on !pendingPostWalkthroughFirstChest;
+              // Yoav 2026-06-26 regression: guests saw no register prompt).
+              try { useTutorialStore.getState().setPendingPostWalkthroughFirstChest(false); } catch { /* non-fatal */ }
               if (isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ } }
               else { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
             }
@@ -776,6 +781,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             // Same post-chest CTAs as the continue path (mod-0-1): guests →
             // register CTA, registered non-Pro → Pro teaser. Armed only after close.
             if (module.id === 'mod-0-1') {
+              // Clear the stale welcome-chest one-shot so the SOFT register CTA isn't
+              // blocked by it (welcome chest is pre-mod-0-1, this is post — they never
+              // overlap, but its gate waits on !pendingPostWalkthroughFirstChest;
+              // Yoav 2026-06-26 regression: guests saw no register prompt).
+              try { useTutorialStore.getState().setPendingPostWalkthroughFirstChest(false); } catch { /* non-fatal */ }
               if (isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ } }
               else { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
             }
