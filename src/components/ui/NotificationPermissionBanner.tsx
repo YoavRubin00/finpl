@@ -46,10 +46,15 @@ export function NotificationPermissionBanner() {
   // and 0-1b) and the recurring 14-day re-ask after a dismissal. notifPromptShown
   // is no longer an entry gate; it's stamped when the banner shows so the rest
   // of the app still knows the ask happened.
-  // Hold the prompt back until the user has actually completed the first
-  // module (mod-0-1) — same gate as the Tools Discovery banner. Asking for
-  // notification permission before the user gets any value is the textbook
-  // way to get permanently denied. Aligned 2026-06-05.
+  // Unlock the prompt at the user's FIRST guaranteed win — the welcome "first
+  // chest" (PostWalkthroughFirstChest), which every new user opens right after
+  // the walkthrough. This used to be gated SOLELY on completing mod-0-1, but
+  // ~half of new users drop DURING mod-0-1 and so were NEVER asked for push →
+  // never got the streak comeback reminder → low D1 (Yoav 2026-06-26). We OR the
+  // welcome-chest flag with mod-0-1 completion so existing users (who predate the
+  // welcome chest) still qualify via completion. Still "after value" — the welcome
+  // chest is a reward moment — so we don't trip the early-ask permanent-deny on iOS.
+  const firstChestOpened = useTutorialStore((s) => s.firstChestOpened);
   const hasCompletedFirstModule = useCompletedModulesStore((s) =>
     s.completedIds.includes('mod-0-1'),
   );
@@ -69,7 +74,7 @@ export function NotificationPermissionBanner() {
     !recentlyDismissed &&
     hasCompletedOnboarding &&
     hasSeenWalkthrough &&
-    hasCompletedFirstModule;
+    (firstChestOpened || hasCompletedFirstModule);
 
   // Defer rendering until the global cooldown is clear, then mark shown so
   // the next banner waits its 10s slot.

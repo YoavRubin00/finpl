@@ -95,6 +95,11 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
       try { addCoins(FIRST_CHEST_COINS, 'lesson'); } catch { /* non-fatal */ }
       try { addXP(FIRST_CHEST_XP, 'lesson_complete'); } catch { /* non-fatal */ }
       try { captureEvent('first_chest_opened', { coins: FIRST_CHEST_COINS, xp: FIRST_CHEST_XP }); } catch { /* non-fatal */ }
+      // Unlock the notification-permission ask at this earliest guaranteed win —
+      // every new user opens the welcome chest, so even those who later drop DURING
+      // mod-0-1 still get asked for push (→ the streak comeback reminder fires).
+      // The banner OR's this with the mod-0-1-completion gate. Yoav 2026-06-26 (D1).
+      try { useTutorialStore.getState().markFirstChestOpened(); } catch { /* non-fatal */ }
     }
     setOpened(true);
   }, [opened, playSound, addCoins, addXP, glowScale, glowOpacity, bodyScale]);
