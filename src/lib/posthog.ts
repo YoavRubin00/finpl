@@ -1,6 +1,7 @@
 import PostHog from 'posthog-react-native';
 import type { PostHogEventProperties } from '@posthog/core';
 import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 
 // Re-export under a friendlier name so feature code can import a single,
 // well-known type rather than reaching into PostHog internals.
@@ -43,6 +44,19 @@ export function initPostHog(): void {
         androidDebouncerDelayMs: 1000,
         iOSdebouncerDelayMs: 1000,
       },
+    });
+
+    // Register platform as a SUPER PROPERTY so it attaches to EVERY event —
+    // including the SDK's own autocaptured lifecycle events (Application
+    // Installed / Opened) and $exception. The RN SDK doesn't populate `$os`
+    // for this project, so installs/DAU/retention were impossible to split by
+    // iOS vs Android (Yoav 2026-06-26: "how many of this week's downloads are
+    // Apple?" was unanswerable). `platform` is 'ios' | 'android' | 'web'.
+    // Super properties persist across launches, so even the once-per-install
+    // event carries it going forward.
+    client.register({
+      platform: Platform.OS,
+      os_version: Platform.Version != null ? String(Platform.Version) : 'unknown',
     });
   } catch (err) {
     if (__DEV__) {
