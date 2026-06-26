@@ -290,7 +290,7 @@ const JUSTIFY_RTL = {
 };
 
 /** Phases where progress is worth saving so the user can resume mid-module */
-const RESTORABLE_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes"]);
+const RESTORABLE_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes", "game", "sim-intro", "sim", "podcast", "couple-dilemma"]);
 
 /** Summary infographic map, maps summary card IDs to portrait PNGs */
 const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
@@ -2720,7 +2720,7 @@ export function LessonFlowScreen() {
     const ALLOWED_START_PHASES = new Set<string>([
       'hero', 'video', 'intro',
       'flashcards', 'interactive-recall', 'quizzes',
-      'sim-intro', 'sim',
+      'sim-intro', 'sim', 'game',
       'podcast', 'couple-dilemma',
       'module-infographic', 'post-infographic-video',
       'shark-dilemma',
@@ -3823,6 +3823,40 @@ export function LessonFlowScreen() {
     }
   }, [chestOpened]);
 
+  // ── Unified chip driver (Yoav 2026-06-26) ─────────────────────────────────
+  // The lesson advances chip-to-chip in the SAME order the accordion shows
+  // (resolveTopics), so "the module runs by the chip order" and the quiz lands on
+  // its threshold slot (75% / 50% mod-0-1) → the chest fires right after it. Game
+  // + couple-dilemma are real chips in the sequence now (no longer orphaned).
+  const goToChipPhase = useCallback((kind: TopicKind) => {
+    switch (kind) {
+      case 'cards':
+      case 'tutorial-video': setFlashcardIndex(0); setPhase('flashcards'); return;
+      case 'recall': mediumHaptic(); setPhase('interactive-recall'); return;
+      case 'sim': mediumHaptic(); setPhase('sim-intro'); return;
+      case 'game': mediumHaptic(); setPhase('game'); return;
+      case 'podcast': mediumHaptic(); setPhase('podcast'); return;
+      case 'couple-dilemma': mediumHaptic(); setPhase('couple-dilemma'); return;
+      case 'quiz': setPhase('quizzes'); safeTimeout(() => setShowQuizIntro(true), 50); return;
+      case 'shark-dilemma': setPhase('shark-dilemma'); return;
+      default: setPhase('summary'); return; // chat (separate route) / unknown → end
+    }
+  }, []);
+  const advanceFromChip = useCallback((currentKind: TopicKind) => {
+    if (!mod) { setPhase('summary'); return; }
+    // After the QUIZ, run the lesson-only tail (infographic / fun-video) before
+    // the next chip — those aren't accordion chips.
+    if (currentKind === 'quiz') {
+      if (mod.id && MODULE_INFOGRAPHIC_MAP[mod.id]) { setPhase('module-infographic'); return; }
+      if (mod.id && MODULE_POST_VIDEO_MAP[mod.id]) { setPhase('post-infographic-video'); return; }
+    }
+    const ordered: TopicKind[] = resolveTopics(mod).map((t) => t.kind).filter((k) => k !== 'tutorial-video' && k !== 'chat');
+    const i = ordered.indexOf(currentKind);
+    const next = i >= 0 ? ordered[i + 1] : undefined;
+    if (!next) { setPhase('summary'); return; }
+    goToChipPhase(next);
+  }, [mod, goToChipPhase]);
+
   const advanceQuiz = useCallback(() => {
     if (!mod) return;
     // Mid-quiz fun video: play the module's Finn video INLINE between two quiz
@@ -3851,26 +3885,11 @@ export function LessonFlowScreen() {
     // Last quiz done. Resolve the next phase first, then decide whether to
     // inject an inline onboarding-style question before transitioning.
     const advanceToNextPhase = () => {
-      // Resolve the post-sim phase up front so a Free user whose simulator quota
-      // is exhausted still has somewhere to go after dismissing the upgrade
-      // modal. Without this, the previous code returned with phase='quizzes' and
-      // the last quiz remained on screen with no advance affordance — a hard
-      // dead-end for the highest-intent monetization moment (QA 2026-06-12).
-      const postSimPhase =
-        mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
-        mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
-        mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary";
-      if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
-        if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
-          useUpgradeModalStore.getState().show("simulator");
-          setPhase(postSimPhase);
-          return;
-        }
-        setPhase("sim-intro");
-        mediumHaptic();
-      } else {
-        setPhase(postSimPhase);
-      }
+      // Unified driver: sim + game already played BEFORE the quiz (accordion
+      // order), so the quiz is the last content chip → the chest fires right after
+      // it. advanceFromChip handles the post-quiz tail (infographic / fun-video)
+      // then the next chip (shark-dilemma / summary).
+      advanceFromChip('quiz');
     };
     // mod-0-1 (post-2026-05-30 swap = financial basics, first lesson) acts as a
     // continuation of onboarding: ask knowledgeLevel RIGHT after the last quiz,
@@ -3968,34 +3987,20 @@ export function LessonFlowScreen() {
     if (mod) {
       useAITelemetryStore.getState().addEvent('sim_decision', mod.id);
     }
-    // Sim-first modules: sim → flashcards (instead of summary)
-    if (mod && SIM_FIRST_MODULES.has(mod.id)) {
-      setPhase("flashcards");
-    } else {
-      setPhase(
-        mod && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
-        mod && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
-        mod && getDilemma(mod.id) ? "shark-dilemma" : "summary"
-      );
-    }
-  }, [mod]);
+    // Unified driver: sim → next chip (game/quiz) in the accordion order.
+    advanceFromChip('sim');
+  }, [mod, advanceFromChip]);
 
   const handleInteractiveRecallComplete = useCallback(() => {
     mediumHaptic();
-    // HOTFIX 2026-06-25: reverted the recall→game in-lesson routing — it caused a
-    // WHITE-SCREEN STUCK for mod-0-1 (which has a higher-lower game): 'game' isn't
-    // in RESTORABLE_PHASES and the game card wasn't verified inside the lesson
-    // layout. Recall → quiz (round-1 behavior); the game stays a separate map chip
-    // until the in-lesson game render is confirmed on device. The dormant 'game'
-    // phase render below is unreachable for now.
-    setPhase("quizzes");
-    safeTimeout(() => setShowQuizIntro(true), 50);
-  }, []);
+    // Unified driver: recall → next chip (sim/game/quiz) in the accordion order.
+    advanceFromChip('recall');
+  }, [advanceFromChip]);
   const handleGameComplete = useCallback(() => {
     mediumHaptic();
-    setPhase("quizzes");
-    safeTimeout(() => setShowQuizIntro(true), 50);
-  }, []);
+    // Unified driver: game → next chip (couple-dilemma/quiz) in the accordion order.
+    advanceFromChip('game');
+  }, [advanceFromChip]);
 
   // Tracks (currentIndex, total) of the interactive-recall set so the
   // outer progress bar can fill incrementally per solved prompt. Default
@@ -4081,14 +4086,10 @@ export function LessonFlowScreen() {
       }
     } else {
       mediumHaptic();
-      if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
-        setPhase("interactive-recall");
-      } else {
-        setPhase("quizzes");
-        safeTimeout(() => setShowQuizIntro(true), 50);
-      }
+      // Unified driver: cards → next chip (recall/sim/game/quiz) in accordion order.
+      advanceFromChip('cards');
     }
-  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, returnTo]);
+  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, returnTo, advanceFromChip]);
 
   const handleDismissFinnTip = useCallback(() => {
     setFinnTipText(null);
@@ -4733,18 +4734,7 @@ export function LessonFlowScreen() {
             <PodcastSegmentScreen
               podcast={modPodcast}
               onProgress={handlePodcastProgress}
-              onComplete={() => {
-                const hasMoreFlashcards = flashcardIndex < mod.flashcards.length - 1;
-                if (hasMoreFlashcards) {
-                  setFlashcardIndex((prev) => prev + 1);
-                  setPhase("flashcards");
-                } else if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
-                  setPhase("interactive-recall");
-                } else {
-                  setPhase("quizzes");
-                  safeTimeout(() => setShowQuizIntro(true), 50);
-                }
-              }}
+              onComplete={() => advanceFromChip('podcast')}
             />
           </Animated.View>
         )}
@@ -4754,18 +4744,7 @@ export function LessonFlowScreen() {
           <Animated.View style={{ flex: 1 }}>
             <CoupleDilemmaScreen
               dilemma={modCoupleDilemma}
-              onComplete={() => {
-                const hasMoreFlashcards = flashcardIndex < mod.flashcards.length - 1;
-                if (hasMoreFlashcards) {
-                  setFlashcardIndex((prev) => prev + 1);
-                  setPhase("flashcards");
-                } else if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
-                  setPhase("interactive-recall");
-                } else {
-                  setPhase("quizzes");
-                  safeTimeout(() => setShowQuizIntro(true), 50);
-                }
-              }}
+              onComplete={() => advanceFromChip('couple-dilemma')}
             />
           </Animated.View>
         )}
@@ -4854,24 +4833,26 @@ export function LessonFlowScreen() {
         {/* ── Game phase (inter-module mini-game, IN-LESSON between recall and
             quiz — Yoav 2026-06-25). Mirrors app/topic-game/[gameId].tsx. ── */}
         {phase === "game" && mod && (
-          <Animated.ScrollView
-            entering={FadeIn.duration(300)}
-            style={{ flex: 1, marginHorizontal: -16 }}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 12, paddingBottom: 12 }}
-            showsVerticalScrollIndicator={false}
-          >
-            {(() => {
-              switch (getGameForModule(mod.id)) {
-                case 'budget-ninja': return <BudgetNinjaCard isActive onContinue={handleGameComplete} />;
-                case 'bullshit-swipe': return <BullshitSwipeCard isActive bypassDailyGate onContinue={handleGameComplete} />;
-                case 'cashout-rush': return <CashoutRushCard isActive onContinue={handleGameComplete} />;
-                case 'fomo-killer': return <FomoKillerCard isActive onContinue={handleGameComplete} />;
-                case 'higher-lower': return <HigherLowerCard isActive onComplete={handleGameComplete} />;
-                case 'price-slider': return <PriceSliderCard isActive onContinue={handleGameComplete} />;
-                default: return null;
-              }
-            })()}
-          </Animated.ScrollView>
+          <Modal visible animationType="fade" presentationStyle="fullScreen" onRequestClose={handleGameComplete}>
+            <View style={{ flex: 1, backgroundColor: "#f0f9ff", paddingTop: safeInsets.top, paddingBottom: safeInsets.bottom }}>
+              <ScrollView
+                contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 12, paddingBottom: 12 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {(() => {
+                  switch (getGameForModule(mod.id)) {
+                    case 'budget-ninja': return <BudgetNinjaCard isActive onContinue={handleGameComplete} />;
+                    case 'bullshit-swipe': return <BullshitSwipeCard isActive bypassDailyGate onContinue={handleGameComplete} />;
+                    case 'cashout-rush': return <CashoutRushCard isActive onContinue={handleGameComplete} />;
+                    case 'fomo-killer': return <FomoKillerCard isActive onContinue={handleGameComplete} />;
+                    case 'higher-lower': return <HigherLowerCard isActive onComplete={handleGameComplete} />;
+                    case 'price-slider': return <PriceSliderCard isActive onContinue={handleGameComplete} />;
+                    default: return null;
+                  }
+                })()}
+              </ScrollView>
+            </View>
+          </Modal>
         )}
 
         {/* ── Module infographic phase (before chest) ── */}

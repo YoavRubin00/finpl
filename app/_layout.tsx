@@ -663,6 +663,21 @@ function RootLayoutInner() {
     }
   }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete, walkthroughTriggered]);
 
+  // Fallback walkthrough re-arm (Yoav 2026-06-26, D1 lever). Diagnosed: ~38% of
+  // users who commit (onboarding_enter_first_module) never fire walkthrough_started
+  // — a committed user whose trigger didn't stick (closed before enterFirstModule
+  // navigated, or a flag-reset edge) lands on the map with no tour. If an onboarded
+  // user is sitting on the map with the walkthrough neither seen nor armed — and
+  // hasn't finished mod-0-1 yet (so this NEVER re-fires for established users) —
+  // re-arm it so the tour still appears. Scoped to (tabs) so it never pops over a
+  // lesson. Fires once: triggerWalkthrough flips walkthroughTriggered → guard goes false.
+  useEffect(() => {
+    if (!hydrated || !isAuthenticated || !hasCompletedOnboarding) return;
+    if (hasSeenWalkthrough || walkthroughTriggered || isMod01Complete) return;
+    if (segments[0] !== "(tabs)") return;
+    try { useTutorialStore.getState().triggerWalkthrough(); } catch { /* non-fatal */ }
+  }, [hydrated, isAuthenticated, hasCompletedOnboarding, hasSeenWalkthrough, walkthroughTriggered, isMod01Complete, segments]);
+
   if (!hydrated || !bootComplete || !navState?.key || !fontsLoaded) {
     return <LoadingWisdom />;
   }
