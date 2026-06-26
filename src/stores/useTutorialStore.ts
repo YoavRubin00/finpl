@@ -72,6 +72,14 @@ interface TutorialState {
    *  → המשך) that fires BEFORE the register CTA / Pro teaser. Cleared on המשך,
    *  which then hands off to the existing register→Pro chain. Persisted; one-shot. */
   pendingPostWalkthroughFirstChest: boolean;
+  /** One-shot durable flag: the welcome "first chest" (PostWalkthroughFirstChest)
+   *  was opened. Set the moment the user taps the welcome chest — BEFORE mod-0-1.
+   *  Unlocks the notification-permission ask at the earliest guaranteed win, so
+   *  the ~half of new users who drop DURING mod-0-1 still get asked for push (and
+   *  thus get the streak comeback reminder). The banner OR's this with the
+   *  mod-0-1-completion gate, so existing users who predate the welcome chest
+   *  still qualify via completion. Yoav 2026-06-26 (D1 lever). */
+  firstChestOpened: boolean;
   /** mod-0-1's inline knowledgeLevel question was resolved (answered OR
    *  skipped). Gates the mod-0-1 70% chest so it appears AFTER the onboarding
    *  question, never before/over it (Yoav 2026-06-17). Skip-safe: set on either
@@ -114,6 +122,7 @@ interface TutorialState {
   setPendingPostWalkthroughCTA: (value: boolean) => void;
   setPendingPostWalkthroughProTeaser: (value: boolean) => void;
   setPendingPostWalkthroughFirstChest: (value: boolean) => void;
+  markFirstChestOpened: () => void;
   markMod01KnowledgeResolved: () => void;
   markEnergyIntroSeen: () => void;
   /** Called when the rating modal actually opens — bumps count + stamps time. */
@@ -154,6 +163,7 @@ export const useTutorialStore = create<TutorialState>()(
       pendingPostWalkthroughCTA: false,
       pendingPostWalkthroughProTeaser: false,
       pendingPostWalkthroughFirstChest: false,
+      firstChestOpened: false,
       mod01KnowledgeResolved: false,
       hasSeenEnergyIntro: false,
       ratePromptHandled: false,
@@ -184,6 +194,7 @@ export const useTutorialStore = create<TutorialState>()(
       setPendingPostWalkthroughCTA: (value: boolean) => set({ pendingPostWalkthroughCTA: value }),
       setPendingPostWalkthroughProTeaser: (value: boolean) => set({ pendingPostWalkthroughProTeaser: value }),
       setPendingPostWalkthroughFirstChest: (value: boolean) => set({ pendingPostWalkthroughFirstChest: value }),
+      markFirstChestOpened: () => set({ firstChestOpened: true }),
       markMod01KnowledgeResolved: () => set({ mod01KnowledgeResolved: true }),
       markEnergyIntroSeen: () => set({ hasSeenEnergyIntro: true }),
       markRatePromptShown: () => set((s) => ({ ratePromptCount: s.ratePromptCount + 1, lastRatePromptAt: Date.now() })),

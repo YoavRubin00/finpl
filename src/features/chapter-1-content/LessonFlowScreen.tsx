@@ -605,23 +605,38 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
           nativeControls={false}
         />
       </Pressable>
-      {/* Loading indicator */}
+      {/* Loading — branded card so a slow video reads as "loading new content",
+          not a frozen/broken screen. Readable white text (was faint #64748b).
+          (Yoav 2026-06-26, app-store review "הטעינות... קלמזי".) */}
       {isLoading && !hasError && (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" }} pointerEvents="none">
-          <ActivityIndicator size="large" color="#38bdf8" />
-          <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b", marginTop: 12 }}>טוען סרטון...</Text>
+          <View style={{ alignItems: "center", gap: 12, backgroundColor: "rgba(10,22,40,0.8)", borderRadius: 22, paddingVertical: 22, paddingHorizontal: 30, borderWidth: 1, borderColor: "rgba(56,189,248,0.35)" }}>
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 60, height: 60 }} contentFit="contain" />
+            <ActivityIndicator size="small" color="#38bdf8" />
+            <Text style={{ fontSize: 14, fontWeight: "800", color: "#ffffff", writingDirection: "rtl" }}>טוען תוכן...</Text>
+          </View>
         </View>
       )}
-      {/* Error overlay — appears if the video fails to load. User can press
-          "דלג" to continue, or wait for the 20s safety timeout. */}
+      {/* Error overlay — branded card with a RETRY (was skip-only, faint text).
+          The skip button below stays as the secondary action. */}
       {hasError && (
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", paddingHorizontal: 32 }} pointerEvents="none">
-          <Text style={{ fontSize: 16, fontWeight: "800", color: "#f1f5f9", textAlign: "center", writingDirection: "rtl" }}>
-            לא הצלחנו לטעון את הסרטון
-          </Text>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8", marginTop: 6, textAlign: "center", writingDirection: "rtl" }}>
-            לחצו על &quot;דלג&quot; כדי להמשיך
-          </Text>
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", paddingHorizontal: 32 }}>
+          <View style={{ alignItems: "center", gap: 10, backgroundColor: "rgba(10,22,40,0.85)", borderRadius: 22, paddingVertical: 22, paddingHorizontal: 26, borderWidth: 1, borderColor: "rgba(148,163,184,0.3)" }}>
+            <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", textAlign: "center", writingDirection: "rtl" }}>
+              לא הצלחנו לטעון את הסרטון
+            </Text>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: "#cbd5e1", textAlign: "center", writingDirection: "rtl" }}>
+              בדקו את החיבור לאינטרנט ונסו שוב, או דלגו כדי להמשיך
+            </Text>
+            <Pressable
+              onPress={() => { setHasError(false); setIsLoading(true); try { player.replay(); } catch { try { player.play(); } catch { /* ignore */ } } }}
+              accessibilityRole="button"
+              accessibilityLabel="נסה שוב"
+              style={{ marginTop: 4, backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 11, paddingHorizontal: 26 }}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>נסה שוב</Text>
+            </Pressable>
+          </View>
         </View>
       )}
       {/* Fast-mode indicator removed — speed change alone is enough feedback.

@@ -139,6 +139,7 @@ function AnimatedCard({ label, sublabel, selected, onPress, index, lottieSource 
   }, []);
 
   function handlePress() {
+    tapHaptic(); // immediate tactile confirmation the option registered (Yoav 2026-06-26)
     pressScale.value = withSequence(
       withTiming(0.98, { duration: 60 }),
       withTiming(1, { duration: 120 })
@@ -215,6 +216,7 @@ function AnimatedGridCard({ emoji, label, sublabel, selected, onPress, index, lo
   }, []);
 
   function handlePress() {
+    tapHaptic(); // immediate tactile confirmation the option registered (Yoav 2026-06-26)
     pressScale.value = withSequence(
       withTiming(0.98, { duration: 60 }),
       withTiming(1, { duration: 120 })
