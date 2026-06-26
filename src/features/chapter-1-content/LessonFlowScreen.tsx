@@ -104,7 +104,7 @@ import { HigherLowerCard } from "../finfeed/minigames/higher-lower/HigherLowerCa
 import { PriceSliderCard } from "../finfeed/minigames/price-slider/PriceSliderCard";
 import { BudgetNinjaCard } from "../finfeed/minigames/budget-ninja/BudgetNinjaCard";
 import { CashoutRushCard } from "../finfeed/minigames/cashout-rush/CashoutRushCard";
-import { getGameForModule } from "../topic-learning/moduleGameMap";
+import { getGameForModule, isSimReplacedByGame } from "../topic-learning/moduleGameMap";
 import { MacroEventCard } from "../macro-events/MacroEventCard";
 import { macroEventsData } from "../macro-events/macroEventsData";
 // Inter-module CONTENT components (Feed-derived; rendered when a module
@@ -290,7 +290,7 @@ const JUSTIFY_RTL = {
 };
 
 /** Phases where progress is worth saving so the user can resume mid-module */
-const RESTORABLE_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes"]);
+const RESTORABLE_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes", "game"]);
 
 /** Summary infographic map, maps summary card IDs to portrait PNGs */
 const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
@@ -2720,7 +2720,7 @@ export function LessonFlowScreen() {
     const ALLOWED_START_PHASES = new Set<string>([
       'hero', 'video', 'intro',
       'flashcards', 'interactive-recall', 'quizzes',
-      'sim-intro', 'sim',
+      'sim-intro', 'sim', 'game',
       'podcast', 'couple-dilemma',
       'module-infographic', 'post-infographic-video',
       'shark-dilemma',
@@ -3856,21 +3856,15 @@ export function LessonFlowScreen() {
       // modal. Without this, the previous code returned with phase='quizzes' and
       // the last quiz remained on screen with no advance affordance — a hard
       // dead-end for the highest-intent monetization moment (QA 2026-06-12).
+      // Sim + game already played BEFORE the quiz now (canonical order, Yoav
+      // 2026-06-26), so the post-quiz tail is just the infographic / video /
+      // dilemma / summary. (Was: quiz → sim-intro here, which put the sim AFTER
+      // the quiz and orphaned the game.)
       const postSimPhase =
         mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
         mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
         mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary";
-      if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
-        if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
-          useUpgradeModalStore.getState().show("simulator");
-          setPhase(postSimPhase);
-          return;
-        }
-        setPhase("sim-intro");
-        mediumHaptic();
-      } else {
-        setPhase(postSimPhase);
-      }
+      setPhase(postSimPhase);
     };
     // mod-0-1 (post-2026-05-30 swap = financial basics, first lesson) acts as a
     // continuation of onboarding: ask knowledgeLevel RIGHT after the last quiz,
@@ -3964,33 +3958,59 @@ export function LessonFlowScreen() {
     advanceQuiz();
   }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, isPro]);
 
+  // Canonical pre-quiz order (Yoav 2026-06-26): after cards/recall, play the SIM,
+  // then the GAME, THEN the quiz — matching the accordion chip order (was: quiz
+  // first, sim after, game orphaned). The quiz becomes the last content chip, so
+  // it lands on the chest threshold and the chest fires right after it.
+  const goAfterSim = useCallback(() => {
+    if (mod && getGameForModule(mod.id)) {
+      mediumHaptic();
+      setPhase("game");
+      return;
+    }
+    setPhase("quizzes");
+    safeTimeout(() => setShowQuizIntro(true), 50);
+  }, [mod]);
+  const goAfterRecall = useCallback(() => {
+    // Real sim (present, NOT sim-first — those play it before the cards — and NOT
+    // replaced by a game) plays here, BEFORE the game/quiz. Pro-locked + no quota
+    // → show the upsell and SKIP the sim so the flow isn't stranded (continues to
+    // the game/quiz).
+    if (mod && MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id) && !isSimReplacedByGame(mod.id)) {
+      if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
+        useUpgradeModalStore.getState().show("simulator");
+        // fall through to game/quiz
+      } else {
+        mediumHaptic();
+        setPhase("sim-intro");
+        return;
+      }
+    }
+    goAfterSim();
+  }, [mod, goAfterSim]);
+
   const handleSimComplete = useCallback(() => {
     if (mod) {
       useAITelemetryStore.getState().addEvent('sim_decision', mod.id);
     }
-    // Sim-first modules: sim → flashcards (instead of summary)
+    // Sim-first modules: sim → flashcards. Otherwise the sim is done → continue the
+    // canonical order to the game (if any), then the quiz. The post-quiz tail
+    // (infographic / video / dilemma / summary) is handled by advanceQuiz now.
     if (mod && SIM_FIRST_MODULES.has(mod.id)) {
       setPhase("flashcards");
     } else {
-      setPhase(
-        mod && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
-        mod && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
-        mod && getDilemma(mod.id) ? "shark-dilemma" : "summary"
-      );
+      goAfterSim();
     }
-  }, [mod]);
+  }, [mod, goAfterSim]);
 
   const handleInteractiveRecallComplete = useCallback(() => {
     mediumHaptic();
-    // HOTFIX 2026-06-25: reverted the recall→game in-lesson routing — it caused a
-    // WHITE-SCREEN STUCK for mod-0-1 (which has a higher-lower game): 'game' isn't
-    // in RESTORABLE_PHASES and the game card wasn't verified inside the lesson
-    // layout. Recall → quiz (round-1 behavior); the game stays a separate map chip
-    // until the in-lesson game render is confirmed on device. The dormant 'game'
-    // phase render below is unreachable for now.
-    setPhase("quizzes");
-    safeTimeout(() => setShowQuizIntro(true), 50);
-  }, []);
+    // Canonical order (Yoav 2026-06-26): recall → sim → game → quiz. 'game' is now
+    // in RESTORABLE_PHASES + ALLOWED_START_PHASES and renders below, so the
+    // recall→game in-lesson route is safe again (the 2026-06-25 white-screen was
+    // the missing restorable/start phase). goAfterRecall picks sim/game/quiz.
+    goAfterRecall();
+  }, [goAfterRecall]);
   const handleGameComplete = useCallback(() => {
     mediumHaptic();
     setPhase("quizzes");
@@ -4084,11 +4104,11 @@ export function LessonFlowScreen() {
       if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
         setPhase("interactive-recall");
       } else {
-        setPhase("quizzes");
-        safeTimeout(() => setShowQuizIntro(true), 50);
+        // No recall → continue the canonical order: sim → game → quiz.
+        goAfterRecall();
       }
     }
-  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, returnTo]);
+  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, returnTo, goAfterRecall]);
 
   const handleDismissFinnTip = useCallback(() => {
     setFinnTipText(null);
