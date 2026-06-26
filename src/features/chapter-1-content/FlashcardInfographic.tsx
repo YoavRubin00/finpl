@@ -469,19 +469,22 @@ proxyImageMapInPlace(FINN_MAP as unknown as Record<string, unknown>);
 // FIRST module a new user sees; their flashcard infographics kept rendering BLANK
 // on device — Vercel Blob's per-client http_403 burst outlasts the retry ladder
 // above (same reason chapter-0 intro AUDIO is bundled, see useIntroAudio's
-// BUNDLED_INTRO_AUDIO). These 5 PNGs ship in the binary → instant, offline,
+// BUNDLED_INTRO_AUDIO). These 5 images ship in the binary → instant, offline,
 // immune to the CDN. Keyed by cardId; takes precedence over INFOGRAPHIC_MAP + the
 // proxy. mod-0-1 uses fc-0-2-1..3, mod-0-1b uses fc-0-2-4..5. Other chapters keep
-// the proxy path. (Filename matches the cardId; the PNG bytes are the same the
-// blob serves at /infographics/mod-0-2/fc-0-2-N.png — the mod-0-2 folder is the
-// post-split legacy location for mod-0-1's cards, like the audio filename trap.)
+// the proxy path. (mod-0-2 folder is the post-split legacy location for mod-0-1's
+// cards, like the audio filename trap.)
+// ⚠️ Stored as .jpg, NOT .png: the blob serves these as JPEG bytes even under a
+// .png name. AAPT runs its PNG cruncher on .png drawables and a JPEG-as-.png
+// FAILS the Android build ("file failed to compile" — Yoav 2026-06-26). .jpg
+// drawables are copied as-is (no cruncher), and JPEG is the true source format.
 /* eslint-disable @typescript-eslint/no-require-imports */
 const BUNDLED_INFOGRAPHIC: Record<string, number> = {
-  'fc-0-2-1': require('../../../assets/infographics/fc-0-2-1.png'),
-  'fc-0-2-2': require('../../../assets/infographics/fc-0-2-2.png'),
-  'fc-0-2-3': require('../../../assets/infographics/fc-0-2-3.png'),
-  'fc-0-2-4': require('../../../assets/infographics/fc-0-2-4.png'),
-  'fc-0-2-5': require('../../../assets/infographics/fc-0-2-5.png'),
+  'fc-0-2-1': require('../../../assets/infographics/fc-0-2-1.jpg'),
+  'fc-0-2-2': require('../../../assets/infographics/fc-0-2-2.jpg'),
+  'fc-0-2-3': require('../../../assets/infographics/fc-0-2-3.jpg'),
+  'fc-0-2-4': require('../../../assets/infographics/fc-0-2-4.jpg'),
+  'fc-0-2-5': require('../../../assets/infographics/fc-0-2-5.jpg'),
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
