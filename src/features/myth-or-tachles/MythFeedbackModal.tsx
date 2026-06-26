@@ -55,7 +55,11 @@ export function MythFeedbackModal({ visible, card, wasCorrect, modifierWon, onNe
         >
             <Pressable style={styles.backdrop} onPress={onNext} />
 
-            <View style={styles.sheet}>
+            {/* The whole sheet advances on tap (Yoav 2026-06-26): before, only
+                the backdrop (top) + the button registered, so tapping the body
+                (Finn/explanation) did nothing. Now any tap on shark's response
+                continues. The inner "next" button still works (also onNext). */}
+            <Pressable style={styles.sheet} onPress={onNext} accessibilityRole="button" accessibilityHint="הקש בכל מקום כדי להמשיך">
                 {/* Drag handle */}
                 <View style={styles.handle} />
 
@@ -102,7 +106,7 @@ export function MythFeedbackModal({ visible, card, wasCorrect, modifierWon, onNe
                         <Text style={styles.nextBtnText}>הכרטיס הבא ›</Text>
                     </Pressable>
                 </Animated.View>
-            </View>
+            </Pressable>
         </Modal>
     );
 }

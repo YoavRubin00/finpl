@@ -42,6 +42,11 @@ import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleCompre
  *  per-topic micro-XP in a future loop. Tunable from a single point. */
 const MODULE_TT_XP = 30;
 const MODULE_TT_COINS = 150;
+/** Small 100%-completion pop (Yoav 2026-06-26). Per-chip rewards were removed —
+ *  the only post-70% reward is this modest coin/XP fly-out when the module hits
+ *  100% (no modal; RewardAnimationProvider fires the fly-out on the economy delta). */
+const HUNDRED_PCT_XP = 15;
+const HUNDRED_PCT_COINS = 60;
 /** Energy (⚡) the 70% chest grants — real grantEnergy + a fly-out in the
  *  ChestCelebrationModal (Yoav 2026-06-22: "בתיבה יקבלו גם 2 אנרגיה"). */
 const CHEST_ENERGY_REWARD = 2;
@@ -485,6 +490,23 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     } catch { /* non-fatal */ }
   }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
+  // Small 100%-completion pop (Yoav 2026-06-26). Per-chip rewards were removed,
+  // so the post-70% chips no longer fly out gold/gems individually — instead a
+  // modest coin/XP pop fires ONCE the first time the module reaches 100%. No
+  // modal: RewardAnimationProvider animates the fly-out off the economy delta.
+  // Atomic stampModuleFullyComplete (+ live persisted flag + ref) → exactly once.
+  useEffect(() => {
+    if (!progressHydrated) return;
+    if (summary.total === 0 || summary.completed < summary.total) return;
+    if (past100Ref.current || moduleFullyComplete) return;
+    past100Ref.current = true;
+    const newly = useTopicProgressStore.getState().stampModuleFullyComplete(module.id);
+    if (!newly) return;
+    addXP(HUNDRED_PCT_XP, 'daily_task');
+    addCoins(HUNDRED_PCT_COINS, 'lesson');
+    try { successHaptic(); } catch { /* non-fatal */ }
+  }, [summary.completed, summary.total, moduleFullyComplete, module.id, addXP, addCoins, progressHydrated, focusTick]);
+
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
   // happens BEFORE momentum builds, not after. "המשך ללמוד" keeps
@@ -660,7 +682,13 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             captured snapshot/report, handles the weekly quota on tap, and opens
             the deep-analysis-style report (with talk-to-Shark) in a modal. */}
         {modulePastThreshold && (
-          <View ref={onEndCardsRef}>
+          // pointerEvents box-none + paddingBottom + zIndex (Yoav 2026-06-26):
+          // the inter-module PEARL below is pulled UP (marginTop:-18, zIndex:2) into
+          // this band, and ModuleReportCard renders null without a snapshot — so the
+          // shark-call card landed right under the pearl's hit-area and taps opened
+          // the pearl/next node instead of the call. The padding clears the overlap
+          // and the zIndex keeps the cards above the pearl.
+          <View ref={onEndCardsRef} pointerEvents="box-none" style={{ zIndex: 5, paddingBottom: 26 }}>
             <ModuleSharkCallCard moduleId={module.id} moduleTitle={module.title} />
             <ModuleReportCard moduleId={module.id} moduleTitle={module.title} />
           </View>

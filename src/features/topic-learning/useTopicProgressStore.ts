@@ -3,8 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
-import { useEconomyUIStore } from '../economy/useEconomyUIStore';
-import { CHIP_COMPLETE_XP, CHIP_COMPLETE_COINS } from '../../constants/economy';
 import type { Topic, TopicProgressEntry, ModuleTopicSummary, ChestRarity } from './types';
 import {
   chestThresholdFor,
@@ -55,7 +53,9 @@ interface TopicProgressState {
   /** Test-and-set: stamps the module's 70% flag and returns true ONLY for the
    *  first caller (false thereafter) so the chest payout fires exactly once. */
   stampModuleThreshold: (moduleId: string) => boolean;
-  stampModuleFullyComplete: (moduleId: string) => void;
+  /** Test-and-set: stamps the module's 100% flag and returns true ONLY for the
+   *  first caller (false thereafter) so the 100% completion pop pays exactly once. */
+  stampModuleFullyComplete: (moduleId: string) => boolean;
   /** Record a chest open NOW. Bumps the streak (or resets it if the
    *  last open was > 48h ago) AND rolls rarity (with pity timer).
    *  Returns both the streak multiplier and the rolled rarity so the
@@ -117,18 +117,12 @@ export const useTopicProgressStore = create<TopicProgressState>()(
             },
           });
         } catch { /* non-fatal */ }
-        // Per-chip reward — but NOT during the continuous auto-flow (Yoav
-        // 2026-06-25): chips there complete in quick succession, so the per-chip
-        // coin/XP fly-out became "too much dopamine". In auto-flow the rewards
-        // live ONLY at the chest + the 100% bonus. Chip-by-chip map taps keep the
-        // per-chip pop. Guarded by the first-completion early-return above.
-        if (via !== 'continuous') {
-          try {
-            const economy = useEconomyUIStore.getState();
-            economy.addXP(CHIP_COMPLETE_XP, 'chip_complete');
-            economy.addCoins(CHIP_COMPLETE_COINS, 'lesson');
-          } catch { /* non-fatal */ }
-        }
+        // NO per-chip reward (Yoav 2026-06-26): the gold/gem fly-out after every
+        // single chip — even chip-by-chip map taps and the chips done AFTER the
+        // 70% chest — was "too much dopamine". Rewards now live ONLY at milestones:
+        // the chest at the 70%/50% threshold (granted in TopicTreeAccordion) and a
+        // small coin/XP pop at 100% (also TopicTreeAccordion, via stampModuleFullyComplete).
+        // `via` is kept for the analytics split above; it no longer gates any payout.
       },
 
       isTopicCompleted: (topicId) => Boolean(get().completed[topicId]),
@@ -175,13 +169,14 @@ export const useTopicProgressStore = create<TopicProgressState>()(
 
       stampModuleFullyComplete: (moduleId) => {
         const state = get();
-        if (state.modulesFullyComplete[moduleId]) return;
+        if (state.modulesFullyComplete[moduleId]) return false;
         set({
           modulesFullyComplete: {
             ...state.modulesFullyComplete,
             [moduleId]: { firstCrossedAt: nowIso() },
           },
         });
+        return true;
       },
 
       recordChestOpen: () => {

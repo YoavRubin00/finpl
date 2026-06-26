@@ -58,19 +58,24 @@ export function FollowupAnswerBubble({ text }: { text: string }): React.ReactEle
         style={{ width: 34, height: 34 }}
         contentFit="contain"
       />
-      <Text
-        style={[
-          RTL,
-          {
-            flex: 1,
-            fontSize: 14,
-            lineHeight: 22,
-            color: '#0f172a',
-          },
-        ]}
-      >
-        {text}
-      </Text>
+      {/* flex:1 belongs on the WRAPPING View, not on the Text. In a row-reverse
+          flexbox, `flex:1` on a Text mis-measures the wrapped height and CLIPS
+          long answers (Yoav 2026-06-26: deep-report answer cut off, only the top
+          shown). Same proven pattern as SharkCommentaryBlock. */}
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            RTL,
+            {
+              fontSize: 14,
+              lineHeight: 22,
+              color: '#0f172a',
+            },
+          ]}
+        >
+          {text}
+        </Text>
+      </View>
     </View>
   );
 }

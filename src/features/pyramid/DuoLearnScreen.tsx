@@ -1172,17 +1172,23 @@ const ChapterSection = React.memo(function ChapterSection({
                   connector + next node slide down naturally with the
                   ScrollView's content height. */}
               {expandedTopicTreeModuleId === module.id && onTopicSelected && (
-                <TopicTreeAccordion
-                  module={module}
-                  nodeOffsetX={getNodeOffset(i)}
-                  onTopicSelected={onTopicSelected}
-                  onContinueAfterChest={onTopicTreeContinueAfterChest}
-                  onAdvanceToNextModule={onTopicTreeAdvanceToNextModule}
-                  onModuleCompleted={onTopicTreeModuleCompleted}
-                  onRecommendedChipRef={onRecommendedChipRef}
-                  onEndCardsRef={onEndCardsRef}
-                  onChipCalloutContinue={onChipCalloutContinue}
-                />
+                // zIndex keeps the accordion (esp. its bottom shark-call/report
+                // cards) ABOVE the inter-module pearl, which is pulled up -18px
+                // into this band with zIndex:2 and would otherwise steal the tap
+                // (Yoav 2026-06-26: "שיחה עם שארק" opened the next module).
+                <View style={{ zIndex: 5 }}>
+                  <TopicTreeAccordion
+                    module={module}
+                    nodeOffsetX={getNodeOffset(i)}
+                    onTopicSelected={onTopicSelected}
+                    onContinueAfterChest={onTopicTreeContinueAfterChest}
+                    onAdvanceToNextModule={onTopicTreeAdvanceToNextModule}
+                    onModuleCompleted={onTopicTreeModuleCompleted}
+                    onRecommendedChipRef={onRecommendedChipRef}
+                    onEndCardsRef={onEndCardsRef}
+                    onChipCalloutContinue={onChipCalloutContinue}
+                  />
+                </View>
               )}
               {showQuestBox && questPathNodeProps && (
                 <>

@@ -465,6 +465,26 @@ function proxyImageMapInPlace(map: Record<string, unknown>): void {
 proxyImageMapInPlace(INFOGRAPHIC_MAP as unknown as Record<string, unknown>);
 proxyImageMapInPlace(FINN_MAP as unknown as Record<string, unknown>);
 
+// Bundled chapter-0 infographics (Yoav 2026-06-26). mod-0-1 / mod-0-1b are the
+// FIRST module a new user sees; their flashcard infographics kept rendering BLANK
+// on device — Vercel Blob's per-client http_403 burst outlasts the retry ladder
+// above (same reason chapter-0 intro AUDIO is bundled, see useIntroAudio's
+// BUNDLED_INTRO_AUDIO). These 5 PNGs ship in the binary → instant, offline,
+// immune to the CDN. Keyed by cardId; takes precedence over INFOGRAPHIC_MAP + the
+// proxy. mod-0-1 uses fc-0-2-1..3, mod-0-1b uses fc-0-2-4..5. Other chapters keep
+// the proxy path. (Filename matches the cardId; the PNG bytes are the same the
+// blob serves at /infographics/mod-0-2/fc-0-2-N.png — the mod-0-2 folder is the
+// post-split legacy location for mod-0-1's cards, like the audio filename trap.)
+/* eslint-disable @typescript-eslint/no-require-imports */
+const BUNDLED_INFOGRAPHIC: Record<string, number> = {
+  'fc-0-2-1': require('../../../assets/infographics/fc-0-2-1.png'),
+  'fc-0-2-2': require('../../../assets/infographics/fc-0-2-2.png'),
+  'fc-0-2-3': require('../../../assets/infographics/fc-0-2-3.png'),
+  'fc-0-2-4': require('../../../assets/infographics/fc-0-2-4.png'),
+  'fc-0-2-5': require('../../../assets/infographics/fc-0-2-5.png'),
+};
+/* eslint-enable @typescript-eslint/no-require-imports */
+
 interface Props {
   cardId: string;
   diveStep?: number;
@@ -484,7 +504,11 @@ interface Props {
 const IMAGE_RETRY_DELAYS_MS = [800, 2400, 6000, 12000] as const;
 
 export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Props) {
-  const baseSource = INFOGRAPHIC_MAP[cardId];
+  // Prefer the bundled (binary) asset when present — it can't 403 and loads
+  // instantly/offline. Falls back to the proxied remote URL for every other card.
+  const bundledSource = BUNDLED_INFOGRAPHIC[cardId] as number | undefined;
+  const baseSource: ImageSource | number | null =
+    bundledSource !== undefined ? bundledSource : INFOGRAPHIC_MAP[cardId];
   const lottieSource = LOTTIE_MAP[cardId];
   const finnTapSource = FINN_TAP_MAP[cardId];
   const isLightBg = LIGHT_BG_CARDS.has(cardId);
@@ -521,8 +545,9 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   // On retry, append ?r=N to the URI so ExpoImage's memory-disk cache cannot
   // serve a previously-cached failure for the same URL. The original entry
   // stays untouched in INFOGRAPHIC_MAP; only the in-flight request is busted.
-  const source: ImageSource | null = (() => {
-    if (!baseSource) return baseSource;
+  const source: ImageSource | number | null = (() => {
+    // Bundled (number) sources never fail → no cache-busting / retry needed.
+    if (!baseSource || typeof baseSource === 'number') return baseSource;
     if (retryAttempt === 0) return baseSource;
     if (typeof baseSource === 'object' && 'uri' in baseSource && typeof baseSource.uri === 'string') {
       const sep = baseSource.uri.includes('?') ? '&' : '?';

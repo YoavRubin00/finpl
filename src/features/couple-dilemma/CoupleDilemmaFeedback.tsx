@@ -31,6 +31,17 @@ export function CoupleDilemmaFeedback({ chosen, onContinue }: Props) {
         style={StyleSheet.absoluteFill}
       />
 
+      {/* Tap ANYWHERE advances (Yoav 2026-06-26): the response/feedback should
+          continue on any tap, not only the bottom CTA. Sits above the gradient
+          and below the bubble/Daisy (both pointerEvents:none, so their taps fall
+          through to here); the bottom CTA stays on top and still works. */}
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={() => { tapHaptic(); onContinue(); }}
+        accessibilityRole="button"
+        accessibilityLabel="המשך"
+      />
+
       {/* Speech bubble, top */}
       <Animated.View
         entering={FadeInDown.duration(360).delay(140)}

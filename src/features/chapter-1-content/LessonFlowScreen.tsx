@@ -225,8 +225,11 @@ const MODULES_WITH_SIM = new Set(["mod-0-2", "mod-0-3", "mod-0-4", "mod-1-1", "m
 
 /** Modules where sim comes BEFORE flashcards (intro → sim → flashcards → quizzes → summary).
  *  2026-05-30 chapter-0 swap: the barter sim used to open mod-0-1; same
- *  pattern is preserved for the slot that now hosts it (mod-0-2). */
-const SIM_FIRST_MODULES = new Set(["mod-0-2", "mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
+ *  pattern is preserved for the slot that now hosts it (mod-0-2).
+ *  mod-0-2 removed (Yoav 2026-06-26): leading with the sim/game before the
+ *  flashcards read as the wrong order ("במה זה בכלל כסף"). Now intro→cards first.
+ *  Keep in sync with topicResolver's SIM_FIRST_MODULE_IDS. */
+const SIM_FIRST_MODULES = new Set(["mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
 
 /**
  * Module whose quiz-tail injects the knowledgeLevel onboarding question

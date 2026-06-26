@@ -146,8 +146,13 @@ export function useElevenLabsConversation() {
     // narration), so WebRTC's record activation throws "Session activation
     // failed" (ExpoModulesCore) and the call dies before it opens. Flip to
     // play+record BEFORE startSession. Best-effort — never block the connect.
+    // shouldRouteThroughEarpiece:false is REQUIRED (Yoav 2026-06-26): on iOS
+    // `allowsRecording:true` switches the category to `.playAndRecord`, which
+    // routes to the EARPIECE by default — the user heard the shark from the
+    // phone-call speaker, not the loud speaker. Forcing it false adds
+    // `.defaultToSpeaker` so the call plays out the main speaker (hands-free).
     try {
-      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true, shouldRouteThroughEarpiece: false });
     } catch {
       /* non-fatal — fall through and let the SDK try */
     }
@@ -164,6 +169,12 @@ export function useElevenLabsConversation() {
         ...(opts?.dynamicVariables ? { dynamicVariables: opts.dynamicVariables } : {}),
       } as Parameters<typeof conversation.startSession>[0]);
       startedRef.current = true;
+      // Re-assert speaker routing AFTER startSession: LiveKit reconfigures the
+      // AVAudioSession when the connection comes up and can revert it to the
+      // earpiece. Re-applying here wins that race (Yoav 2026-06-26). Best-effort.
+      try {
+        await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true, shouldRouteThroughEarpiece: false });
+      } catch { /* non-fatal */ }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'לא ניתן לפתוח חיבור לשירות הקול.';
       captureEvent('shark_voice_error', {
