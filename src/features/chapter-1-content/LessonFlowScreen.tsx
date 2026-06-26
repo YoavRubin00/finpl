@@ -4834,7 +4834,12 @@ export function LessonFlowScreen() {
             quiz — Yoav 2026-06-25). Mirrors app/topic-game/[gameId].tsx. ── */}
         {phase === "game" && mod && (
           <Modal visible animationType="fade" presentationStyle="fullScreen" onRequestClose={handleGameComplete}>
-            <View style={{ flex: 1, backgroundColor: "#f0f9ff", paddingTop: safeInsets.top, paddingBottom: safeInsets.bottom }}>
+            {/* GestureHandlerRootView is REQUIRED inside a Modal — RN renders the
+                Modal in a SEPARATE native hierarchy outside the app-root GHRV, so
+                the game cards' Pan/swipe gestures don't fire without it (Yoav
+                2026-06-26: "ההחלקה ימינה ושמאלה לא עבדה"). */}
+            <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
+            <View style={{ flex: 1, paddingTop: safeInsets.top, paddingBottom: safeInsets.bottom }}>
               <ScrollView
                 contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 12, paddingBottom: 12 }}
                 showsVerticalScrollIndicator={false}
@@ -4852,6 +4857,7 @@ export function LessonFlowScreen() {
                 })()}
               </ScrollView>
             </View>
+            </GestureHandlerRootView>
           </Modal>
         )}
 
