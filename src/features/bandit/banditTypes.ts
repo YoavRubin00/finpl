@@ -9,7 +9,8 @@ export type ExperimentId =
   | 'bridge_social_proof'
   | 'upgrade_paywall_headline'
   | 'upgrade_trigger_timing'
-  | 'daily_email_variant';
+  | 'daily_email_variant'
+  | 'onboarding_welcome_hook';
 
 export interface BanditVariant {
   id: string;
@@ -70,6 +71,21 @@ export type ExperimentPayloads = {
     // Email body/subject is built in src/features/email/emailTemplates.ts
     // keyed by variant id. Payload only carries a short tone label for analytics.
     tone: 'meta' | 'sad' | 'streak' | 'minimal' | 'welcome';
+  };
+  onboarding_welcome_hook: {
+    eyebrow: string;
+    title: string;
+    /** New value/hook line shown under the title; empty string = control (no line). */
+    benefit: string;
+    cta: string;
+    /**
+     * First-screen layout. Omitted/`'passive'` = the classic single-CTA welcome
+     * (the 4 copy arms). `'active_question'` renders the first profiling question
+     * (the Dream cards) directly on the welcome screen so the first tap is a
+     * meaningful choice — measured against the passive control. Optional so the
+     * existing arms stay valid without a layout field.
+     */
+    layout?: 'passive' | 'active_question';
   };
 };
 

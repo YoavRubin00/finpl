@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, AppState } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -33,7 +33,8 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
-import { tapHaptic } from "../../utils/haptics";
+import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { ParticleBurst } from "../../components/ui/ParticleBurst";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useStreak, markDailyActivityCompleted } from "../economy/useStreak";
 import { StreakCelebrationScreen } from "../streak/StreakCelebrationScreen";
@@ -43,6 +44,7 @@ import { SignupGateStep } from "./SignupGateStep";
 import { getApiBase } from "../../db/apiBase";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
+import { useBandit } from "../bandit/useBandit";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
 import { captureEvent } from "../../lib/posthog";
@@ -1872,9 +1874,11 @@ interface IntroStepProps {
   onRegister: () => void;
   onGuest: () => void;
   onLoginSuccess: () => void;
+  /** Active-layout: user picked their Dream on the welcome screen → enter guest + jump to "goal". */
+  onPickDream: (dream: FinancialDream) => void;
 }
 
-function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
+function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDream }: IntroStepProps) {
   // 2026-05-30 — two-step intro (Duolingo cadence):
   //   "welcome"  — DEFAULT. Big mascot + "מתחילים" CTA. Friendly first impression
   //                that doesn't ask for anything; "I have an account" link routes
@@ -1889,6 +1893,36 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const introRouter = useRouter();
+  // Welcome-hook bandit (Yoav 2026-06-26): the welcome screen loses ~20-30% who
+  // never tap the CTA — the #1 top-of-funnel leak. Thompson-sampling A/B/C/control
+  // over the copy (control + benefit/curiosity/empathy), optimizing tap-through.
+  const { payload: welcomeCopy, variantId: welcomeVariantId, trackImpression: trackWelcomeImpression, trackConversion: trackWelcomeConversion, trackDismiss: trackWelcomeDismiss } = useBandit('onboarding_welcome_hook');
+  const welcomeConvertedRef = useRef(false);
+  const welcomeDismissedRef = useRef(false);
+  // ── Active first-screen (bandit arm 'active_question') ──
+  // Render the first Dream question as tappable cards on the welcome screen so
+  // the first interaction is a meaningful choice + juice, then advance straight
+  // to "goal" (skipping the standalone dream step for this path).
+  const isActiveLayout = welcomeCopy.layout === 'active_question';
+  const { playSound: playIntroSound } = useSoundEffect();
+  const reducedMotionIntro = useReducedMotion();
+  const [pickedDream, setPickedDream] = useState<FinancialDream | null>(null);
+  const [showDreamBurst, setShowDreamBurst] = useState(false);
+  const pickedDreamRef = useRef(false);
+  const idleScale = useSharedValue(1);
+  useEffect(() => {
+    trackWelcomeImpression();
+    // The welcome screen has no explicit reject button — leaving the app without
+    // tapping the CTA is the bandit's "dismiss" (failure) signal. Fire once.
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next !== 'active' && !welcomeConvertedRef.current && !welcomeDismissedRef.current) {
+        welcomeDismissedRef.current = true;
+        try { trackWelcomeDismiss(); } catch { /* non-fatal */ }
+      }
+    });
+    return () => subscription.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-check terms when returning from terms page after pressing "קראתי"
   useEffect(() => {
@@ -1925,7 +1959,9 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
     finnScale.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.quad) });
     textOpacity.value = withDelay(300, withTiming(1, { duration: 300 }));
     textTy.value = withDelay(300, withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) }));
-    ctaScale.value = withDelay(600, withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }));
+    // CTA shows fast (Yoav 2026-06-26 activation): was 600ms — the button stayed
+    // invisible/untappable too long, bleeding impatient cold-opens (~20-30% welcome bounce).
+    ctaScale.value = withDelay(200, withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }));
   }, []);
 
   // Re-trigger content animation on sub-step change
@@ -1947,6 +1983,34 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
     transform: [{ translateY: textTy.value }],
   }));
   const ctaAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+  // Idle bounce on the mascot (active layout only) — pulls the eye for low-intent
+  // cold-opens in the first seconds. No-op under reduced motion.
+  useEffect(() => {
+    if (!isActiveLayout || reducedMotionIntro) return;
+    idleScale.value = withDelay(700, withRepeat(withSequence(
+      withTiming(1.05, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+      withTiming(1.0, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+    ), -1, false));
+  }, [isActiveLayout, reducedMotionIntro]);
+  const finnActiveStyle = useAnimatedStyle(() => ({
+    opacity: finnOpacity.value,
+    transform: [{ scale: finnScale.value * idleScale.value }],
+  }));
+  // First-tap on a Dream card: select + juice (visual only) + telemetry, then
+  // advance to "goal" after the same beat DreamStep uses (AUTO_ADVANCE_MS).
+  function handlePickDream(id: FinancialDream) {
+    if (pickedDreamRef.current) return;
+    pickedDreamRef.current = true;
+    welcomeConvertedRef.current = true;
+    setPickedDream(id);
+    setShowDreamBurst(true);
+    try { successHaptic(); } catch { /* non-fatal */ }
+    try { playIntroSound('btn_click_heavy'); } catch { /* non-fatal */ }
+    try { trackWelcomeConversion(); } catch { /* non-fatal */ }
+    try { captureEvent('welcome_primary_clicked', { destination: 'onboarding_guest', variant: welcomeVariantId, dream: id }); } catch { /* non-fatal */ }
+    setTermsAccepted(true);
+    setTimeout(() => onPickDream(id), AUTO_ADVANCE_MS);
+  }
 
   const inputStyle = {
     borderRadius: 14,
@@ -1968,33 +2032,61 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
   if (subStep === "welcome") {
     return (
       <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
-        <Animated.View style={[introStyles.finnWrap, finnStyle]}>
+        <Animated.View style={[introStyles.finnWrap, isActiveLayout ? finnActiveStyle : finnStyle]}>
           <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
           </LinearGradient>
         </Animated.View>
+        {showDreamBurst ? (
+          <ParticleBurst color="gold" onComplete={() => setShowDreamBurst(false)} />
+        ) : null}
 
         <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
           <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
-            {"היי, אני קפטן שארק"}
+            {welcomeCopy.eyebrow}
           </Text>
-          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"מתחילים לשחק עם\nהכסף שלך."}</Text>
+          <Text style={[introStyles.title, { marginBottom: welcomeCopy.benefit ? 12 : 0 }]}>{welcomeCopy.title}</Text>
+          {welcomeCopy.benefit ? (
+            <Text style={{ fontSize: 14.5, fontWeight: "500", color: "#475569", textAlign: "center", writingDirection: "rtl", lineHeight: 21, maxWidth: 330 }}>
+              {welcomeCopy.benefit}
+            </Text>
+          ) : null}
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", width: "100%" }]}>
-          {/* Primary CTA */}
-          <Pressable
-            onPress={() => {
-              try { captureEvent('welcome_primary_clicked', { destination: 'onboarding_guest' }); } catch { /* non-fatal */ }
-              setTermsAccepted(true);
-              onGuest();
-            }}
-            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
-            accessibilityRole="button"
-            accessibilityLabel="מתחילים"
-          >
-            <Text style={introStyles.ctaText}>מתחילים</Text>
-          </Pressable>
+          {isActiveLayout ? (
+            /* Active first-screen: the first Dream question as tappable cards. Conversion = card tap. */
+            <View style={[styles.grid, { width: "100%" }]}>
+              {DREAMS.map((d, i) => (
+                <AnimatedGridCard
+                  key={d.id}
+                  index={i}
+                  emoji={d.emoji}
+                  label={d.label}
+                  sublabel={d.sub}
+                  selected={pickedDream === d.id}
+                  onPress={() => handlePickDream(d.id)}
+                  lottieSource={DREAM_LOTTIES[d.id]}
+                />
+              ))}
+            </View>
+          ) : (
+            /* Primary CTA — bandit variant copy; conversion = this tap */
+            <Pressable
+              onPress={() => {
+                welcomeConvertedRef.current = true;
+                try { trackWelcomeConversion(); } catch { /* non-fatal */ }
+                try { captureEvent('welcome_primary_clicked', { destination: 'onboarding_guest', variant: welcomeVariantId }); } catch { /* non-fatal */ }
+                setTermsAccepted(true);
+                onGuest();
+              }}
+              style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
+              accessibilityRole="button"
+              accessibilityLabel={welcomeCopy.cta}
+            >
+              <Text style={introStyles.ctaText}>{welcomeCopy.cta}</Text>
+            </Pressable>
+          )}
 
           {/* Disclaimer right under the primary button */}
           <Text
@@ -2739,6 +2831,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       onGuest={() => {
         enterGuestMode();
         slide("dream", {});
+      }}
+      onPickDream={(dream) => {
+        enterGuestMode();
+        slide("goal", { financialDream: dream });
       }}
       onLoginSuccess={() => router.replace("/" as never)}
     />

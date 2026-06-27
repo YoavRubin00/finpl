@@ -330,6 +330,73 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
       { id: 'shark_welcome_v1', label: 'welcome', payload: { tone: 'welcome' } },
     ],
   },
+
+  // Onboarding welcome-screen hook A/B/C/control (Yoav 2026-06-26). The welcome
+  // screen loses ~20-30% who never tap "מתחילים" — this is the #1 top-of-funnel
+  // leak. Variants add a value/hook line (the missing piece). Conversion = tap
+  // the primary CTA; dismiss = background the app on the welcome screen without
+  // tapping. Copy follows BRAND.md: Captain Shark, singular gender-neutral.
+  onboarding_welcome_hook: {
+    goal: 'retention',
+    variants: [
+      {
+        id: 'welcome_hook_v0',
+        label: 'control',
+        payload: {
+          eyebrow: 'היי, אני קפטן שארק',
+          title: 'מתחילים לשחק עם\nהכסף שלך.',
+          benefit: '',
+          cta: 'מתחילים',
+        },
+      },
+      {
+        id: 'welcome_hook_v1',
+        label: 'benefit_10min',
+        payload: {
+          eyebrow: 'היי, אני קפטן שארק',
+          title: 'עשר דקות, ומתחילים\nלשלוט בכסף',
+          benefit: 'בלי שיעורי כלכלה משעממים — משחק קצר שמלמד מה באמת עושים עם משכורת, חיסכון והשקעה ראשונה.',
+          cta: 'מתחילים — 10 דקות',
+        },
+      },
+      {
+        id: 'welcome_hook_v2',
+        label: 'curiosity_school',
+        payload: {
+          eyebrow: 'היי, אני קפטן שארק',
+          title: 'מה שבית הספר שכח\nללמד אותך על כסף',
+          benefit: 'איך כסף עושה כסף בזמן שישנים, ולמה רובנו מגלים את זה מאוחר מדי. בואו נסגור את הפער.',
+          cta: 'רוצה לדעת',
+        },
+      },
+      {
+        id: 'welcome_hook_v3',
+        label: 'empathy_vanish',
+        payload: {
+          eyebrow: 'היי, אני קפטן שארק',
+          title: 'הכסף נכנס ונעלם,\nואין לך מושג לאן',
+          benefit: 'רובנו אף פעם לא לימדו אותנו את זה. הצטרפו לאלפים שכבר הפכו את הבלגן לשליטה — צעד אחד קטן בכל פעם.',
+          cta: 'מתחילים לסדר את זה',
+        },
+      },
+      // Active first-screen (Yoav 2026-06-27): instead of a passive "tap to start"
+      // CTA, render the first profiling question (Dream cards) right here so the
+      // first interaction is a choice with instant juice. Screen 1 is ~53% of all
+      // onboarding loss and the drop is low-intent bounce — an active first tap
+      // (Duolingo/Brawl Stars pattern) is the bet. Conversion = tapping a card.
+      {
+        id: 'welcome_hook_v4_active',
+        label: 'active_question',
+        payload: {
+          eyebrow: 'היי, אני קפטן שארק',
+          title: 'מה החלום הפיננסי שלך?',
+          benefit: 'נתחיל מהמטרה — הדרך תתגלה.',
+          cta: 'מתחילים',
+          layout: 'active_question',
+        },
+      },
+    ],
+  },
 };
 
 export function getVariantPayload<E extends ExperimentId>(
