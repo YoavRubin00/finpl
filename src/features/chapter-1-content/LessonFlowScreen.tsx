@@ -11,7 +11,7 @@ import { useAudioStore } from "../../stores/useAudioStore";
 import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
 import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
 import { useContinuousRunStore } from "../topic-learning/useContinuousRunStore";
-import { resolveTopics } from "../topic-learning/topicResolver";
+import { resolveTopics, SIM_FIRST_MODULE_IDS } from "../topic-learning/topicResolver";
 import type { TopicKind } from "../topic-learning/types";
 import { chestThresholdFor } from "../topic-learning/types";
 import { SharkChipCallout } from "../topic-learning/components/SharkChipCallout";
@@ -223,13 +223,10 @@ import { MODULE_HERO_MAP, MODULE_INFOGRAPHIC_MAP, MODULE_POST_VIDEO_MAP } from '
  *  sim-intro → sim, then SimulatorLoader returned null → blank screen. */
 const MODULES_WITH_SIM = new Set(["mod-0-2", "mod-0-3", "mod-0-4", "mod-1-1", "mod-1-2", "mod-1-3", "mod-1-4", "mod-1-5", "mod-1-6", "mod-1-7", "mod-1-8", "mod-1-9", "mod-2-10", "mod-2-11", "mod-2-12", "mod-2-13", "mod-2-14", "mod-3-15", "mod-3-16", "mod-3-17", "mod-3-18", "mod-4-19", "mod-4-20", "mod-4-21", "mod-4-22", "mod-4-23", "mod-4-24", "mod-5-25", "mod-5-26", "mod-5-27", "mod-5-28", "mod-5-29", "mod-4-25", "mod-4-26", "mod-4-27", "mod-4-28", "mod-4-29", "mod-4-30", "mod-5-30", "mod-4-b1", "mod-4-b2", "mod-4-b3", "mod-4-b4"]);
 
-/** Modules where sim comes BEFORE flashcards (intro → sim → flashcards → quizzes → summary).
- *  2026-05-30 chapter-0 swap: the barter sim used to open mod-0-1; same
- *  pattern is preserved for the slot that now hosts it (mod-0-2).
- *  mod-0-2 removed (Yoav 2026-06-26): leading with the sim/game before the
- *  flashcards read as the wrong order ("במה זה בכלל כסף"). Now intro→cards first.
- *  Keep in sync with topicResolver's SIM_FIRST_MODULE_IDS. */
-const SIM_FIRST_MODULES = new Set(["mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
+/** Modules where sim comes BEFORE flashcards (intro → sim → flashcards → quizzes
+ *  → summary). Single source of truth = `SIM_FIRST_MODULE_IDS` in topicResolver
+ *  (imported above) — no duplicate Set here, so the accordion order and this
+ *  lesson branch can't desync (the bug that orphaned mod-0-2's sim). */
 
 /**
  * Module whose quiz-tail injects the knowledgeLevel onboarding question
@@ -2300,7 +2297,7 @@ export function LessonFlowScreen() {
       return;
     }
     const target: FlowPhase =
-      SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id) ? "sim" : "flashcards";
+      SIM_FIRST_MODULE_IDS.has(mod.id) && MODULES_WITH_SIM.has(mod.id) ? "sim" : "flashcards";
     if (imagesReady) {
       setPhase(target);
     } else {
@@ -4512,7 +4509,7 @@ export function LessonFlowScreen() {
               ההתקדמות... מראה עדיין את כל המודולה"). */}
           {(phase as string) !== "sim-intro" && (phase as string) !== "sim" && (() => {
             const hasSim = MODULES_WITH_SIM.has(mod.id);
-            const isSimFirst = SIM_FIRST_MODULES.has(mod.id);
+            const isSimFirst = SIM_FIRST_MODULE_IDS.has(mod.id);
             // Podcast + couple-dilemma each add one step to the lesson flow.
             const hasPodcastStep = !!modPodcast;
             const hasCoupleDilemmaStep = !!modCoupleDilemma && coupleDilemmaTriggerAfter >= 0;

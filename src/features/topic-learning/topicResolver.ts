@@ -82,11 +82,15 @@ function buildTopic(kind: TopicKind, moduleId: string, order: number): Topic {
   };
 }
 
-/** Mirrors LessonFlowScreen's SIM_FIRST_MODULES set (line 170 of that
- *  file). Keep in sync manually when modules opt into sim-first. The
- *  topic tree uses this to bump sim earlier in the canonical order. */
-const SIM_FIRST_MODULE_IDS = new Set([
-  'mod-0-2', 'mod-1-1', 'mod-2-12', 'mod-2-13',
+/** Single source of truth for "sim comes BEFORE cards" modules — imported by
+ *  LessonFlowScreen (no duplicate set there) so the accordion chip order and the
+ *  lesson's intro→sim-vs-cards branch can never desync again. The topic tree uses
+ *  this to bump sim earlier in the canonical order.
+ *  mod-0-2 REMOVED 2026-06-27: it is intro→cards (Yoav 2026-06-26). The stale
+ *  entry made the accordion show sim/game first while the lesson skipped them →
+ *  orphaned sim (blank "ארגז חול" page) + the 75% chest never fired. */
+export const SIM_FIRST_MODULE_IDS = new Set([
+  'mod-1-1', 'mod-2-12', 'mod-2-13',
   'mod-3-18', 'mod-4-20', 'mod-4-22', 'mod-4-23',
   'mod-4-27', 'mod-4-b4',
 ]);
