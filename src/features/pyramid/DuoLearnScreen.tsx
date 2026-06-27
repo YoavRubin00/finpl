@@ -622,6 +622,29 @@ function ModuleNode({
   const swipeDone = useDailyChallengesStore((s) => s.getSwipeGamePlaysToday() > 0);
   const dailyChallengePending = !(newsChallengeDone || dilemmaDone || swipeDone);
 
+  // Subtle "alive" bob + pulse on the active mascot while a daily challenge is
+  // pending — pulls the eye toward the CTA. The asset is a crisp static webp
+  // (~10KB); the motion lives in-app (Reanimated), which avoids the ghosting a
+  // baked video loop introduced and keeps the bundle light (Yoav 2026-06-27).
+  const mascotReduceMotion = useReducedMotion();
+  const mascotPulse = useSharedValue(0);
+  useEffect(() => {
+    if (showCharacter && dailyChallengePending && !mascotReduceMotion) {
+      mascotPulse.value = withRepeat(
+        withSequence(withTiming(1, { duration: 1050 }), withTiming(0, { duration: 1050 })),
+        -1,
+        false,
+      );
+    } else {
+      cancelAnimation(mascotPulse);
+      mascotPulse.value = 0;
+    }
+    return () => cancelAnimation(mascotPulse);
+  }, [showCharacter, dailyChallengePending, mascotReduceMotion, mascotPulse]);
+  const mascotPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -5 * mascotPulse.value }, { scale: 1 + 0.05 * mascotPulse.value }],
+  }));
+
   // Completed + active → arena color; locked → gray
   const bgColor = state === "locked" ? "#e5e7eb" : colors.bg;
   // 3D bottom border (darker shade of bg)
@@ -651,8 +674,10 @@ function ModuleNode({
               accessibilityLabel={onQuestPress ? `משימות יומיות, ${questCompletedCount ?? 0} מתוך ${questTotalCount ?? 0}` : undefined}
               style={{ width: CHAR_SIZE, height: CHAR_SIZE }}
             >
-              <View style={{ width: CHAR_SIZE, height: CHAR_SIZE, overflow: "hidden" }}>
-                <ExpoImage source={dailyChallengePending ? FINN_DAILY_CHALLENGE : FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
+              <View style={{ width: CHAR_SIZE, height: CHAR_SIZE }}>
+                <Animated.View style={mascotPulseStyle}>
+                  <ExpoImage source={dailyChallengePending ? FINN_DAILY_CHALLENGE : FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
+                </Animated.View>
               </View>
             </Pressable>
             {questTotalCount !== undefined && questTotalCount > 0 && (
