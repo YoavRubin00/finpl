@@ -349,36 +349,6 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
           cta: 'מתחילים',
         },
       },
-      {
-        id: 'welcome_hook_v1',
-        label: 'benefit_3min',
-        payload: {
-          eyebrow: 'היי, אני קפטן שארק',
-          title: 'שלוש דקות, ומתחילים\nלשלוט בכסף',
-          benefit: 'בלי שיעורי כלכלה משעממים — משחק קצר שמלמד מה באמת עושים עם משכורת, חיסכון והשקעה ראשונה.',
-          cta: 'מתחילים — 3 דקות',
-        },
-      },
-      {
-        id: 'welcome_hook_v2',
-        label: 'curiosity_school',
-        payload: {
-          eyebrow: 'היי, אני קפטן שארק',
-          title: 'מה שבית הספר שכח\nללמד אותך על כסף',
-          benefit: 'איך כסף עושה כסף בזמן שישנים, ולמה רובנו מגלים את זה מאוחר מדי. בואו נסגור את הפער.',
-          cta: 'רוצה לדעת',
-        },
-      },
-      {
-        id: 'welcome_hook_v3',
-        label: 'empathy_vanish',
-        payload: {
-          eyebrow: 'היי, אני קפטן שארק',
-          title: 'הכסף נכנס ונעלם,\nואין לך מושג לאן',
-          benefit: 'רובנו אף פעם לא לימדו אותנו את זה. הצטרפו לאלפים שכבר הפכו את הבלגן לשליטה — צעד אחד קטן בכל פעם.',
-          cta: 'מתחילים לסדר את זה',
-        },
-      },
       // Active first-screen (Yoav 2026-06-27): instead of a passive "tap to start"
       // CTA, render the first profiling question (Dream cards) right here so the
       // first interaction is a choice with instant juice. Screen 1 is ~53% of all
