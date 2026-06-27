@@ -80,7 +80,7 @@ import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 import { BreakingNewsBadge } from "../breaking-news/components/BreakingNewsBadge";
-import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { FINN_STANDARD, FINN_DAILY_CHALLENGE } from "../retention-loops/finnMascotConfig";
 import { EnergyStationCard } from "../energy/EnergyStationCard";
 import { useHeartsStore } from "../subscription/useHeartsStore";
 // FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
@@ -249,7 +249,11 @@ function storeKey(chapterId: string): string {
 // Finn speech bubble. Single steady copy, the trophy badge on the character
 // communicates the quest hook visually. Future iteration: rotate per chapter
 // (not per module) to give a subtle "new chapter, new vibe" feel.
-const FINN_PHRASE_DEFAULT = "האתגרים היומיים שלך כאן";
+// Captain-Shark speech bubble beside the active node — nudges the daily
+// challenge while it's pending, congratulates once any one is done (Yoav
+// 2026-06-27). Singular, gender-neutral, Captain-Shark voice (BRAND.md).
+const FINN_PHRASE_CHALLENGE_PENDING = "יש לך אתגר יומי — קדימה!";
+const FINN_PHRASE_CHALLENGE_DONE = "אתגר היום הושלם! נתראה מחר";
 
 // Time-based Hebrew greeting
 function getGreeting(): string {
@@ -608,6 +612,16 @@ function ModuleNode({
 }) {
   const colors = ARENA_COLORS[arenaId];
 
+  // Daily-challenge CTA (Yoav 2026-06-27): while NO daily challenge is done
+  // today, the active node's Captain-Shark wears the "daily challenge!" loop to
+  // nudge a tap — the shark already opens Daily Quests via onQuestPress. Reverts
+  // to the normal mascot once ANY of news / dilemma / swipe is done today.
+  // Primitive (boolean) selectors only — never a fresh object/array (Zustand v5).
+  const newsChallengeDone = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
+  const dilemmaDone = useDailyChallengesStore((s) => s.getDilemmaPlaysToday() > 0);
+  const swipeDone = useDailyChallengesStore((s) => s.getSwipeGamePlaysToday() > 0);
+  const dailyChallengePending = !(newsChallengeDone || dilemmaDone || swipeDone);
+
   // Completed + active → arena color; locked → gray
   const bgColor = state === "locked" ? "#e5e7eb" : colors.bg;
   // 3D bottom border (darker shade of bg)
@@ -638,7 +652,7 @@ function ModuleNode({
               style={{ width: CHAR_SIZE, height: CHAR_SIZE }}
             >
               <View style={{ width: CHAR_SIZE, height: CHAR_SIZE, overflow: "hidden" }}>
-                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
+                <ExpoImage source={dailyChallengePending ? FINN_DAILY_CHALLENGE : FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
               </View>
             </Pressable>
             {questTotalCount !== undefined && questTotalCount > 0 && (
@@ -665,7 +679,7 @@ function ModuleNode({
           >
             <View style={styles.speechArrow} />
             <Text style={styles.speechText} numberOfLines={2}>
-              {FINN_PHRASE_DEFAULT}
+              {dailyChallengePending ? FINN_PHRASE_CHALLENGE_PENDING : FINN_PHRASE_CHALLENGE_DONE}
             </Text>
           </Animated.View>
         </>
