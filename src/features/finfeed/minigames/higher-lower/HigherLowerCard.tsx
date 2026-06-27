@@ -49,6 +49,8 @@ interface Props {
   /** Optional callback invoked when the user taps "המשך" on the done summary.
    *  Inter-module flow uses this to skip the obscure top-right ✕ button. */
   onComplete?: () => void;
+  /** When true, bypass the daily-gate lockout — the in-lesson game must always be playable. */
+  freePlay?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -265,9 +267,10 @@ function FeedbackCard({
 /*  Main card                                                         */
 /* ------------------------------------------------------------------ */
 
-export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _isActive, onComplete }: Props) {
+export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _isActive, onComplete, freePlay = false }: Props) {
   const playHigherLower = useDailyChallengesStore((s) => s.playHigherLower);
-  const hasPlayedToday = useDailyChallengesStore((s) => s.hasHigherLowerPlayedToday());
+  const hasPlayedTodayReal = useDailyChallengesStore((s) => s.hasHigherLowerPlayedToday());
+  const hasPlayedToday = freePlay ? false : hasPlayedTodayReal;
   const playsToday = useDailyChallengesStore((s) => s.getHigherLowerPlaysToday());
 
   const [deck] = useState<HigherLowerScenario[]>(() => {

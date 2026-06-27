@@ -184,17 +184,17 @@ function renderGameCard(
           />
         : <FallbackContinueOnMount onMount={onContinue} />;
     case 'fomo-killer':
-      return <FomoKillerCard isActive={isActive} onContinue={onContinue} />;
+      return <FomoKillerCard isActive={isActive} freePlay onContinue={onContinue} />;
     case 'bullshit-swipe':
       return <BullshitSwipeCard isActive={isActive} bypassDailyGate onContinue={onContinue} />;
     case 'higher-lower':
-      return <HigherLowerCard isActive={isActive} onComplete={onContinue} />;
+      return <HigherLowerCard isActive={isActive} freePlay onComplete={onContinue} />;
     case 'price-slider':
-      return <PriceSliderCard isActive={isActive} onContinue={onContinue} />;
+      return <PriceSliderCard isActive={isActive} freePlay onContinue={onContinue} />;
     case 'budget-ninja':
-      return <BudgetNinjaCard isActive={isActive} onContinue={onContinue} />;
+      return <BudgetNinjaCard isActive={isActive} freePlay onContinue={onContinue} />;
     case 'cashout-rush':
-      return <CashoutRushCard isActive={isActive} onContinue={onContinue} />;
+      return <CashoutRushCard isActive={isActive} freePlay onContinue={onContinue} />;
     case 'macro-event': {
       if (!macroEventId) return null;
       const event = macroEventsData.find((e) => e.id === macroEventId);

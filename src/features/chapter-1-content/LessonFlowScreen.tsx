@@ -4249,13 +4249,13 @@ export function LessonFlowScreen() {
       <VideoHookPlayer
         videoUri={getCachedVideoPath(MODULE_POST_VIDEO_MAP[mod.id])}
         hookText={mod.videoHook ?? ""}
-        onFinish={() => setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary")}
+        onFinish={() => setPhase("summary")}
         unitColors={unitColors}
       />
     );
   }
   if (phase === "post-infographic-video") {
-    return <FallbackToPhaseEffect run={() => setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary")} />;
+    return <FallbackToPhaseEffect run={() => setPhase("summary")} />;
   }
 
   // Shark Dilemma ("לייעץ לשארק") — advisory scenario right before the chest.
@@ -4299,7 +4299,9 @@ export function LessonFlowScreen() {
       if (result.unwiseCount === 0 && result.path.length > 1) {
         eco.addXP(20, "challenge_complete");
       }
-      setPhase("summary");
+      // shark-dilemma is now a mid-flow chip (before the quiz, R5.16 2026-06-27) —
+      // continue the chip order instead of ending the lesson.
+      advanceFromChip("shark-dilemma");
     };
 
     // Video-first dilemma (pause-in-place over the Finn scene) — picked when the
@@ -4843,12 +4845,12 @@ export function LessonFlowScreen() {
               >
                 {(() => {
                   switch (getGameForModule(mod.id)) {
-                    case 'budget-ninja': return <BudgetNinjaCard isActive onContinue={handleGameComplete} />;
+                    case 'budget-ninja': return <BudgetNinjaCard isActive freePlay onContinue={handleGameComplete} />;
                     case 'bullshit-swipe': return <BullshitSwipeCard isActive bypassDailyGate onContinue={handleGameComplete} />;
-                    case 'cashout-rush': return <CashoutRushCard isActive onContinue={handleGameComplete} />;
-                    case 'fomo-killer': return <FomoKillerCard isActive onContinue={handleGameComplete} />;
-                    case 'higher-lower': return <HigherLowerCard isActive onComplete={handleGameComplete} />;
-                    case 'price-slider': return <PriceSliderCard isActive onContinue={handleGameComplete} />;
+                    case 'cashout-rush': return <CashoutRushCard isActive freePlay onContinue={handleGameComplete} />;
+                    case 'fomo-killer': return <FomoKillerCard isActive freePlay onContinue={handleGameComplete} />;
+                    case 'higher-lower': return <HigherLowerCard isActive freePlay onComplete={handleGameComplete} />;
+                    case 'price-slider': return <PriceSliderCard isActive freePlay onContinue={handleGameComplete} />;
                     default: return null;
                   }
                 })()}
@@ -4876,7 +4878,7 @@ export function LessonFlowScreen() {
               />
             </View>
             <Pressable
-              onPress={() => { tapHaptic(); setPhase(mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" : (mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary")); }}
+              onPress={() => { tapHaptic(); setPhase(mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" : "summary"); }}
               style={{ marginTop: 14, backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
               accessibilityRole="button"
               accessibilityLabel="המשך"

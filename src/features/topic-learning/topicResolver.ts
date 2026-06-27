@@ -45,19 +45,25 @@ import { getRecallSet } from '../sentence-exercise/sentenceData';
 // inside the first 70% (Yoav: "תעביר אותו ... להיות באמצע המפת אקורדיון, ככה
 // שהוא יכלל ב-70% הראשונים"). Completion math is count-based so this only
 // changes chip ORDER + the "recommended next" pointer, nothing else.
+// R5.16 (2026-06-27, Yoav): `game` moved AFTER the dilemmas ("שינג'ת התקציב ירד
+// למטה יותר") and `shark-dilemma` moved BEFORE `quiz` (it used to be canonical-LAST,
+// always stranded in the last 25% after the chest — "הדילמה האיכותית שכרגע בסוף
+// תכנס בתוך ה-75 אחוז"). Both dilemmas now sit before the quiz → inside the 75%.
 const CANONICAL_ORDER: TopicKind[] = [
   'intro',
   'cards',
   'tutorial-video',
   'recall',
   'sim',
-  'game',
-  'podcast',
   'couple-dilemma',
-  'quiz',
   'shark-dilemma',
+  'podcast',
+  'game',
+  'quiz',
 ];
 
+// SIM_FIRST keeps sim/game LEADING (that's the whole point of sim-first), but
+// shark-dilemma also moves before the quiz here for consistency (into the 75%).
 const SIM_FIRST_ORDER: TopicKind[] = [
   'intro',
   'sim',
@@ -65,10 +71,10 @@ const SIM_FIRST_ORDER: TopicKind[] = [
   'cards',
   'tutorial-video',
   'recall',
-  'podcast',
   'couple-dilemma',
-  'quiz',
   'shark-dilemma',
+  'podcast',
+  'quiz',
 ];
 
 function buildTopic(kind: TopicKind, moduleId: string, order: number): Topic {

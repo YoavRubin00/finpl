@@ -53,17 +53,17 @@ export default function TopicGameRoute(): React.ReactElement | null {
   const card = useMemo(() => {
     switch (gameId) {
       case 'budget-ninja':
-        return <BudgetNinjaCard isActive onContinue={handleFinish} />;
+        return <BudgetNinjaCard isActive freePlay onContinue={handleFinish} />;
       case 'bullshit-swipe':
         return <BullshitSwipeCard isActive bypassDailyGate onContinue={handleFinish} />;
       case 'cashout-rush':
-        return <CashoutRushCard isActive onContinue={handleFinish} />;
+        return <CashoutRushCard isActive freePlay onContinue={handleFinish} />;
       case 'fomo-killer':
-        return <FomoKillerCard isActive onContinue={handleFinish} />;
+        return <FomoKillerCard isActive freePlay onContinue={handleFinish} />;
       case 'higher-lower':
-        return <HigherLowerCard isActive onComplete={handleFinish} />;
+        return <HigherLowerCard isActive freePlay onComplete={handleFinish} />;
       case 'price-slider':
-        return <PriceSliderCard isActive onContinue={handleFinish} />;
+        return <PriceSliderCard isActive freePlay onContinue={handleFinish} />;
       default:
         return null;
     }

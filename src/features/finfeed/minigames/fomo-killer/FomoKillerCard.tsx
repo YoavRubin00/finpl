@@ -43,13 +43,16 @@ interface Props {
   isActive: boolean;
   /** Inter-module overlay sets this to render a "המשך" button on the result. */
   onContinue?: () => void;
+  /** When true, bypass the daily-gate lockout — the in-lesson game must always be playable. */
+  freePlay?: boolean;
 }
 
 type InternalPhase = FomoPhase;
 
-export const FomoKillerCard = React.memo(function FomoKillerCard({ isActive: _isActive, onContinue }: Props) {
+export const FomoKillerCard = React.memo(function FomoKillerCard({ isActive: _isActive, onContinue, freePlay = false }: Props) {
   const playFomoKiller = useDailyChallengesStore((s) => s.playFomoKiller);
-  const hasPlayedToday = useDailyChallengesStore((s) => s.hasFomoKillerPlayedToday());
+  const hasPlayedTodayReal = useDailyChallengesStore((s) => s.hasFomoKillerPlayedToday());
+  const hasPlayedToday = freePlay ? false : hasPlayedTodayReal;
   const playsToday = useDailyChallengesStore((s) => s.getFomoKillerPlaysToday());
 
   const [phase, setPhase] = useState<InternalPhase>('intro');

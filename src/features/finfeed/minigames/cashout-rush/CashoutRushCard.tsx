@@ -69,6 +69,8 @@ interface Props {
   isActive: boolean;
   /** Inter-module overlay sets this to render a "המשך" button on the result. */
   onContinue?: () => void;
+  /** When true, bypass the daily-gate lockout — the in-lesson game must always be playable. */
+  freePlay?: boolean;
 }
 
 type Phase = 'idle' | 'running' | 'cashed' | 'crashed' | 'education';
@@ -213,9 +215,10 @@ function GambleWarning() {
   );
 }
 
-export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, onContinue }: Props) {
+export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, onContinue, freePlay = false }: Props) {
   const playCashoutRush = useDailyChallengesStore((s) => s.playCashoutRush);
-  const hasPlayedToday = useDailyChallengesStore((s) => s.hasCashoutRushPlayedToday());
+  const hasPlayedTodayReal = useDailyChallengesStore((s) => s.hasCashoutRushPlayedToday());
+  const hasPlayedToday = freePlay ? false : hasPlayedTodayReal;
   const playsToday = useDailyChallengesStore((s) => s.getCashoutRushPlaysToday());
 
   const [phase, setPhase] = useState<Phase>('idle');

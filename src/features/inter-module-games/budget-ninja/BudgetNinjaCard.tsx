@@ -39,6 +39,8 @@ interface Props {
   isActive: boolean;
   /** Inter-module overlay sets this to render a "המשך" button on the result. */
   onContinue?: () => void;
+  /** When true, bypass the daily-gate lockout — the in-lesson game must always be playable. */
+  freePlay?: boolean;
 }
 
 type Phase = 'idle' | 'playing' | 'done';
@@ -207,9 +209,10 @@ function SharkResult({ score, kindsAllowed }: { score: number; kindsAllowed: boo
   );
 }
 
-export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive, onContinue }: Props) {
+export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive, onContinue, freePlay = false }: Props) {
   const playBudgetNinja = useDailyChallengesStore((s) => s.playBudgetNinja);
-  const hasPlayedToday = useDailyChallengesStore((s) => s.hasBudgetNinjaPlayedToday());
+  const hasPlayedTodayReal = useDailyChallengesStore((s) => s.hasBudgetNinjaPlayedToday());
+  const hasPlayedToday = freePlay ? false : hasPlayedTodayReal;
   const playsToday = useDailyChallengesStore((s) => s.getBudgetNinjaPlaysToday());
 
   const [phase, setPhase] = useState<Phase>('idle');

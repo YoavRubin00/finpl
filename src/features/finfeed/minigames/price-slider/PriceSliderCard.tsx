@@ -39,6 +39,8 @@ interface Props {
   isActive: boolean;
   /** Inter-module overlay sets this to render a "המשך" button on the result. */
   onContinue?: () => void;
+  /** When true, bypass the daily-gate lockout — the in-lesson game must always be playable. */
+  freePlay?: boolean;
 }
 
 type Phase = 'guessing' | 'revealing' | 'done';
@@ -166,9 +168,10 @@ function ValueTicker({ target, color, delayMs }: { target: number; color: string
   );
 }
 
-export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _isActive, onContinue }: Props) {
+export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _isActive, onContinue, freePlay = false }: Props) {
   const playPriceSlider = useDailyChallengesStore((s) => s.playPriceSlider);
-  const hasPlayedToday = useDailyChallengesStore((s) => s.hasPriceSliderPlayedToday());
+  const hasPlayedTodayReal = useDailyChallengesStore((s) => s.hasPriceSliderPlayedToday());
+  const hasPlayedToday = freePlay ? false : hasPlayedTodayReal;
   const playsToday = useDailyChallengesStore((s) => s.getPriceSliderPlaysToday());
 
   const [item] = useState<PriceSliderItem>(() => {
