@@ -46,8 +46,7 @@ import type { ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion'
 import { usePearlsStore } from './usePearlsStore';
 import { pearlIdFor, type PearlContent } from './pearlConfig';
 import { PearlProgressBar } from './PearlProgressBar';
-import { shouldUseTopicTree } from '../topic-learning/topicResolver';
-import { useTopicProgressStore } from '../topic-learning/useTopicProgressStore';
+import { lessonRouteFor } from '../topic-learning/topicResolver';
 import { chapter0Data } from '../chapter-0-content/chapter0Data';
 import { chapter1Data } from '../chapter-1-content/chapter1Data';
 import { chapter2Data } from '../chapter-2-content/chapter2Data';
@@ -513,20 +512,20 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // on the expanded accordion at the END of the intro instead of
     // dropping into the legacy flashcards flow ("שהתחלתי את המודולה
     // מושגי יסוד המשך דרך הפנינה ... התחיל את הכרטיסיות בפורמט הישן").
+    // Route the pearl's next module through lessonRouteFor so it ALWAYS lands in
+    // the topic-tree chip flow (returnTo=topic-tree) — never the legacy
+    // flashcards / old-chest path. (The old introDone branch dropped the
+    // returnTo flag once the intro was already done → legacy. lessonRouteFor
+    // keeps the flag for every topic-tree module. Yoav 2026-06-11 / 2026-06-27.)
     const nextChapter = ALL_CHAPTERS_PEARL.find((c) => c.id === pearl.chapterId);
     const nextModule = nextChapter?.modules.find((m) => m.id === pearl.nextModuleId);
-    if (nextModule && shouldUseTopicTree(nextModule)) {
-      const introDone = useTopicProgressStore.getState()
-        .isTopicCompleted(`${nextModule.id}:intro`);
-      const tail = introDone ? '' : '&startPhase=intro&returnTo=topic-tree';
-      router.push(
-        `/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}${tail}` as never,
-      );
-      return;
-    }
     // Push, not replace — keeps the map underneath so the back stack works
     // naturally if the user backs out of the lesson without finishing.
-    router.push(`/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}` as never);
+    router.push(
+      (nextModule
+        ? lessonRouteFor(nextModule, pearl.chapterId)
+        : `/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}`) as never,
+    );
   }, [pearl, activePage, stages, goToPage, markCompleted, onClose, router, setLastStage]);
 
   const renderStage = useCallback(

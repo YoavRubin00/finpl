@@ -15,6 +15,7 @@ import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 import { useSavedItemsStore } from "./useSavedItemsStore";
 import { useIsPro } from "../subscription/useSubscription";
+import { lessonRouteById } from "../subscription/moduleAccess";
 import { CompactFeedCardPreview } from "./CompactFeedCardPreview";
 import type { SavedItem } from "./savedItemTypes";
 import { MAX_SAVED_ITEMS } from "./savedItemTypes";
@@ -63,9 +64,7 @@ export function SavedItemsScreen() {
       item.chapterId != null &&
       item.moduleId
     ) {
-      router.push(
-        `/lesson/${item.moduleId}?chapterId=${item.chapterId}` as never
-      );
+      router.push(lessonRouteById(item.moduleId, String(item.chapterId)) as never);
     }
   };
 

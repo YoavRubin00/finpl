@@ -2519,7 +2519,7 @@ export function DuoLearnScreen() {
       setTopicTreeModule(null);
       useUsageStore.getState().markMod01bPaywallSeen();
       try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b_topic_tree' }); } catch { /* non-fatal */ }
-      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0';
+      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree';
       router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
     }
@@ -2874,7 +2874,7 @@ export function DuoLearnScreen() {
                   tapHaptic();
                   try { captureEvent('register_cta_accepted', { module_id: 'mod-1-1', source: 'skip-intro' }); } catch { /* non-fatal */ }
                   setShowSkipIntroRegisterCTA(false);
-                  router.replace(`/(auth)/register?returnTo=${encodeURIComponent("/lesson/mod-1-1?chapterId=chapter-1")}` as never);
+                  router.replace(`/(auth)/register?returnTo=${encodeURIComponent("/lesson/mod-1-1?chapterId=chapter-1&startPhase=intro&returnTo=topic-tree")}` as never);
                 }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
                 accessibilityRole="button"
@@ -2891,7 +2891,7 @@ export function DuoLearnScreen() {
                   // marked complete by handleSkipIntro, so the lesson is unlocked
                   // and accessible without registering. push (not replace) so Back
                   // returns to the learn map.
-                  router.push('/lesson/mod-1-1?chapterId=chapter-1' as never);
+                  router.push('/lesson/mod-1-1?chapterId=chapter-1&startPhase=intro&returnTo=topic-tree' as never);
                 }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"

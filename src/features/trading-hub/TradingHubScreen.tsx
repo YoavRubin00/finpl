@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { lessonRouteById } from '../subscription/moduleAccess';
 import { Briefcase, RefreshCw, Star } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
 import type { AnimationObject } from 'lottie-react-native';
@@ -543,7 +544,7 @@ export function TradingHubScreen() {
                         {LEARN_LINKS.map((link) => (
                             <AnimatedPressable
                                 key={link.moduleId}
-                                onPress={() => { tapHaptic(); router.push(`/lesson/${link.moduleId}?chapterId=${link.chapterId}` as never); }}
+                                onPress={() => { tapHaptic(); router.push(lessonRouteById(link.moduleId, link.chapterId) as never); }}
                                 style={styles.learnCardOuter}
                             >
                                 <View style={styles.learnCard}>

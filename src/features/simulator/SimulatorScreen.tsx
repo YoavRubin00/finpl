@@ -212,7 +212,7 @@ export function SimulatorScreen() {
 
             {/* CTA to compound interest module */}
             <Pressable
-              onPress={() => router.push("/lesson/mod-1-1?chapterId=chapter-1" as never)}
+              onPress={() => router.push("/lesson/mod-1-1?chapterId=chapter-1&startPhase=intro&returnTo=topic-tree" as never)}
               style={s.moduleCta}
             >
               <Text style={s.moduleCtaText}>ללמוד ריבית דריבית</Text>

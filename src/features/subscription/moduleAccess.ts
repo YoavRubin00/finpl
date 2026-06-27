@@ -1,4 +1,6 @@
 import { PRO_LOCKED_SIMS } from "../../constants/proGates";
+import type { Module } from "../chapter-1-content/types";
+import { lessonRouteFor } from "../topic-learning/topicResolver";
 import { getCompletedModulesSync } from "../chapter-1-content/useProgress";
 import { queryClient } from "../../lib/queryClient";
 import type { SubscriptionState } from "../../lib/api/subscription";
@@ -28,6 +30,9 @@ export interface AccessibleModule {
   chapterId: string;
   storeChapterId: string;
   title: string;
+  /** The full Module — so callers can route via lessonRouteFor (which needs to
+   *  check shouldUseTopicTree) without a second cross-chapter lookup. */
+  module: Module;
 }
 
 export function isModuleAccessible(moduleId: string, chapterId: string): boolean {
@@ -59,6 +64,25 @@ export function isModuleAccessible(moduleId: string, chapterId: string): boolean
   return true;
 }
 
+/** Deep-link helper: resolve a module by id across ALL chapters and return its
+ *  lesson route (topic-tree chip flow when supported, legacy otherwise). For
+ *  CTAs that only carry a moduleId string — saved items, tool next-step, trading
+ *  hub, premium learning, simulator — so they never drop into the legacy flow
+ *  (old chest + no chip persistence). Yoav 2026-06-27. */
+export function lessonRouteById(
+  moduleId: string,
+  chapterId: string,
+  opts: { startPhase?: string; replay?: boolean } = {},
+): string {
+  for (const ch of ALL_CHAPTERS_ORDERED) {
+    const m = ch.modules.find((mm) => mm.id === moduleId);
+    // Use the FOUND chapter's id, not the caller's — keeps chapterId correct
+    // even when the caller only has a loose value (e.g. SavedItem stores a number).
+    if (m) return lessonRouteFor(m, ch.id, opts);
+  }
+  return `/lesson/${moduleId}?chapterId=${chapterId}`;
+}
+
 export function nextAccessibleModule(): AccessibleModule | null {
   for (const ch of ALL_CHAPTERS_ORDERED) {
     const completed = getCompletedModulesSync(chapterStoreKey(ch.id));
@@ -71,6 +95,7 @@ export function nextAccessibleModule(): AccessibleModule | null {
         chapterId: ch.id,
         storeChapterId: chapterStoreKey(ch.id),
         title: nextMod.title,
+        module: nextMod,
       };
     }
   }

@@ -18,6 +18,7 @@ import {
 import { tapHaptic, heavyHaptic } from '../../utils/haptics';
 import { CHAPTER_CTA_COLORS } from '../finfeed/types';
 import { useChapterMindMap } from './useChapterMindMap';
+import { lessonRouteFor } from '../topic-learning/topicResolver';
 
 function chapterStoreKey(chapterId: string): string {
   return `ch-${chapterId.split('-')[1]}`;
@@ -54,7 +55,7 @@ export function ChapterIntroScreen() {
       tapHaptic();
       setCurrentChapter(chapterStoreKey(chapter.id));
       setCurrentModule(idx);
-      router.push(`/lesson/${moduleId}?chapterId=${chapter.id}`);
+      router.push(lessonRouteFor(chapter.modules[idx], chapter.id));
     },
     [chapter, router, setCurrentChapter, setCurrentModule],
   );
@@ -97,7 +98,7 @@ export function ChapterIntroScreen() {
       const idx = ch.modules.findIndex((m) => m.id === next.moduleId);
       if (idx >= 0) setCurrentModule(idx);
     }
-    router.push(`/lesson/${next.moduleId}?chapterId=${next.chapterId}`);
+    router.push(lessonRouteFor(next.module, next.chapterId));
   }, [chapter, router, setCurrentChapter, setCurrentModule]);
 
   if (!chapter || !root) {

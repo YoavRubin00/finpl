@@ -11,7 +11,7 @@ import { useAudioStore } from "../../stores/useAudioStore";
 import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
 import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
 import { useContinuousRunStore } from "../topic-learning/useContinuousRunStore";
-import { resolveTopics, SIM_FIRST_MODULE_IDS } from "../topic-learning/topicResolver";
+import { resolveTopics, SIM_FIRST_MODULE_IDS, lessonRouteFor } from "../topic-learning/topicResolver";
 import type { TopicKind } from "../topic-learning/types";
 import { chestThresholdFor, chipsToChestFor } from "../topic-learning/types";
 import { SharkChipCallout } from "../topic-learning/components/SharkChipCallout";
@@ -2500,14 +2500,14 @@ export function LessonFlowScreen() {
     if (chapterId && currentModIdx >= 0 && currentModIdx + 1 < chapterModules.length) {
       const next = chapterModules[currentModIdx + 1];
       if (!next.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(next.id))) {
-        return `/lesson/${next.id}?chapterId=${chapterId}`;
+        return lessonRouteFor(next, chapterId);
       }
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
       const completed = getCompletedModulesSync(chapterStoreKey(ch.id));
       const nextIdx = ch.modules.findIndex((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !completed.includes(m.id));
       if (nextIdx >= 0) {
-        return `/lesson/${ch.modules[nextIdx].id}?chapterId=${ch.id}`;
+        return lessonRouteFor(ch.modules[nextIdx], ch.id);
       }
     }
     return '/(tabs)';
@@ -2562,7 +2562,7 @@ export function LessonFlowScreen() {
         const nextMod = ch.modules[nextIdx];
         setCurrentChapter(chapterStoreKey(ch.id));
         setCurrentModule(nextIdx);
-        router.replace(`/lesson/${nextMod.id}?chapterId=${ch.id}` as never);
+        router.replace(lessonRouteFor(nextMod, ch.id) as never);
         return;
       }
     }
@@ -2606,7 +2606,10 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1b' && !isPro && !useUsageStore.getState().hasSeenMod01bPaywall) {
       useUsageStore.getState().markMod01bPaywallSeen();
       try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b' }); } catch { /* non-fatal */ }
-      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0';
+      const mod02 = chapterModules.find((m) => m.id === 'mod-0-2');
+      const returnTo = mod02
+        ? lessonRouteFor(mod02, 'chapter-0')
+        : '/lesson/mod-0-2?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree';
       router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
     }
@@ -2631,7 +2634,10 @@ export function LessonFlowScreen() {
       // The two-name split fragmented funnels — all paywall surfaces now land
       // on the same event with `paywall` / `source` properties for breakdown.
       try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_4', source: 'post_mod_0_4' }); } catch { /* non-fatal */ }
-      const returnTo = '/lesson/mod-0-5?chapterId=chapter-0';
+      const mod05 = chapterModules.find((m) => m.id === 'mod-0-5');
+      const returnTo = mod05
+        ? lessonRouteFor(mod05, 'chapter-0')
+        : '/lesson/mod-0-5?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree';
       router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
     }
@@ -2790,9 +2796,14 @@ export function LessonFlowScreen() {
       // based), gated for mod-0-1 by the knowledgeLevel question. AFTER the chest
       // the auto-flow KEEPS going chip-to-chip (no per-chip map detour) all the way
       // to 100% (Yoav 2026-06-25) — the user opted in by tapping "continue".
-      const crossedChest = summary.completed - 1 < chipsToChest && summary.completed >= chipsToChest;
+      // Exit as soon as the threshold is REACHED (>=), not only on the single
+      // exact-crossing transition. tt_exitFiredRef already guarantees ONE fire,
+      // so ">=" is both safe AND robust — the old exact-crossing check could miss
+      // the threshold (count off by one at the crossing) and run the whole module
+      // through to the legacy summary chest (part of the 2026-06-27 mod-0-2 bug).
+      const reachedChest = summary.completed >= chipsToChest;
       const moduleComplete = summary.total > 0 && summary.completed >= summary.total;
-      const chestReady = crossedChest && mod01QuestionResolved;
+      const chestReady = reachedChest && mod01QuestionResolved;
       const shouldExit = chestReady || moduleComplete;
       if (!shouldExit) {
         // Fire the "עוד X לתיבה" callout (pop+confetti) once per real chip — only
@@ -3022,6 +3033,29 @@ export function LessonFlowScreen() {
     const t = setTimeout(() => returnToMap("/(tabs)/index"), 120);
     return () => clearTimeout(t);
   }, [ttProgressActive, phase, returnToMap]);
+
+  // Topic-tree safety net (Yoav 2026-06-27): under the chip auto-flow the chest
+  // exits at the threshold (seam above) and the user never reaches the legacy
+  // `summary`. But if a topic-tree module ever lands here anyway (count fell
+  // short of the threshold, or a future entry point slips through without
+  // returnTo=topic-tree being honored), we must NEVER render the OLD
+  // end-of-lesson chest. Mark every content chip done (the lesson reached its
+  // end) and bounce to the map so the accordion fires its single canonical
+  // chest. Gated on the LIVE flag (returnTo), not the dead ttProgressActive.
+  useEffect(() => {
+    if (returnTo !== 'topic-tree' || isReplay) return;
+    if (phase !== 'summary') return;
+    if (tt_exitFiredRef.current) return;
+    tt_exitFiredRef.current = true;
+    if (mod) {
+      resolveTopics(mod).forEach((t) => {
+        if (t.kind !== 'chat') {
+          useTopicProgressStore.getState().markTopicCompleted(t, 'continuous');
+        }
+      });
+    }
+    returnToMap("/(tabs)/index");
+  }, [returnTo, isReplay, phase, mod, returnToMap]);
 
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed

@@ -12,6 +12,8 @@ import { BullshitSwipeCard } from "../../src/features/finfeed/minigames/bullshit
 import { FINN_HAPPY, FINN_STANDARD } from "../../src/features/retention-loops/finnMascotConfig";
 import { tapHaptic, successHaptic } from "../../src/utils/haptics";
 import { useTutorialStore } from "../../src/stores/useTutorialStore";
+import { lessonRouteFor } from "../../src/features/topic-learning/topicResolver";
+import { chapter0Data } from "../../src/features/chapter-0-content/chapter0Data";
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -45,10 +47,15 @@ export default function BullshitCh0InterstitialPage() {
 
   const handleContinue = useCallback(() => {
     tapHaptic();
-    router.replace({
-      pathname: "/lesson/[id]",
-      params: { id: "mod-0-4", chapterId: "chapter-0" },
-    } as never);
+    // Route mod-0-4 through lessonRouteFor so the interstitial lands in the
+    // topic-tree chip flow (returnTo=topic-tree), not the legacy linear flow
+    // (old chest + no chip persistence). Yoav 2026-06-27.
+    const mod04 = chapter0Data.modules.find((m) => m.id === "mod-0-4");
+    router.replace(
+      (mod04
+        ? lessonRouteFor(mod04, "chapter-0")
+        : "/lesson/mod-0-4?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree") as never,
+    );
   }, [router]);
 
   const handleHomePress = useCallback(() => {

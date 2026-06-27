@@ -12,6 +12,7 @@ import { BookOpen, ChevronLeft, ExternalLink, ArrowLeft } from 'lucide-react-nat
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
 import { NEXT_STEPS, type FinancialToolKey } from '../financialNextStepMap';
+import { lessonRouteById } from '../../subscription/moduleAccess';
 
 interface ToolNextStepCardProps {
   /** Which tool is rendering this card — drives the lesson + action lookup. */
@@ -50,7 +51,7 @@ export function ToolNextStepCard({
 
   const handleLesson = () => {
     tapHaptic();
-    router.push(`/lesson/${entry.lessonId}?chapterId=${entry.chapterId}` as never);
+    router.push(lessonRouteById(entry.lessonId, entry.chapterId) as never);
   };
 
   const handleAction = () => {

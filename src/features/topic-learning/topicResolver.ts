@@ -144,6 +144,34 @@ export function shouldUseTopicTree(module: Module): boolean {
   return resolveTopics(module).length >= 1;
 }
 
+/**
+ * Single source of truth for the URL that OPENS a module's lesson. ALWAYS route
+ * through this — never hand-build `/lesson/[id]?...` — so every entry point
+ * (map tap, chip tap, post-module advance, paywall returnTo, pearl, chapter
+ * intro, interstitial, deep-link CTA) lands in the SAME flow.
+ *
+ * The bug this prevents (Yoav 2026-06-27): the sequential post-module paths
+ * (post-mod-0-1b paywall → mod-0-2, ch0 interstitial → mod-0-4, next-module
+ * advance, chapter-intro) pushed `/lesson/[id]` WITHOUT `returnTo=topic-tree`,
+ * so those modules ran the LEGACY linear flow — the chip auto-flow seam was
+ * disabled (no chips marked) and the OLD end-of-lesson chest rendered. Only the
+ * map/chip/daily-quest/first-pearl paths had been migrated (2026-06-11); this
+ * helper guarantees no future entry point can desync again.
+ *
+ * topic-tree modules → `…&startPhase=<phase>&returnTo=topic-tree` (chip flow).
+ * linear-flow / genuinely-empty modules, or an explicit replay → legacy URL.
+ */
+export function lessonRouteFor(
+  module: Module,
+  chapterId: string,
+  opts: { startPhase?: string; replay?: boolean } = {},
+): string {
+  const base = `/lesson/${module.id}?chapterId=${chapterId}`;
+  if (opts.replay) return `${base}&replay=1`;
+  if (!shouldUseTopicTree(module)) return base;
+  return `${base}&startPhase=${opts.startPhase ?? 'intro'}&returnTo=topic-tree`;
+}
+
 export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): Topic[] {
   const simFirst = opts.simFirst ?? SIM_FIRST_MODULE_IDS.has(module.id);
   const order = module.id === 'mod-0-4' ? MOD_0_4_ORDER : simFirst ? SIM_FIRST_ORDER : CANONICAL_ORDER;

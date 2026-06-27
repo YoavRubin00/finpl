@@ -19,6 +19,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { lessonRouteById } from '../subscription/moduleAccess';
 
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { LottieIcon } from '../../components/ui/LottieIcon';
@@ -249,7 +250,7 @@ export const PremiumLearningCard = React.memo(function PremiumLearningCard({ ite
     }
     useChapterUIStore.getState().setCurrentChapter(item.storeChapterId);
     useChapterUIStore.getState().setCurrentModule(item.moduleIndex);
-    router.push(`/lesson/${item.moduleId}?chapterId=${item.chapterId}` as never);
+    router.push(lessonRouteById(item.moduleId, item.chapterId) as never);
   }, [item, router, playSound, onContinue]);
 
   // CTA, last step
