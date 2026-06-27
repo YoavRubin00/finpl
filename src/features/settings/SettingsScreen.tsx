@@ -147,6 +147,8 @@ export function SettingsScreen() {
   const toggleMusic = useAudioStore((s) => s.toggleMusic);
   const sfxEnabled = useAudioStore((s) => s.sfxEnabled);
   const toggleSfx = useAudioStore((s) => s.toggleSfx);
+  const hapticsEnabled = useAudioStore((s) => s.hapticsEnabled);
+  const toggleHaptics = useAudioStore((s) => s.toggleHaptics);
 
   // Chat tone
   const companionId: CompanionId = profile?.companionId ?? "warren-buffett";
@@ -620,6 +622,25 @@ export function SettingsScreen() {
                       thumbColor="#ffffff"
                       ios_backgroundColor={STITCH_BLUE.dim}
                       accessibilityLabel="צלילי מקשים"
+                      accessibilityRole="switch"
+                    />
+                  }
+                />
+                <Divider />
+                <SettingsRow
+                  icon={
+                    <Text style={{ fontSize: 20 }}>📳</Text>
+                  }
+                  label="רטט"
+                  subtitle={hapticsEnabled ? "מופעל" : "כבוי"}
+                  right={
+                    <Switch
+                      value={hapticsEnabled}
+                      onValueChange={() => { toggleHaptics(); tapHaptic(); }}
+                      trackColor={{ false: STITCH_BLUE.dim, true: STITCH_BLUE.success }}
+                      thumbColor="#ffffff"
+                      ios_backgroundColor={STITCH_BLUE.dim}
+                      accessibilityLabel="רטט"
                       accessibilityRole="switch"
                     />
                   }
