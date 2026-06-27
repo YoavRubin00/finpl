@@ -1,6 +1,6 @@
 import type { Module } from '../chapter-1-content/types';
 import type { Topic, TopicKind } from './types';
-import { chestThresholdFor } from './types';
+import { chestThresholdFor, chipsToChestFor } from './types';
 import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
 import { getDilemma } from '../shark-dilemma/dilemmasData';
 import { getGameForModule, isSimReplacedByGame } from './moduleGameMap';
@@ -77,6 +77,21 @@ const SIM_FIRST_ORDER: TopicKind[] = [
   'quiz',
 ];
 
+// mod-0-4 ONLY (Yoav 2026-06-27): both dilemmas come AFTER the quiz, and the
+// chest fires after them → intro→cards→game→quiz→couple-dilemma→shark-dilemma→🎁→chat.
+const MOD_0_4_ORDER: TopicKind[] = [
+  'intro',
+  'cards',
+  'tutorial-video',
+  'recall',
+  'sim',
+  'game',
+  'quiz',
+  'couple-dilemma',
+  'shark-dilemma',
+  'podcast',
+];
+
 function buildTopic(kind: TopicKind, moduleId: string, order: number): Topic {
   return {
     id: `${moduleId}:${kind}`,
@@ -131,7 +146,7 @@ export function shouldUseTopicTree(module: Module): boolean {
 
 export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): Topic[] {
   const simFirst = opts.simFirst ?? SIM_FIRST_MODULE_IDS.has(module.id);
-  const order = simFirst ? SIM_FIRST_ORDER : CANONICAL_ORDER;
+  const order = module.id === 'mod-0-4' ? MOD_0_4_ORDER : simFirst ? SIM_FIRST_ORDER : CANONICAL_ORDER;
   const present = new Map<TopicKind, boolean>();
 
   if (module.interactiveIntro?.trim()) present.set('intro', true);
@@ -203,10 +218,11 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // EXCEPTION — mod-0-1b: chat is the LAST chip (after the quiz), per Yoav
   // 2026-06-22 ("במודולה 0-1B תשים את שיחת הצאט להיות אחרונה ולא הקוויז").
   if (present.get('chat') && out.length >= 1) {
-    const chatLast = module.id === 'mod-0-1b';
-    const insertAt = chatLast ? out.length : Math.max(0, out.length - 1);
-    const chatTopic = buildTopic('chat', module.id, insertAt);
-    out.splice(insertAt, 0, chatTopic);
+    // chat is ALWAYS the LAST chip — the single chip OUTSIDE the chest (Yoav
+    // 2026-06-27: "רק הצ'אט מחוץ לתיבה"). shark-dilemma no longer tails the list
+    // (R5.16), so nothing needs to come after chat anymore.
+    const chatTopic = buildTopic('chat', module.id, out.length);
+    out.push(chatTopic);
     out.forEach((t, i) => { t.defaultOrder = i; });
   }
 
@@ -217,7 +233,7 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // order, not access (users can still tap any chip).
   if (present.get('quiz')) {
     const total = out.length;
-    const maxQuizIdx = Math.max(0, Math.ceil(chestThresholdFor(module.id) * total) - 1);
+    const maxQuizIdx = Math.max(0, chipsToChestFor(module.id, total) - 1);
     const qi = out.findIndex((t) => t.kind === 'quiz');
     if (qi > maxQuizIdx) {
       const [q] = out.splice(qi, 1);

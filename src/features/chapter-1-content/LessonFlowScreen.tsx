@@ -13,7 +13,7 @@ import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
 import { useContinuousRunStore } from "../topic-learning/useContinuousRunStore";
 import { resolveTopics, SIM_FIRST_MODULE_IDS } from "../topic-learning/topicResolver";
 import type { TopicKind } from "../topic-learning/types";
-import { chestThresholdFor } from "../topic-learning/types";
+import { chestThresholdFor, chipsToChestFor } from "../topic-learning/types";
 import { SharkChipCallout } from "../topic-learning/components/SharkChipCallout";
 import { pickContinueCompliment } from "../topic-learning/moduleCompliments";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
@@ -2785,7 +2785,7 @@ export function LessonFlowScreen() {
       // Exit only when the chest would actually fire — threshold crossed AND
       // (mod-0-1) the inline knowledgeLevel question resolved. So the auto-flow
       // runs quiz → knowledgeLevel question → chest, in that order.
-      const chipsToChest = Math.ceil(chestThresholdFor(mod.id) * topics.length);
+      const chipsToChest = chipsToChestFor(mod.id, topics.length);
       // The chest opens ONLY on the chip that first CROSSES the threshold (count-
       // based), gated for mod-0-1 by the knowledgeLevel question. AFTER the chest
       // the auto-flow KEEPS going chip-to-chip (no per-chip map detour) all the way
@@ -3326,7 +3326,7 @@ export function LessonFlowScreen() {
     if (!autoFlow || !mod) return;
     const t = resolveTopics(mod);
     const sum = useTopicProgressStore.getState().summaryForModule(mod.id, t);
-    const chipsToChest = Math.ceil(chestThresholdFor(mod.id) * t.length);
+    const chipsToChest = chipsToChestFor(mod.id, t.length);
     const pastChest = chipsToChest > 0 && sum.completed >= chipsToChest;
     const done = sum.total > 0 && sum.completed >= sum.total;
     if (pastChest && !done) {

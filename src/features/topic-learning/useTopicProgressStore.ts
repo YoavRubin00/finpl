@@ -5,7 +5,7 @@ import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
 import type { Topic, TopicProgressEntry, ModuleTopicSummary, ChestRarity } from './types';
 import {
-  chestThresholdFor,
+  chipsToChestFor,
   PITY_TIMER_THRESHOLD,
   MYTHIC_DROP_RATE,
   RARE_DROP_RATE,
@@ -132,12 +132,11 @@ export const useTopicProgressStore = create<TopicProgressState>()(
         const total = topics.length;
         const completedCount = topics.filter((t) => state.completed[t.id]).length;
         const pct = total === 0 ? 0 : Math.round((completedCount / total) * 100);
-        // R8 T3.1 — first-chest gate uses per-module threshold (mod-0-1
-        // and mod-0-2 fire at 50% so the user gets their first dopamine
-        // hit earlier in onboarding). Default = canonical 0.7.
-        const moduleThreshold = chestThresholdFor(moduleId);
+        // First-chest gate: opens when completedCount reaches chipsToChestFor —
+        // clamped so the LAST chip (chat) always stays OUTSIDE the chest
+        // (Yoav 2026-06-27). Single source of truth in types.ts.
         const isModuleDone =
-          total > 0 && completedCount / total >= moduleThreshold;
+          total > 0 && completedCount >= chipsToChestFor(moduleId, total);
 
         // PURE read — no set() here. The "first crossed" flags are stamped by
         // stampModuleThreshold / stampModuleFullyComplete from the accordion's

@@ -149,8 +149,18 @@ export const MODULE_CHEST_THRESHOLD: Record<string, number> = {
   'mod-0-1': 0.5,
 };
 
-/** Resolve the first-chest threshold for a module. Falls back to the
- *  canonical 75% when there's no override. */
+/** Chest threshold by chapter (Yoav 2026-06-27): chapter 0 = 0.75 (mod-0-1 = 0.5,
+ *  earliest dopamine); chapter 1+ = 0.90 so the chest lands at the very end and
+ *  only the chat chip sits after it. Explicit MODULE_CHEST_THRESHOLD overrides win. */
 export function chestThresholdFor(moduleId: string): number {
-  return MODULE_CHEST_THRESHOLD[moduleId] ?? TOPIC_COMPLETION_THRESHOLD;
+  if (MODULE_CHEST_THRESHOLD[moduleId] != null) return MODULE_CHEST_THRESHOLD[moduleId];
+  return moduleId.startsWith('mod-0') ? TOPIC_COMPLETION_THRESHOLD : 0.9;
+}
+
+/** Number of completed chips that opens the chest. Clamped to `total - 1` so the
+ *  LAST chip (always `chat`) stays OUTSIDE the chest (Yoav 2026-06-27: "רק הצ'אט
+ *  מחוץ לתיבה"). Single source of truth — used by the resolver's quiz-move, the
+ *  accordion's isModuleDone, and the LessonFlowScreen auto-flow seam. */
+export function chipsToChestFor(moduleId: string, total: number): number {
+  return Math.min(Math.ceil(chestThresholdFor(moduleId) * total), Math.max(1, total - 1));
 }
