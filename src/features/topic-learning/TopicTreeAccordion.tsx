@@ -722,15 +722,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             cooldown (rateAppPrompt.ts). Accept → store deep-link + never again. */}
         <RateAppPromptModal
           visible={ratePromptVisible}
-          onRate={() => {
-            setRatePromptVisible(false);
-            useTutorialStore.getState().markRated();
-            openStoreReview({ moduleId: module.id });
-          }}
-          onLater={() => {
-            setRatePromptVisible(false);
-            try { track({ name: 'rate_prompt_cta_tapped', props: { action: 'later', module_id: module.id } }); } catch { /* non-fatal */ }
-          }}
+          onClose={() => setRatePromptVisible(false)}
+          moduleId={module.id}
         />
 
         {/* Single chest celebration at 70% (Yoav 2026-06-12). The 100%

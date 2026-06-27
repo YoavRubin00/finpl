@@ -133,6 +133,9 @@ export type AppEvent =
   // ── App-store rating prompt (in-app, active users, post-chest) ──────────
   | { name: 'rate_prompt_shown'; props: { trigger: 'module_complete'; module_id: string; completed_modules: number } }
   | { name: 'rate_prompt_cta_tapped'; props: { action: 'open_store' | 'later'; store?: 'ios' | 'android'; module_id?: string } }
+  | { name: 'rate_sentiment_selected'; props: { sentiment: 'positive' | 'negative'; module_id?: string } }
+  | { name: 'rate_review_requested'; props: { available: boolean; module_id?: string } }
+  | { name: 'rate_feedback_submitted'; props: { text?: string; module_id?: string } }
 
   // ── Pro / Subscription / Pricing ───────────────────────────────────────
   | { name: 'pro_gate_shown'; props: { feature: ProGateFeature } }

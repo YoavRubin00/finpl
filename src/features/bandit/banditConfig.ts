@@ -351,12 +351,12 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
       },
       {
         id: 'welcome_hook_v1',
-        label: 'benefit_10min',
+        label: 'benefit_3min',
         payload: {
           eyebrow: 'היי, אני קפטן שארק',
-          title: 'עשר דקות, ומתחילים\nלשלוט בכסף',
+          title: 'שלוש דקות, ומתחילים\nלשלוט בכסף',
           benefit: 'בלי שיעורי כלכלה משעממים — משחק קצר שמלמד מה באמת עושים עם משכורת, חיסכון והשקעה ראשונה.',
-          cta: 'מתחילים — 10 דקות',
+          cta: 'מתחילים — 3 דקות',
         },
       },
       {
