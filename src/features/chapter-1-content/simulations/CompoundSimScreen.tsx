@@ -278,6 +278,10 @@ function YearSlider({
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const hasInteractedRef = useRef(false);
+    // Dedupe: only fire haptic + onChange when the rounded year actually changes
+    // (PanResponder move events fire on every pixel — avoids haptic spam).
+    const prevYearRef = useRef(years);
+    prevYearRef.current = years;
 
     const panResponderWrapped = useRef(
         PanResponder.create({
@@ -291,6 +295,8 @@ function YearSlider({
                     hasInteractedRef.current = true;
                     onInteract();
                 }
+                if (newYear === prevYearRef.current) return;
+                prevYearRef.current = newYear;
                 onChangeRef.current(newYear);
                 tapHaptic();
             },
@@ -298,6 +304,8 @@ function YearSlider({
                 const x = Math.max(0, Math.min(gestureState.moveX - 24, sliderWidth.current));
                 const pct = 1 - x / sliderWidth.current; // RTL: invert
                 const newYear = Math.round(min + pct * (max - min));
+                if (newYear === prevYearRef.current) return;
+                prevYearRef.current = newYear;
                 onChangeRef.current(newYear);
                 tapHaptic();
             },
@@ -621,7 +629,10 @@ export function CompoundSimScreen({ onComplete, suppressAudio = false }: Compoun
         return () => clearTimeout(t);
     }, [hasInteracted]);
     const hasExploredYear20 = useRef(false);
-    const milestoneTriggered = useRef(false);
+    // Confetti is celebrated once per FRESH crossing of ₪1M. Resets when the
+    // value drops back below ₪1M, so re-entering the millionaire zone re-fires
+    // — but staying above ₪1M no longer spawns an unbounded ~100ms loop.
+    const hasCelebratedMillionRef = useRef(false);
     const autoRunTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Track if user has explored year 20+
@@ -675,7 +686,7 @@ export function CompoundSimScreen({ onComplete, suppressAudio = false }: Compoun
         setRewardsGranted(false);
         setShowConfetti(false);
         hasExploredYear20.current = false;
-        milestoneTriggered.current = false;
+        hasCelebratedMillionRef.current = false;
     }, [reset]);
 
     // Calculate bar height percentages relative to the larger value
@@ -683,30 +694,24 @@ export function CompoundSimScreen({ onComplete, suppressAudio = false }: Compoun
     const investedPercent = state.totalInvested / maxValue;
     const compoundPercent = state.totalCompoundValue / maxValue;
 
-    // Milestone: ₪1M trigger, confetti only
+    // Milestone: ₪1M trigger, confetti only — fires once per fresh crossing.
     useEffect(() => {
-        if (state.totalCompoundValue >= MILLION && !milestoneTriggered.current) {
-            milestoneTriggered.current = true;
+        if (state.totalCompoundValue >= MILLION && !hasCelebratedMillionRef.current) {
+            hasCelebratedMillionRef.current = true;
             heavyHaptic();
             setShowConfetti(true);
         }
         if (state.totalCompoundValue < MILLION) {
-            milestoneTriggered.current = false;
+            // Dropped below ₪1M — arm the next celebration and stop any burst.
+            hasCelebratedMillionRef.current = false;
             setShowConfetti(false);
         }
     }, [state.totalCompoundValue]);
 
-    // Confetti loop, keep spawning while above ₪1M
+    // Single confetti burst — just clear it when the explosion finishes.
+    // (No more unbounded re-spawn loop while parked above ₪1M.)
     const handleConfettiComplete = useCallback(() => {
-        if (milestoneTriggered.current) {
-            setShowConfetti(false);
-            // Re-trigger on next tick to loop
-            setTimeout(() => {
-                if (milestoneTriggered.current) {
-                    setShowConfetti(true);
-                }
-            }, 100);
-        }
+        setShowConfetti(false);
     }, []);
 
     // Fast Forward: auto-slide from 1 to 40
@@ -724,7 +729,9 @@ export function CompoundSimScreen({ onComplete, suppressAudio = false }: Compoun
                 return;
             }
             updateYears(currentYear);
-            tapHaptic();
+            // Haptic only on milestone years during fast-forward (was firing on
+            // every 120ms tick → ~40 buzzes in a burst on the haptic motor).
+            if (currentYear % 5 === 0) tapHaptic();
         }, 120);
     }, [updateYears]);
 

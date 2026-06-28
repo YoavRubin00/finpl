@@ -1,7 +1,7 @@
 import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, StyleSheet, ScrollView, PanResponder, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, PanResponder, Dimensions, type DimensionValue } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -57,7 +57,7 @@ function BudgetBar({
     }, [pct, animWidth]);
 
     const barStyle = useAnimatedStyle(() => ({
-        width: `${animWidth.value}%` as unknown as number,
+        width: `${animWidth.value}%` as DimensionValue,
     }));
 
     const barColor = pct > 50 ? '#4ade80' : pct > 25 ? '#facc15' : '#f97316';
@@ -131,6 +131,9 @@ function SwipeableItemCard({
     const isTrap = item.category === 'trap';
     const cardX = useSharedValue(0);
     const isDoneRef = useRef(false);
+    // Swipe-resolve timers (onAddToCart/onSkip fire 150ms after the swipe-out
+    // animation) — tracked so they're cleared if the card unmounts mid-swipe.
+    const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const panResponder = useMemo(() => PanResponder.create({
         onStartShouldSetPanResponder: () => true,
@@ -144,16 +147,20 @@ function SwipeableItemCard({
             if (g.dx > SWIPE_THRESHOLD) {
                 isDoneRef.current = true;
                 cardX.value = withTiming(SCREEN_WIDTH, { duration: 200 });
-                setTimeout(() => onAddToCart(), 150);
+                doneTimerRef.current = setTimeout(() => onAddToCart(), 150);
             } else if (g.dx < -SWIPE_THRESHOLD) {
                 isDoneRef.current = true;
                 cardX.value = withTiming(-SCREEN_WIDTH, { duration: 200 });
-                setTimeout(() => onSkip(), 150);
+                doneTimerRef.current = setTimeout(() => onSkip(), 150);
             } else {
                 cardX.value = withSpring(0, { damping: 18 });
             }
         },
     }), [onAddToCart, onSkip, cardX]);
+
+    useEffect(() => () => {
+        if (doneTimerRef.current) clearTimeout(doneTimerRef.current);
+    }, []);
 
     const cardStyle = useAnimatedStyle(() => ({
         transform: [

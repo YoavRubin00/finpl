@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { View, Text, Pressable, StyleSheet, Vibration } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, {
@@ -33,6 +33,11 @@ const HELP_OFFER_MOVE_THRESHOLD = 5;
 // פריט: paddingVertical 8+8 + content max(28,22) + border 1.5+1.5 = ~47;
 // gap 6 → step ≈ 53. נשתמש ב-52 כדי שגרירה גדולה תרגיש מדויקת.
 const ITEM_STEP_HEIGHT = 52;
+
+// Spring profile — soft, slightly bouncy, low stiffness. Mimics iOS reorder
+// feel rather than a tight engineering snap. Hoisted to module scope so it's
+// a stable reference across renders (the Pan gesture is memoized below).
+const SOFT_SPRING = { damping: 13, stiffness: 130, mass: 0.7 } as const;
 
 /**
  * State that the card exposes to its parent so the parent can render a
@@ -98,7 +103,7 @@ interface DraggableItemRowProps {
   children: ReactNode;
 }
 
-function DraggableItemRow({
+const DraggableItemRow = React.memo(function DraggableItemRow({
   idx,
   totalItems,
   locked,
@@ -124,55 +129,60 @@ function DraggableItemRow({
   const triggerTickHaptic = useCallback(() => { selectionHaptic(); }, []);
   const triggerDropHaptic = useCallback(() => { tapHaptic(); }, []);
 
-  // Spring profile — soft, slightly bouncy, low stiffness. Mimics iOS reorder
-  // feel rather than a tight engineering snap.
-  const SOFT_SPRING = { damping: 13, stiffness: 130, mass: 0.7 } as const;
-
-  const pan = Gesture.Pan()
-    .enabled(!locked)
-    // ה-gesture מתחיל אחרי 6px אנכיים — קצת יותר רגיש מ-8 הקודם, נעים יותר
-    // לתחילת גרירה בלי לחטוף taps על החצים.
-    .activeOffsetY([-6, 6])
-    .onStart(() => {
-      isDragging.value = 1;
-      stepsAcc.value = 0;
-      liftProgress.value = withSpring(1, SOFT_SPRING);
-      runOnJS(triggerStartHaptic)();
-    })
-    .onUpdate((e) => {
-      // כמה שלבים מהמקור צריך להיות עכשיו ה-row.
-      const target = Math.round(e.translationY / ITEM_STEP_HEIGHT);
-      if (target !== stepsAcc.value) {
-        const oldIdx = indexRef.value;
-        const newIdx = oldIdx + (target - stepsAcc.value);
-        const clamped = Math.max(0, Math.min(totalItems - 1, newIdx));
-        if (clamped !== oldIdx) {
-          runOnJS(onMoveItem)(oldIdx, clamped);
-          // "תיק תיק" subtle בכל חציית שורה — מקנה תחושת picker iOS-י.
-          runOnJS(triggerTickHaptic)();
-          // עדכון אופטימי ב-worklet כך שה-onUpdate הבא יראה את המיקום החדש
-          // עוד לפני שה-React renders חזרה אלינו ויעדכן את indexRef דרך useEffect.
-          indexRef.value = clamped;
-          stepsAcc.value = target;
-        }
-      }
-      // translateY ויזואלי = הסטה של האצבע פחות מה שכבר התקדמנו ב-reorder.
-      // כך ה-row נשאר תחת האצבע גם אחרי שהוא קפץ במיקום ב-array.
-      translateY.value = e.translationY - stepsAcc.value * ITEM_STEP_HEIGHT;
-    })
-    .onEnd(() => {
-      translateY.value = withSpring(0, SOFT_SPRING);
-      liftProgress.value = withSpring(0, SOFT_SPRING);
-      isDragging.value = 0;
-      stepsAcc.value = 0;
-      runOnJS(triggerDropHaptic)();
-    })
-    .onFinalize(() => {
-      translateY.value = withSpring(0, SOFT_SPRING);
-      liftProgress.value = withSpring(0, SOFT_SPRING);
-      isDragging.value = 0;
-      stepsAcc.value = 0;
-    });
+  // Build the Pan gesture once per [locked, totalItems] instead of on every
+  // render — avoids rebuilding/re-attaching the gesture when unrelated props
+  // (rankColor, children, etc.) change. The shared values and haptic callbacks
+  // are stable refs, so they don't need to be in the dependency list.
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(!locked)
+        // ה-gesture מתחיל אחרי 6px אנכיים — קצת יותר רגיש מ-8 הקודם, נעים יותר
+        // לתחילת גרירה בלי לחטוף taps על החצים.
+        .activeOffsetY([-6, 6])
+        .onStart(() => {
+          isDragging.value = 1;
+          stepsAcc.value = 0;
+          liftProgress.value = withSpring(1, SOFT_SPRING);
+          runOnJS(triggerStartHaptic)();
+        })
+        .onUpdate((e) => {
+          // כמה שלבים מהמקור צריך להיות עכשיו ה-row.
+          const target = Math.round(e.translationY / ITEM_STEP_HEIGHT);
+          if (target !== stepsAcc.value) {
+            const oldIdx = indexRef.value;
+            const newIdx = oldIdx + (target - stepsAcc.value);
+            const clamped = Math.max(0, Math.min(totalItems - 1, newIdx));
+            if (clamped !== oldIdx) {
+              runOnJS(onMoveItem)(oldIdx, clamped);
+              // "תיק תיק" subtle בכל חציית שורה — מקנה תחושת picker iOS-י.
+              runOnJS(triggerTickHaptic)();
+              // עדכון אופטימי ב-worklet כך שה-onUpdate הבא יראה את המיקום החדש
+              // עוד לפני שה-React renders חזרה אלינו ויעדכן את indexRef דרך useEffect.
+              indexRef.value = clamped;
+              stepsAcc.value = target;
+            }
+          }
+          // translateY ויזואלי = הסטה של האצבע פחות מה שכבר התקדמנו ב-reorder.
+          // כך ה-row נשאר תחת האצבע גם אחרי שהוא קפץ במיקום ב-array.
+          translateY.value = e.translationY - stepsAcc.value * ITEM_STEP_HEIGHT;
+        })
+        .onEnd(() => {
+          translateY.value = withSpring(0, SOFT_SPRING);
+          liftProgress.value = withSpring(0, SOFT_SPRING);
+          isDragging.value = 0;
+          stepsAcc.value = 0;
+          runOnJS(triggerDropHaptic)();
+        })
+        .onFinalize(() => {
+          translateY.value = withSpring(0, SOFT_SPRING);
+          liftProgress.value = withSpring(0, SOFT_SPRING);
+          isDragging.value = 0;
+          stepsAcc.value = 0;
+        }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locked, totalItems],
+  );
 
   const animatedStyle = useAnimatedStyle(() => {
     // interp [0..1] for scale (1 → 1.06) and shadow (0.05 → 0.22)
@@ -261,7 +271,7 @@ function DraggableItemRow({
       </Animated.View>
     </GestureDetector>
   );
-}
+});
 
 export function TimelineOrderCard({
   prompt,
@@ -291,19 +301,28 @@ export function TimelineOrderCard({
   const [helpDismissed, setHelpDismissed] = useState<boolean>(false);
   const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const moveCountRef = useRef(0);
+  // Read the latest locked/helpDismissed inside the timer callback via refs so
+  // resetInactivityTimer has a STABLE identity — otherwise it changes whenever
+  // `locked` flips and restarts the 15s countdown on every lock toggle.
+  const lockedRef = useRef(locked);
+  lockedRef.current = locked;
+  const helpDismissedRef = useRef(helpDismissed);
+  helpDismissedRef.current = helpDismissed;
   const resetInactivityTimer = useCallback(() => {
     if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
-    if (helpDismissed || locked) return;
+    if (helpDismissedRef.current || lockedRef.current) return;
     helpTimerRef.current = setTimeout(() => {
       setShowHelpOffer(true);
     }, HELP_OFFER_DELAY_MS);
-  }, [helpDismissed, locked]);
+  }, []);
+  // Start the inactivity countdown on mount and whenever a new prompt mounts —
+  // NOT when `locked` flips (that's handled inside the callback via refs).
   useEffect(() => {
     resetInactivityTimer();
     return () => {
       if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
     };
-  }, [resetInactivityTimer]);
+  }, [prompt.id, resetInactivityTimer]);
   // Reset the move counter whenever a new prompt mounts (key change on
   // the prompt id propagates here via the prompt prop).
   useEffect(() => {
@@ -341,7 +360,11 @@ export function TimelineOrderCard({
   // התנתקה מ-moveItem ועברה לכפתור "בדוק" — כך המשתמש שולט מתי לבדוק.
   const moveItem = useCallback(
     (fromIdx: number, toIdx: number) => {
-      if (locked) return;
+      // Read locked/helpDismissed via refs so moveItem keeps a STABLE identity:
+      // the per-row Pan gesture is memoized and captures this callback, so if its
+      // identity changed on helpDismissed the gesture would hold a stale closure
+      // and re-surface the already-dismissed help offer after a few more drags.
+      if (lockedRef.current) return;
       const current = localOrderRef.current;
       const clamped = Math.max(0, Math.min(current.length - 1, toIdx));
       if (clamped === fromIdx) return;
@@ -360,12 +383,12 @@ export function TimelineOrderCard({
       moveCountRef.current += 1;
       if (
         moveCountRef.current >= HELP_OFFER_MOVE_THRESHOLD
-        && !helpDismissed
+        && !helpDismissedRef.current
       ) {
         setShowHelpOffer(true);
       }
     },
-    [locked, resetInactivityTimer, helpDismissed],
+    [resetInactivityTimer],
   );
 
   // Apply the correct order in one shot when the user accepts shark's help.
@@ -397,10 +420,7 @@ export function TimelineOrderCard({
   const handleCheck = useCallback(() => {
     if (locked) return;
     const current = localOrderRef.current;
-    const isCorrect = current.every((itemId, i) => {
-      const item = prompt.items.find((it) => it.id === itemId);
-      return item !== undefined && item.correctOrder === i;
-    });
+    const isCorrect = current.every((itemId, i) => itemMap[itemId]?.correctOrder === i);
 
     if (isCorrect) {
       successHaptic();
@@ -427,7 +447,7 @@ export function TimelineOrderCard({
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       wrongTimerRef.current = setTimeout(() => setWrong(false), 1400);
     }
-  }, [locked, prompt.items, onSubmit, triggerShake, playSound]);
+  }, [locked, itemMap, onSubmit, triggerShake, playSound]);
 
   const handleContinue = useCallback(() => {
     onCorrectSettledRef.current();

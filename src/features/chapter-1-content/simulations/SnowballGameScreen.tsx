@@ -1,6 +1,6 @@
 import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, Dimensions } from 'react-native';
+import { View, Text, Dimensions, type DimensionValue } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -136,7 +136,7 @@ function SalaryBar({ salary, obligations, freePercent }: { salary: number; oblig
     }, [obligations, salary, barWidth]);
 
     const obligationStyle = useAnimatedStyle(() => ({
-        width: `${barWidth.value}%` as unknown as number,
+        width: `${barWidth.value}%` as DimensionValue,
     }));
 
     const isCritical = freePercent < 30;
@@ -218,12 +218,12 @@ function PurchaseCard({
 
             successHaptic();
 
-            setTimeout(() => {
+            safeTimeout(() => {
                 onChoice(option);
                 setSelectedOption(null);
             }, 2000);
         },
-        [selectedOption, onChoice],
+        [selectedOption, onChoice, safeTimeout],
     );
 
     return (

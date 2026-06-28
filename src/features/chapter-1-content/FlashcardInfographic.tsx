@@ -8,7 +8,7 @@
  */
 import { useState, useCallback, useEffect, useRef } from "react";
 import { View, Image, Text, StyleSheet, Pressable, Modal, Platform } from "react-native";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing, interpolate, Extrapolation } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing, interpolate, Extrapolation, useReducedMotion } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 import type { ImageSource, ImageLoadEventData } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
@@ -598,6 +598,8 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     });
   }, [cardId, baseSource, retryAttempt, lottieSource]);
 
+  const reducedMotion = useReducedMotion();
+
   const zoomScale = useSharedValue(1);
   const zoomX = useSharedValue(0);
   const zoomY = useSharedValue(0);
@@ -645,6 +647,11 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   }, [diveStep, zoomRegions, zoomScale, zoomX, zoomY]);
 
   useEffect(() => {
+    if (reducedMotion) {
+      breathScale.value = 1;
+      breathDriftY.value = 0;
+      return;
+    }
     breathScale.value = withRepeat(
       withTiming(1.012, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
       -1,
@@ -655,15 +662,19 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
       -1,
       true,
     );
-  }, [breathScale, breathDriftY]);
+  }, [breathScale, breathDriftY, reducedMotion]);
 
   useEffect(() => {
+    if (reducedMotion) {
+      shimmer.value = 0.85;
+      return;
+    }
     shimmer.value = withRepeat(
       withTiming(0.85, { duration: 900, easing: Easing.inOut(Easing.sin) }),
       -1,
       true,
     );
-  }, [shimmer]);
+  }, [shimmer, reducedMotion]);
 
   const shimmerStyle = useAnimatedStyle(() => ({ opacity: shimmer.value }));
 

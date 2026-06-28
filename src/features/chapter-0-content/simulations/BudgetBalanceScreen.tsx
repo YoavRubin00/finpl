@@ -85,12 +85,15 @@ export function BudgetBalanceScreen({ onComplete }: { onComplete: (score: number
       setBalance(b => b + item.amount);
       successHaptic();
     } else {
-      setBalance(b => b - item.amount);
-      if (balance - item.amount < 0) {
-        errorHaptic();
-      } else {
-        mediumHaptic();
-      }
+      // Decide the haptic from the FRESH balance inside the updater — reading the
+      // `balance` state var here was stale on rapid taps (two expenses in one tick
+      // both saw the pre-update value → wrong error/medium haptic).
+      setBalance(b => {
+        const next = b - item.amount;
+        if (next < 0) errorHaptic();
+        else mediumHaptic();
+        return next;
+      });
     }
 
     setItems(prev => prev.filter(i => i.id !== item.id));

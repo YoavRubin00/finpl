@@ -56,7 +56,7 @@ const END_DELAY_MS = 800;
 /*  useNinjaEngine                                                     */
 /* ------------------------------------------------------------------ */
 
-export function useNinjaEngine(scenario: NinjaScenario, screenHeight: number) {
+export function useNinjaEngine(scenario: NinjaScenario, screenHeight: number, screenWidth: number) {
     /* ---- Game phase & state ---- */
     const [phase, setPhase] = useState<NinjaPhase>('ready');
     const [gameState, setGameState] = useState<NinjaGameState>({
@@ -137,6 +137,9 @@ export function useNinjaEngine(scenario: NinjaScenario, screenHeight: number) {
             strikesRef.current += newlyMissed.length;
 
             if (strikesRef.current >= MAX_STRIKES) {
+                // endGame() already commits missedItems + strikes to state in the
+                // same batch, and the board unmounts on the summary phase — no
+                // extra sync needed here.
                 endGame();
                 return;
             }
@@ -188,7 +191,7 @@ export function useNinjaEngine(scenario: NinjaScenario, screenHeight: number) {
 
             const { hitRadius } = ninjaPhysics;
             const hit = flyingRef.current.find((fi) => {
-                const itemPixelX = fi.x * screenHeight; // approximate, screen width ≈ height for hit check
+                const itemPixelX = fi.x * screenWidth;
                 const itemPixelY = fi.y * screenHeight;
                 const dx = fingerX - itemPixelX;
                 const dy = fingerY - itemPixelY;
@@ -211,7 +214,7 @@ export function useNinjaEngine(scenario: NinjaScenario, screenHeight: number) {
 
             setSlicedItems([...slicedRef.current]);
         },
-        [screenHeight],
+        [screenHeight, screenWidth],
     );
 
     /* ---- Pan gesture for slicing ---- */
@@ -341,10 +344,10 @@ export function useNinjaEngine(scenario: NinjaScenario, screenHeight: number) {
     }> => {
         return flyingRef.current.map((fi) => ({
             item: fi.item,
-            pixelX: fi.x * screenHeight,
+            pixelX: fi.x * screenWidth,
             pixelY: fi.y * screenHeight,
         }));
-    }, [screenHeight]);
+    }, [screenHeight, screenWidth]);
 
     return {
         phase,

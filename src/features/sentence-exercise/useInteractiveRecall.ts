@@ -124,23 +124,27 @@ export function useInteractiveRecall(
       const isFirstTry = attemptsSoFar === 0;
       const reward = rewardFor(attemptsSoFar + 1);
       const finishesSet = state.currentIndex >= (set?.prompts.length ?? 0) - 1;
-      const newStreak = isFirstTry ? state.streak + 1 : 0;
-      const streakBonus = STREAK_BONUS_AT.has(newStreak) ? STREAK_BONUS_XP : 0;
-      const mood: FinnMood = finishesSet ? "dancing" : newStreak >= 3 ? "fire" : "happy";
-      const message = finishesSet
-        ? "סיימתם את סט התרגול!"
-        : newStreak >= 3
-          ? "סטריק! 🔥"
-          : pickCorrectMessage(prompt);
 
-      setState((prev) => ({
-        ...prev,
-        streak: newStreak,
-        totalXp: prev.totalXp + reward.xp + streakBonus,
-        totalCoins: prev.totalCoins + reward.coins,
-        finnMood: mood,
-        finnMessage: message,
-      }));
+      setState((prev) => {
+        const prevFinishesSet = prev.currentIndex >= (set?.prompts.length ?? 0) - 1;
+        const newStreak = isFirstTry ? prev.streak + 1 : 0;
+        const streakBonus = STREAK_BONUS_AT.has(newStreak) ? STREAK_BONUS_XP : 0;
+        const mood: FinnMood = prevFinishesSet ? "dancing" : newStreak >= 3 ? "fire" : "happy";
+        const message = prevFinishesSet
+          ? "סיימת את סט התרגול!"
+          : newStreak >= 3
+            ? "סטריק! 🔥"
+            : pickCorrectMessage(prompt);
+
+        return {
+          ...prev,
+          streak: newStreak,
+          totalXp: prev.totalXp + reward.xp + streakBonus,
+          totalCoins: prev.totalCoins + reward.coins,
+          finnMood: mood,
+          finnMessage: message,
+        };
+      });
 
       // Feed the shared cross-lesson energy combo (every 4-in-a-row → +1 energy).
       useHeartsStore.getState().registerComboCorrect();

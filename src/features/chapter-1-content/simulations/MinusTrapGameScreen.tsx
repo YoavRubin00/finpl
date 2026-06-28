@@ -429,7 +429,6 @@ function SwipeableCard({
     );
 
     const gesture = Gesture.Pan()
-        .runOnJS(true)
         .onUpdate((e) => {
             translateX.value = e.translationX;
             translateY.value = e.translationY * 0.3;
@@ -692,8 +691,8 @@ const [rewardsGranted, setRewardsGranted] = useState(false);
     useEffect(() => {
         if (state.isGameOver && !gameOverAnimDone) {
             heavyHaptic();
-            setTimeout(() => heavyHaptic(), 150);
-            setTimeout(() => heavyHaptic(), 300);
+            safeTimeout(() => heavyHaptic(), 150);
+            safeTimeout(() => heavyHaptic(), 300);
             if (!heartDeductedRef.current) {
                 heartDeductedRef.current = true;
                 // Simulations are a SANDBOX — game-over does NOT cost energy

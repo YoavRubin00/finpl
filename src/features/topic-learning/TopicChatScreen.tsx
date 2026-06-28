@@ -36,9 +36,14 @@ import { chapter3Data } from '../chapter-3-content/chapter3Data';
 import { chapter4Data } from '../chapter-4-content/chapter4Data';
 import { chapter5Data } from '../chapter-5-content/chapter5Data';
 import { COMPANION_PERSONALITIES as COMPANIONS } from '../chat/chatData';
-import type { CompanionId } from '../auth/types';
+import type { CompanionId, UserProfile } from '../auth/types';
 
 const ALL_CHAPTERS = [chapter0Data, chapter1Data, chapter2Data, chapter3Data, chapter4Data, chapter5Data];
+
+function formatTime(ts: number): string {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 interface Message {
   /** Stable identity for React keys — survives streaming updates and
@@ -48,6 +53,73 @@ interface Message {
   text: string;
   timestamp: number;
 }
+
+/**
+ * One chat bubble, memoized so a streamed chunk (which mutates only the LAST
+ * message's `text`) re-renders just that bubble instead of the whole history.
+ * Keyed on id + text + isStreamingPlaceholder — the only inputs that change.
+ */
+const MessageBubble = React.memo(function MessageBubble({
+  msg,
+  isStreamingPlaceholder,
+}: {
+  msg: Message;
+  isStreamingPlaceholder: boolean;
+}): React.ReactElement {
+  const isBot = msg.role === 'assistant';
+  return (
+    <View
+      style={[
+        msgStyles.messageRow,
+        isBot ? msgStyles.messageRowBot : msgStyles.messageRowUser,
+      ]}
+    >
+      {isBot && (
+        <View style={msgStyles.avatarCircle}>
+          <ExpoImage
+            source={FINN_STANDARD}
+            style={{ width: 22, height: 22 }}
+            contentFit="contain"
+            accessible={false}
+          />
+        </View>
+      )}
+      <View
+        style={[
+          msgStyles.bubble,
+          isBot ? msgStyles.botBubble : msgStyles.userBubble,
+          isStreamingPlaceholder && { paddingVertical: 14 },
+        ]}
+      >
+        {isStreamingPlaceholder ? (
+          <ActivityIndicator color="#0e7490" />
+        ) : isBot ? (
+          // Match the main chat: render bot replies through the shared
+          // markdown renderer so **bold**, lists and spacing look the
+          // same here as in ChatScreen (was bare <Text> = flat text).
+          <MarkdownText content={msg.text} baseStyle={[msgStyles.botText, rtl.text]} />
+        ) : (
+          <Text
+            style={[
+              msgStyles.userText,
+              rtl.text,
+            ]}
+            allowFontScaling={false}
+          >
+            {`\u2067${msg.text}\u2069`}
+          </Text>
+        )}
+        {!isStreamingPlaceholder && (
+          <View style={msgStyles.metaRow}>
+            <Text style={msgStyles.timestamp} allowFontScaling={false}>
+              {formatTime(msg.timestamp)}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+});
 
 /**
  * Dedicated, topic-scoped chat. Mirrors the main ChatScreen's
@@ -95,6 +167,13 @@ export function TopicChatScreen(): React.ReactElement {
   }, [moduleId, moduleInfo]);
 
   const [messages, setMessages] = useState<Message[]>([]);
+  // Mirror the transcript in a ref so sendMessage can read the latest
+  // history WITHOUT listing `messages` in its deps — otherwise the callback
+  // was recreated on every keystroke and every streamed chunk.
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -136,7 +215,7 @@ export function TopicChatScreen(): React.ReactElement {
     const userMsg: Message = { id: `u${msgIdRef.current++}`, role: 'user', text: trimmed, timestamp: Date.now() };
     // Snapshot the request transcript BEFORE we append the streaming
     // placeholder, and map our 'assistant' role to the API's 'model'.
-    const reqMessages = [...messages, userMsg].map((m) => ({
+    const reqMessages = [...messagesRef.current, userMsg].map((m) => ({
       role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
       content: m.text,
     }));
@@ -155,9 +234,13 @@ export function TopicChatScreen(): React.ReactElement {
        // The previous `({} as never)` cast suppressed TypeScript while leaking
        // `${undefined}` into the LLM prompt. We still pass an empty object
        // here so the prompt remains usable for guest users without a profile.
+      // buildSystemPrompt self-guards every optional field, so a guest with
+      // no profile is fine — but we type the fallback explicitly instead of
+      // hiding the empty-object hole behind a Parameters<> cast.
+      const promptProfile: UserProfile = (profile ?? {}) as Partial<UserProfile> as UserProfile;
       const systemPrompt = buildSystemPrompt(
         displayName,
-        (profile ?? {}) as Parameters<typeof buildSystemPrompt>[1],
+        promptProfile,
         companionId,
         allCompletedModules,
         currentChapterId,
@@ -214,7 +297,8 @@ export function TopicChatScreen(): React.ReactElement {
     currentChapterId,
     moduleInfo,
     moduleId,
-    messages,
+    // `messages` intentionally omitted — read via messagesRef so the callback
+    // stays stable across keystrokes and streamed chunks.
   ]);
 
   if (!moduleInfo) {
@@ -228,10 +312,6 @@ export function TopicChatScreen(): React.ReactElement {
   }
 
   const limitHit = !isPro && remaining <= 0;
-  const formatTime = (ts: number): string => {
-    const d = new Date(ts);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
@@ -324,65 +404,21 @@ export function TopicChatScreen(): React.ReactElement {
               </Animated.View>
             )}
             {messages.map((msg, idx) => {
-              const isBot = msg.role === 'assistant';
               // The streaming bot bubble is pre-appended empty before the
               // first chunk arrives; show a spinner INSIDE it instead of
               // rendering a separate loading row below the list (which
               // surfaced as a duplicate Finn bubble \u2014 Yoav 2026-06-12).
               const isStreamingPlaceholder =
-                isBot && loading && idx === messages.length - 1 && msg.text.length === 0;
+                msg.role === 'assistant' &&
+                loading &&
+                idx === messages.length - 1 &&
+                msg.text.length === 0;
               return (
-                <View
+                <MessageBubble
                   key={msg.id}
-                  style={[
-                    msgStyles.messageRow,
-                    isBot ? msgStyles.messageRowBot : msgStyles.messageRowUser,
-                  ]}
-                >
-                  {isBot && (
-                    <View style={msgStyles.avatarCircle}>
-                      <ExpoImage
-                        source={FINN_STANDARD}
-                        style={{ width: 22, height: 22 }}
-                        contentFit="contain"
-                        accessible={false}
-                      />
-                    </View>
-                  )}
-                  <View
-                    style={[
-                      msgStyles.bubble,
-                      isBot ? msgStyles.botBubble : msgStyles.userBubble,
-                      isStreamingPlaceholder && { paddingVertical: 14 },
-                    ]}
-                  >
-                    {isStreamingPlaceholder ? (
-                      <ActivityIndicator color="#0e7490" />
-                    ) : isBot ? (
-                      // Match the main chat: render bot replies through the shared
-                      // markdown renderer so **bold**, lists and spacing look the
-                      // same here as in ChatScreen (was bare <Text> = flat text).
-                      <MarkdownText content={msg.text} baseStyle={[msgStyles.botText, rtl.text]} />
-                    ) : (
-                    <Text
-                      style={[
-                        msgStyles.userText,
-                        rtl.text,
-                      ]}
-                      allowFontScaling={false}
-                    >
-                      {`\u2067${msg.text}\u2069`}
-                    </Text>
-                    )}
-                    {!isStreamingPlaceholder && (
-                      <View style={msgStyles.metaRow}>
-                        <Text style={msgStyles.timestamp} allowFontScaling={false}>
-                          {formatTime(msg.timestamp)}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
+                  msg={msg}
+                  isStreamingPlaceholder={isStreamingPlaceholder}
+                />
               );
             })}
           </ScrollView>

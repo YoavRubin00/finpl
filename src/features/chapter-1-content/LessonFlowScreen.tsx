@@ -480,6 +480,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
   const startedAtRef = useRef<number | null>(null);
   const reportedStartRef = useRef(false);
   const insets = useSafeAreaInsets();
+  const safeTimeout = useTimeoutCleanup();
 
   // Extracts a stable identifier for the video so PostHog events can be
   // grouped — bundle (number) is the static asset id; URI strips the CDN
@@ -533,7 +534,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       if (hasPlayedRef.current && !e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - trimEnd) {
         const duration_ms = startedAtRef.current ? Date.now() - startedAtRef.current : null;
         captureEvent('video_completed', { video_key: videoKey, platform: Platform.OS, duration_ms });
-        setTimeout(safeFinish, 500);
+        safeTimeout(safeFinish, 500);
       }
     }));
 
@@ -1146,6 +1147,7 @@ function QuizCard({
   useEffect(() => {
     return () => { if (autoTimerRef.current) clearTimeout(autoTimerRef.current); };
   }, []);
+  const safeTimeout = useTimeoutCleanup();
   const { playSound } = useSoundEffect();
   const [finnState, setFinnState] = useState<FinnAnimationState>("thinking");
 
@@ -1171,7 +1173,7 @@ function QuizCard({
         celebrationScale.value = withSpring(1, { damping: 20, stiffness: 150 });
         setFinnState("celebrate");
         successHaptic();
-        setTimeout(() => { playSound('modal_open_2'); }, 100);
+        safeTimeout(() => { playSound('modal_open_2'); }, 100);
         autoTimerRef.current = setTimeout(() => onCorrectAnswer(), 3400);
       } else {
         // Wrong answer, give up to 3 chances
@@ -1179,7 +1181,7 @@ function QuizCard({
         errorHaptic();
         onWrongImmediate(); // Heart drops immediately
         setFinnState("empathy");
-        setTimeout(() => { playSound('modal_open_3'); }, 100);
+        safeTimeout(() => { playSound('modal_open_3'); }, 100);
         const newWrong = new Set(wrongAttempts);
         newWrong.add(idx);
         setWrongAttempts(newWrong);
@@ -1366,7 +1368,7 @@ function QuizCard({
             {wrongAttempts.size > 0 && !isRevealed && (
               <Animated.View entering={FadeIn.duration(200)} style={{ marginTop: 12 }}>
                 <Text style={[RTL_STYLE, { fontSize: 12, color: "#f59e0b" }]}>
-                  לא נכון, נסה שוב! 💪 ({wrongAttempts.size}/3)
+                  לא נכון, ננסה שוב! 💪 ({wrongAttempts.size}/3)
                 </Text>
               </Animated.View>
             )}
@@ -1471,16 +1473,16 @@ function SummaryScreen({
   const isChapterComplete = completedInChapter >= chapterModules.length;
 
   const completionMessagesPerfect = [
-    "מושלם! עניתם נכון על כל השאלות",
-    "כל הכבוד! הידע שלכם בשמיים",
-    "מצוין! אתם ממש מקצוענים פיננסיים",
+    "מושלם! ענית נכון על כל השאלות",
+    "כל הכבוד! הידע שלך בשמיים",
+    "מצוין! ממש מקצוען/ית פיננסי/ת",
     "מושלם! קפטן שארק מתרשם מאוד",
   ];
 
   const completionMessagesGood = [
-    "כל הכבוד! סיימתם את המודול",
-    "יופי! עשיתם צעד גדול קדימה",
-    "עבודה מעולה! אתם בדרך הנכונה",
+    "כל הכבוד! סיימת את המודול",
+    "יופי! צעד גדול קדימה",
+    "עבודה מעולה! בדרך הנכונה",
     "סחתיין! עוד מודול בארון",
   ];
 
@@ -1493,7 +1495,7 @@ function SummaryScreen({
         ? completionMessagesPerfect[randomIdx]
         : correctCount >= totalCount / 2
           ? completionMessagesGood[randomIdx]
-          : "סיימת! נסה שוב כדי לשפר";
+          : "סיימת! ננסה שוב כדי לשפר";
 
   const progressLabel =
     isChapterComplete
@@ -2056,13 +2058,18 @@ function SimIntroOverlay({
 /* ------------------------------------------------------------------ */
 
 const CHAPTER_DATA_MAP: Record<string, typeof chapter1Data> = {
-  "chapter-0": chapter0Data as unknown as typeof chapter1Data,
+  "chapter-0": chapter0Data,
   "chapter-1": chapter1Data,
   "chapter-2": chapter2Data,
   "chapter-3": chapter3Data,
   "chapter-4": chapter4Data,
   "chapter-5": chapter5Data,
 };
+
+// Hoisted to module scope: ordered chapter list for the access gate. Was
+// rebuilt every render inside the component (PERF). Both chapter0Data and
+// chapter1Data are typed `: Chapter`, so no cast is needed.
+const ALL_CHAPTERS_ORDERED = [chapter0Data, chapter1Data, chapter2Data, chapter3Data, chapter4Data, chapter5Data];
 
 const LESSON_COLORS: Record<string, { bg: string; dim: string; glow: string; bottom: string }> = {
   "chapter-0": { bg: "#3b82f6", dim: "#dbeafe", glow: "#93c5fd", bottom: "#1d4ed8" },
@@ -2431,7 +2438,7 @@ export function LessonFlowScreen() {
   }, [isPro, isBookmarked, bookmarkId, mod, id, chapterId, showUpgradeModal, removeItem, addItem]);
 
   // Check if this module is accessible (in sequence or PRO)
-  const ALL_CHAPTERS_ORDERED = [chapter0Data as unknown as typeof chapter1Data, chapter1Data, chapter2Data, chapter3Data, chapter4Data, chapter5Data];
+  // ALL_CHAPTERS_ORDERED hoisted to module scope (see top of file).
   // Subscribe to the durable local completion store so the gate re-evaluates the
   // instant a module is marked complete (getCompletedModulesSync unions it in).
   const localCompletedIds = useCompletedModulesStore((s) => s.completedIds);
@@ -2743,6 +2750,9 @@ export function LessonFlowScreen() {
 
   useEffect(() => {
     setVideoPlaying(phase === "video" || phase === "post-infographic-video" || phase === "mid-quiz-video");
+    // Reset the global audio-duck flag on unmount-during-video so it never
+    // leaks "video playing" into the next screen.
+    return () => setVideoPlaying(false);
   }, [phase]);
 
   // remember the entry phase. The moment the lesson advances past it (the
@@ -3586,6 +3596,9 @@ export function LessonFlowScreen() {
   // Drain the post-chest nudge queue: only show Referral/Bridge once every
   // higher-priority modal has been dismissed, so the user never sees two
   // popups stacked. Re-runs whenever a blocker toggles.
+  // PERF TODO: this modal-effect chain re-runs on every one of ~8 boolean
+  // toggles; consider consolidating the blocker flags into a single
+  // reducer/derived state instead of one effect keyed on all of them.
   useEffect(() => {
     if (!pendingPostChestNudge) return;
     const blockerActive =
@@ -3615,11 +3628,21 @@ export function LessonFlowScreen() {
   // Chapter context for progress display
   const chapterData = chapterId ? CHAPTER_DATA_MAP[chapterId] : undefined;
   const chapterModules = chapterData?.modules ?? [];
-  const currentModIdx = chapterModules.findIndex((m) => m.id === id);
   const chapterStoreId = chapterId ? `ch-${chapterId.split("-")[1]}` : "";
-  const completedSet = getCompletedModulesSync(chapterStoreId);
-  const currentAlreadyCounted = id ? completedSet.includes(id) : false;
-  const completedInChapter = completedSet.length + (phase === "summary" && !currentAlreadyCounted ? 1 : 0);
+  // getCompletedModulesSync does filter+map+Set+spread; memoize it (and the
+  // derived counts) so it doesn't recompute on every render — keyed on the
+  // same inputs as isModuleAccessible (progressData/localCompletedIds keep it
+  // fresh when completion changes).
+  const { currentModIdx, completedInChapter } = useMemo(() => {
+    const set = getCompletedModulesSync(chapterStoreId);
+    const idx = chapterModules.findIndex((m) => m.id === id);
+    const alreadyCounted = id ? set.includes(id) : false;
+    return {
+      currentModIdx: idx,
+      completedInChapter: set.length + (phase === "summary" && !alreadyCounted ? 1 : 0),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterStoreId, chapterModules, id, phase, progressData, localCompletedIds]);
   const isLastModule = currentModIdx === chapterModules.length - 1;
   const nextModule = !isLastModule ? chapterModules[currentModIdx + 1] : undefined;
 
@@ -3991,7 +4014,7 @@ export function LessonFlowScreen() {
     } else {
       setShowOutOfHearts(true);
     }
-  }, [mod, quizIndex, isReplay]);
+  }, [mod, quizIndex, isReplay, isPro, energyOn]);
 
   // Deferred, advances quiz after feedback shown (stops if no hearts left)
   const handleWrongRevealed = useCallback(() => {
@@ -4993,6 +5016,10 @@ export function LessonFlowScreen() {
                       accessibilityRole="button"
                       accessibilityLabel="פתח תיבת אוצר"
                       onPress={() => {
+                        // SYNCHRONOUS double-tap guard: chestOpened is async state,
+                        // so a fast second tap before it flushes would double-grant
+                        // coins/XP. chestAnimationStartedRef is set synchronously below.
+                        if (chestOpened || chestAnimationStartedRef.current) return;
                         if (!chestOpened) {
                           playSound('btn_click_heavy');
                           chestAnimationStartedRef.current = true;
@@ -5384,6 +5411,7 @@ export function LessonFlowScreen() {
             style={StyleSheet.absoluteFill}
           />
           {/* Diamond overlay pattern (like shop) */}
+          {/* PERF TODO: 14×8 = 112 absolute Views rebuilt every render — extract to a memoized/static decorative component (e.g. a single pre-rendered background) instead of mapping 112 Views inline. */}
           <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
             {Array.from({ length: 14 }).map((_, row) =>
               Array.from({ length: 8 }).map((_, col) => (

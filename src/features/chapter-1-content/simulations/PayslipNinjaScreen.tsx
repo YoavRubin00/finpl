@@ -517,14 +517,14 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
                                 style={styles.pauseBtn}
                                 accessibilityRole="button"
                                 accessibilityLabel={isPaused ? 'המשך טיימר' : 'השהה טיימר'}
-                                accessibilityHint={isPaused ? 'לחץ כדי להמשיך את הספירה' : 'לחץ כדי להשהות את הספירה'}
+                                accessibilityHint={isPaused ? 'הקש כדי להמשיך את הספירה' : 'הקש כדי להשהות את הספירה'}
                             >
                                 {isPaused ? <Play size={16} color="#3b82f6" /> : <Pause size={16} color="#64748b" />}
                             </AnimatedPressable>
                         </View>
                         {isPaused && (
                             <Text style={[RTL, { fontSize: 13, fontWeight: '700', color: '#3b82f6', textAlign: 'center', marginTop: 4 }]}>
-                                ⏸ המשחק מושהה, לחץ ▶ כדי להמשיך
+                                המשחק מושהה, הקש כדי להמשיך
                             </Text>
                         )}
 

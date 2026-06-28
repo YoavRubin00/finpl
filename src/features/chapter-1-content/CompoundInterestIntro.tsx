@@ -142,7 +142,7 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
   // Caption fade-in on phase change
   useEffect(() => {
     captionOp.value = 0;
-    captionOp.value = withTiming(1, { duration: 350 });
+    captionOp.value = reducedMotion ? 1 : withTiming(1, { duration: 350 });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 

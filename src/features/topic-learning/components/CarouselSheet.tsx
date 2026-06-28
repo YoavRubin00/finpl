@@ -62,6 +62,13 @@ export function CarouselSheet({
     [total],
   );
 
+  // Warm the next slide's decoded image into cache so swiping advances are
+  // instant (the proxied 4:5 PNGs are heavy to decode on first paint).
+  useEffect(() => {
+    const next = slides[page + 1];
+    if (next) void ExpoImage.prefetch(toProxiedImageUri(next.uri), "memory-disk");
+  }, [page, slides]);
+
   // Horizontal swipe → next/prev. RTL mapping mirrors MondialCarouselSheet:
   // rightward drag = advance (next slide sits to the LEFT in RTL), leftward =
   // back. activeOffsetX lets vertical drags + taps pass through.
@@ -108,8 +115,10 @@ export function CarouselSheet({
               </View>
 
               <View style={styles.stage}>
+                {/* No key={page}: keep the wrapper mounted so prefetched images
+                    crossfade via ExpoImage's transition={150} instead of remounting
+                    (a remount discards the warmed cache). FadeIn fires on first mount. */}
                 <Animated.View
-                  key={page}
                   entering={FadeIn.duration(180)}
                   style={styles.slideWrap}
                 >

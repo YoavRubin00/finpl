@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { successHaptic } from '../../utils/haptics';
@@ -133,12 +134,23 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // `useModulePrefetch` so multiple mounts don't re-download.
   useTopicTreeAssetPrefetch(module);
 
-  const completedMap = useTopicProgressStore((s) => s.completed);
+  // Subscribe ONLY to THIS module's topics' completion slice (one boolean per
+  // topic, in `topics` order) wrapped in useShallow — so a topic completing in
+  // an UNRELATED module no longer invalidates this module's memos. (Previously
+  // we subscribed to the whole `s.completed` map, so any completion anywhere
+  // re-ran summary / isCompletedMap / displayTopics here.) The booleans are
+  // shallow-compared, so this re-renders only when one of THIS module's topics
+  // actually flips.
+  const completedFlags = useTopicProgressStore(
+    useShallow((s) => topics.map((t) => Boolean(s.completed[t.id]))),
+  );
   const summarize = useTopicProgressStore((s) => s.summaryForModule);
   const summary = useMemo(
     () => summarize(module.id, topics),
+    // summarize reads s.completed via getState() internally; completedFlags is
+    // the stable dependency that tells us when THIS module's completion changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [module.id, topics, completedMap],
+    [module.id, topics, completedFlags],
   );
 
   // Chips still needed to open the chest — drives the SharkChipCallout
@@ -156,11 +168,15 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     (s) => Object.keys(s.modulesPastThreshold).length === 0,
   );
 
+  // Built off the per-module completedFlags slice (stable via useShallow) instead
+  // of the whole completed map, so this stays referentially stable when none of
+  // THIS module's topics changed — preventing unrelated completions from
+  // invalidating displayTopics / ModuleTopicLayout memos downstream.
   const isCompletedMap = useMemo(() => {
     const out: Record<string, boolean> = {};
-    topics.forEach((t) => { out[t.id] = Boolean(completedMap[t.id]); });
+    topics.forEach((t, i) => { out[t.id] = completedFlags[i]; });
     return out;
-  }, [topics, completedMap]);
+  }, [topics, completedFlags]);
 
   // Bonus "tool" chip (e.g. "נתח תלוש שכר") — appended to the END of the
   // accordion ONLY once the module crosses the registered reveal % (Yoav

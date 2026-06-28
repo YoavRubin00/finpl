@@ -23,6 +23,7 @@ import Animated, {
   cancelAnimation,
 } from "react-native-reanimated";
 import LottieView from "lottie-react-native";
+import { useTimeoutCleanup } from "../../../hooks/useTimeoutCleanup";
 import { AnimatedPressable } from "../../../components/ui/AnimatedPressable";
 import { ConfettiExplosion } from "../../../components/ui/ConfettiExplosion";
 import { GoldCoinIcon } from "../../../components/ui/GoldCoinIcon";
@@ -72,9 +73,14 @@ export function BarterPuzzleScreen({
   const [heldItem, setHeldItem] = useState<BarterItem>(STARTING_ITEM);
   const [speech, setSpeech] = useState<string>("");
   const [speechKey, setSpeechKey] = useState(0);
-  const [showHint, setShowHint] = useState(false);
+  // Hint was only ever shown during the (now-removed) chicken→François swap step,
+  // so it stays false in the current reject→coin flow. Kept as a no-op read.
+  const [showHint] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [coinAccepted, setCoinAccepted] = useState<Set<string>>(new Set());
+
+  // Auto-clearing timers (no leaks on unmount mid-animation)
+  const safeTimeout = useTimeoutCleanup();
 
   // Merchant slot positions (measured via onLayout)
   const merchantPositions = useRef<Record<string, { x: number; y: number }>>({});
@@ -93,42 +99,11 @@ export function BarterPuzzleScreen({
     // Skip the chicken→François barter swap (Yoav 2026-05-27 — the rejection
     // scene is enough to demonstrate the friction of barter). Go straight to
     // the coin reveal so users don't have to drag through an extra step.
-    setTimeout(() => {
+    safeTimeout(() => {
       setSpeech("");
       setPhase("coinDrop");
     }, 1200);
-  }, []);
-
-  const handleSwap1 = useCallback(() => {
-    successHaptic();
-    setSpeech(SWAP_MERCHANTS[0].acceptLine);
-    setSpeechKey((k) => k + 1);
-    setHeldItem({ emoji: SWAP_MERCHANTS[0].gives, label: SWAP_MERCHANTS[0].givesLabel });
-    setShowHint(false);
-    // Skip swap2+payDebt → go straight to coin phase after one barter trade
-    setTimeout(() => {
-      setSpeech("");
-      setPhase("coinDrop");
-    }, 1200);
-  }, []);
-
-  const handleSwap2 = useCallback(() => {
-    successHaptic();
-    setSpeech(SWAP_MERCHANTS[1].acceptLine);
-    setSpeechKey((k) => k + 1);
-    setHeldItem({ emoji: SWAP_MERCHANTS[1].gives, label: SWAP_MERCHANTS[1].givesLabel });
-    setTimeout(() => {
-      setPhase("payDebt");
-      setSpeech("");
-    }, 800);
-  }, []);
-
-  const handlePayDebt = useCallback(() => {
-    successHaptic();
-    setSpeech(TARGET_MERCHANT.acceptLine);
-    setSpeechKey((k) => k + 1);
-    setTimeout(() => setPhase("coinDrop"), 1500);
-  }, []);
+  }, [safeTimeout]);
 
   const handleCoinDrop = useCallback(() => {
     heavyHaptic();
@@ -144,16 +119,16 @@ export function BarterPuzzleScreen({
         const next = new Set(prev);
         next.add(merchantId);
         if (next.size >= 2) {
-          setTimeout(() => {
+          safeTimeout(() => {
             doubleHeavyHaptic();
             setShowConfetti(true);
-            setTimeout(() => setPhase("insight"), 600);
+            safeTimeout(() => setPhase("insight"), 600);
           }, 400);
         }
         return next;
       });
     },
-    [],
+    [safeTimeout],
   );
 
   const handleFinish = useCallback(() => {
@@ -189,22 +164,10 @@ export function BarterPuzzleScreen({
         handleReject();
         return false; // spring back
       }
-      if (phase === "swap1" && closestId === "francois") {
-        handleSwap1();
-        return true;
-      }
-      if (phase === "swap2" && closestId === "yossi") {
-        handleSwap2();
-        return true;
-      }
-      if (phase === "payDebt" && closestId === "abu-hasan") {
-        handlePayDebt();
-        return true;
-      }
 
       return false;
     },
-    [phase, coinAccepted, handleReject, handleSwap1, handleSwap2, handlePayDebt, handleCoinAccept],
+    [phase, coinAccepted, handleReject, handleCoinAccept],
   );
 
   // ── Render ──
@@ -231,21 +194,17 @@ export function BarterPuzzleScreen({
     );
   }
 
-  // Active game phases: reject, swap1, swap2, payDebt, moneyPhase
+  // Active game phases: reject, moneyPhase
   // Clear stale positions, only visible merchants should have registered positions
   const visibleMerchantIds = new Set<string>();
   const visibleMerchants: Merchant[] = [];
-  if (phase === "reject" || phase === "payDebt" || phase === "moneyPhase") {
+  if (phase === "reject" || phase === "moneyPhase") {
     visibleMerchants.push(TARGET_MERCHANT);
     visibleMerchantIds.add(TARGET_MERCHANT.id);
   }
-  if (phase === "swap1" || phase === "moneyPhase") {
+  if (phase === "moneyPhase") {
     visibleMerchants.push(SWAP_MERCHANTS[0]);
     visibleMerchantIds.add(SWAP_MERCHANTS[0].id);
-  }
-  if (phase === "swap2") {
-    visibleMerchants.push(SWAP_MERCHANTS[1]);
-    visibleMerchantIds.add(SWAP_MERCHANTS[1].id);
   }
   // Remove stale positions of merchants that are no longer visible
   for (const id of Object.keys(merchantPositions.current)) {
@@ -259,12 +218,9 @@ export function BarterPuzzleScreen({
   }
 
   const inMoneyPhaseTitle = phase === "moneyPhase";
-  const phaseTitle =
-    inMoneyPhaseTitle
-      ? "גרור את המטבע לכל סוחר"
-      : phase === "payDebt"
-        ? "עכשיו תן לאבו-חסן את הדגים!"
-        : "גרור את הפריט לסוחר הנכון";
+  const phaseTitle = inMoneyPhaseTitle
+    ? "גרור את המטבע לכל סוחר"
+    : "גרור את הפריט לסוחר הנכון";
 
   return (
     <View style={styles.container}>
@@ -435,17 +391,15 @@ function DraggableItem({
         translateX.value = gesture.dx;
         translateY.value = gesture.dy;
       },
+      // PERF TODO: migrate to Gesture.Pan worklet
       onPanResponderRelease: (_, gesture) => {
         const dropX = gesture.moveX;
         const dropY = gesture.moveY;
-        const accepted = onDropRef.current(dropX, dropY);
-        if (!accepted) {
-          translateX.value = withSpring(0, SPRING_SMOOTH);
-          translateY.value = withSpring(0, SPRING_SMOOTH);
-        } else {
-          translateX.value = withSpring(0, SPRING_SMOOTH);
-          translateY.value = withSpring(0, SPRING_SMOOTH);
-        }
+        // Fire the drop for its side effects (phase transitions); the item always
+        // springs back to origin whether or not the drop was accepted.
+        onDropRef.current(dropX, dropY);
+        translateX.value = withSpring(0, SPRING_SMOOTH);
+        translateY.value = withSpring(0, SPRING_SMOOTH);
         scale.value = withSpring(1, SPRING_SMOOTH);
       },
     }),

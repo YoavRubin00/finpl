@@ -161,6 +161,21 @@ export function FillBlankCard({
   const onCorrectSettledRef = useRef(onCorrectSettled);
   useEffect(() => { onCorrectSettledRef.current = onCorrectSettled; });
 
+  // Pending timers from handleChoice — sound cue, the correct-hold settle, and
+  // the wrong-flash auto-clear. Stored in refs so they can be cleared on
+  // unmount and at the start of each handleChoice (mirrors TimelineOrderCard's
+  // wrongTimerRef pattern) — otherwise a rapid tap or unmount mid-delay leaks
+  // the timer and fires a setState / callback on a stale/unmounted card.
+  const soundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrongTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearPendingTimers = useCallback(() => {
+    if (soundTimerRef.current) clearTimeout(soundTimerRef.current);
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
+  }, []);
+  useEffect(() => clearPendingTimers, [clearPendingTimers]);
+
   const { playSound } = useSoundEffect();
 
   const shakeStyle = useAnimatedStyle(() => ({
@@ -170,6 +185,9 @@ export function FillBlankCard({
   const handleChoice = useCallback(
     (choice: FillBlankChoice) => {
       if (!activeSlot || placement[activeSlot]) return;
+      // Cancel any timers still pending from a previous tap before scheduling
+      // new ones, so a fast second tap doesn't leak the earlier delays.
+      clearPendingTimers();
       tapHaptic();
       // Same sound palette as the quiz options in LessonFlowScreen
       // (btn_click_soft_3 on tap, modal_open_2 on correct, modal_open_3
@@ -178,18 +196,18 @@ export function FillBlankCard({
       const result = onAttempt(activeSlot, choice.id);
       if (result.correct) {
         successHaptic();
-        setTimeout(() => { playSound('modal_open_2'); }, 100);
+        soundTimerRef.current = setTimeout(() => { playSound('modal_open_2'); }, 100);
         setWrongChoice(null);
         setConfetti((n) => n + 1);
         const nextSlot = prompt.slots.find((s) => s.slotId !== activeSlot && !placement[s.slotId]);
         if (nextSlot) {
           setActiveSlot(nextSlot.slotId);
         } else {
-          setTimeout(() => onCorrectSettledRef.current(), CORRECT_HOLD_MS);
+          settleTimerRef.current = setTimeout(() => onCorrectSettledRef.current(), CORRECT_HOLD_MS);
         }
       } else {
         errorHaptic();
-        setTimeout(() => { playSound('modal_open_3'); }, 100);
+        soundTimerRef.current = setTimeout(() => { playSound('modal_open_3'); }, 100);
         setWrongChoice(choice.id);
         if (!reducedMotion) {
           shake.value = withSequence(
@@ -199,7 +217,7 @@ export function FillBlankCard({
             withTiming(0, { duration: 60 }),
           );
         }
-        setTimeout(() => setWrongChoice((c) => (c === choice.id ? null : c)), 420);
+        wrongTimerRef.current = setTimeout(() => setWrongChoice((c) => (c === choice.id ? null : c)), 420);
       }
     },
     [activeSlot, onAttempt, placement, prompt.slots, shake, reducedMotion, playSound],

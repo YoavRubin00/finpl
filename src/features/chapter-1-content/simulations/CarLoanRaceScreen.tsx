@@ -1,6 +1,6 @@
 import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, type DimensionValue } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -51,7 +51,7 @@ function SpeedBar({ speed }: { speed: number }) {
     }, [speed, animWidth]);
 
     const barStyle = useAnimatedStyle(() => ({
-        width: `${animWidth.value}%` as unknown as number,
+        width: `${animWidth.value}%` as DimensionValue,
     }));
 
     const color = speed > 60 ? '#22c55e' : speed > 30 ? '#f59e0b' : '#f97316';

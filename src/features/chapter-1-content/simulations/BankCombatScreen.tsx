@@ -1,5 +1,5 @@
 import { createAudioPlayer } from 'expo-audio';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
     useSharedValue,
@@ -368,9 +368,14 @@ export function BankCombatScreen({ onComplete }: { onComplete: () => void }) {
 const [showFeedback, setShowFeedback] = useState(false);
     const [hitType, setHitType] = useState<'shield' | 'damage' | null>(null);
 
+    // Synchronous guard so a fast double-tap can't resolve two rounds before
+    // state updates (state.isComplete is a stale closure during the same tick).
+    const resolvingRef = useRef(false);
+
     const onDefensePress = useCallback(
         (defense: DefenseOption) => {
-            if (state.isComplete) return;
+            if (state.isComplete || resolvingRef.current) return;
+            resolvingRef.current = true;
 
             const isBlocked = defense.effectiveness > 0;
             setHitType(isBlocked ? 'shield' : 'damage');
@@ -389,11 +394,13 @@ const [showFeedback, setShowFeedback] = useState(false);
     );
 
     const dismissFeedback = useCallback(() => {
+        resolvingRef.current = false;
         setShowFeedback(false);
         setHitType(null);
     }, []);
 
     const handleReplay = useCallback(() => {
+        resolvingRef.current = false;
         resetGame();
         setShowFeedback(false);
         setHitType(null);

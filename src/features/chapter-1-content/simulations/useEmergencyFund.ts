@@ -22,6 +22,9 @@ const LAYOFF_MONTHS = new Set([8, 9]);
 /** Internal state extends public state with outstanding loan tracking */
 interface InternalState extends EmergencyFundState {
     outstandingLoan: number;
+    /** Month-feedback carried IN the state so it's set atomically with the rest
+     *  of the month advance (was a separate setState fired inside this updater). */
+    lastMonthResult: MonthResult | null;
 }
 
 /** Feedback info from the last month processed */
@@ -44,11 +47,11 @@ const INITIAL_STATE: InternalState = {
     happiness: 5,
     isComplete: false,
     outstandingLoan: 0,
+    lastMonthResult: null,
 };
 
 export function useEmergencyFund(config: EmergencyFundConfig) {
     const [internal, setInternal] = useState<InternalState>(INITIAL_STATE);
-    const [lastMonthResult, setLastMonthResult] = useState<MonthResult | null>(null);
     const scheduleRef = useRef<Record<number, string>>(generateSchedule());
 
     /** Get the emergency event for a given month (if any) */
@@ -63,7 +66,7 @@ export function useEmergencyFund(config: EmergencyFundConfig) {
 
     /** Public state (without internal outstandingLoan) */
     const state: EmergencyFundState = useMemo(() => {
-        const { outstandingLoan: _, ...publicState } = internal;
+        const { outstandingLoan: _o, lastMonthResult: _l, ...publicState } = internal;
         return publicState;
     }, [internal]);
 
@@ -181,15 +184,6 @@ export function useEmergencyFund(config: EmergencyFundConfig) {
                 const nextMonth = month + 1;
                 const isComplete = nextMonth > config.totalMonths;
 
-                setLastMonthResult({
-                    savingsAdded,
-                    event,
-                    absorbed,
-                    loanTaken: loanForEvent + expenseShortfall,
-                    expenseShortfall,
-                    happinessEvent: happinessEventResult,
-                });
-
                 return {
                     fundBalance: Math.round(fundBalance),
                     loansTaken,
@@ -200,6 +194,17 @@ export function useEmergencyFund(config: EmergencyFundConfig) {
                     happiness,
                     isComplete,
                     outstandingLoan: Math.round(currentLoan),
+                    // Set the month-feedback atomically in the SAME updater return —
+                    // calling setLastMonthResult() inside this updater was a setState
+                    // during another setState's compute (double-fire under concurrent).
+                    lastMonthResult: {
+                        savingsAdded,
+                        event,
+                        absorbed,
+                        loanTaken: loanForEvent + expenseShortfall,
+                        expenseShortfall,
+                        happinessEvent: happinessEventResult,
+                    },
                 };
             });
         },
@@ -252,7 +257,6 @@ export function useEmergencyFund(config: EmergencyFundConfig) {
     const resetGame = useCallback(() => {
         scheduleRef.current = generateSchedule();
         setInternal(INITIAL_STATE);
-        setLastMonthResult(null);
     }, []);
 
     return {
@@ -260,7 +264,7 @@ export function useEmergencyFund(config: EmergencyFundConfig) {
         currentEvent,
         isLayoffMonth,
         nextMonthHasEvent,
-        lastMonthResult,
+        lastMonthResult: internal.lastMonthResult,
         handleSavingsChoice,
         score,
         resetGame,
