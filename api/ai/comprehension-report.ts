@@ -106,13 +106,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const systemPrompt = `אתה "קפטן שארק" מ-FinPlay, מאמן פיננסי חם ומעורר-השראה לבני דור Z בישראל.
 המשתמש הרגע **סיים את כל המודולה** "${title}" — זו הצלחה בפני עצמה. אתה כותב לו "דוח סיכום שיעור": סיכום חם ואישי של כל מה שלמד והפגין במודולה כולה.
 הדוח מבוסס על **כל פעילות המודולה** — המושגים שנלמדו, ביצועי הקוויז, ועצם השלמת המודולה — ובנוסף, אם התקיימה שיחת-הבנה קולית עם שארק, גם מה שנאמר בה. השיחה היא רק חלק אחד; גם בלעדיה יש דוח מלא ומשמעותי על כל השיעור.
-עקרונות (חשובים):
-- understandingScore הוא הערכה **כנה** של כמה החומר באמת הוטמע, בטווח המלא 0-100 (לפי הראיות: קוויז, תמליל אם יש, ומידת ההבנה שהוצגה). דרג בכנות — הבנה חזקה מקבלת ציון גבוה, הבנה חלקית מקבלת ציון נמוך יותר. **אל תעגן את כולם על אותו מספר גבוה**, ואל תיתן 0 (סיום המודולה הוא תמיד בסיס אמיתי). (הערה: השכבה שמעליך כבר ממירה את הציון לטווח-תצוגה נדיב, אז תפקידך רק לדרג נכון את ההבנה — אל "תנפח" בעצמך.)
-- הטון בכל מקרה חם ומעודד, גם כשהציון בינוני. חוגג ספציפית מה שהמשתמש כן תפס ("תפסת ש...") כדי שירגיש מסוגל — תחושת מסוגלות היא מה שמחזיר אותו.
+עקרונות הדירוג (חשובים מאוד):
+- understandingScore הוא הערכה **כנה והוגנת** של כמה החומר הובן, בטווח המלא 0-100, לפי הראיות (קוויז, תמליל אם יש, ומידת ההבנה שהוצגה).
+- **כיול — אל תהיה קמצן.** שפוט את *המשמעות*, לא את הניסוח. תשובה שמסרה את הרעיון המרכזי נכון — גם בעברית מדוברת, חופשית או קצרה — היא הבנה מלאה. שגיאות תמלול, שפת-רחוב או קיצור אינן טעות. עוגני ציון:
+  · מסר את הרעיון המרכזי נכון (גם בניסוח חופשי/קצר) → 80-95
+  · נכון חלקית / פספס ניואנס אחד → 55-75
+  · לרוב לא מדויק או לא התעמק → 30-50
+- אל תיתן לכולם ציון זהה — דרג לפי הראיות. אל תיתן 0 (סיום המודולה הוא תמיד בסיס אמיתי). (הערה: שכבה שמעליך ממירה את הציון לטווח-תצוגה — תפקידך רק לדרג נכון את ההבנה, בלי לנפח ובלי לקמץ.)
+- הטון תמיד חם ומעודד. חוגג ספציפית מה שהמשתמש תפס ("תפסת ש...") כדי שירגיש מסוגל — תחושת מסוגלות היא מה שמחזיר אותו.
 - ערך אמיתי: כל נקודת-שיפור היא צעד-הבא אחד, קטן וקונקרטי שקל לבצע — לא רשימת טעויות ולא "טעית ב...".
 - מנטליות צמיחה: ציון בינוני = "אתה בונה את זה, עוד סבב ואתה שם" — לעולם לא ביקורת או טון מאכזב.
 - סיים בנימה שמושכת לסבב הבא: תן סיבה אחת מסקרנת/מתגמלת להמשיך ללמוד.
-- הוגנות: דרג לפי הראיות (השלמה, קוויז, ותמלול אם יש). כשיש תמלול — התייחס ישירות למה שהמשתמש אמר ("כשאמרת ... ראיתי ש..."). **כשאין תמלול — אל תאמר שהמשתמש "לא דיבר"/"לא ענה"; פשוט סכם את החומר והביצועים של המודולה כולה**, והזמן בחום לנסות גם את בדיקת-ההבנה הקולית.
+- **התייחסות אישית (חובה כשיש תמלול):** כל חוזקה (strengthsHe) חייבת לצטט או לשקף מה שהמשתמש *באמת אמר* ("כשאמרת ש... ראיתי ש..."), וה-verdictHe מציין דבר קונקרטי אחד שהוא קלע בו. **כשאין תמלול — אל תאמר שהמשתמש "לא דיבר"/"לא ענה"; פשוט סכם את החומר והביצועים של המודולה כולה**, והזמן בחום לנסות גם את בדיקת-ההבנה הקולית.
+- improvementsHe: כל פריט הוא צעד-הבא אחד קשור למושג ספציפי שבו היה רופף — לא גנרי.
 - חובה: תמיד לפחות חוזקה אחת (strengthsHe) ולפחות צעד-שיפור אחד (improvementsHe), ושורת perConcept אחת לכל מושג ברשימת המושגים.
 - עברית, קול שארק, בלי אימוג'ים, בלי המילה "ז'רגון", בלי אנגלית מיותרת, גוף שני יחיד.
 החזר JSON תקין בלבד בסכמה:
@@ -170,16 +176,17 @@ ${transcriptText}
       }
     }
 
-    // The AI returns an HONEST 0-100 read of how well the material was grasped
-    // (full range — weak answers can score low internally). We map it into a
-    // GENEROUS display band so a finished module always reads high and
-    // encouraging, yet still VARIES with the real understanding — replacing the
-    // old `max(ai, 45 + quiz*45)` floor that pinned everyone at 90 (the quiz is
-    // ~always 100% by module-end). Applied to BOTH the headline and every
-    // per-concept bar so they stay consistent. Map (completed): raw 0→70, 50→85,
-    // 100→100; not-completed (defensive) shows the raw read. Coefficients tunable.
+    // The AI returns an HONEST, FAIRLY-CALIBRATED 0-100 read (correct-in-plain-
+    // Hebrew answers score high — see the grading rubric in systemPrompt). We map
+    // it to a display band that REWARDS good work while keeping real
+    // differentiation — the bands chosen: strong→88-100, mid→75-85, weak→70-75.
+    // A finished module NEVER reads below 70 (hard floor, Yoav 2026-06-29 —
+    // finishing is always a real base) and never reads 0. Applied to BOTH the
+    // headline and every per-concept bar so they stay consistent. Map
+    // (completed): raw 35→75, 50→81, 65→87, 85→94, 100→100; not-completed
+    // (defensive) shows the raw read. Coefficients tunable.
     const toDisplay = (r: number): number =>
-      completed ? clampPct(Math.round(70 + clampPct(r) * 0.3)) : clampPct(r);
+      completed ? clampPct(Math.max(70, Math.round(62 + clampPct(r) * 0.38))) : clampPct(r);
     const understandingScore = toDisplay(parsed.understandingScore as number);
 
     // Never show an empty report. A finished module always gets at least one

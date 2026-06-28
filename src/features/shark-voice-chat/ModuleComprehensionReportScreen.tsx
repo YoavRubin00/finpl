@@ -45,19 +45,24 @@ interface Props {
   onDone: () => void;
 }
 
+// Bands aligned to the server's fair-differentiation display curve
+// (api/ai/comprehension-report.ts): strong→88-100, mid→75-85, weak→70-75 (hard
+// floor 70 — a finished module never reads below it). The number and label must
+// stay coherent — 88+ reads "mastery", never a 70 labelled "really good
+// understanding".
 function scoreColor(score: number): string {
-  if (score >= 75) return '#16a34a';
-  if (score >= 45) return '#e9a200';
-  // Growth-mindset (דואו): a low score is "early", not a failure — use the
+  if (score >= 88) return '#16a34a';
+  if (score >= 75) return '#e9a200';
+  // Growth-mindset (דואו): a lower score is "early", not a failure — use the
   // brand sky-blue, never an alarming red that shames the user.
   return '#0ea5e9';
 }
 function scoreLabel(score: number): string {
-  if (score >= 85) return 'שליטה מצוינת!';
-  if (score >= 70) return 'הבנה ממש טובה';
-  if (score >= 45) return 'בדרך הנכונה — ממשיכים!';
+  if (score >= 88) return 'שליטה מצוינת!';
+  if (score >= 78) return 'הבנה ממש טובה';
+  if (score >= 70) return 'בדרך הנכונה — עוד קצת ואתה שם';
   // Encouraging + pull to play again (was the harsh "שווה לחזור על זה").
-  return 'התחלה טובה — עוד סבב ואתה שם!';
+  return 'התחלה טובה — סבב נוסף ינעל את זה';
 }
 
 /* ───────────────── collapsible section (mirrors DeepAnalysisCard) ──────── */
@@ -239,6 +244,9 @@ export function ModuleComprehensionReportScreen({
             </View>
             <Text style={[styles.scoreLabel, { color: col }]}>{scoreLabel(sc)}</Text>
             <Text style={[RTL, styles.verdict]}>{report.verdictHe}</Text>
+            {stored?.usedTranscript ? (
+              <Text style={styles.liveIncluded}>כולל את תשובות הלייב שלך</Text>
+            ) : null}
           </Animated.View>
 
           {report.strengthsHe.length > 0 && (
@@ -409,6 +417,17 @@ const styles = StyleSheet.create({
   scoreOf: { fontSize: 12, color: '#64748b', fontWeight: '600' },
   scoreLabel: { fontSize: 17, fontWeight: '800' },
   verdict: { fontSize: 15, color: '#0f172a', lineHeight: 22, textAlign: 'center' },
+  liveIncluded: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0369a1',
+    backgroundColor: '#e0f2fe',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    overflow: 'hidden',
+    textAlign: 'center',
+  },
 
   section: {
     backgroundColor: '#fff',
