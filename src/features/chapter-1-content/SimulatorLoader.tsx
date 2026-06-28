@@ -23,15 +23,20 @@ const SIM_LOADERS: Record<string, () => SimScreen> = {
   "mod-0-4": () => require("../chapter-0-content/simulations/BudgetBalanceScreen").BudgetBalanceScreen,
 
   // Chapter 1
-  "mod-1-1": () => require("./simulations").CompoundSimScreen,
-  "mod-1-2": () => require("./simulations").MinusTrapGameScreen,
-  "mod-1-3": () => require("./simulations").SnowballGameScreen,
-  "mod-1-4": () => require("./simulations").BudgetGameScreen,
-  "mod-1-5": () => require("./simulations").PayslipNinjaScreen,
-  "mod-1-6": () => require("./simulations").CarLoanRaceScreen,
-  "mod-1-7": () => require("./simulations").BankCombatScreen,
-  "mod-1-8": () => require("./simulations").ShoppingCartScreen,
-  "mod-1-9": () => require("./simulations").EmergencyFundScreen,
+  // Require the SPECIFIC sim file, NOT the `./simulations` barrel — the barrel
+  // eagerly evaluates ALL 9 chapter-1 sims (+ their Lottie/data deps) on first
+  // access, which blocked the JS thread and showed a long WHITE SCREEN before the
+  // sim opened (Yoav 2026-06-28, payslip module). Per-file require loads only the
+  // one sim the user is entering.
+  "mod-1-1": () => require("./simulations/CompoundSimScreen").CompoundSimScreen,
+  "mod-1-2": () => require("./simulations/MinusTrapGameScreen").MinusTrapGameScreen,
+  "mod-1-3": () => require("./simulations/SnowballGameScreen").SnowballGameScreen,
+  "mod-1-4": () => require("./simulations/BudgetGameScreen").BudgetGameScreen,
+  "mod-1-5": () => require("./simulations/PayslipNinjaScreen").PayslipNinjaScreen,
+  "mod-1-6": () => require("./simulations/CarLoanRaceScreen").CarLoanRaceScreen,
+  "mod-1-7": () => require("./simulations/BankCombatScreen").BankCombatScreen,
+  "mod-1-8": () => require("./simulations/ShoppingCartScreen").ShoppingCartScreen,
+  "mod-1-9": () => require("./simulations/EmergencyFundScreen").EmergencyFundScreen,
   // Chapter 2
   "mod-2-10": () => require("../chapter-2-content/simulations").CreditScoreScreen,
   "mod-2-11": () => require("../chapter-2-content/simulations").TaxPuzzleScreen,
