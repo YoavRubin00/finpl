@@ -1,0 +1,39 @@
+diff --git a/node_modules/@elevenlabs/client/dist/VoiceConversation.js b/node_modules/@elevenlabs/client/dist/VoiceConversation.js
+index 97030b6..bb86fe6 100644
+--- a/node_modules/@elevenlabs/client/dist/VoiceConversation.js
++++ b/node_modules/@elevenlabs/client/dist/VoiceConversation.js
+@@ -19,11 +19,16 @@ export class VoiceConversation extends BaseConversation {
+         try {
+             // Platform-specific strategy handles wake lock, mic permission,
+             // delay, connection creation, and input/output setup.
+-            if (!setupStrategy) {
++            // PATCH (FinPlay): Metro's ESM→CJS transform breaks the live binding
++            // of `setupStrategy` on native Hermes, so it reads `undefined` even
++            // though the RN entry (@elevenlabs/react-native) called setSetupStrategy.
++            // Fall back to a globalThis copy that setSetupStrategy also writes.
++            const _resolvedStrategy = setupStrategy || (typeof globalThis !== "undefined" ? globalThis.__elevenlabs_setupStrategy : undefined);
++            if (!_resolvedStrategy) {
+                 throw new Error("No voice session setup strategy registered. " +
+                     'Import the platform-specific entry point (e.g. @elevenlabs/client via the "browser" export).');
+             }
+-            sessionSetup = await setupStrategy(fullOptions);
++            sessionSetup = await _resolvedStrategy(fullOptions);
+             conversation = new VoiceConversation(fullOptions, sessionSetup.connection, sessionSetup.input, sessionSetup.output, sessionSetup.playbackEventTarget, sessionSetup.detach);
+             fullOptions.onConversationCreated?.(conversation);
+             conversation.markConnected();
+diff --git a/node_modules/@elevenlabs/client/dist/platform/VoiceSessionSetup.js b/node_modules/@elevenlabs/client/dist/platform/VoiceSessionSetup.js
+index cd9946a..7bf5c6e 100644
+--- a/node_modules/@elevenlabs/client/dist/platform/VoiceSessionSetup.js
++++ b/node_modules/@elevenlabs/client/dist/platform/VoiceSessionSetup.js
+@@ -10,6 +10,11 @@ export let setupStrategy;
+  */
+ export function setSetupStrategy(strategy) {
+     setupStrategy = strategy;
++    // PATCH (FinPlay): also store on globalThis so readers survive Metro's broken
++    // ESM live-binding on native Hermes (see VoiceConversation.js _resolvedStrategy).
++    if (typeof globalThis !== "undefined") {
++        globalThis.__elevenlabs_setupStrategy = strategy;
++    }
+ }
+ /**
+  * Sets up a voice session for a WebRTC connection.
