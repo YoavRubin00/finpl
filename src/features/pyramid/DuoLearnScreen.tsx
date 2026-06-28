@@ -79,7 +79,6 @@ import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
-import { BreakingNewsBadge } from "../breaking-news/components/BreakingNewsBadge";
 import { FINN_STANDARD, FINN_DAILY_CHALLENGE } from "../retention-loops/finnMascotConfig";
 import { EnergyStationCard } from "../energy/EnergyStationCard";
 import { useHeartsStore } from "../subscription/useHeartsStore";
@@ -2920,12 +2919,6 @@ export function DuoLearnScreen() {
         </Modal>
       )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
-        {/* Persistent breaking-news button — top-left, ALWAYS visible (Yoav
-            2026-06-28: moved here from under the active-node shark so it's never
-            hidden; shows a red dot when there's an unread 09:00 summary). */}
-        <View style={{ position: 'absolute', top: insets.top + 6, left: 14, zIndex: 50 }} pointerEvents="box-none">
-          <BreakingNewsBadge />
-        </View>
                 {/* תחנת הכוח — always-visible energy power-station band, pinned above the
             scrolling lesson path (so it never shifts the path's auto-scroll math). */}
         {/* Hidden ONLY on the brand-new user's very first landing (before the
