@@ -36,10 +36,11 @@ import { captureException } from '../../lib/sentry';
 
 const RTL = { writingDirection: 'rtl' as const };
 const CALL_SECONDS = 45;
-// Hard ceiling: past the 45s soft target we never cut the user off mid-answer —
-// we grace until they stop — but the call always ends by this cap (Yoav:
-// "extend up to a minute" if the user is still talking).
-const MAX_CALL_SECONDS = 60;
+// Hard ceiling. The call normally ends when Captain Shark delivers his spoken
+// sign-off ("…נתראה בשיעור הבא") — detected from his transcript — so the closing
+// line is always heard in full and the user is never cut off mid-answer. This
+// cap is only a backstop for a conversation that never wraps up on its own.
+const MAX_CALL_SECONDS = 75;
 
 interface Props {
   moduleId: string;
@@ -88,6 +89,9 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
   const timerStartedRef = useRef(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef = useRef(0);
+  // Flips true once Captain Shark is actually VOICING his closing line — the
+  // call then ends the moment he finishes it (never mid-sentence, never mid-answer).
+  const signoffRef = useRef(false);
 
   // Connect once, primed with this module's comprehension questions. The live
   // SDK needs the mic but does NOT reliably trigger the OS/browser permission
@@ -167,9 +171,11 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
   }, [disconnect, attachTranscript, generateReport, moduleId, onComplete]);
 
   // Start the countdown once the call is actually live (not while connecting).
-  // Soft target = CALL_SECONDS (45s). When it's up, we DON'T cut the user off
-  // mid-answer: if they're still speaking we grace until they stop, hard-capped
-  // at MAX_CALL_SECONDS (60s). Shark delivers the spoken sign-off itself.
+  // CALL_SECONDS (45s) is a SOFT target the agent is prompted to wrap up by — it
+  // drives the visual countdown only. The call actually ENDS when Captain Shark
+  // finishes his spoken sign-off (detected from his transcript), so we never cut
+  // the user off mid-answer or the shark off mid-goodbye. MAX_CALL_SECONDS is a
+  // hard backstop if the conversation never wraps up on its own.
   useEffect(() => {
     const active = status === 'listening' || status === 'thinking' || status === 'speaking';
     if (!active || timerStartedRef.current) return;
@@ -178,13 +184,23 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
     tickRef.current = setInterval(() => {
       elapsedRef.current += 1;
       const elapsed = elapsedRef.current;
-      const userStillAnswering = useSharkVoiceStore.getState().status === 'listening';
-      // End at the 45s target — unless the user is mid-answer, then wait for
-      // them to finish — but never run past the 60s hard cap.
-      if (elapsed >= MAX_CALL_SECONDS || (elapsed >= CALL_SECONDS && !userStillAnswering)) {
-        finish();
-        return;
+      const state = useSharkVoiceStore.getState();
+      // Detect the sign-off only while the shark is ACTUALLY voicing it (status
+      // 'speaking' + the farewell in his transcript) — guards against the text
+      // arriving a beat before the audio and ending the call too early.
+      if (
+        !signoffRef.current
+        && state.status === 'speaking'
+        && (state.sharkText.includes('נתראה') || state.sharkText.includes('שיעור הבא'))
+      ) {
+        signoffRef.current = true;
       }
+      // Hard backstop first.
+      if (elapsed >= MAX_CALL_SECONDS) { finish(); return; }
+      // Sign-off finished (shark stopped voicing it) → end gracefully. The
+      // onAudio debounce holds status at 'speaking' until the audio has played,
+      // so by the time it leaves 'speaking' the closing line was heard in full.
+      if (signoffRef.current && state.status !== 'speaking') { finish(); return; }
       setSecondsLeft(Math.max(0, CALL_SECONDS - elapsed));
     }, 1000);
   }, [status, finish, progress]);
@@ -225,7 +241,7 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
         <View style={styles.topBar}>
           <View style={styles.timePill}>
             <Text style={[RTL, styles.timeText]}>
-              {connecting ? 'מתחבר…' : `0:${String(secondsLeft).padStart(2, '0')}`}
+              {connecting ? 'מתחבר…' : secondsLeft > 0 ? `0:${String(secondsLeft).padStart(2, '0')}` : 'מסכמים…'}
             </Text>
           </View>
           <Pressable
