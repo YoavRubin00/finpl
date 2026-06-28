@@ -59,6 +59,12 @@ interface ChestCelebrationModalProps {
   /** Whether this chest is the FINAL 100% chest rather than the 70%
    *  threshold one. Drives copy + reward visuals. R6 Epic 5. */
   isFinale?: boolean;
+  /** Percent of the lesson completed when the chest opens — the module's
+   *  REAL chest threshold (chapter 1+ = 90, chapter 0 = 75, mod-0-1 = 50;
+   *  from chestThresholdFor). Drives the non-finale subheading. Defaults to
+   *  70 for legacy callers that don't pass it (Yoav 2026-06-28: the copy was
+   *  a stale literal "70%" after the thresholds were raised). */
+  thresholdPct?: number;
   /** R8 T3.4 — rarity tier rolled by useTopicProgressStore.recordChestOpen.
    *  Drives the rarity badge + particle palette (gold for mythic, cyan for
    *  rare, none for common). The coin bonus is already baked into `coins`
@@ -99,6 +105,7 @@ export function ChestCelebrationModal({
   onAdvanceToNextModule,
   onDoNResolve,
   isFinale = false,
+  thresholdPct = 70,
   rarity = 'common',
   quitLabel = null,
   onQuit,
@@ -364,7 +371,7 @@ export function ChestCelebrationModal({
             <Text style={[styles.subheading, RTL_CENTER]} allowFontScaling={false}>
               {isFinale
                 ? 'סיימת את כל הרכיבים. תיבת המאסטר נפתחת.'
-                : 'סיימת 70% מהשיעור. הגיע הזמן לפרס.'}
+                : `סיימת ${thresholdPct}% מהשיעור. הגיע הזמן לפרס.`}
             </Text>
             {/* Mystery reveal (Yoav 17/06): the rarity badge is now gated on
                 `opened` so rare/mythic is HIDDEN until the user taps — the chest
