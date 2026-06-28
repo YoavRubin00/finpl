@@ -984,18 +984,14 @@ function KnowledgeStep({ goal, onNext, onBack, initialValue }: { goal: Financial
 const CY = new Date().getFullYear();
 // Minimum age is 16. Aligned with Terms (docs/finplay-terms-and-privacy.md
 // + LegalScreen line 70) which require parental consent for users under 18
-// and ban under-16 users entirely. The "12-17" option was removed 2026-06-02
-// to close the gap between Terms and code.
-// The "under-16" option is intentionally surfaced (not hidden) so a child
-// who taps it sees a clear blocking message instead of silently being
-// nudged to lie about their age.
-type AgeGroupOption = AgeGroup | "under-16";
-const AGE_GROUPS: { label: string; sub: string; ageGroup: AgeGroupOption; birthYear: number }[] = [
+// and ban under-16 users entirely. The youngest selectable bracket is 16–17.
+// The explicit "מתחת ל-16" hard-block option was removed 2026-06-28 (Yoav) —
+// it was creating a mid-onboarding wall.
+const AGE_GROUPS: { label: string; sub: string; ageGroup: AgeGroup; birthYear: number }[] = [
   { label: "16–17", sub: "מקדימים את כולם", ageGroup: "minor", birthYear: CY - 16 },
   { label: "18–23", sub: "טרי מהים", ageGroup: "adult", birthYear: CY - 21 },
   { label: "24–29", sub: "צוללים פנימה", ageGroup: "adult", birthYear: CY - 26 },
   { label: "30+", sub: "מאוחר? אף פעם לא", ageGroup: "adult", birthYear: CY - 33 },
-  { label: "מתחת ל-16", sub: "מצטערים, חוזרים אלינו אחר כך", ageGroup: "under-16", birthYear: CY - 13 },
 ];
 
 const KNOWLEDGE_REACTIONS: Record<string, string> = {
@@ -1016,27 +1012,6 @@ function AgeStep({ knowledge, onNext, onBack, initialAgeGroup }: { knowledge: Kn
   const tap = useCallback((i: number) => {
     if (advancedRef.current) return;
     const { ageGroup, birthYear } = AGE_GROUPS[i];
-    // Hard block for users under 16. We surface a clear message instead of
-    // letting them proceed so it's obvious the app isn't for them yet, and
-    // we don't write a "minor" profile with a birthYear that breaks Terms.
-    if (ageGroup === "under-16") {
-      setSel(i);
-      Alert.alert(
-        "לצערנו האפליקציה זמינה מגיל 16",
-        "FinPlay מותרת לשימוש מגיל 16 ומעלה. בני 16–17 שיירשמו יוכלו לרכוש מנוי Pro רק לאחר אישור הורה דרך תהליך מובנה באפליקציה. תוכל/י לחזור אלינו כשתגיע/י לגיל 16.",
-        [
-          {
-            text: "הבנתי",
-            onPress: () => {
-              setSel(null);
-              advancedRef.current = false;
-            },
-          },
-        ],
-        { cancelable: false },
-      );
-      return;
-    }
     advancedRef.current = true;
     setSel(i);
     setTimeout(() => onNext(ageGroup, birthYear), AUTO_ADVANCE_MS);

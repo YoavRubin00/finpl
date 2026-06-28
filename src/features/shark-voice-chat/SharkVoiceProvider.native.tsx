@@ -12,6 +12,7 @@ import { Platform, View, Text } from 'react-native';
 import type { ConversationProviderProps } from '@elevenlabs/react-native';
 import { captureEvent } from '../../lib/posthog';
 import { captureException } from '../../lib/sentry';
+import { installVoicePolyfills } from './voicePolyfills';
 
 // One-shot diagnostic: when the SDK fails to load, find out WHICH layer throws
 // (Metro swallows the real eval error, leaving only the downstream "undefined").
@@ -21,6 +22,7 @@ let probed = false;
 function probeSdkOnce(): void {
   if (probed) return;
   probed = true;
+  installVoicePolyfills(); // DOMException must exist before any livekit/elevenlabs require
   // `v` is a BUNDLE MARKER — if PostHog shows v:'v2', the new OTA bundle (with
   // the metro browser-condition fix) is actually running; v missing/old = the
   // device is still on the previous bundle (OTA not applied).
@@ -62,6 +64,7 @@ function probeSdkOnce(): void {
  */
 export function SharkVoiceProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   let ConversationProvider: ComponentType<ConversationProviderProps> | undefined;
+  installVoicePolyfills(); // DOMException polyfill before the deferred SDK require
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('@elevenlabs/react-native') as

@@ -2178,34 +2178,21 @@ export function DuoLearnScreen() {
     // estimate drifts (Yoav 2026-06-20: "עדיין לא נפתח על הציפ הנכון").
     let landed = false;
     let timers: ReturnType<typeof setTimeout>[] = [];
-    const scrollToRecommended = (isLast: boolean) => {
+    const scrollToRecommended = (_isLast: boolean) => {
       if (landed) return;
-      const chip = recommendedChipRef.current;
       const scroller = scrollRef.current;
-      const estimate = () => scrollRef.current?.scrollTo({ y: targetY, animated: true });
-      if (!chip || !scroller || typeof chip.measureLayout !== 'function') {
-        if (isLast) estimate();
-        return;
-      }
-      const innerGetter = scroller as unknown as { getInnerViewNode?: () => unknown };
-      const inner = innerGetter.getInnerViewNode?.();
-      const relativeTo = typeof inner === 'number' ? inner : findNodeHandle(scroller);
-      if (relativeTo == null) { if (isLast) estimate(); return; }
-      try {
-        chip.measureLayout(
-          relativeTo,
-          (_x: number, y: number) => {
-            // Measured the real gold-chip node → land on it and STOP retrying,
-            // so a later pass never yanks a user who already began scrolling.
-            landed = true;
-            timers.forEach(clearTimeout);
-            scrollRef.current?.scrollTo({ y: Math.max(0, y - VIEWPORT_TOP_PAD), animated: true });
-          },
-          () => { if (isLast) estimate(); },
-        );
-      } catch {
-        if (isLast) estimate();
-      }
+      if (!scroller) return;
+      // Precise on-chip landing via chip.measureLayout(...) regressed on the new
+      // RN (Fabric) architecture: measureLayout rejects the numeric ScrollView
+      // node handle ("ref.measureLayout must be called with a ref to a native
+      // component") and bails — so it never actually landed here, it only spammed
+      // the dev console on every retry pass. The computed `targetY` (accordion
+      // connector + per-chip row heights) is what was effectively running, so use
+      // it directly: land once and stop retrying so a late pass never yanks the
+      // user mid-scroll. (Revisit precise landing with a Fabric host-instance ref.)
+      landed = true;
+      timers.forEach(clearTimeout);
+      scroller.scrollTo({ y: targetY, animated: true });
     };
     const raf = requestAnimationFrame(() => scrollToRecommended(false));
     // More passes over a longer window so a SLOW cold-remount return (heavy

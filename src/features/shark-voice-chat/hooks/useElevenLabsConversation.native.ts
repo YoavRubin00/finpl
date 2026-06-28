@@ -15,6 +15,7 @@ import { fetchConversationToken } from '../services/voiceSessionClient';
 import type { ComprehensionOverride } from '../moduleComprehension';
 import { captureEvent } from '../../../lib/posthog';
 import { captureException } from '../../../lib/sentry';
+import { installVoicePolyfills } from '../voicePolyfills';
 
 /**
  * Native (iOS/Android) driver for the ElevenLabs Conversational AI session
@@ -46,6 +47,9 @@ function cleanTranscriptText(text: string): string {
 const AUDIO_SILENCE_MS = 900;
 
 export function useElevenLabsConversation() {
+  // DOMException (used by livekit-client at module-eval) is absent from Hermes —
+  // install the shim before the deferred SDK require below. Idempotent.
+  installVoicePolyfills();
   const startingRef = useRef(false);
   const startedRef = useRef(false);
   const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

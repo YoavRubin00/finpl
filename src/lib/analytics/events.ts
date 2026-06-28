@@ -172,6 +172,7 @@ export type AppEvent =
   // wa-click.ts) with the same event name + source:'welcome_email'.
   | { name: 'whatsapp_cta_shown'; props: { source: 'pearl_feed' | 'more_screen' } }
   | { name: 'whatsapp_cta_tapped'; props: { source: 'pearl_feed' | 'more_screen' | 'welcome_email' } }
+  | { name: 'instagram_cta_tapped'; props: { source: 'more_screen' | string } }
 
   // ── Referral / Friends ─────────────────────────────────────────────────
   | { name: 'referral_screen_viewed'; props: { has_code: boolean; friends_count: number; dividend_available: number; already_collected_today: boolean } }
