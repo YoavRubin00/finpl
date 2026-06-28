@@ -36,7 +36,6 @@ export function BreakingNewsBadge(): React.ReactElement | null {
   const { playSound } = useSoundEffect();
   const reduceMotion = useReducedMotion();
 
-  const hasTickers = useBreakingNewsStore((s) => s.items.length > 0);
   const hasUnread = useBreakingNewsStore((s) => s.hasUnreadToday());
 
   const pulse = useSharedValue(1);
@@ -60,8 +59,6 @@ export function BreakingNewsBadge(): React.ReactElement | null {
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
   }));
-
-  if (!hasTickers) return null;
 
   const handlePress = () => {
     tapHaptic();

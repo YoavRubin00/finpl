@@ -17,6 +17,7 @@ import { and, eq } from 'drizzle-orm';
 import { breakingNewsSummaries } from '../../../src/db/schema';
 import { fetchTickerNews } from '../_shared/perplexityNews';
 import { tavilyNewsSearch, type TavilyBundle } from '../_shared/tavily';
+import { fetchMarketData } from './fetchMarketData';
 import { withRetry, isTransientAiError } from '../_shared/retry';
 import { formatFailuresForRetryHint } from '../_shared/simplicityCheck';
 import {
@@ -110,6 +111,11 @@ export async function generateForTicker(
   //    This keeps the feature working in every environment: locally (no
   //    Tavily key → Perplexity) and in production (Tavily, with Perplexity
   //    as a safety net).
+  // Kick off the real-time market snapshot in PARALLEL with the news fetch — it
+  // grounds the hype index in actual price/volume movement (Yoav 2026-06-28).
+  // Best-effort: a null here just means "no market grounding", never a failure.
+  const marketPromise = fetchMarketData(ticker).catch(() => null);
+
   let bundle: TavilyBundle;
   if (process.env.TAVILY_API_KEY) {
     try {
@@ -126,6 +132,7 @@ export async function generateForTicker(
   if (bundle.results.length === 0) {
     throw new Error(`news search returned 0 results for ${ticker}`);
   }
+  const market = await marketPromise;
 
   // 2) Gemini — structure the bundle into the JSON shape we persist.
   const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -136,7 +143,7 @@ export async function generateForTicker(
     contents: [
       {
         role: 'user',
-        parts: [{ text: buildBreakingNewsUserPrompt(ticker, bundle) }],
+        parts: [{ text: buildBreakingNewsUserPrompt(ticker, bundle, market) }],
       },
     ],
     generationConfig: {

@@ -31,13 +31,14 @@ export const BREAKING_NEWS_SYSTEM_PROMPT = `אתה שארק — אנליסט פ�
 הנחיות:
 - הסיכום חייב להיות 2-3 משפטים. בלי מבוא, בלי "להלן הסיכום". ישר לעניין.
 - אל תמציא נתונים. אם הקלט לא ברור — אמור זאת ("חדשות מעורבות, סנטימנט לא מובהק").
-- מדד ההייפ (0-100):
-    0-20  שקט מוחלט, אפס דיון
-    21-40 דיון רגיל, חדשות שגרתיות
-    41-60 דיון מוגבר, יש משהו מעניין
-    61-80 הייפ גבוה, וירליות בסושיאל, נפח גבוה
-    81-100 פיצוץ, trending, FOMO/פניקה
-  התבסס על: כמות אזכורים, חדות הסנטימנט, נוכחות בפורומים (Reddit/StockTwits), שיא ירידה/עלייה של אחוזים ספציפיים.
+- מדד ההייפ (0-100) — **עגן אותו בתנועת-השוק האמיתית** כשסופקו "נתוני שוק היום":
+    0-20  שקט מוחלט, אפס דיון. מחיר זז פחות מ-1%, נפח רגיל.
+    21-40 דיון רגיל, חדשות שגרתיות. תנודה קלה.
+    41-60 דיון מוגבר, יש משהו מעניין. מחיר ±3% או נפח מעל הממוצע.
+    61-80 הייפ גבוה, וירליות בסושיאל, נפח גבוה. מחיר ±5% או נפח 2x+ הממוצע.
+    81-100 פיצוץ, trending, FOMO/פניקה. מחיר ±10% או נפח 3x+ הממוצע, יחד עם buzz בפורומים.
+  כלל-ברזל: אם המחיר כמעט לא זז והנפח רגיל — ההייפ נמוך (0-40) גם אם יש המון כותרות. תנועת-מחיר/נפח אמיתית = הייפ גבוה.
+  התבסס על: תנועת-מחיר ונפח בפועל (העיקר), כמות אזכורים, חדות הסנטימנט, ונוכחות בפורומים (Reddit/StockTwits).
 - sentiment: bullish/bearish/neutral. נדרש החלטה ברורה — תן את המעודכן ביותר.
 - keyEvents: 1-3 אירועים ספציפיים מהקלט (הכרזת רווחים, חוזה חדש, שדרוג/הורדה של אנליסט, וכו'). כל אירוע עם impact: high/med/low.
 - sources: 3-5 קישורים מהקלט בלבד — אל תמציא URLs. בחר את המקורות הסמכותיים ביותר.
@@ -67,9 +68,16 @@ export const BREAKING_NEWS_SYSTEM_PROMPT = `אתה שארק — אנליסט פ�
 export function buildBreakingNewsUserPrompt(
   ticker: string,
   bundle: TavilyBundle,
+  market?: { changePct: number; volumeMultiplier: number } | null,
 ): string {
   const tavilyAnswer = bundle.answer
     ? `סיכום ראשוני:\n${bundle.answer}\n\n`
+    : '';
+
+  // Real price/volume today — Gemini anchors the hype index in this, not just
+  // the article count/tone (Yoav 2026-06-28).
+  const marketLine = market
+    ? `נתוני שוק היום (אמיתיים — עגן בהם את מדד-ההייפ):\n- שינוי מחיר: ${market.changePct > 0 ? '+' : ''}${market.changePct.toFixed(1)}%\n- נפח מול הממוצע: ${market.volumeMultiplier.toFixed(1)}x\n\n`
     : '';
 
   const snippets = bundle.results

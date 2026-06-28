@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { AlertTriangle, Bell, LogIn, Newspaper, Plus, Sparkles, X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
@@ -117,8 +118,12 @@ export function BreakingNewsScreen(): React.ReactElement {
         })),
         res.tradingDay,
       );
-    } catch {
-      /* swallow — keep showing cached. user pulls to retry. */
+    } catch (err) {
+      // Surface WHY /list failed (401 auth vs network) instead of silently
+      // showing empty — this is the data behind the "my stocks vanished" report.
+      const message = err instanceof Error ? err.message : String(err);
+      try { captureEvent('breaking_news_list_failed', { message }); } catch { /* non-fatal */ }
+      /* keep showing cached — user can pull to retry. */
     }
   }, [setItems]);
 
@@ -162,6 +167,17 @@ export function BreakingNewsScreen(): React.ReactElement {
       }
     })();
   }, [refresh, isGuest]);
+
+  // Re-sync from the server whenever the screen regains focus (returning from
+  // another tab). The mount effect fires only once, so without this the tracked
+  // list could show stale/empty after navigation (Yoav 2026-06-28). Light: just
+  // refresh — the one-time backfill-generate stays in the mount effect above.
+  useFocusEffect(
+    useCallback(() => {
+      if (isGuest) return;
+      void refresh();
+    }, [isGuest, refresh]),
+  );
 
   // Manual per-card retry after a failed generation. Clears the failed/attempted
   // marks for that ticker and tries once more.
@@ -221,20 +237,31 @@ export function BreakingNewsScreen(): React.ReactElement {
     // Optimistic: render the placeholder card immediately so the user sees feedback.
     addLocal(ticker);
     setGenerating(ticker);
+    // Step 1 — TRACK. Only this failing means the ticker was never saved, so
+    // only this rolls back the optimistic card. (Yoav 2026-06-28: previously a
+    // failed *generate* also removed it → "I added a stock and it vanished".)
     try {
       await addTrackedTicker(ticker);
-      // Trigger on-demand generation so the user doesn't wait until tomorrow.
-      await generateBreakingNewsForTicker(ticker);
-      await refresh();
     } catch (err) {
       removeLocal(ticker);
       const message = err instanceof Error ? err.message : String(err);
-      try { captureEvent('breaking_news_generate_failed', { ticker, message, source: 'add' }); } catch { /* non-fatal */ }
-      // Friendly banner — never dump the raw server JSON
-      // (`generate 500: {"error":...}`) at the user. Keep the full raw message
-      // in the PostHog event above for diagnosis, and surface only a short
-      // reqId here so support can correlate it with the Vercel logs.
+      try { captureEvent('breaking_news_generate_failed', { ticker, message, source: 'track' }); } catch { /* non-fatal */ }
+      // Friendly banner — never dump the raw server JSON at the user; the full
+      // message goes to the PostHog event above for diagnosis.
       setErrorBanner(friendlyAddError(ticker, message));
+      setGenerating(null);
+      return;
+    }
+    // Step 2 — GENERATE the summary on-demand. The ticker is ALREADY tracked, so
+    // a failure here KEEPS the card (marked "נסה שוב") — cron/backfill fills it
+    // in later instead of the user losing the stock they just added.
+    try {
+      await generateBreakingNewsForTicker(ticker);
+      await refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      try { captureEvent('breaking_news_generate_failed', { ticker, message, source: 'add' }); } catch { /* non-fatal */ }
+      setFailed((prev) => new Set(prev).add(ticker));
     } finally {
       setGenerating(null);
     }
