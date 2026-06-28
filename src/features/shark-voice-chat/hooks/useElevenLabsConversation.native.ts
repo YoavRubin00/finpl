@@ -233,11 +233,19 @@ export function useElevenLabsConversation() {
     [conversation, setMuted],
   );
 
+  // Disconnect ONLY on real unmount. Keying this on [disconnect] re-ran the
+  // effect every time the SDK's `conversation` object changed identity — which
+  // happens the moment the call connects / the agent starts speaking — and React
+  // runs the PREVIOUS cleanup on each change, calling endSession() and tearing
+  // the live call down ~2s after it connected (the "stuck on מתחבר then drops"
+  // bug). A ref holds the latest disconnect without making it an effect dep.
+  const disconnectRef = useRef(disconnect);
+  disconnectRef.current = disconnect;
   useEffect(() => {
     return () => {
-      void disconnect();
+      void disconnectRef.current();
     };
-  }, [disconnect]);
+  }, []);
 
   return { connect, disconnect, toggleMute };
 }
