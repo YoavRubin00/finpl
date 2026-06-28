@@ -1,10 +1,10 @@
 import { useState, useCallback } from "react";
 import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
-import { Image as ExpoImage } from "expo-image";
+import { Image as ExpoImage, type ImageSource } from "expo-image";
 import { useAuthStore } from "../auth/useAuthStore";
-import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
+import { FINN_HAPPY, FINN_EMPATHIC, FINN_STANDARD, FINN_TABLET, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
-import { tapHaptic } from "../../utils/haptics";
+import { tapHaptic, successHaptic } from "../../utils/haptics";
 import type { KnowledgeLevel, LearningTime, DailyGoalMinutes } from "../auth/types";
 
 export type ProfileQuestionKind = "knowledgeLevel" | "learningTime" | "dailyGoal";
@@ -13,15 +13,28 @@ interface Option<T> {
   id: T;
   label: string;
   sub: string;
+  emoji?: string;
 }
 
 const KNOWLEDGE_OPTIONS: Option<KnowledgeLevel>[] = [
-  { id: "none", label: "כלום ושום דבר", sub: "מאפס מוחלט" },
-  { id: "beginner", label: "קצת בעניינים", sub: "שמעתי על זה" },
-  { id: "some", label: "ממוצע", sub: "הבסיס מוכר לי" },
-  { id: "experienced", label: "מנוסה", sub: "יש ידע, אבל תמיד יש מה ללמוד" },
-  { id: "expert", label: "כריש מוול סטריט", sub: "שוחה בעולם הפיננסי" },
+  { id: "none", label: "כלום ושום דבר", sub: "מאפס מוחלט", emoji: "😵‍💫" },
+  { id: "beginner", label: "קצת בעניינים", sub: "שמעתי על זה", emoji: "😅" },
+  { id: "some", label: "ממוצע", sub: "הבסיס מוכר לי", emoji: "🙂" },
+  { id: "experienced", label: "מנוסה", sub: "יש ידע, אבל תמיד יש מה ללמוד", emoji: "😎" },
+  { id: "expert", label: "כריש מוול סטריט", sub: "שוחה בעולם הפיננסי", emoji: "🤑" },
 ];
+
+// Captain Shark reacts to the selected feeling (knowledgeLevel only). Each answer
+// maps to an existing WebP expression — empathy for "knew nothing" up to a
+// celebration dance for the "Wall Street shark". Reuses finnMascotConfig variants,
+// no new assets. (learningTime/dailyGoal keep the static FINN_HAPPY greeting.)
+const KNOWLEDGE_MASCOT: Record<KnowledgeLevel, ImageSource> = {
+  none: FINN_EMPATHIC,
+  beginner: FINN_TABLET,
+  some: FINN_STANDARD,
+  experienced: FINN_HAPPY,
+  expert: FINN_DANCING,
+};
 
 const TIME_OPTIONS: Option<LearningTime>[] = [
   { id: "morning", label: "בוקר עם הקפה", sub: "פתיחה חכמה ליום" },
@@ -37,7 +50,7 @@ const DAILY_OPTIONS: Option<DailyGoalMinutes>[] = [
 ];
 
 const TITLES: Record<ProfileQuestionKind, string> = {
-  knowledgeLevel: "איך הרגשת עם השיעור?",
+  knowledgeLevel: "איך הרגשת עם החומר?",
   learningTime: "מתי הכי קל לך ללמוד?",
   dailyGoal: "כמה דקות ביום בא לך להתחייב?",
 };
@@ -60,7 +73,7 @@ export function InModuleProfileQuestion({ visible, kind, onDone }: Props) {
 
   const handlePick = useCallback((id: string | number) => {
     setSel(id);
-    tapHaptic();
+    successHaptic();
     // Casts are safe — each kind has its own typed options array (see KNOWLEDGE_OPTIONS / TIME_OPTIONS / DAILY_OPTIONS),
     // so `id` at runtime is always a valid member of the corresponding enum.
     if (kind === "knowledgeLevel") {
@@ -73,7 +86,7 @@ export function InModuleProfileQuestion({ visible, kind, onDone }: Props) {
     setTimeout(() => {
       setSel(null);
       onDone();
-    }, 600);
+    }, 850);
   }, [kind, updateProfile, onDone]);
 
   const handleSkip = useCallback(() => {
@@ -87,6 +100,12 @@ export function InModuleProfileQuestion({ visible, kind, onDone }: Props) {
       ? TIME_OPTIONS
       : DAILY_OPTIONS;
 
+  // Reactive mascot: change expression to match the picked knowledgeLevel feeling;
+  // otherwise (or before any pick) show the friendly greeting.
+  const mascotSrc = kind === "knowledgeLevel" && sel != null
+    ? KNOWLEDGE_MASCOT[sel as KnowledgeLevel]
+    : FINN_HAPPY;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleSkip}>
       <View style={styles.backdrop}>
@@ -97,7 +116,7 @@ export function InModuleProfileQuestion({ visible, kind, onDone }: Props) {
           accessibilityRole="button"
         />
         <View style={styles.card}>
-          <ExpoImage source={FINN_HAPPY} accessible={false} style={styles.finn} contentFit="contain" />
+          <ExpoImage source={mascotSrc} accessible={false} style={styles.finn} contentFit="contain" transition={250} />
           <Text style={styles.title}>{TITLES[kind]}</Text>
           <Text style={styles.subtitle}>{SUBTITLES[kind]}</Text>
 
@@ -108,16 +127,19 @@ export function InModuleProfileQuestion({ visible, kind, onDone }: Props) {
                 <AnimatedPressable
                   key={String(opt.id)}
                   onPress={() => handlePick(opt.id)}
-                  style={[styles.option, isSelected && styles.optionSelected]}
+                  style={[styles.option, styles.optionRow, isSelected && styles.optionSelected]}
                   accessibilityRole="button"
                   accessibilityLabel={opt.label}
                 >
-                  <Text style={[styles.optLabel, isSelected && styles.optLabelSelected]}>
-                    {opt.label}
-                  </Text>
-                  <Text style={[styles.optSub, isSelected && styles.optSubSelected]}>
-                    {opt.sub}
-                  </Text>
+                  {opt.emoji ? <Text style={styles.optEmoji}>{opt.emoji}</Text> : null}
+                  <View style={styles.textCol}>
+                    <Text style={[styles.optLabel, isSelected && styles.optLabelSelected]}>
+                      {opt.label}
+                    </Text>
+                    <Text style={[styles.optSub, isSelected && styles.optSubSelected]}>
+                      {opt.sub}
+                    </Text>
+                  </View>
                 </AnimatedPressable>
               );
             })}
@@ -175,6 +197,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#bae6fd",
   },
+  optionRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 12,
+  },
+  optEmoji: { fontSize: 26 },
+  textCol: { flex: 1 },
   optionSelected: {
     backgroundColor: "#0ea5e9",
     borderColor: "#0284c7",
