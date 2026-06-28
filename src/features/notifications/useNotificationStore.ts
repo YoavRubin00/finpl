@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
+import { getMorningCopy, getStreakCopy, pickFinnCopy } from './finnNotificationCopy';
 import type { NotificationChannelId, NotificationState } from "./notificationTypes";
 
 // ─── Default handler, show banners in foreground ───────────────────────────
@@ -240,6 +241,23 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         }
         const granted = finalStatus === "granted";
         set({ permissionGranted: granted });
+        // D1 catch-22 fix (Yoav 2026-06-28): a fresh opt-in is the ONLY moment we
+        // can arm next-day reminders for a churning new user who may never reopen
+        // the app. Enable the core retention reminders AND schedule them NOW —
+        // the once-per-day scheduler won't run again until the next app open,
+        // which a D1-churner never reaches. Gated on `prompted` so a later
+        // already-granted reconciliation never re-enables prefs the user turned
+        // OFF in Settings. The existing useFinnNotificationScheduler re-arms these
+        // (personalised) on every subsequent app open.
+        if (granted && prompted) {
+          set({ preferences: { ...get().preferences, streak: true, morning: true, inactivity: true } });
+          try {
+            await ensureAndroidChannels();
+            await get().scheduleMorningMotivation({ ...pickFinnCopy(getMorningCopy()), data: { screen: "/(tabs)/learn" } });
+            await get().scheduleStreakReminderWithCopy({ ...pickFinnCopy(getStreakCopy('safe')), data: { screen: "/(tabs)/learn" } }, 20);
+            track({ name: 'next_day_reminder_scheduled', props: { source: source ?? 'permission_grant' } });
+          } catch { /* non-fatal — the daily scheduler re-arms on the next app open */ }
+        }
         // The opt-in signal: granted ÷ prompted = the real approval rate.
         try { track({ name: 'notification_permission_result', props: { granted, prompted, source: source ?? 'unknown' } }); } catch { /* non-fatal */ }
         return granted;

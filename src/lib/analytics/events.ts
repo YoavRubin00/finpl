@@ -240,7 +240,15 @@ export type AppEvent =
   // reconciliation, NOT a user choice). `source` is the entry point. This is
   // what measures the true opt-in RATE (granted ÷ prompted) — distinct from
   // `notification_banner_action`, which only means "tapped אשר".
-  | { name: 'notification_permission_result'; props: { granted: boolean; prompted: boolean; source?: string } };
+  | { name: 'notification_permission_result'; props: { granted: boolean; prompted: boolean; source?: string } }
+
+  // ── D1 return hook (next-day retention) — Yoav 2026-06-28 ──────────────
+  // Fix for the new-user D1 catch-22: when notification permission is granted we
+  // arm the daily morning/streak reminders IMMEDIATELY (not on the next app open
+  // a churning user never reaches). Plus a small next-day return reward on D1.
+  | { name: 'next_day_reminder_scheduled'; props: { source?: string } }
+  | { name: 'day1_return_reward_shown'; props: { coins: number } }
+  | { name: 'day1_return_reward_claimed'; props: { coins: number; freezes?: number } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event

@@ -6300,8 +6300,8 @@ export function LessonFlowScreen() {
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); safeTimeout(() => returnToMap("/(tabs)/index"), 80); }} accessibilityRole="button" accessibilityLabel="חזור לתפריט">
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
-            <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", textAlign: "center" }}>{"לחץ בכל מקום כדי לחזור"}</Text>
+            <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מחר מחכים לך אתגרים חדשים 🔥"}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", textAlign: "center" }}>{"חזור מחר ושמור על הרצף · לחץ בכל מקום"}</Text>
           </Animated.View>
         </Pressable>
       )}

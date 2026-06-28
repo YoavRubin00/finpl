@@ -13,11 +13,19 @@ export function useSubscription() {
   // returns false from undefined data, which is correct.
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isGuest = useAuthStore((s) => s.isGuest);
+  // DEV-ONLY Pro override for the local WEB dev server: RevenueCat doesn't run
+  // on web, so force the Pro entitlement so Pro features can be exercised in the
+  // browser. Gated on __DEV__ AND Platform.OS==='web' so it can NEVER affect
+  // production or native dev builds. (Yoav 2026-06-28 — web Pro test.)
+  const devWebPro = __DEV__ && Platform.OS === 'web';
   return useQuery({
     queryKey: subscriptionQueryKey,
-    queryFn: async () => (await getSubscription()).subscription,
+    queryFn: async () => {
+      if (devWebPro) return { isPro: true, proExpiresAt: null } as SubscriptionState;
+      return (await getSubscription()).subscription;
+    },
     staleTime: 30_000,
-    enabled: isAuthenticated && !isGuest,
+    enabled: (isAuthenticated && !isGuest) || devWebPro,
   });
 }
 

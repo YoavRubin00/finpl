@@ -114,8 +114,8 @@ export function NotificationPermissionBanner() {
   return (
     <NotificationBanner
       visible={visible}
-      message="אתם מפספסים התראות ממני"
-      actionLabel="אשר"
+      message="רוצים שאזכיר לכם לחזור מחר ולשמור על הרצף? 🔥"
+      actionLabel="כן, תזכירו לי"
       onAction={handleAllow}
       onDismiss={handleDismiss}
       duration={0}
