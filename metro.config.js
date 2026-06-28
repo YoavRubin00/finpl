@@ -4,13 +4,18 @@ const { withNativeWind } = require("nativewind/metro");
 
 const config = getDefaultConfig(__dirname);
 
-// Enable modern resolution so import.meta works on web (needed by reanimated v4)
+// Enable modern package-exports resolution.
 config.resolver.unstable_enablePackageExports = true;
-config.resolver.unstable_conditionNames = [
-  "browser",
-  "require",
-  "react-native",
-];
+// "browser" MUST be web-only. When it was in the GLOBAL condition list it was
+// active on native too, so any package with a "browser" exports condition
+// (@elevenlabs/react-native, livekit-client, @livekit/components-react, …)
+// resolved to its WEB build on Android. Those throw at eval on Hermes →
+// require() returns undefined → the shark voice call crashed (PostHog:
+// "Cannot read property 'ConversationProvider' of undefined", Android only;
+// web was fine). Keep "browser" for web (reanimated v4 import.meta) via
+// unstable_conditionsByPlatform; native now gets only require/react-native.
+config.resolver.unstable_conditionNames = ["require", "react-native"];
+config.resolver.unstable_conditionsByPlatform = { web: ["browser"] };
 
 // ---------------------------------------------------------------------------
 // Redirect lottie-react-native → SafeLottieView on web
