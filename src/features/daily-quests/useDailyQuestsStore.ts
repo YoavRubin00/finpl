@@ -143,13 +143,20 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         const dilemmaPlays = challengeStore.getDilemmaPlaysToday();
         const swipePlays = challengeStore.getSwipeGamePlaysToday();
         const newsDone = newsStore.hasCompletedToday();
-        const todayCompletedMods = progressData.filter((m) => m.status === 'completed').length;
+        // BUG FIX (Yoav 2026-06-28): was counting ALL-TIME completed modules, so the
+        // "module" daily star stayed filled forever and never reset each day. Count
+        // only a module completed TODAY (Israel day) via completedAt.
+        const completedModuleToday = progressData.some((m) => {
+          if (m.status !== 'completed' || !m.completedAt) return false;
+          const d = new Date(m.completedAt);
+          return !Number.isNaN(d.getTime()) && israelDayKey(d) === today;
+        });
 
         const updated = quests.map((q) => {
           if (q.isCompleted) return q;
           let done = false;
           if (q.type === "dilemma") done = dilemmaPlays > 0;
-          else if (q.type === "module") done = todayCompletedMods > 0;
+          else if (q.type === "module") done = completedModuleToday;
           else if (q.type === "swipe") done = swipePlays > 0;
           else if (q.type === "news") done = newsDone;
           return done ? { ...q, isCompleted: true } : q;

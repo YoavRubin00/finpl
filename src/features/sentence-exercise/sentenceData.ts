@@ -1097,7 +1097,7 @@ export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
   "mod-1-5": {
     moduleId: "mod-1-5",
     title: "בואו נתרגל!",
-    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    intro: "2 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
     prompts: [
       {
         type: "fill-blank",
@@ -1137,23 +1137,6 @@ export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
           correct: ["מדויק!", "אלופים!", "זוכרים את עלות המעביד!"],
           empathicFirst: "חשבו שהמעסיק מוסיף מעבר לברוטו גם הפרשות ומיסים.",
           hintAfterTwoWrongs: "רמז: על ברוטו 10,000 ₪ המעסיק משלם בערך 12,500 ₪.",
-        },
-      },
-      {
-        type: "timeline-order",
-        id: "recall-mod-1-5-to-1",
-        instruction: "סדרו מהסכום הגבוה לנמוך ביותר (לדוגמה על ברוטו 10,000 ₪)",
-        difficulty: "medium",
-        items: [
-          { id: "employer", label: "עלות מעביד — כ-12,500 ₪", correctOrder: 0 },
-          { id: "gross", label: "שכר ברוטו — 10,000 ₪", correctOrder: 1 },
-          { id: "net", label: "שכר נטו — כ-8,200 ₪", correctOrder: 2 },
-          { id: "deductions", label: "סך הניכויים מהברוטו — כ-1,800 ₪", correctOrder: 3 },
-        ],
-        finn: {
-          correct: ["מצוין!", "הבנתם את התלוש!", "בדיוק!"],
-          empathicFirst: "חשבו מה גדול יותר — עלות המעביד או הנטו שמגיע אליכם.",
-          hintAfterTwoWrongs: "רמז: עלות המעביד הכי גבוהה, הנטו קטן ממנה, והניכויים הם הסכום הקטן.",
         },
       },
     ],

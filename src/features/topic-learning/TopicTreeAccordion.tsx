@@ -185,7 +185,15 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // Carousel chip opens an in-app sheet (not a lesson phase), so intercept it
   // here; every other chip delegates to the parent's navigation handler.
   const handleChipPress = useCallback((topic: Topic) => {
-    if (topic.kind === 'carousel') { setCarouselOpen(true); return; }
+    if (topic.kind === 'carousel') {
+      setCarouselOpen(true);
+      // Mark the carousel chip done so it shows completed (green) after the user
+      // opens it (Yoav 2026-06-28: "לא מסומנת כמושלמת גם אחרי סיום"). Display-only —
+      // NOT in the completion `topics` — so this changes ONLY the chip's visual
+      // state and never moves the chest math.
+      try { useTopicProgressStore.getState().markTopicCompleted(topic, 'chip'); } catch { /* non-fatal */ }
+      return;
+    }
     onTopicSelected(topic);
   }, [onTopicSelected]);
 
@@ -739,6 +747,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           coins={chestState?.coins ?? MODULE_TT_COINS}
           energy={chestState?.energy ?? CHEST_ENERGY_REWARD}
           isFinale={chestState?.isFinale ?? false}
+          thresholdPct={Math.round(chestThresholdFor(module.id) * 100)}
           rarity={chestState?.rarity ?? 'common'}
           onContinueModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }

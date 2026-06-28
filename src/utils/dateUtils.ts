@@ -14,8 +14,8 @@ const IL_DAY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
  *  user-facing daily reset — challenges, quests, streak ceremonies. Auto-
  *  handles IST/IDT transitions. Do NOT use for server-bound payloads that
  *  must agree with a UTC ledger; use `todayISO()` for those. */
-export function israelDayKey(): string {
-  return IL_DAY_FORMATTER.format(new Date());
+export function israelDayKey(date: Date = new Date()): string {
+  return IL_DAY_FORMATTER.format(date);
 }
 
 /** Whole UTC calendar days between sign-up and today (0 on the first day, 1 on
