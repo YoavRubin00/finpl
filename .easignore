@@ -209,3 +209,15 @@ assets/infographics/finn-installments.png
 assets/infographics/microsoft-sankey.png
 assets/IMAGES/Recitation_3_pdf
 assets/IMAGES/new icon.png
+
+# ── Pre-1.4.1 store-build bloat sweep (Yoav 2026-06-29) ──────────────────────
+# shark-voice-stage.png is unreferenced (grep-verified: no require/import) yet
+# matched IMAGES/** and bundled ~1.7MB of dead weight into the app binary.
+assets/IMAGES/shark-voice-stage.png
+# Source/work ZIPs — the two under lottie/ matched lottie/** and were bundling
+# into the app; none is referenced by any code.
+assets/Design System.zip
+assets/lottie/First Project.zip
+assets/lottie/finplay-decoration.zip
+# ffmpeg two-pass logs — the .mbtree is ~7MB and `*.log` above does NOT catch it.
+*.mbtree

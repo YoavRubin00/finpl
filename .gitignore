@@ -129,3 +129,8 @@ PRD_FinPlay_Stich.md
 # upscaled coin previews, raw mp4s pre-WebP conversion). Never source code.
 _qcprev/
 _work/
+
+# ffmpeg two-pass encoding logs — transient build artifacts, never source.
+# (The .mbtree companion is ~7MB and *.log in .easignore doesn't catch it.)
+ffmpeg2pass-*.log
+*.mbtree
