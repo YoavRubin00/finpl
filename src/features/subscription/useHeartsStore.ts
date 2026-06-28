@@ -18,11 +18,10 @@ const HEART_REFILL_MS = 15 * 60 * 1000; // 15 minutes per energy unit (was 5h) �
 const MAX_PRACTICE_REFILLS_PER_DAY = 2; // ×PRACTICE_ENERGY_GRANT = +10/day
 const PRACTICE_ENERGY_GRANT = 5; // energy granted per practice/replay completion (was +1)
 
-/** Max energy a single passive-regen settlement grants (on app return). A long
- *  absence gives this "welcome back" gift, NOT a full refill — energy stays a
- *  real resource so the refill/Pro paywall keeps meaning (Yoav 2026-06-22:
- *  "לא צריך למלא הכל, נגיד לתת 5 אנרגיה מתנה"). */
-export const WELCOME_BACK_ENERGY_GIFT = 5;
+/** One-time daily "welcome back" gift granted on RETURN to the app (on top of
+ *  passive regen), capped to once per calendar day via `returnGiftDate`. Yoav
+ *  2026-06-28: "מתנה של 3 אנרגיה מוגבל לפעם אחת ביום". */
+export const RETURN_GIFT_ENERGY = 3;
 
 /** Energy is fully OFF for the very first module (mod-0-1) so a brand-new user
  *  meets the lesson with zero lives/energy friction; it switches ON from
@@ -47,9 +46,11 @@ function calcHeartRefills(lastLostAt: string | null, currentHearts: number): num
   if (!lastLostAt || currentHearts >= MAX_HEARTS) return 0;
   const elapsed = Math.max(0, Date.now() - new Date(lastLostAt).getTime());
   const refills = Math.floor(elapsed / HEART_REFILL_MS);
-  // Cap a single settlement to the welcome-back gift — returning after a long
-  // absence gives +WELCOME_BACK_ENERGY_GIFT, never a silent full refill.
-  return Math.min(refills, MAX_HEARTS - currentHearts, WELCOME_BACK_ENERGY_GIFT);
+  // FULL time-based regen (Yoav 2026-06-28): NO welcome-back cap. Energy refills
+  // 1 unit / 15min up to MAX, so a long absence (≥5h) returns a FULL bar. The old
+  // +5-per-settlement cap confused users ("8h away, still not full") and risked
+  // losing players, so it was removed.
+  return Math.min(refills, MAX_HEARTS - currentHearts);
 }
 
 interface HeartsState {
@@ -83,6 +84,10 @@ interface HeartsState {
   // Keyed by source ('quest' | 'daily-task' | 'station-game' | 'ad' | 'combo' …).
   // Value = energy granted from that source TODAY (reset on date change).
   energyGrantsBySource: Record<string, { date: string; energy: number }>;
+
+  // Date (YYYY-MM-DD) the daily +RETURN_GIFT_ENERGY welcome-back gift was last
+  // claimed, so it grants at most ONCE per calendar day. Persisted.
+  returnGiftDate: string | null;
 
   // PRO users have unlimited energy → energy must be fully INERT for them:
   // never decreases, never increases, no gain/loss animations. Mirrored from
@@ -125,6 +130,12 @@ interface HeartsActions {
   /** Reset the combo streak (call on any wrong answer / sim failure). */
   resetCombo: () => void;
 
+  /** Called when the user RETURNS to the app (on the learn screen): settles the
+   *  passive regen (with the gain animation) and grants the once-per-day
+   *  +RETURN_GIFT_ENERGY welcome-back gift. Safe to call repeatedly — regen is
+   *  idempotent and the gift is gated to once/day. */
+  claimReturnEnergy: () => void;
+
   /** Show / hide the GLOBAL out-of-energy modal (non-lesson depletion). */
   flagDepleted: () => void;
   /** Open the refill modal ON DEMAND (user tapped the energy pill) WITHOUT
@@ -150,6 +161,7 @@ const initialState: HeartsState = {
   practiceRefillDate: null,
   pendingPracticeForHeart: false,
   energyGrantsBySource: {},
+  returnGiftDate: null,
   isPro: false,
 };
 
@@ -298,6 +310,20 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
 
       resetCombo: () => set({ comboStreak: 0 }),
 
+      claimReturnEnergy: (): void => {
+        if (get().isPro) return; // Pro = inert
+        // Settle passive regen and SHOW it. refillHearts stays silent on the
+        // internal pre-spend/pre-grant settles (so a spend never animates a gain
+        // then a loss); the regen gain animation fires ONLY here, on return.
+        const regen = get().refillHearts();
+        if (regen > 0) emit('gain', regen, 'regen');
+        // Daily welcome-back gift — once per calendar day, ON TOP of the regen.
+        if (get().returnGiftDate !== todayISO()) {
+          const granted = get().grantEnergy(RETURN_GIFT_ENERGY, 'return-gift'); // emits its own gain
+          if (granted > 0) set({ returnGiftDate: todayISO() });
+        }
+      },
+
       flagDepleted: () => set((state) => {
         // Fire `energy_depleted` once per false→true transition (NOT on every
         // blocked action while already at 0) so the YOAVS weekly "ran out of
@@ -327,13 +353,27 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
     },
     {
       name: 'hearts-storage-v1',
+      // Bump 0→1 to run the one-time full-energy reset migration below.
+      version: 1,
       storage: createJSONStorage(() => zustandStorage),
+      // ONE-TIME full-energy reset for every EXISTING player (Yoav 2026-06-28:
+      // "שלכולם יהיה אנרגיה מלאה, תאפס את זה" — don't lose players to the old
+      // +5-cap regen bug). Runs exactly once per device when the persisted
+      // version (0 = no version) upgrades to 1; new installs start at MAX anyway.
+      migrate: (persisted: unknown, version: number) => {
+        const s = (persisted ?? {}) as Partial<HeartsState>;
+        if (version < 1) {
+          return { ...s, hearts: MAX_HEARTS, lastHeartLostAt: null } as unknown as HeartsState & HeartsActions;
+        }
+        return s as unknown as HeartsState & HeartsActions;
+      },
       partialize: (state) => ({
         hearts: state.hearts,
         lastHeartLostAt: state.lastHeartLostAt,
         practiceRefillsToday: state.practiceRefillsToday,
         practiceRefillDate: state.practiceRefillDate,
         energyGrantsBySource: state.energyGrantsBySource,
+        returnGiftDate: state.returnGiftDate,
         // sessionHeartsLost intentionally NOT persisted (cold-start reset)
         // pendingPracticeForHeart intentionally NOT persisted (transient flag)
       }),

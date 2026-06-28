@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions, findNodeHandle } from "react-native";
+import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions, findNodeHandle, AppState } from "react-native";
 // Gesture-handler ScrollView + RootView — used ONLY inside the swipe/dilemma
 // Modals below. RN's Modal mounts in a separate native window so the
 // app-level GestureHandlerRootView doesn't extend into it, and RN's
@@ -1640,6 +1640,23 @@ export function DuoLearnScreen() {
     useTopicProgressStore.setState((s) => ({
       completed: { ...s.completed, '__reset_r5__': { completedAt: new Date().toISOString() } },
     }));
+  }, []);
+
+  // Energy on RETURN to the app — cold-start mount AND background→active — settle
+  // the passive regen (1/15min, up to MAX) and grant the once-per-day welcome-back
+  // gift, with the gain animation + haptic right here on the learn screen (Yoav
+  // 2026-06-28). No-op for Pro; regen is idempotent and the gift is gated once/day,
+  // so repeat calls are safe. In-app tab navigation does NOT fire it (no AppState change).
+  useEffect(() => {
+    useHeartsStore.getState().claimReturnEnergy();
+    let prev = AppState.currentState;
+    const sub = AppState.addEventListener('change', (next) => {
+      if (/inactive|background/.test(prev) && next === 'active') {
+        useHeartsStore.getState().claimReturnEnergy();
+      }
+      prev = next;
+    });
+    return () => sub.remove();
   }, []);
 
   // Warm-up prefetch (Yoav 2026-06-12, option #3): the moment the learn map
