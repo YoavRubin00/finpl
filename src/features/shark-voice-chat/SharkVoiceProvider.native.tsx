@@ -21,27 +21,32 @@ let probed = false;
 function probeSdkOnce(): void {
   if (probed) return;
   probed = true;
-  const r: Record<string, string> = {};
+  // `v` is a BUNDLE MARKER — if PostHog shows v:'v2', the new OTA bundle (with
+  // the metro browser-condition fix) is actually running; v missing/old = the
+  // device is still on the previous bundle (OTA not applied).
+  const r: Record<string, string> = { v: 'v2' };
   const step = (key: string, fn: () => void) => {
     try {
       fn();
       r[key] = 'ok';
     } catch (e) {
-      r[key] = String((e as Error)?.message ?? e).slice(0, 220);
+      r[key] = String((e as Error)?.message ?? e).slice(0, 200);
     }
   };
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  step('webrtc', () => { require('@livekit/react-native-webrtc'); });
+  step('webrtc', () => { if (require('@livekit/react-native-webrtc') == null) throw new Error('undefined'); });
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  step('livekit', () => { require('@livekit/react-native'); });
+  step('webrtcReg', () => { (require('@livekit/react-native-webrtc') as { registerGlobals: () => void }).registerGlobals(); });
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  step('livekitClient', () => { if (require('livekit-client') == null) throw new Error('undefined'); });
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  step('livekit', () => { if (require('@livekit/react-native') == null) throw new Error('undefined'); });
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   step('registerGlobals', () => { (require('@livekit/react-native') as { registerGlobals: () => void }).registerGlobals(); });
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  step('elevenClientInternal', () => { require('@elevenlabs/client/internal'); });
   step('elevenRN', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const m = require('@elevenlabs/react-native') as { ConversationProvider?: unknown } | undefined;
-    if (!m) throw new Error('require returned undefined');
+    if (m == null) throw new Error('require returned undefined');
     if (!m.ConversationProvider) throw new Error('loaded but ConversationProvider missing');
   });
   try {
