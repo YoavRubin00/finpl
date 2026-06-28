@@ -1,23 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
-import type { SharkVoiceStatus } from '../useSharkVoiceStore';
 
 /**
  * Drives which "expression" loop the shark avatar plays based on the live
- * voice session status.
+ * voice session status. TWO states only (Yoav 2026-06-29 — "בלי לסבך"):
  *
- * States:
- *  - `speaking`            → CYCLES `talking-1 → talking-2 → talking-3` every
- *                            `TALKING_CYCLE_MS` so a long reply keeps feeling
- *                            live instead of looping one clip.
- *  - `thinking`/`connecting` → `thinking` (the captain ponders / dials in).
- *  - everything else        → `listening` (attentive, mouth closed).
+ *  - `speaking`      → ONE talking loop (`talking-1`) held for the ENTIRE turn.
+ *                      No cycling between talking variants, no cross-fade churn
+ *                      mid-speech. The mouth still moves (the WebP loops) — the
+ *                      avatar just never swaps while the shark is talking.
+ *  - everything else → `listening` (attentive, mouth closed).
  *
- * **Mid-speech flicker guard:** the SDK briefly reports non-speaking modes
- * during natural pauses (commas, breaths, inter-sentence gaps) even though
- * the agent's turn isn't over. We hold for `TALKING_HOLD_MS` before settling
- * to `listening`; if `speaking` returns within that window the pending
- * transition is cancelled, so the avatar never visibly leaves talking mode.
+ * **Finish-of-turn guard:** the SDK briefly reports non-speaking modes during
+ * natural pauses (commas, breaths, inter-sentence gaps) even though the agent's
+ * turn isn't over. We hold for `TALKING_HOLD_MS` before settling to
+ * `listening`; if `speaking` returns within that window the pending transition
+ * is cancelled — so the avatar switches to listening ONLY once the shark has
+ * actually finished talking, never mid-reply.
  */
 
 export type SharkExpression =
@@ -30,65 +29,41 @@ export type SharkExpression =
   | 'empathic'
   | 'victory';
 
-// Short hold only — smooths a 1–2 frame flicker on the speaking→listening
-// edge. The precise "is he making sound" detection now lives in the hook's
-// output-volume loop (`useElevenLabsConversation.web.ts`), which already
-// debounces word-gaps, so this can be small to keep the mouth in tight sync.
+// Short hold only — absorbs the SDK's brief non-speaking blips during natural
+// pauses so the avatar doesn't flip to listening mid-reply. The precise
+// "is he making sound" detection lives in the hook's output-volume loop, which
+// already debounces word-gaps, so this can stay small.
 const TALKING_HOLD_MS = 120;
-// How long each talking variant shows before advancing to the next. Long
-// enough to read as a deliberate gesture, short enough that a multi-sentence
-// reply visibly varies.
-const TALKING_CYCLE_MS = 1900;
-const TALKING_VARIANTS: readonly SharkExpression[] = ['talking-1', 'talking-2', 'talking-3'];
 
 export function useSharkAvatarState(): SharkExpression {
   const status = useSharkVoiceStore((s) => s.status);
   const [expression, setExpression] = useState<SharkExpression>('listening');
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cycleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const variantIdxRef = useRef(0);
 
   useEffect(() => {
     if (status === 'speaking') {
+      // Shark is talking: hold ONE talking loop for the whole turn — no cycling
+      // between variants, no swapping mid-speech.
       if (exitTimerRef.current) {
         clearTimeout(exitTimerRef.current);
         exitTimerRef.current = null;
       }
-      setExpression(TALKING_VARIANTS[variantIdxRef.current % TALKING_VARIANTS.length]);
-      if (!cycleTimerRef.current) {
-        cycleTimerRef.current = setInterval(() => {
-          variantIdxRef.current = (variantIdxRef.current + 1) % TALKING_VARIANTS.length;
-          setExpression(TALKING_VARIANTS[variantIdxRef.current]);
-        }, TALKING_CYCLE_MS);
-      }
+      setExpression('talking-1');
     } else {
-      if (cycleTimerRef.current) {
-        clearInterval(cycleTimerRef.current);
-        cycleTimerRef.current = null;
-      }
-      if (status === 'thinking' || status === 'connecting') {
-        if (exitTimerRef.current) {
-          clearTimeout(exitTimerRef.current);
-          exitTimerRef.current = null;
-        }
-        setExpression('thinking');
-      } else {
-        if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
-        exitTimerRef.current = setTimeout(() => {
-          setExpression('listening');
-          exitTimerRef.current = null;
-        }, TALKING_HOLD_MS);
-      }
+      // Not speaking (user talking / thinking / connecting / idle) → the
+      // attentive non-talking loop, but only after the finish-of-turn hold so
+      // brief pauses inside the shark's reply don't flip it early.
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = setTimeout(() => {
+        setExpression('listening');
+        exitTimerRef.current = null;
+      }, TALKING_HOLD_MS);
     }
 
     return () => {
       if (exitTimerRef.current) {
         clearTimeout(exitTimerRef.current);
         exitTimerRef.current = null;
-      }
-      if (cycleTimerRef.current) {
-        clearInterval(cycleTimerRef.current);
-        cycleTimerRef.current = null;
       }
     };
   }, [status]);
