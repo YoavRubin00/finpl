@@ -6,15 +6,19 @@ const config = getDefaultConfig(__dirname);
 
 // Enable modern package-exports resolution.
 config.resolver.unstable_enablePackageExports = true;
-// "browser" MUST be web-only. When it was in the GLOBAL condition list it was
-// active on native too, so any package with a "browser" exports condition
-// (@elevenlabs/react-native, livekit-client, @livekit/components-react, …)
-// resolved to its WEB build on Android. Those throw at eval on Hermes →
-// require() returns undefined → the shark voice call crashed (PostHog:
-// "Cannot read property 'ConversationProvider' of undefined", Android only;
-// web was fine). Keep "browser" for web (reanimated v4 import.meta) via
-// unstable_conditionsByPlatform; native now gets only require/react-native.
-config.resolver.unstable_conditionNames = ["require", "react-native"];
+// Two corrections to the previous override, both needed for the native voice SDK:
+//  1. "browser" MUST be web-only. Globally it was active on native too, so
+//     @elevenlabs/react-native (browser→web build) resolved wrong on Android.
+//  2. "import" MUST be present (it's a Metro default the old override dropped).
+//     livekit-client's exports are ONLY { import: *.esm.mjs, require: *.umd.js }.
+//     Without "import", native matched "require" → the UMD build, which is
+//     browser-targeted and throws at eval on Hermes → require('livekit-client')
+//     returned undefined → @livekit/react-native → @elevenlabs/react-native all
+//     cascaded to undefined → the shark voice call crashed (PostHog probe:
+//     livekit-client=undefined, registerGlobals fails). With "import", native
+//     resolves the ESM build, which Metro transpiles cleanly.
+// "browser" stays web-only (reanimated v4 import.meta) via conditionsByPlatform.
+config.resolver.unstable_conditionNames = ["require", "import", "react-native"];
 config.resolver.unstable_conditionsByPlatform = { web: ["browser"] };
 
 // ---------------------------------------------------------------------------

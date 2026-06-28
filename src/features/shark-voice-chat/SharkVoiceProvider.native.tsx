@@ -24,7 +24,7 @@ function probeSdkOnce(): void {
   // `v` is a BUNDLE MARKER — if PostHog shows v:'v2', the new OTA bundle (with
   // the metro browser-condition fix) is actually running; v missing/old = the
   // device is still on the previous bundle (OTA not applied).
-  const r: Record<string, string> = { v: 'v2' };
+  const r: Record<string, string> = { v: 'v3' };
   const step = (key: string, fn: () => void) => {
     try {
       fn();
