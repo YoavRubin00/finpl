@@ -2470,13 +2470,15 @@ export function DuoLearnScreen() {
   // CTA rename ("סיים את כל המודולה שיוביל למפת המודולה הפתוחה, עם
   // מה שהמשתמש עוד לא סיים", NOT to the pearl that comes after it).
   const handleTopicTreeContinueAfterChest = useCallback(() => {
-    // Keep the accordion OPEN, and land the user so they SEE the module they
-    // just finished — the report + shark-call cards — with the NEXT module
-    // sitting in view below them (Yoav 2026-06-22). Measure the cards block and
-    // scroll it to ~42% down the viewport: end-of-module above, cards
-    // centred-ish, next node below. Retry across a few frames since the cards
-    // mount the same commit the chest closes (so the first measure can miss).
-    const { height } = Dimensions.get('window');
+    // Keep the accordion OPEN and land the user with the shark-call card at the
+    // TOP of the viewport — endCardsRef's first child IS the ModuleSharkCallCard,
+    // so measuring the band's top and scrolling it to the same headroom as the
+    // gold-chip scroll (CALL_CARD_TOP_PAD) puts the call card up top, with the
+    // report card, the inter-module pearl, and the NEXT module flowing into view
+    // below it (Yoav 2026-06-29). The old ~42% target sat mid-screen and pushed
+    // the pearl + next module off the bottom. Retry across a few frames since the
+    // cards mount the same commit the chest closes (so the first measure can miss).
+    const CALL_CARD_TOP_PAD = 96;
     const tryScroll = (): boolean => {
       const node = endCardsRef.current;
       const scroller = scrollRef.current;
@@ -2489,7 +2491,7 @@ export function DuoLearnScreen() {
         node.measureLayout(
           relativeTo,
           (_x: number, y: number) => {
-            scrollRef.current?.scrollTo({ y: Math.max(0, y - height * 0.42), animated: true });
+            scrollRef.current?.scrollTo({ y: Math.max(0, y - CALL_CARD_TOP_PAD), animated: true });
           },
           () => {},
         );
