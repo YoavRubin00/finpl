@@ -5,9 +5,12 @@ const { withInfoPlist, withAndroidManifest, AndroidConfig } = require('@expo/con
  * expo-audio's autolinking injects but FinPlay does not actually use.
  *
  * iOS:     remove "audio" from UIBackgroundModes (Apple 2.5.4)
- * Android: force-remove FOREGROUND_SERVICE_MEDIA_PLAYBACK / FOREGROUND_SERVICE
- *          uses-permission via tools:node="remove" so the manifest merger
- *          drops anything autolinked native modules try to declare.
+ * Android: force-remove FOREGROUND_SERVICE_MEDIA_PLAYBACK uses-permission via
+ *          tools:node="remove" so the manifest merger drops the media-playback
+ *          foreground service expo-audio autolinks but we never use.
+ *          NOTE: we do NOT strip FOREGROUND_SERVICE — the live shark voice call
+ *          (@livekit/react-native → WebRTC) needs it (+ FOREGROUND_SERVICE_MICROPHONE)
+ *          for in-call mic capture on Android 14+. Stripping it broke the call.
  *          Also marks MainActivity resizeableActivity=true so Android 16
  *          large-screen warnings clear without unlocking portrait.
  */
@@ -25,7 +28,8 @@ function withNoBackgroundAudioIos(config) {
 
 const BLOCKED_ANDROID_PERMS = [
   'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
-  'android.permission.FOREGROUND_SERVICE',
+  // FOREGROUND_SERVICE intentionally NOT stripped — LiveKit/WebRTC needs it for
+  // the live shark voice call's in-call mic capture (Android 14+). Yoav 2026-06-28.
 ];
 
 function withNoBackgroundAudioAndroid(config) {

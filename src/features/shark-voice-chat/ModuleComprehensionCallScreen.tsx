@@ -8,6 +8,8 @@ import {
   ImageBackground,
   StyleSheet,
   useWindowDimensions,
+  Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,6 +31,8 @@ import {
   buildComprehensionForModule,
   buildComprehensionOverride,
 } from './moduleComprehension';
+import { captureEvent } from '../../lib/posthog';
+import { captureException } from '../../lib/sentry';
 
 const RTL = { writingDirection: 'rtl' as const };
 const CALL_SECONDS = 45;
@@ -102,14 +106,35 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
         if (!perm.granted && perm.canAskAgain) {
           perm = await requestRecordingPermissionsAsync(); // fires the OS/browser prompt
         }
+        // Telemetry: the entire pre-connect path was invisible to analytics — the
+        // native "call never starts" bug (0 connect_attempt on iOS/Android) went
+        // undiagnosed for weeks because the mic gate failed silently. Now the
+        // permission outcome is visible per platform in PostHog.
+        try {
+          captureEvent('shark_voice_mic_permission', {
+            platform: Platform.OS,
+            status: perm.granted ? 'granted' : perm.canAskAgain ? 'denied_can_ask' : 'denied_blocked',
+          });
+        } catch { /* non-fatal */ }
         if (!perm.granted) {
-          useSharkVoiceStore
-            .getState()
-            .setError('כדי לדבר עם שארק צריך הרשאת מיקרופון. אפשרו אותה בהגדרות → מיקרופון (או בהגדרות המכשיר) ונסו שוב.');
+          if (!perm.canAskAgain) {
+            // Permanently denied — a static message is a dead end. Open the OS
+            // Settings so the user can actually flip the mic toggle, then reopen.
+            useSharkVoiceStore
+              .getState()
+              .setError('כדי לדבר עם שארק צריך הרשאת מיקרופון. פותחים את ההגדרות, מאשרים מיקרופון, וחוזרים לשיחה.');
+            try { Linking.openSettings(); } catch { /* non-fatal */ }
+          } else {
+            useSharkVoiceStore
+              .getState()
+              .setError('כדי לדבר עם שארק צריך לאשר גישה למיקרופון ולנסות שוב.');
+          }
           return;
         }
-      } catch {
-        // If the permission check itself throws, fall through and let the SDK try.
+      } catch (e) {
+        // The permission check itself threw — log it (was silent before) and let
+        // the SDK attempt its own prompt as a last resort.
+        captureException(e as Error, { feature: 'shark-voice', step: 'mic-permission' });
       }
       await connect(override);
     })();

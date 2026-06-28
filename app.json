@@ -136,12 +136,14 @@
         "backgroundColor": "#0a1628"
       },
       "permissions": [
-        "com.android.vending.BILLING"
+        "com.android.vending.BILLING",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE"
       ],
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.FOREGROUND_SERVICE",
         "android.permission.CAMERA"
       ],
       "intentFilters": [
@@ -186,6 +188,7 @@
       ],
       "infoPlist": {
         "UIBackgroundModes": [],
+        "NSMicrophoneUsageDescription": "FinPlay משתמשת במיקרופון כדי שתוכל/י לנהל שיחת קול חיה עם קפטן שארק לבדיקת הבנה.",
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [

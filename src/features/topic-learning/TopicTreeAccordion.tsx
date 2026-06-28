@@ -549,7 +549,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // (registered users) so we never stack two modals after one chest.
   const [signupGateVisible, setSignupGateVisible] = useState(false);
   const maybeShowSignupGate = useCallback(() => {
-    if (module.id === 'mod-0-1' || module.id === 'mod-0-1b') return;
+    // mod-0-1 NOW uses this reliable in-accordion gate too (Yoav 2026-06-28):
+    // its old path (pendingPostWalkthroughCTA → PostWalkthroughRegisterCTAGate)
+    // is gated on `onLearnMap` and never fired after the 0-1 chest, so guests
+    // got NO register prompt. This gate renders in the accordion regardless of
+    // pathname. mod-0-1b still defers to its own post-module paywall flow.
+    if (module.id === 'mod-0-1b') return;
     if (useTutorialStore.getState().moduleEndGateShown[module.id]) return;
     if (profileQTimerRef.current) clearTimeout(profileQTimerRef.current);
     // Mark "shown" only when the modal actually opens — if the user navigates
