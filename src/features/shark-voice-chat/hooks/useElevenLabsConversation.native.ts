@@ -60,6 +60,7 @@ export function useElevenLabsConversation() {
   const setSharkText = useSharkVoiceStore((s) => s.setSharkText);
   const setError = useSharkVoiceStore((s) => s.setError);
   const setMuted = useSharkVoiceStore((s) => s.setMuted);
+  const addTurn = useSharkVoiceStore((s) => s.addTurn);
 
   // Runtime-load the SDK hook (see the type-only import note above). Cheap cache
   // hit after first eval; keeps the native SDK out of the module-eval graph.
@@ -98,9 +99,15 @@ export function useElevenLabsConversation() {
       if (!cleaned) return;
       if (source === 'user') {
         setUserTranscript(cleaned);
+        // Accumulate the full conversation so the comprehension report grades the
+        // user's ACTUAL spoken answers on native too. This was web-only — `turns`
+        // stayed empty on iOS/Android, so the grader ran on no transcript and the
+        // "כולל תשובות לייב" badge / used_transcript never fired on phones.
+        addTurn('user', cleaned);
         setStatus('thinking');
       } else {
         setSharkText(cleaned);
+        addTurn('shark', cleaned);
       }
     },
     onModeChange: ({ mode }: { mode: 'speaking' | 'listening' }) => {
