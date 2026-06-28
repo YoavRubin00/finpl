@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-quick-base64/android/build.gradle b/node_modules/react-native-quick-base64/android/build.gradle
+index 44a4ae7..0923176 100644
+--- a/node_modules/react-native-quick-base64/android/build.gradle
++++ b/node_modules/react-native-quick-base64/android/build.gradle
+@@ -91,7 +91,7 @@ android {
+     externalNativeBuild {
+       cmake {
+         cppFlags "-O2 -frtti -fexceptions -Wall -Wno-unused-variable -fstack-protector-all"
+-        arguments "-DANDROID_STL=c++_shared"
++        arguments "-DANDROID_STL=c++_shared", "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+         abiFilters (*reactNativeArchitectures())
+       }
+     }
