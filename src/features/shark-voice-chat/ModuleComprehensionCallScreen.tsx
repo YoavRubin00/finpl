@@ -162,6 +162,20 @@ function CallContent({ moduleId, moduleTitle, onComplete }: Props): React.ReactE
     void disconnect();
     try {
       const turns = useSharkVoiceStore.getState().turns;
+      // Telemetry: a genuinely-completed live voice check. The timer only runs
+      // once the call connected, so elapsed>0 means a real call happened (not a
+      // pre-connect bail). Powers the "how many did the voice call" metric on
+      // Yoav's dashboard.
+      if (elapsedRef.current > 0) {
+        try {
+          captureEvent('shark_voice_call_completed', {
+            platform: Platform.OS,
+            module_id: moduleId,
+            duration_sec: elapsedRef.current,
+            turns: turns.length,
+          });
+        } catch { /* non-fatal */ }
+      }
       attachTranscript(moduleId, turns);
       void generateReport(moduleId);
     } catch {

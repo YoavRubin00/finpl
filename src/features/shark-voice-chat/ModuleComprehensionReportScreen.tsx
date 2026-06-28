@@ -21,6 +21,7 @@ import {
 } from '../stock-analyst/components/FollowupBubbles';
 import { useModuleComprehensionStore } from './useModuleComprehensionStore';
 import type { ConversationTurn } from './useSharkVoiceStore';
+import { captureEvent } from '../../lib/posthog';
 
 // Look & feel intentionally mirrors the Stock-Analyst DeepAnalysisCard: a
 // light-blue (sky) panel of white, collapsible sections floating on a deep
@@ -106,6 +107,23 @@ export function ModuleComprehensionReportScreen({
     if (!report && !generating) void generateReport(moduleId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moduleId]);
+
+  // Telemetry: the user reached a real comprehension report (the "summary").
+  // Fire once per mount once a report is ready — powers the "how many saw the
+  // summary" metric on Yoav's dashboard.
+  const reportLoggedRef = useRef(false);
+  useEffect(() => {
+    if (report && !reportLoggedRef.current) {
+      reportLoggedRef.current = true;
+      try {
+        captureEvent('comprehension_report_viewed', {
+          platform: Platform.OS,
+          module_id: moduleId,
+          used_transcript: !!stored?.usedTranscript,
+        });
+      } catch { /* non-fatal */ }
+    }
+  }, [report, moduleId, stored]);
 
   /* ── follow-up Q&A ── */
   const [followups, setFollowups] = useState<ConversationTurn[]>([]);
