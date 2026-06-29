@@ -127,8 +127,11 @@ export function StreakCelebrationScreen({
 
   // Entrance sequence
   useEffect(() => {
-    if (isMilestone) {
-      doubleHeavyHaptic(); // Extra dramatic burst for milestones (7, 30, 100 days)
+    // Day-2/3 habit days get the milestone-grade double burst too — the
+    // first-72h window is the biggest retention cliff, so the ritual must feel
+    // as big as a milestone. (P3 retention 2026-06-29.)
+    if (isMilestone || isHabitDay) {
+      doubleHeavyHaptic();
     } else {
       heavyHaptic();
     }
@@ -262,6 +265,11 @@ export function StreakCelebrationScreen({
         ? "שלושה ימים! ההרגל נתפס"
         : "";
 
+  // Forward-looking "tomorrow" hook — the in-app mirror of the streak reminder
+  // push. Fires on every streak celebration (incl. day 1), pre-committing the
+  // return. Milestones keep the pure celebration. (P3 retention 2026-06-29.)
+  const motivation = isMilestone ? "המשך ככה!" : `מחר: יום ${streak + 1} ברצף 🔥`;
+
   return (
     <Pressable style={styles.pressableContainer} onPress={handleDismiss}>
       <Animated.View style={[styles.container, overlayStyle]}>
@@ -275,8 +283,10 @@ export function StreakCelebrationScreen({
           <ConfettiExplosion onComplete={() => setShowConfetti(false)} />
         )}
 
-        {/* Ambient sparkles for milestones */}
-        {isMilestone && <SparkleOverlay density="high" />}
+        {/* Ambient sparkles for milestones AND day-2/3 habit days (ritual). */}
+        {(isMilestone || isHabitDay) && (
+          <SparkleOverlay density={isMilestone ? "high" : "medium"} />
+        )}
 
         {/* Milestone gold flash overlay */}
         {isMilestone && (
@@ -400,7 +410,7 @@ export function StreakCelebrationScreen({
 
         {/* Motivational text */}
         <Animated.View style={motivationStyle}>
-          <Text style={styles.motivationText}>המשך ככה!</Text>
+          <Text style={styles.motivationText}>{motivation}</Text>
         </Animated.View>
       </Animated.View>
     </Pressable>

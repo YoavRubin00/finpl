@@ -12,6 +12,11 @@ import { appRedirectHtml } from './_shared/appRedirectPage';
 const TARGETS: Record<string, string> = {
   learn: 'finpl://learn',
   index: 'finpl://index',
+  // Re-engagement email CTA → today's daily challenge (same deep target as the
+  // dailyChallenge push) so a returning tap lands in a 1-minute game, not the
+  // map home. The CTA→action gap was the 0.3% click-through killer. (P4
+  // retention 2026-06-29.)
+  daily_dilemma: 'finpl://quest/daily-dilemma',
 };
 const FALLBACK_URL = 'https://finplay.me';
 

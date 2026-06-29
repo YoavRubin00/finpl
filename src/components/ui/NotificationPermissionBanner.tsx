@@ -20,7 +20,7 @@ import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useCompletedModulesStore } from "../../features/economy/useCompletedModulesStore";
 import { NotificationBanner } from "./NotificationBanner";
-import { FINN_STANDARD } from "../../features/retention-loops/finnMascotConfig";
+import { FINN_FIRE } from "../../features/retention-loops/finnMascotConfig";
 import { track } from "../../lib/analytics/events";
 
 const RESHOW_AFTER_DAYS = 14;
@@ -119,7 +119,7 @@ export function NotificationPermissionBanner() {
       onAction={handleAllow}
       onDismiss={handleDismiss}
       duration={0}
-      imageSource={FINN_STANDARD}
+      imageSource={FINN_FIRE}
     />
   );
 }

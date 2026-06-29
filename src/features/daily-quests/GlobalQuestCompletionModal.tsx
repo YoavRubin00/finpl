@@ -4,7 +4,7 @@ import Animated, { FadeIn, FadeInUp, useSharedValue, useAnimatedStyle, withRepea
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { STITCH } from "../../theme/Stitch";
 import { Image as ExpoImage } from "expo-image";
-import { FINN_DANCING } from "../retention-loops/finnMascotConfig";
+import { FINN_DANCING, FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
@@ -57,6 +57,9 @@ export function GlobalQuestCompletionModal() {
   };
 
   const preview = previewQuestReward(streak);
+  // Tomorrow's reward (one streak day higher) — the "what's next" tease shown
+  // after claim to pre-commit the return. (P3 retention 2026-06-29.)
+  const tomorrowPreview = previewQuestReward(streak + 1);
 
   const reduceMotion = useReducedMotion();
   const chestPulse = useSharedValue(1);
@@ -135,7 +138,7 @@ export function GlobalQuestCompletionModal() {
              </Animated.View>
           </View>
 
-          <Text style={styles.tapHint}>לחצו על התיבה כדי לפתוח</Text>
+          {!showClaimAnim && <Text style={styles.tapHint}>לחצו על התיבה כדי לפתוח</Text>}
 
           {showClaimAnim && (
             <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -143,6 +146,18 @@ export function GlobalQuestCompletionModal() {
               <FlyingRewards type="xp" amount={preview.xp} onComplete={() => {}} />
               <FlyingRewards type="coins" amount={preview.coins} onComplete={() => {}} />
             </View>
+          )}
+
+          {/* "Tomorrow" hook — Captain Shark pre-commits the return right after
+              the reward lands (Supercell "what's next" beat); the in-app mirror
+              of the streak reminder push. (P3 retention 2026-06-29.) */}
+          {showClaimAnim && (
+            <Animated.View entering={FadeIn.delay(900).duration(400)} style={styles.tomorrowRow}>
+              <ExpoImage source={FINN_TALKING} style={styles.tomorrowShark} contentFit="contain" accessible={false} />
+              <Text style={styles.tomorrowText}>
+                מחר מחכה לכם עוד תיבה — יום {streak + 1} ברצף, ועוד +{tomorrowPreview.coins} מטבעות
+              </Text>
+            </Animated.View>
           )}
         </Animated.View>
       </View>
@@ -223,5 +238,29 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: STITCH.primaryCyan,
     marginTop: 20,
+  },
+  tomorrowRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: "rgba(125, 211, 252, 0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(125, 211, 252, 0.4)",
+  },
+  tomorrowShark: {
+    width: 36,
+    height: 36,
+  },
+  tomorrowText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "800",
+    color: STITCH.onSurface,
+    textAlign: "right",
+    writingDirection: "rtl" as const,
   },
 });

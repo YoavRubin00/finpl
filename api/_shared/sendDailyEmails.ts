@@ -169,8 +169,9 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         ? `${baseUrl}/api/email/track-click?u=${encodeURIComponent(user.id)}&v=${encodeURIComponent(variantId)}&s=${sig}`
         // No tracking secret → skip conversion logging but STILL route through the
         // /api/go interstitial so the CTA reliably opens the app (a bare finpl://
-        // link is ignored by Android/Gmail from an email tap).
-        : `${baseUrl}/api/go?to=learn`;
+        // link is ignored by Android/Gmail from an email tap). Target today's
+        // daily challenge (P4 retention 2026-06-29), matching track-click.
+        : `${baseUrl}/api/go?to=daily_dilemma`;
 
       // Open-tracking pixel — fires retention_email_opened to PostHog. No
       // signature needed: an open is low-stakes (worst case a forged open),

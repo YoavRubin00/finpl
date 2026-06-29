@@ -9,8 +9,11 @@ import { capturePostHog } from '../_shared/posthogCapture';
 const EXPERIMENT_ID = 'daily_email_variant';
 // Deep link straight into the app — the live click target. Was previously
 // the marketing landing page, which made the email feel like a redirect to
-// an ad rather than "open the game" (user report 2026-06-03).
-const REDIRECT_URL = 'finpl://learn';
+// an ad rather than "open the game" (user report 2026-06-03). 2026-06-29 (P4
+// retention): point at today's daily challenge (same deep target as the
+// dailyChallenge push) so a returning tap lands in a 1-minute game, not the
+// map home — the CTA→action gap was the 0.3% click-through killer.
+const REDIRECT_URL = 'finpl://quest/daily-dilemma';
 // Web fallback if the app isn't installed / the scheme doesn't resolve.
 const FALLBACK_URL = 'https://finplay.me';
 
