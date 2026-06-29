@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions, findNodeHandle, AppState } from "react-native";
+import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions, AppState } from "react-native";
 // Gesture-handler ScrollView + RootView — used ONLY inside the swipe/dilemma
 // Modals below. RN's Modal mounts in a separate native window so the
 // app-level GestureHandlerRootView doesn't extend into it, and RN's
@@ -2476,40 +2476,36 @@ export function DuoLearnScreen() {
   // earlier R6 pearl-scroll was the wrong target after Yoav's 2026-06-11
   // CTA rename ("סיים את כל המודולה שיוביל למפת המודולה הפתוחה, עם
   // מה שהמשתמש עוד לא סיים", NOT to the pearl that comes after it).
-  const handleTopicTreeContinueAfterChest = useCallback(() => {
-    // Keep the accordion OPEN and land the user with the shark-call card at the
-    // TOP of the viewport — endCardsRef's first child IS the ModuleSharkCallCard,
-    // so measuring the band's top and scrolling it to the same headroom as the
-    // gold-chip scroll (CALL_CARD_TOP_PAD) puts the call card up top, with the
-    // report card, the inter-module pearl, and the NEXT module flowing into view
-    // below it (Yoav 2026-06-29). The old ~42% target sat mid-screen and pushed
-    // the pearl + next module off the bottom. Retry across a few frames since the
-    // cards mount the same commit the chest closes (so the first measure can miss).
-    const CALL_CARD_TOP_PAD = 96;
+  // Land the end-of-module cards band (its FIRST child IS ModuleSharkCallCard)
+  // just below the header, so the summary-call card sits near the top with the
+  // report card, the inter-module pearl, and the NEXT module flowing into view
+  // below it — the order Yoav asked for (2026-06-29). measureInWindow +
+  // scrollYRef is Fabric-safe; the old measureLayout(numericHandle) was
+  // unreliable on the new architecture and often landed at the top of the
+  // chapter / the wrong spot. Retry across a few frames since the cards mount
+  // the same commit the chest closes (so the first measure can miss).
+  const scrollEndCardsNearTop = useCallback(() => {
+    const DESIRED_TOP = insets.top + 72; // band sits just under the header
     const tryScroll = (): boolean => {
       const node = endCardsRef.current;
       const scroller = scrollRef.current;
-      if (!node || !scroller || typeof node.measureLayout !== 'function') return false;
-      const innerGetter = scroller as unknown as { getInnerViewNode?: () => unknown };
-      const inner = innerGetter.getInnerViewNode?.();
-      const relativeTo = typeof inner === 'number' ? inner : findNodeHandle(scroller);
-      if (relativeTo == null) return false;
-      try {
-        node.measureLayout(
-          relativeTo,
-          (_x: number, y: number) => {
-            scrollRef.current?.scrollTo({ y: Math.max(0, y - CALL_CARD_TOP_PAD), animated: true });
-          },
-          () => {},
-        );
-        return true;
-      } catch {
-        return false;
-      }
+      if (!node || !scroller || typeof node.measureInWindow !== 'function') return false;
+      node.measureInWindow((_x: number, winY: number) => {
+        if (typeof winY !== 'number') return;
+        const target = Math.max(0, scrollYRef.current + winY - DESIRED_TOP);
+        scrollRef.current?.scrollTo({ y: target, animated: true });
+      });
+      return true;
     };
     requestAnimationFrame(() => { if (!tryScroll()) setTimeout(tryScroll, 140); });
     setTimeout(tryScroll, 340);
-  }, []);
+  }, [insets.top]);
+
+  const handleTopicTreeContinueAfterChest = useCallback(() => {
+    // 70% chest, module not finished: keep the accordion OPEN and land the
+    // shark-call card near the top with the pearl + next module below.
+    scrollEndCardsNearTop();
+  }, [scrollEndCardsNearTop]);
 
   // "המשך" after chest — keep accordion OPEN, scroll end-of-module cards
   // (report + shark call) near the top (~20% from top) so the next module
@@ -2535,33 +2531,11 @@ export function DuoLearnScreen() {
       router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
     }
-    // Keep accordion open and land on the end cards at ~20% from top —
-    // next module node sits in the lower portion naturally.
-    const { height } = Dimensions.get('window');
-    const tryScroll = (): boolean => {
-      const node = endCardsRef.current;
-      const scroller = scrollRef.current;
-      if (!node || !scroller || typeof node.measureLayout !== 'function') return false;
-      const innerGetter = scroller as unknown as { getInnerViewNode?: () => unknown };
-      const inner = innerGetter.getInnerViewNode?.();
-      const relativeTo = typeof inner === 'number' ? inner : findNodeHandle(scroller);
-      if (relativeTo == null) return false;
-      try {
-        node.measureLayout(
-          relativeTo,
-          (_x: number, y: number) => {
-            scrollRef.current?.scrollTo({ y: Math.max(0, y - height * 0.20), animated: true });
-          },
-          () => {},
-        );
-        return true;
-      } catch {
-        return false;
-      }
-    };
-    requestAnimationFrame(() => { if (!tryScroll()) setTimeout(tryScroll, 140); });
-    setTimeout(tryScroll, 340);
-  }, [topicTreeModule, router, isPro]);
+    // Keep the accordion open; land the end-of-module cards near the top with
+    // the pearl + next module visible below — same landing as the 70%-chest
+    // continue path (Yoav 2026-06-29).
+    scrollEndCardsNearTop();
+  }, [topicTreeModule, router, isPro, scrollEndCardsNearTop]);
 
   // Generic module-completed handler — invoked when the user picks
   // "next module" inside the chest. Closes the accordion.

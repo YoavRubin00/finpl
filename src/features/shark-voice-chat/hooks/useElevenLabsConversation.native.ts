@@ -41,10 +41,19 @@ function cleanTranscriptText(text: string): string {
     .trim();
 }
 
-// Mirror of the web hook's debounce window: real inter-sentence gaps from
-// the TTS stream are 600–800ms; 900ms is generous enough to absorb those
-// without leaving the avatar stuck in "speaking" once the turn really ends.
-const AUDIO_SILENCE_MS = 900;
+// Frame-accurate "is the shark actually making sound right now" detection,
+// mirroring the web hook. We poll the SDK's real OUTPUT volume (getOutputVolume,
+// 0–1) instead of guessing from audio-chunk ARRIVAL timing. Chunks are buffered
+// AHEAD of playback, so onAudio stops firing while the shark is still talking —
+// the old 900ms chunk-gap timer then flipped the avatar to "listening" mid-reply
+// (Yoav 2026-06-29: "עדיין מתחלף תוך הדיבור"). Volume is the ground truth, so the
+// talking loop holds for the WHOLE turn and releases only once he's truly quiet.
+const OUTPUT_POLL_MS = 40; // ~25fps — imperceptible attack latency
+// Above this output level = sound is playing. Below the noise floor = silent.
+const OUTPUT_SPEAKING_THRESHOLD = 0.025;
+// Keep "speaking" through dips shorter than this so word-gaps don't flicker,
+// but a real sentence pause (longer) correctly shows him not talking.
+const OUTPUT_RELEASE_MS = 160;
 
 export function useElevenLabsConversation() {
   // DOMException (used by livekit-client at module-eval) is absent from Hermes —
@@ -52,8 +61,16 @@ export function useElevenLabsConversation() {
   installVoicePolyfills();
   const startingRef = useRef(false);
   const startedRef = useRef(false);
-  const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastAudioAtRef = useRef<number>(0);
+  // Output-volume polling loop (started after startSession) + the last moment
+  // real sound was heard. `sawAnyLoudRef` gates the release: we only flip to
+  // "listening" once we've CONFIRMED getOutputVolume reports real sound at least
+  // once this session. If native volume ever reports 0 throughout (SDK gap), we
+  // never auto-release — the avatar holds the talking loop through the turn and
+  // only drops to "listening" when the user speaks (onMessage → 'thinking'),
+  // which is strictly better than swapping mid-speech.
+  const volumeLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastLoudAtRef = useRef<number>(0);
+  const sawAnyLoudRef = useRef(false);
 
   const setStatus = useSharkVoiceStore((s) => s.setStatus);
   const setUserTranscript = useSharkVoiceStore((s) => s.setUserTranscript);
@@ -111,22 +128,20 @@ export function useElevenLabsConversation() {
       }
     },
     onModeChange: ({ mode }: { mode: 'speaking' | 'listening' }) => {
-      if (mode === 'speaking') {
-        setStatus('speaking');
-        return;
-      }
-      const elapsed = Date.now() - lastAudioAtRef.current;
-      if (elapsed < AUDIO_SILENCE_MS) return;
-      if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
-      setStatus('listening');
+      // Instant attack: trust the SDK's "speaking" the moment it fires so the
+      // mouth opens with zero perceived lag. The RELEASE (when he stops) is owned
+      // by the output-volume loop below for frame-accurate sync, so we
+      // deliberately IGNORE the SDK's "listening" here — it also fires during
+      // mid-sentence breaths, which would swap the avatar mid-reply (parity with
+      // the web hook; Yoav 2026-06-29).
+      if (mode === 'speaking') setStatus('speaking');
     },
     onAudio: () => {
-      lastAudioAtRef.current = Date.now();
+      // Secondary instant-attack + liveness signal. Refreshing lastLoudAtRef here
+      // can only DELAY a release, never cause a premature one (the volume loop
+      // owns the release), so it's safe even though chunks arrive buffered ahead.
+      lastLoudAtRef.current = Date.now();
       setStatus('speaking');
-      if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
-      speakingTimeoutRef.current = setTimeout(() => {
-        setStatus('listening');
-      }, AUDIO_SILENCE_MS);
     },
   });
 
@@ -186,6 +201,38 @@ export function useElevenLabsConversation() {
       try {
         await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true, shouldRouteThroughEarpiece: false });
       } catch { /* non-fatal */ }
+
+      // Frame-accurate talking sync (parity with the web hook): poll the agent's
+      // real OUTPUT volume and drive speaking↔listening off actual sound. Attack
+      // is instant (volume crosses the threshold, or onAudio/onModeChange above);
+      // release waits OUTPUT_RELEASE_MS of quiet so word-gaps don't flicker. Only
+      // manages speaking/listening — when he's silent we leave the status
+      // untouched, so the user-turn "thinking" set in onMessage is preserved.
+      lastLoudAtRef.current = Date.now();
+      sawAnyLoudRef.current = false;
+      if (volumeLoopRef.current) clearInterval(volumeLoopRef.current);
+      volumeLoopRef.current = setInterval(() => {
+        if (!startedRef.current) return;
+        let vol = 0;
+        try {
+          const anyConv = conversation as unknown as { getOutputVolume?: () => number };
+          vol = typeof anyConv.getOutputVolume === 'function' ? anyConv.getOutputVolume() : 0;
+        } catch {
+          return; // SDK shape changed / not ready — skip this tick
+        }
+        const status = useSharkVoiceStore.getState().status;
+        if (vol > OUTPUT_SPEAKING_THRESHOLD) {
+          lastLoudAtRef.current = Date.now();
+          sawAnyLoudRef.current = true;
+          if (status !== 'speaking') setStatus('speaking');
+        } else if (
+          sawAnyLoudRef.current
+          && status === 'speaking'
+          && Date.now() - lastLoudAtRef.current > OUTPUT_RELEASE_MS
+        ) {
+          setStatus('listening');
+        }
+      }, OUTPUT_POLL_MS);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'לא ניתן לפתוח חיבור לשירות הקול.';
       captureEvent('shark_voice_error', {
@@ -203,6 +250,10 @@ export function useElevenLabsConversation() {
     const wasStarted = startedRef.current;
     startingRef.current = false;
     startedRef.current = false;
+    if (volumeLoopRef.current) {
+      clearInterval(volumeLoopRef.current);
+      volumeLoopRef.current = null;
+    }
     if (wasStarted) {
       try {
         await conversation.endSession();

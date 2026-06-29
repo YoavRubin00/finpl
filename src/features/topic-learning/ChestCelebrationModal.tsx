@@ -82,6 +82,15 @@ interface ChestCelebrationModalProps {
    *  chest_cta_tapped='finish_module' (code-review 2026-06-12). Falls back
    *  to onContinueModule when not provided (legacy callers). */
   onDismiss?: () => void;
+  /** Live summary-call ("שיחת סיכום לייב") option, surfaced as a button ABOVE
+   *  "המשך" once the chest is opened (Yoav 2026-06-29). `available` gates the
+   *  whole button on the live-voice SDK being present; `eligible` (Pro / free
+   *  trial left) flips the copy + style between "start" and a PRO upsell. Tapping
+   *  fires `onStartSummaryCall` — the parent closes the chest and starts the
+   *  call. All three optional so legacy callers render unchanged. */
+  summaryCallAvailable?: boolean;
+  summaryCallEligible?: boolean;
+  onStartSummaryCall?: () => void;
 }
 
 /**
@@ -110,6 +119,9 @@ export function ChestCelebrationModal({
   quitLabel = null,
   onQuit,
   onDismiss,
+  summaryCallAvailable = false,
+  summaryCallEligible = false,
+  onStartSummaryCall,
 }: ChestCelebrationModalProps): React.ReactElement | null {
   const [opened, setOpened] = useState(false);
   const [showDoN, setShowDoN] = useState(false);
@@ -351,6 +363,11 @@ export function ChestCelebrationModal({
     onAdvanceToNextModule();
   }, [onAdvanceToNextModule]);
 
+  const handleSummaryCall = useCallback(() => {
+    tapHaptic();
+    onStartSummaryCall?.();
+  }, [onStartSummaryCall]);
+
   if (!visible) return null;
 
   return (
@@ -516,6 +533,21 @@ export function ChestCelebrationModal({
                     </Text>
                   </Pressable>
                 )
+              )}
+              {/* Yoav 2026-06-29: live summary-call option, ABOVE "המשך" (DoN
+                  already ran before the CTAs appear). Tapping closes the chest
+                  and starts the call; non-eligible users get the PRO upsell. */}
+              {summaryCallAvailable && (
+                <Pressable
+                  onPress={handleSummaryCall}
+                  accessibilityRole="button"
+                  accessibilityLabel={summaryCallEligible ? 'שיחת סיכום לייב עם שארק' : 'שדרגו ל-PRO לשיחת סיכום לייב'}
+                  style={[styles.cta, summaryCallEligible ? styles.ctaSummary : styles.ctaSummaryPro]}
+                >
+                  <Text style={[styles.ctaSummaryText, RTL]} allowFontScaling={false}>
+                    {summaryCallEligible ? '🎙️ שיחת סיכום לייב' : '🎙️ שיחת סיכום לייב · PRO'}
+                  </Text>
+                </Pressable>
               )}
               <Pressable
                 onPress={handleAdvance}
@@ -814,6 +846,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: 'rgba(224, 242, 254, 0.55)',
+  },
+  // Live summary-call CTA — cyan to read as the "voice/shark" action, distinct
+  // from the blue "המשך". PRO variant is an outline (locked-premium feel).
+  ctaSummary: {
+    backgroundColor: '#0891b2',
+    borderBottomWidth: 4,
+    borderBottomColor: '#155e75',
+    shadowColor: '#0891b2',
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+  },
+  ctaSummaryPro: {
+    backgroundColor: 'rgba(8, 145, 178, 0.18)',
+    borderWidth: 2,
+    borderColor: 'rgba(103, 232, 249, 0.6)',
+  },
+  ctaSummaryText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#ffffff',
   },
   ctaText: {
     fontSize: 17,

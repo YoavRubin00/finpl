@@ -36,6 +36,7 @@ import { useToolNudgeStore } from '../notifications/useToolNudgeStore';
 import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { ModuleReportCard } from './components/ModuleReportCard';
 import { ModuleSharkCallCard } from './components/ModuleSharkCallCard';
+import { useModuleSharkCall } from './components/useModuleSharkCall';
 import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleComprehensionStore';
 
 /** Base reward on topic-tree 70% completion. Lower than the legacy
@@ -133,6 +134,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // couple dilemma) the moment the accordion mounts. Idempotent via
   // `useModulePrefetch` so multiple mounts don't re-download.
   useTopicTreeAssetPrefetch(module);
+
+  // Shared live summary-call launcher (consent → call → report). Drives BOTH the
+  // on-map call card in the end-cards band AND the new "שיחת סיכום לייב" button
+  // inside the chest modal (Yoav 2026-06-29). Its modals are rendered once at the
+  // accordion root below so closing the chest never unmounts an in-flight call.
+  const sharkCall = useModuleSharkCall(module.id, module.title);
 
   // Subscribe ONLY to THIS module's topics' completion slice (one boolean per
   // topic, in `topics` order) wrapped in useShallow — so a topic completing in
@@ -876,7 +883,17 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             setChestState(null);
             router.replace('/(tabs)/index' as never);
           }}
+          // Yoav 2026-06-29: live summary-call option ABOVE "המשך". Tapping
+          // closes the chest and starts the call (consent → call → report).
+          summaryCallAvailable={sharkCall.available}
+          summaryCallEligible={sharkCall.eligible}
+          onStartSummaryCall={() => { setChestState(null); sharkCall.openCall(); }}
         />
+
+        {/* Live summary-call modals (consent → call → report) for the chest
+            button. Rendered at the accordion root — NOT inside the chest modal —
+            so closing the chest never unmounts an in-flight call. */}
+        {sharkCall.modals}
 
         {/* Tool-of-the-day nudge after the chest (mirrors the legacy flow).
             Self-gates on the nudge-queue 'tools' cooldown; once/day via the
