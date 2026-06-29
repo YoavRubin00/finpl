@@ -1493,10 +1493,17 @@ export function DuoLearnScreen() {
         // through topic-tree when supported (was the third entry that
         // dropped users back into the legacy linear flow).
         if (shouldUseTopicTree(next)) {
-          const introDone = useTopicProgressStore.getState()
-            .isTopicCompleted(`${next.id}:intro`);
+          // Mirror handleModulePress (Yoav 2026-06-23): gate the intro jump on a
+          // true FIRST engagement, not on the intro CHIP alone. Modules without
+          // an interactiveIntro never complete `<id>:intro`, so the old
+          // `!introDone` gate pushed the intro on every quest tap even after the
+          // user had already started the module — the bonus-lesson tap "didn't
+          // work" (user report 2026-06-29). `next` is uncompleted by
+          // construction, so !anyChipDone is sufficient here.
+          const progress = useTopicProgressStore.getState();
+          const anyChipDone = resolveTopics(next).some((t) => progress.isTopicCompleted(t.id));
           setTopicTreeModule({ module: next, chapterId: ch.id });
-          if (!introDone) {
+          if (!anyChipDone) {
             router.push(
               `/lesson/${next.id}?chapterId=${ch.id}&startPhase=intro&returnTo=topic-tree` as never,
             );

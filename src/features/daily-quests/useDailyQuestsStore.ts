@@ -297,6 +297,20 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         proRewardClaimed: state.proRewardClaimed,
         lastRewardSummary: state.lastRewardSummary,
       }),
+      onRehydrateStorage: () => () => {
+        // Day-rollover check the MOMENT persisted quests land. Without this the
+        // only triggers (AppState→active, DuoLearnScreen mount, sheet open)
+        // either don't fire on a cold start (AppState starts "active", no
+        // change event) or race the async MMKV rehydration and get overwritten
+        // by yesterday's persisted quests — leaving the 4 stars "half-completed"
+        // in the morning AND the (stale-completed) module quest disabled so its
+        // tap is swallowed (user report 2026-06-29). Defer one tick so the store
+        // finishes wiring before refreshQuests reads/writes it. refreshQuests is
+        // idempotent same-day. Mirrors useEconomyUIStore / useHeartsStore.
+        setTimeout(() => {
+          try { useDailyQuestsStore.getState().refreshQuests(); } catch { /* non-fatal */ }
+        }, 0);
+      },
     }
   )
 );
