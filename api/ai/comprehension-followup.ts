@@ -137,7 +137,11 @@ ${question}
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          generationConfig: { maxOutputTokens: 512, temperature: 0.6 },
+          // thinkingBudget:0 — disable Gemini 2.5 "thinking" so it doesn't eat
+          // the output budget and truncate the visible Hebrew answer mid-sentence.
+          // The reply is a short grounded 2-4 sentence answer — no reasoning
+          // needed. 1024 gives Hebrew headroom. (Mirrors analyst-followup.)
+          generationConfig: { maxOutputTokens: 1024, temperature: 0.6, thinkingConfig: { thinkingBudget: 0 } },
         }),
       },
     );
