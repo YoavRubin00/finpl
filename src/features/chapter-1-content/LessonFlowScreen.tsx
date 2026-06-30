@@ -36,6 +36,7 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import { ChevronRight, ChevronLeft, Bookmark } from "lucide-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
+import { GlobalErrorBoundary } from "../../components/ui/ErrorBoundary";
 import { useLessonMusic } from "../../hooks/useLessonMusic";
 import { useTimeoutCleanup } from "../../hooks/useTimeoutCleanup";
 
@@ -3911,6 +3912,13 @@ export function LessonFlowScreen() {
     goToChipPhase(next);
   }, [mod, goToChipPhase]);
 
+  // Self-heal: if we entered sim-intro without simConcept data (gating drift),
+  // skip to the next chip instead of crashing on the unguarded title access or
+  // stalling on a blank overlay. 2026-06-30.
+  useEffect(() => {
+    if (phase === 'sim-intro' && mod && !mod.simConcept) advanceFromChip('sim');
+  }, [phase, mod, advanceFromChip]);
+
   const advanceQuiz = useCallback(() => {
     if (!mod) return;
     // Mid-quiz fun video: play the module's Finn video INLINE between two quiz
@@ -4868,22 +4876,41 @@ export function LessonFlowScreen() {
           unitColors={unitColors}
         />
 
-        {/* ── Sim intro phase ── */}
-        {phase === "sim-intro" && (
-          <SimIntroOverlay
-            title={mod.simConcept.title}
-            description={mod.simConcept.description}
-            onStart={() => { playSound('modal_open_4'); setPhase("sim"); }}
-            unitColors={unitColors}
-          />
-        )}
-
-        {/* ── Sim phase ── */}
-        {phase === "sim" && (
-          <Animated.View style={[contentStyle, { flex: 1, marginHorizontal: -16 }]}>
-            <SimulatorLoader moduleId={mod.id} onComplete={handleSimComplete} />
-            {/* Skip button removed, users complete sims naturally */}
-          </Animated.View>
+        {/* ── Sim phases (intro + sandbox) ── Wrapped in an error boundary so a
+            missing/broken simulator (or absent simConcept) recovers with a
+            "המשך" instead of a white screen. Yoav 2026-06-30: recall →
+            "סיפור בהמשכים" (the sim chip) blanked the lesson. ── */}
+        {(phase === "sim-intro" || phase === "sim") && (
+          <GlobalErrorBoundary
+            resetKey={phase}
+            fallback={(reset) => (
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+                <Pressable
+                  onPress={() => { reset(); advanceFromChip('sim'); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="המשך"
+                  style={{ backgroundColor: unitColors.bg ?? "#2563eb", paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 }}
+                >
+                  <Text style={{ color: "#ffffff", fontSize: 16, fontWeight: "900", writingDirection: "rtl" }}>המשך</Text>
+                </Pressable>
+              </View>
+            )}
+          >
+            {phase === "sim-intro" && mod.simConcept && (
+              <SimIntroOverlay
+                title={mod.simConcept.title}
+                description={mod.simConcept.description}
+                onStart={() => { playSound('modal_open_4'); setPhase("sim"); }}
+                unitColors={unitColors}
+              />
+            )}
+            {phase === "sim" && (
+              <Animated.View style={[contentStyle, { flex: 1, marginHorizontal: -16 }]}>
+                <SimulatorLoader moduleId={mod.id} onComplete={handleSimComplete} />
+                {/* Skip button removed, users complete sims naturally */}
+              </Animated.View>
+            )}
+          </GlobalErrorBoundary>
         )}
 
         {/* ── Game phase (inter-module mini-game, IN-LESSON between recall and

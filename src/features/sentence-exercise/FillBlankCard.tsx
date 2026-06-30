@@ -199,11 +199,17 @@ export function FillBlankCard({
         soundTimerRef.current = setTimeout(() => { playSound('modal_open_2'); }, 100);
         setWrongChoice(null);
         setConfetti((n) => n + 1);
-        const nextSlot = prompt.slots.find((s) => s.slotId !== activeSlot && !placement[s.slotId]);
-        if (nextSlot) {
-          setActiveSlot(nextSlot.slotId);
-        } else {
+        // Use the authoritative `finishesSet` from the attempt result (computed
+        // by the recall engine WITH this choice already applied) instead of
+        // scanning the async `placement` prop — the prop can still be stale on
+        // the final slot, which dropped onCorrectSettled and stuck the user on
+        // recall (next chip never opened). 2026-06-30.
+        if (result.finishesSet) {
           settleTimerRef.current = setTimeout(() => onCorrectSettledRef.current(), CORRECT_HOLD_MS);
+        } else {
+          const nextSlot = prompt.slots.find((s) => s.slotId !== activeSlot && !placement[s.slotId]);
+          if (nextSlot) setActiveSlot(nextSlot.slotId);
+          else settleTimerRef.current = setTimeout(() => onCorrectSettledRef.current(), CORRECT_HOLD_MS);
         }
       } else {
         errorHaptic();

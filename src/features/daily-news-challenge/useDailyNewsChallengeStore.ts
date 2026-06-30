@@ -244,7 +244,12 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
       },
 
       hasCompletedToday: () => {
-        const { answered } = get();
+        const { answered, cachedFor } = get();
+        // Day-aware: yesterday's persisted answers must NOT count as "done
+        // today". On a cold start across midnight the daily-quests news star
+        // read `true` here (stale `answered`) BEFORE setTodayChallenge reset
+        // it, so the news quest looked completed on the new day. 2026-06-30.
+        if (cachedFor !== todayKey()) return false;
         return answered[0] !== null && answered[1] !== null;
       },
 
@@ -312,6 +317,25 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         perfectDays: state.perfectDays,
         lastCompletionEventDateKey: state.lastCompletionEventDateKey,
       }),
+      onRehydrateStorage: () => () => {
+        // Cold start on a NEW day: clear yesterday's per-day slice so the news
+        // challenge — and its daily-quest star — read as not-done immediately,
+        // before the fresh challenge is fetched (setTodayChallenge). Mirrors
+        // the useDailyQuestsStore rehydration reset. 2026-06-30.
+        setTimeout(() => {
+          try {
+            const s = useDailyNewsChallengeStore.getState();
+            if (s.cachedFor && s.cachedFor !== todayKey()) {
+              useDailyNewsChallengeStore.setState({
+                answered: [null, null],
+                regularChestOpened: false,
+                proChestOpened: false,
+              });
+              try { useDailyQuestsStore.getState().refreshQuests(); } catch { /* non-fatal */ }
+            }
+          } catch { /* non-fatal */ }
+        }, 0);
+      },
     },
   ),
 );

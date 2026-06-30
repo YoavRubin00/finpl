@@ -1,5 +1,12 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import type { ComponentType } from "react";
+import { captureException } from "../../lib/sentry";
+import { SIM_MODULE_IDS, hasSim } from "./simModuleIds";
+
+// Re-export the gate so the `sim` chip can be checked next to the loaders.
+// (topicResolver imports it from the lightweight simModuleIds to avoid pulling
+// this heavy module into the pure data resolver.)
+export { hasSim };
 
 interface SimulatorLoaderProps {
   moduleId: string;
@@ -75,14 +82,46 @@ const SIM_LOADERS: Record<string, () => SimScreen> = {
   "mod-5-30": () => require("../chapter-5-content/simulations").CryptoSimScreen,
 };
 
+// Dev-only drift guard — SIM_MODULE_IDS (used by topicResolver to decide
+// whether the `sim` chip appears) must list EXACTLY the SIM_LOADERS keys.
+if (__DEV__) {
+  const loaderKeys = Object.keys(SIM_LOADERS);
+  const missing = loaderKeys.filter((k) => !SIM_MODULE_IDS.has(k));
+  const extra = [...SIM_MODULE_IDS].filter((k) => !(k in SIM_LOADERS));
+  if (missing.length || extra.length) {
+    console.warn(
+      `[SimulatorLoader] SIM_MODULE_IDS out of sync with SIM_LOADERS — missing=[${missing.join(", ")}] extra=[${extra.join(", ")}]`,
+    );
+  }
+}
+
 export const SimulatorLoader = memo(function SimulatorLoader({
   moduleId,
   onComplete,
 }: SimulatorLoaderProps) {
-  const SimComponent = useMemo(() => {
+  const SimComponent = useMemo<SimScreen | null>(() => {
     const loader = SIM_LOADERS[moduleId];
-    return loader ? loader() : null;
+    if (!loader) return null;
+    try {
+      return loader();
+    } catch (err) {
+      // A broken/missing sim require used to throw → Hermes unmounts the tree
+      // → WHITE SCREEN. Log and fall through to the graceful skip below.
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        context: "SimulatorLoader.require",
+        moduleId,
+      });
+      return null;
+    }
   }, [moduleId]);
+
+  // No loader, or the require threw → don't dead-end on a blank screen. Skip
+  // the sim (zero score) so the lesson advances to the next chip. Run as an
+  // effect, never as a setState during render.
+  const missing = SimComponent === null;
+  useEffect(() => {
+    if (missing) onComplete(0);
+  }, [missing, onComplete]);
 
   if (!SimComponent) return null;
 

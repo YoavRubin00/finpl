@@ -4,6 +4,7 @@ import { chestThresholdFor, chipsToChestFor } from './types';
 import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
 import { getDilemma } from '../shark-dilemma/dilemmasData';
 import { getGameForModule, isSimReplacedByGame } from './moduleGameMap';
+import { hasSim } from '../chapter-1-content/simModuleIds';
 import { getCoupleDilemmaForModule } from '../couple-dilemma/coupleDilemmas';
 import { getPodcastForModule } from '../podcast-segment/podcasts';
 import { getRecallSet } from '../sentence-exercise/sentenceData';
@@ -214,7 +215,12 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // R6 — `isSimReplacedByGame` suppresses the sim chip for modules
   // whose "sim" is really a matching exercise (chapter 0 mostly).
   // Yoav: "במושגי יסוד פיננסים אין ארגז חול, אז תשים במקומו איזה משחק".
-  if (module.simConcept && !isSimReplacedByGame(module.id)) {
+  // Gate on a REAL simulator loader existing (hasSim) too — a module with a
+  // `simConcept` but NO SIM_LOADERS entry used to surface a `sim` chip that,
+  // once entered, rendered a blank/white screen (SimulatorLoader → null).
+  // Removing the chip also removes 'sim' from the advanceFromChip sequence
+  // (same resolveTopics source), so recall advances straight on. 2026-06-30.
+  if (module.simConcept && !isSimReplacedByGame(module.id) && hasSim(module.id)) {
     present.set('sim', true);
   }
   if (getGameForModule(module.id)) present.set('game', true);

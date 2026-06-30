@@ -11,6 +11,15 @@ interface ErrorBoundaryState {
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
+  /** Optional render-prop fallback — replaces the default full-screen "אופס"
+   *  so a host (e.g. the lesson flow) can show a small recover-and-continue UI
+   *  instead of dead-ending on a blank screen. Receives a `reset` callback
+   *  that clears the captured error. */
+  fallback?: (reset: () => void) => React.ReactNode;
+  /** When this value changes, the boundary auto-clears a previous error so the
+   *  next content renders fresh after a recovered crash (e.g. the lesson phase
+   *  key). */
+  resetKey?: string | number;
 }
 
 export class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -49,12 +58,21 @@ export class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, Err
     }
   }
 
+  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+    // Auto-recover when the host changes resetKey (e.g. advanced to a new
+    // lesson phase) so a one-off crash doesn't stick the boundary open.
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
   private handleRetry = () => {
     this.setState({ hasError: false, error: null });
   };
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback(this.handleRetry);
       return (
         <View
           accessible
