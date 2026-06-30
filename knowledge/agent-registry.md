@@ -2,10 +2,10 @@
 
 > מפת כל הסוכנים בפרויקט `finpl-current`: דמות, KPI יחיד, ידע שהוא טוען, ומתי לקרוא לו.
 > מתוחזק על ידי **מאיה**. סוכן חדש/משופר נרשם כאן עם `version`.
-> **תאריך עדכון:** 2026-06-15.
+> **תאריך עדכון:** 2026-06-30 (נוסף **ים** — PM).
 
 ## שני סוגי סוכנים
-1. **`.claude/agents/` — subagents** (נקראים דרך Task / `subagent_type`): yoatzon, בר, טרנדון, מושן, **maya**. אסטרטגיה, שיווק, טרנדים, מדיה, enablement.
+1. **`.claude/agents/` — subagents** (נקראים דרך Task / `subagent_type`): yoatzon, בר, טרנדון, מושן, **maya**, **ים**. אסטרטגיה, שיווק, טרנדים, מדיה, enablement, מוצר/PMF.
 2. **`.claude/commands/` — slash commands** (נקראים ב-`/שם`): וארן, יוצרון, יפיופי, מוני, רטנשן, דואו, אודרי, ארכיטקט, הסורק, קפטן. עובדים על **הקוד והמוצר**.
 
 ---
@@ -19,6 +19,7 @@
 | **טרנדון** 🔥 | חיישן טרנדים פיננסי יומי IL+עולם + 3 סקרים + רעיונות קפטן שארק | **רעיונות שנכנסים לגאנט** של בר (relevance×viral) | INDEX, glossary, brand-voice | sonnet | A |
 | **מושן** 🎬 | Motion Design באפליקציה (Reanimated/Lottie, 60fps) + מדיה motion שיווקית | **60fps + game-feel** ללא jank | INDEX, brand-voice, business-facts | sonnet | A |
 | **maya** 🎓 | ראש Enablement: מתחזקת את המוח, יוצרת/משפרת סוכנים, סורקת פערים | **איכות+עקביות הצוות** (כל סוכן עם דמות+KPI+knowledge) | INDEX + כל `knowledge/` | opus | A |
+| **ים** 🧭 | מנהל-מוצר (PM): אוחז במוצר, מקור-אמת למצב-מוצר, רודמאפ ל-PMF. **מנהל צוות-מוצר** — מאציל data→הוג, הרגל→דואו, UX→יפיופי; מתכלל עם בר (שותף) | התקדמות ל-**PMF** (אקטיבציה · רטנשן WAU/WoW+D1 · streak≥2 · NSM) | INDEX, business-facts, glossary, brand-voice (`docs/BRAND.md`), CLAUDE.md, דשבורדים PMF 763997 + Retention 747334 | opus | B |
 
 ---
 
@@ -45,6 +46,8 @@
 | נושא | בעלים | לא — לעבור ל... |
 |---|---|---|
 | אסטרטגיה / ₪400K / אילוץ #1 | yoatzon | — |
+| מצב-מוצר / רודמאפ / החלטות-מוצר / PMF | **ים** | אסטרטגיה עסקית כוללת → yoatzon |
+| ניהול צוות-המוצר (האצלה) | **ים** | הביצוע: data→הוג · הרגל→דואו · UX→יפיופי |
 | גאנט תוכן + סושיאל | בר | טרנדים גולמיים → טרנדון; תוכן באפליקציה → יוצרון |
 | טרנדים יומיים | טרנדון | בחירה+תזמון → בר |
 | Motion premium / מדיה שיווקית | מושן | game-feel design → יפיופי; השארק כגיבור → skill `finplay-higgsfield-reels` |
@@ -66,6 +69,8 @@
 - **טרנדון** רץ כ-routine בענן (`trig_01HfFkRa9Yh7BzwjNbdQ9Vin`, 07:00 IL); הקובץ כאן הוא ה-on-demand subagent. תואם.
 - **בר / מושן / 10 הפקודות** — ייחודיים לפרויקט `finpl-current` (לא קיימים ב-OS).
 - **maya** — מותקנת כאן ע"י עצמה (2026-06-15) כראש Enablement של צוות FinPlay. version A.
+- **ים** — נוצר ע"י מאיה (2026-06-30) לבקשת יואב, כמנהל-המוצר (PM) של FinPlay. ייחודי ל-`finpl-current`. **צוות-המוצר שהוא מנהל:** הוג (data, כרגע **ראוטין-ענן בלבד — אין קובץ סוכן מקומי**, ראה [[gaps]] G6), דואו (`/דואו`, רטנשן/הרגל), יפיופי (`/יפיופי`, UX/חוויה). **בר** = שותף cross-functional, לא כפוף. מקביל אנושי: תומר (PM אנושי) — ים מתכלל ומזין, תומר/יואב מכריעים.
+  - **version B (2026-06-30, מאיה — Enablement fix):** נצפה שים נתקע בעת הפעלת הסקילים דואו/יפיופי לפני כתיבת התוצר. שורש: ה-Skill tool מגודר-הרשאות, ולא היו allow-rules לסקילים האלה ב-`settings.local.json` → prompt-אישור שנתקע בריצה אוטונומית. **תוקן:** (1) הוספו allow-rules ל-`Skill(דואו/duo)`, `Skill(יפיופי/ux-polish)`, `Task(בר)`, `PostHog exec`, `Notion fetch/search/create/update` (מיזוג, לא דריסה); (2) נוסף `tools:` מפורש ל-frontmatter של ים (Skill, Task, PostHog, Notion, Read/Write/Edit, Bash, Web); (3) נוסף playbook "איך לכנס את הצוות" עם כלל fail-through — אם delegate נכשל, רושמים שורה וממשיכים, **התוצר תמיד נכתב**; (4) חוזקה שורת טעינת-הידע (INDEX→BRAND→CLAUDE→דשבורדים).
 
 ## נוהל עדכון
 סוכן חדש/משופר → ערוך את הקובץ ב-`.claude/agents/` או `.claude/commands/`, הוסף `knowledge:` ושורת "טען INDEX", רשום כאן עם `version`, ותעד ב-OS `audits/agent-evals/`.
