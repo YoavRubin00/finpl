@@ -18,6 +18,12 @@ export interface LoungeTable {
   emoji: string;
   /** צבע-מבטא לזוהר/מסגרת של השולחן */
   accent: string;
+  /**
+   * אמנות קפטן-שארק מחופש-לשולחן לכרטיסי-הקרוסלה (בסגנון בר). וובף שקוף
+   * מוגש מ-Vercel Blob דרך /api/img — לא bundled. אופציונלי: בזמן שבר
+   * מפיק, הקלף נופל חן לאמוג'י (fallback). מלא פר-שולחן כשהנכס חי.
+   */
+  cardArtUri?: string;
   /** מרכז ה-hotspot על הסצנה, באחוזים מרוחב/גובה התמונה */
   hotspot: { cxPct: number; cyPct: number };
   /** עוצמת הזום בכניסה לשולחן */
@@ -31,6 +37,8 @@ export const LOUNGE_TABLES: LoungeTable[] = [
     subtitleHe: "מדדים, ריבית-דריבית ומהלכים",
     emoji: "📈",
     accent: "#38bdf8",
+    // קפטן שארק כאנליסט שוק-הון (בר, nano_banana_pro, שקוף) — פיילוט
+    cardArtUri: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/club/cards/shark-stocks.webp",
     // מכויל מול lounge-scene-v1 (שולחן-ההולוגרמות, שמאל-מרכז)
     hotspot: { cxPct: 23, cyPct: 53 },
     zoomScale: 1.9,

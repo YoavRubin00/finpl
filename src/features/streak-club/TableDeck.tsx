@@ -1,5 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeInUp,
   FadeIn,
@@ -10,6 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { toProxiedImageUri } from "../../lib/imageProxy";
 import type { LoungeTable } from "./loungeConfig";
 import type { ClubDrop } from "./clubContent";
 
@@ -76,11 +79,22 @@ export function TableDeck({
     // delay קטן אחרי תחילת-הזום — המצלמה "מספרת" קודם, הדק נוחת אחריה
     <Animated.View entering={FadeInUp.delay(140).duration(260)} style={styles.wrap} pointerEvents="box-none">
       <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.card, { width: cardW, borderColor: table.accent }, cardStyle]}>
+        <Animated.View style={[styles.card, { width: cardW }, cardStyle]}>
+          {/* רקע-תכלת — חתימת הקרוסלות של בר, מרונדר חי (לא תמונה אפויה) */}
+          <LinearGradient
+            colors={["#eaf8ff", "#cfeeff", "#a8ddfb"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* תג-שולחן (ימין) + מונה 1/N (שמאל) — חתימת-הקרוסלה */}
           <View style={[styles.tableTag, { backgroundColor: `${table.accent}22`, borderColor: table.accent }]}>
             <Text style={styles.tableTagText} allowFontScaling={false}>
-              {table.emoji} שולחן {table.titleHe}
+              {table.emoji} {table.titleHe}
             </Text>
+          </View>
+          <View style={[styles.countPill, { backgroundColor: table.accent }]}>
+            <Text style={styles.countPillText} allowFontScaling={false}>{page + 1}/{total}</Text>
           </View>
 
           {isActionPage ? (
@@ -106,14 +120,27 @@ export function TableDeck({
               )}
             </View>
           ) : (
-            <>
-              <Text style={styles.cardEmoji} allowFontScaling={false}>{card.emoji}</Text>
-              <Text style={styles.cardTitle}>{card.titleHe}</Text>
-              <Text style={styles.cardBody}>{card.bodyHe}</Text>
-            </>
+            <View style={styles.insightArea}>
+              <Text style={styles.headline}>{card.titleHe}</Text>
+              <Text style={styles.body}>{card.bodyHe}</Text>
+              {/* קפטן שארק מחופש-לשולחן (וובף שקוף מ-Blob) — נופל חן לאמוג'י */}
+              <View style={styles.artWrap}>
+                {table.cardArtUri ? (
+                  <ExpoImage
+                    source={{ uri: toProxiedImageUri(table.cardArtUri) }}
+                    style={styles.art}
+                    contentFit="contain"
+                    transition={250}
+                    accessible={false}
+                  />
+                ) : (
+                  <Text style={styles.emojiBig} allowFontScaling={false}>{card.emoji}</Text>
+                )}
+              </View>
+            </View>
           )}
 
-          {/* מונה + נקודות התקדמות (RTL) */}
+          {/* נקודות התקדמות (RTL) */}
           <View style={styles.dotsRow}>
             {Array.from({ length: total }).map((_, i) => (
               <View key={i} style={[styles.dot, i === page && { width: 20, backgroundColor: table.accent }]} />
@@ -172,46 +199,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.97)",
-    borderRadius: 24,
-    borderWidth: 2,
+    borderRadius: 26,
+    overflow: "hidden",
     paddingHorizontal: 22,
-    paddingTop: 18,
+    paddingTop: 46,
     paddingBottom: 16,
-    minHeight: 280,
-    shadowColor: "#000",
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    minHeight: 400,
+    shadowColor: "#0b2b40",
+    shadowOpacity: 0.4,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 14,
     alignItems: "center",
   },
   tableTag: {
-    alignSelf: "center",
+    position: "absolute",
+    top: 12,
+    right: 14,
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    marginBottom: 14,
   },
-  tableTagText: { fontSize: 12.5, fontWeight: "800", color: "#0f172a", writingDirection: "rtl" },
-  cardEmoji: { fontSize: 44, marginBottom: 8 },
-  cardTitle: {
-    fontSize: 21,
+  tableTagText: { fontSize: 12.5, fontWeight: "800", color: "#0c4a6e", writingDirection: "rtl" },
+  countPill: {
+    position: "absolute",
+    top: 12,
+    left: 14,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  countPillText: { fontSize: 12, fontWeight: "900", color: "#0b1220" },
+  insightArea: { flex: 1, alignSelf: "stretch", alignItems: "center", justifyContent: "flex-start", gap: 10 },
+  headline: {
+    fontSize: 22,
     fontWeight: "900",
-    color: "#0f172a",
+    color: "#0c4a6e",
     textAlign: "center",
     writingDirection: "rtl",
-    marginBottom: 8,
+    marginBottom: 2,
   },
-  cardBody: {
+  body: {
     fontSize: 15.5,
     lineHeight: 24,
     fontWeight: "600",
-    color: "#334155",
+    color: "#15385a",
     textAlign: "center",
     writingDirection: "rtl",
   },
+  artWrap: { flex: 1, minHeight: 130, alignItems: "center", justifyContent: "flex-end", marginTop: 6 },
+  art: { width: 160, height: 170 },
+  emojiBig: { fontSize: 76 },
   actionArea: { alignItems: "center", paddingVertical: 8, flexGrow: 1, justifyContent: "center" },
   actionLabel: {
     fontSize: 13,
@@ -246,7 +285,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     alignItems: "center",
   },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#cbd5e1" },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(12,74,110,0.30)" },
   ctaRow: {
     flexDirection: "row-reverse",
     gap: 10,

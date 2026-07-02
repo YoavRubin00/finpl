@@ -23,6 +23,8 @@ import { ChevronRight } from "lucide-react-native";
 
 import { SheetCloseButton } from "../../components/ui/SheetCloseButton";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
+import { LottieIcon } from "../../components/ui/LottieIcon";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { toProxiedImageUri } from "../../lib/imageProxy";
 import { captureEvent } from "../../lib/posthog";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
@@ -52,6 +54,8 @@ type LoungeView = "lounge" | TableId;
 /* eslint-disable @typescript-eslint/no-require-imports */
 const DAISY_STANDARD = require("../../../assets/webp/daisy/daisy-standard.webp") as number;
 const DAISY_CELEBRATE = require("../../../assets/webp/daisy/daisy-happy-celebrate.webp") as number;
+// אש-הרצף — הלוטי הקנוני של האפליקציה (אותו קובץ כמו ה-header/חגיגות)
+const FIRE_LOTTIE = require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number;
 // שארק+דייזי עם האוצר — נכס שנוצר בדיוק לרגע-הפינאלה
 const FINN_DAISY_TREASURE = require("../../../assets/webp/fin-daisy-treasure.webp") as number;
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -462,9 +466,13 @@ export function StreakLoungeSheet({
               />
             </View>
           </View>
-          <Text style={styles.memberLine} allowFontScaling={false}>
-            {locked ? `רצף ${streak} 🔥` : `רצף ${streak} 🔥 · ביקור מס' ${Math.max(totalVisits, 1)}`}
-          </Text>
+          <View style={styles.memberRow}>
+            <Text style={styles.memberLine} allowFontScaling={false}>{`רצף ${streak}`}</Text>
+            <LottieIcon source={FIRE_LOTTIE} size={18} autoPlay loop active={visible && !reducedMotion} />
+            {!locked && (
+              <Text style={styles.memberLine} allowFontScaling={false}>{`· ביקור מס' ${Math.max(totalVisits, 1)}`}</Text>
+            )}
+          </View>
           {/* חותמות-השבוע: יום שסגרת בו את המועדון = חותמת זהב. אל תשבור את השרשרת. */}
           {!locked && (
             <View style={styles.stampsRow} accessible accessibilityLabel={`חותמות השבוע: ${weekStamps.filter((s) => s.full).length} מתוך 7 ימים הושלמו`}>
@@ -652,7 +660,9 @@ function TableHotspot({
           haloStyle,
         ]}
       />
-      <Animated.View entering={FadeInDown.delay(180 + index * 110).duration(320)}>
+      {/* התווית יושבת מתחת לרכיב-הויזואלי של השולחן (יואב 2.7) — ההילה
+          נשארת ממורכזת על האייקון בסצנה, הצ'יפ צונח מתחתיו */}
+      <Animated.View entering={FadeInDown.delay(180 + index * 110).duration(320)} style={hotspotStyles.chipDrop}>
         <Pressable
           onPress={onPress}
           disabled={locked}
@@ -661,7 +671,14 @@ function TableHotspot({
           accessibilityLabel={`שולחן ${table.titleHe}${seen ? ", הדרופ של היום נצפה, מחר דרופ חדש" : ", דרופ חדש מחכה"}`}
           style={[hotspotStyles.chip, { borderColor: table.accent, opacity: seen ? 0.62 : 1 }]}
         >
-          <Text style={hotspotStyles.emoji} allowFontScaling={false}>{seen ? "✓" : table.emoji}</Text>
+          {seen ? (
+            <Text style={hotspotStyles.emoji} allowFontScaling={false}>✓</Text>
+          ) : table.id === "savings" ? (
+            // זהב-האפליקציה (GoldCoinIcon) במקום אמוג'י 🪙 (יואב 2.7)
+            <View style={hotspotStyles.iconWrap}><GoldCoinIcon size={26} /></View>
+          ) : (
+            <Text style={hotspotStyles.emoji} allowFontScaling={false}>{table.emoji}</Text>
+          )}
           <Text style={hotspotStyles.label} allowFontScaling={false}>{table.titleHe}</Text>
           {seen && tomorrowTeaseHe ? (
             // קליפהנגר פר-שולחן: מה מחכה כאן מחר — 3 סיבות קטנות לחזור
@@ -676,6 +693,8 @@ function TableHotspot({
 }
 
 const hotspotStyles = StyleSheet.create({
+  // הצ'יפ צונח ~46px מתחת למרכז-ה-hotspot כדי לשבת מתחת לויזואל בסצנה
+  chipDrop: { marginTop: 46 },
   chip: {
     alignItems: "center",
     backgroundColor: "rgba(4,18,31,0.82)",
@@ -686,6 +705,7 @@ const hotspotStyles = StyleSheet.create({
     minWidth: 84,
   },
   emoji: { fontSize: 26, marginBottom: 2 },
+  iconWrap: { marginBottom: 4, alignItems: "center", justifyContent: "center" },
   label: { fontSize: 13, fontWeight: "900", color: "#f1f5f9", writingDirection: "rtl" },
   tease: {
     fontSize: 10,
@@ -710,13 +730,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   closeBtn: { position: "absolute", right: 0, top: 0, bottom: 0, justifyContent: "center" },
+  memberRow: {
+    flexDirection: "row-reverse",
+    alignSelf: "center",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 2,
+  },
   memberLine: {
     fontSize: 12.5,
     fontWeight: "800",
     color: "rgba(226,232,240,0.85)",
     textAlign: "center",
     writingDirection: "rtl",
-    marginTop: 2,
   },
   stampsRow: {
     flexDirection: "row-reverse",
