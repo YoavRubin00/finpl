@@ -29,7 +29,8 @@ export function TradeRoomChatScreen(): React.ReactElement {
   const router = useRouter();
   const params = useLocalSearchParams<{ roomId: string }>();
   const roomId = (params.roomId ?? 'wallstreet') as TradeRoomId;
-  const room = getRoomById(roomId);
+  const customRooms = useTradeRoomsStore((s) => s.customRooms);
+  const room = customRooms.find((r) => r.id === roomId) ?? getRoomById(roomId);
 
   const messagesByRoom = useTradeRoomsStore((s) => s.messagesByRoom);
   const sendMessage = useTradeRoomsStore((s) => s.sendMessage);

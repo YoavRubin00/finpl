@@ -102,7 +102,6 @@ export interface DailyEventTopic {
 
 const DAILY_EVENT_TOPICS: DailyEventTopic[] = [
   { title: 'עונת הדוחות של ענקיות הטק', subtitle: 'מי מפתיעה ומי מאכזבת?' },
-  { title: 'הריבית של בנק ישראל', subtitle: 'מה זה עושה למשכנתא ולבורסה?' },
   { title: 'ביטקוין חצה עוד שיא?', subtitle: 'האם זה רכבת או בלון?' },
   { title: 'המניה שכולם מדברים עליה', subtitle: 'הייפ אמיתי או עדר?' },
   { title: 'שקל חזק, דולר חלש', subtitle: 'מי מרוויח ומי בוכה?' },
@@ -118,11 +117,11 @@ export function getDailyEventTopic(now: Date = new Date()): DailyEventTopic {
 }
 
 /**
- * Honest member count — no fake hundreds. Until real presence exists,
- * every room shows the seed crew size (5) so it doesn't look empty.
+ * Honest member count — no fake hundreds. Built-in rooms show the seed crew
+ * size (5); a room you created starts with just you.
  */
-export function getRoomMemberCount(_room: TradeRoom): number {
-  return 5;
+export function getRoomMemberCount(room: TradeRoom): number {
+  return room.isCustom ? Math.max(1, room.memberBase) : 5;
 }
 
 // ===== Community personas (recurring per room, feel like regulars) =====

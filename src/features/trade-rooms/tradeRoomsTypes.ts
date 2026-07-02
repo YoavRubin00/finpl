@@ -4,13 +4,16 @@
 
 import type { AnonAlias } from '../anon-advice/anonAdviceTypes';
 
-export type TradeRoomId =
+/** Built-in room ids; user-created rooms get generated `custom-*` ids. */
+export type BuiltinTradeRoomId =
   | 'wallstreet'
   | 'telaviv'
   | 'crypto'
   | 'beginners'
   | 'league-talk'
   | 'daily-event';
+
+export type TradeRoomId = BuiltinTradeRoomId | (string & {});
 
 /** Bullish / bearish tag a member can attach to a message. */
 export type MessageSentiment = 'bull' | 'bear';
@@ -31,6 +34,8 @@ export interface TradeRoom {
   pinnedTip: string;
   /** True for the rotating daily-event room. */
   isDailyEvent?: boolean;
+  /** True for rooms the user created. */
+  isCustom?: boolean;
 }
 
 export interface TradeRoomMessage {

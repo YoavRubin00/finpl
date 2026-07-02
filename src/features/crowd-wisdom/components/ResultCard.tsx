@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { Brain, Clock, Zap, Handshake, Sparkles } from "lucide-react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 
+import { MarketOddsHeader } from "./MarketOddsHeader";
 import type { PostVoteSnapshot } from "../types";
 
 interface ResultCardProps {
@@ -46,6 +47,9 @@ export function ResultCard({ snapshot, closesInHours }: ResultCardProps) {
 
       {/* Prompt */}
       <Text style={styles.prompt}>{question.prompt}</Text>
+
+      {/* Live market — probability as the price, straight from the bet ledger */}
+      <MarketOddsHeader question={question} />
 
       {/* Distribution bar (multi-color stacked) */}
       <View style={styles.distBar}>

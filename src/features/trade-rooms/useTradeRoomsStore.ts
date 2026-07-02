@@ -4,6 +4,7 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import { useAnonAdviceStore } from '../anon-advice/useAnonAdviceStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import type {
+  TradeRoom,
   TradeRoomId,
   TradeRoomMessage,
   MessageSentiment,
@@ -40,12 +41,15 @@ interface TradeRoomsState {
   lastReadAt: Record<string, string>;
   /** Date (YYYY-MM-DD) the daily first-message reward was granted. */
   chatRewardDate: string | null;
+  /** Rooms the user created — appear alongside the built-in rooms. */
+  customRooms: TradeRoom[];
 
   // Selectors
   getMessages: (roomId: TradeRoomId) => TradeRoomMessage[];
   getUnreadCount: (roomId: TradeRoomId) => number;
   getLastMessage: (roomId: TradeRoomId) => TradeRoomMessage | null;
   getSentimentSummary: (roomId: TradeRoomId) => RoomSentimentSummary;
+  getRoom: (roomId: TradeRoomId) => TradeRoom | null;
 
   // Actions
   sendMessage: (
@@ -55,6 +59,11 @@ interface TradeRoomsState {
   ) =>
     | { ok: true; messageId: string; reward: { coins: number; xp: number } | null }
     | { ok: false; reason: string };
+  createRoom: (input: {
+    name: string;
+    emoji: string;
+    tagline: string;
+  }) => { ok: true; roomId: string } | { ok: false; reason: string };
   removeMessage: (roomId: TradeRoomId, messageId: string) => void;
   toggleLike: (roomId: TradeRoomId, messageId: string) => void;
   markRoomRead: (roomId: TradeRoomId) => void;
@@ -73,8 +82,15 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
       messagesByRoom: seedAllRooms(),
       lastReadAt: {},
       chatRewardDate: null,
+      customRooms: [],
 
       getMessages: (roomId) => get().messagesByRoom[roomId] ?? [],
+
+      getRoom: (roomId) => {
+        const builtin = TRADE_ROOMS.find((r) => r.id === roomId);
+        if (builtin) return builtin;
+        return get().customRooms.find((r) => r.id === roomId) ?? null;
+      },
 
       getUnreadCount: (roomId) => {
         const lastRead = get().lastReadAt[roomId];
@@ -150,6 +166,57 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
         };
       },
 
+      createRoom: ({ name, emoji, tagline }) => {
+        const cleanName = name.trim();
+        const cleanTagline = tagline.trim();
+        if (cleanName.length < 2 || cleanName.length > 24) {
+          return { ok: false, reason: 'שם חדר: 2 עד 24 תווים.' };
+        }
+        const nameCheck = moderateChatMessage(cleanName);
+        if (!nameCheck.ok) {
+          return { ok: false, reason: nameCheck.reason ?? 'השם לא מתאים.' };
+        }
+        const exists = [...TRADE_ROOMS, ...get().customRooms].some(
+          (r) => r.name === cleanName,
+        );
+        if (exists) {
+          return { ok: false, reason: 'כבר יש חדר עם השם הזה.' };
+        }
+
+        const roomId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const room: TradeRoom = {
+          id: roomId,
+          name: cleanName,
+          emoji: emoji || '💬',
+          tagline: cleanTagline.length > 0 ? cleanTagline : 'חדר קהילה חדש — פתחו את הדיון',
+          accentColor: '#0ea5e9',
+          accentBg: '#e0f2fe',
+          memberBase: 1,
+          pinnedTip: 'חדר חדש במים. קבעו את הטון — בלי ספאם, עם נימוקים.',
+          isCustom: true,
+        };
+
+        // Captain Shark opens every new room.
+        const welcome: TradeRoomMessage = {
+          id: makeId('shark'),
+          roomId,
+          alias: null,
+          avatarId: null,
+          isSelf: false,
+          isShark: true,
+          body: `ברוכים הבאים ל"${cleanName}"! החדר נפתח הרגע — ההודעה הראשונה קובעת את הכיוון.`,
+          likes: 0,
+          likedBySelf: false,
+          sentAt: new Date().toISOString(),
+        };
+
+        set((state) => ({
+          customRooms: [...state.customRooms, room],
+          messagesByRoom: { ...state.messagesByRoom, [roomId]: [welcome] },
+        }));
+        return { ok: true, roomId };
+      },
+
       /** Used by the moderation bot to retract a message that failed review. */
       removeMessage: (roomId, messageId) => {
         set((state) => ({
@@ -186,9 +253,11 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
         messagesByRoom: state.messagesByRoom,
         lastReadAt: state.lastReadAt,
         chatRewardDate: state.chatRewardDate,
+        customRooms: state.customRooms,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        if (!Array.isArray(state.customRooms)) state.customRooms = [];
         // Seed rooms that are missing (first install / new rooms added later).
         const seeded = seedAllRooms();
         const merged: Record<string, TradeRoomMessage[]> = { ...state.messagesByRoom };

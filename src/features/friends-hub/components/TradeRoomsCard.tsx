@@ -19,6 +19,8 @@ export function TradeRoomsCard(): React.ReactElement {
   const router = useRouter();
   const messagesByRoom = useTradeRoomsStore((s) => s.messagesByRoom);
   const lastReadAt = useTradeRoomsStore((s) => s.lastReadAt);
+  const customRooms = useTradeRoomsStore((s) => s.customRooms);
+  const allRooms = [...TRADE_ROOMS, ...customRooms];
 
   const dailyTopic = getDailyEventTopic();
 
@@ -29,7 +31,7 @@ export function TradeRoomsCard(): React.ReactElement {
     return messages.filter((m) => !m.isSelf && m.sentAt > lastRead).length;
   };
 
-  const totalUnread = TRADE_ROOMS.reduce((sum, r) => sum + unreadFor(r.id), 0);
+  const totalUnread = allRooms.reduce((sum, r) => sum + unreadFor(r.id), 0);
 
   const openList = (): void => {
     tapHaptic();
@@ -120,7 +122,7 @@ export function TradeRoomsCard(): React.ReactElement {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, gap: 10, flexDirection: 'row-reverse' }}
       >
-        {TRADE_ROOMS.map((room) => {
+        {allRooms.map((room) => {
           const unread = unreadFor(room.id);
           return (
             <Pressable

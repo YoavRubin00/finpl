@@ -5,6 +5,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { tapHaptic, mediumHaptic } from "../../../utils/haptics";
 import { BetPanel } from "./BetPanel";
+import { MarketOddsHeader } from "./MarketOddsHeader";
 import type { CrowdWisdomQuestion } from "../types";
 
 interface LivePollCardProps {
@@ -63,6 +64,9 @@ export function LivePollCard({ question, onSubmit }: LivePollCardProps) {
           <Text style={styles.contextChipText}>{question.contextChip}</Text>
         </View>
       ) : null}
+
+      {/* Market view — implied probability as the price, Polymarket-style */}
+      <MarketOddsHeader question={question} />
 
       {/* Choices */}
       <View style={styles.choices}>
