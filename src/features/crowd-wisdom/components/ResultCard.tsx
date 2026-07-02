@@ -35,9 +35,7 @@ export function ResultCard({ snapshot, closesInHours }: ResultCardProps) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.brandName}>תוצאות חכמת ההמונים</Text>
-            <Text style={styles.brandMeta}>
-              {totalVoters.toLocaleString("he-IL")} הצביעו · נסגר עוד {closesInHours}ש׳
-            </Text>
+            <Text style={styles.brandMeta}>נסגר עוד {closesInHours}ש׳</Text>
           </View>
         </View>
         <View style={styles.clockChip}>
@@ -104,7 +102,7 @@ export function ResultCard({ snapshot, closesInHours }: ResultCardProps) {
       >
         <View style={styles.verdictLeft}>
           <View style={styles.xpReward}>
-            <Text style={styles.xpRewardValue}>+50</Text>
+            <Text style={styles.xpRewardValue}>+100 🪙</Text>
             <Zap size={14} color="#ffffff" strokeWidth={2.6} />
           </View>
         </View>

@@ -11,6 +11,7 @@ import { StreakHeroCard } from "./components/StreakHeroCard";
 import { BullBearGauge } from "./components/BullBearGauge";
 import { CategoryPills } from "./components/CategoryPills";
 import { LivePollCard } from "./components/LivePollCard";
+import { SliderForecastCard } from "./components/SliderForecastCard";
 import { ResultCard } from "./components/ResultCard";
 import { EducationalTooltipCard } from "./components/EducationalTooltipCard";
 import type { CrowdWisdomCategory } from "./types";
@@ -21,7 +22,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { tokenStore } from "../../lib/auth/secureStore";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 
-const VOTE_COIN_REWARD = 50;
+const VOTE_COIN_REWARD = 100;
 
 const SENTIMENT_GAUGE_QUESTION_ID = "sentiment_market_monthly";
 
@@ -97,7 +98,7 @@ export function CrowdWisdomScreen(): React.ReactElement {
         <Pressable
           onPress={() => {
             tapHaptic();
-            router.back();
+            router.replace('/(tabs)/friends' as never);
           }}
           style={styles.iconBtn}
           accessibilityRole="button"
@@ -143,6 +144,9 @@ export function CrowdWisdomScreen(): React.ReactElement {
             footer={`על בסיס ${sentimentSnapshot.totalVoters.toLocaleString("he-IL")} הצבעות · מתעדכן כל שעה`}
           />
         ) : null}
+
+        {/* 2b. Weekly slider forecast — drag along a live, plausible range */}
+        <SliderForecastCard />
 
         {/* 3. Category filter pills */}
         <CategoryPills

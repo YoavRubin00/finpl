@@ -32,7 +32,7 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: DUO.bg, alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ color: DUO.textMuted, fontSize: 15 }}>הפוסט לא נמצא</Text>
-        <Pressable onPress={() => router.back()} style={{ marginTop: 12 }}>
+        <Pressable onPress={() => router.replace('/anon-advice' as never)} style={{ marginTop: 12 }}>
           <Text style={{ color: DUO.blue, fontSize: 14, fontWeight: '700' }}>חזרה</Text>
         </Pressable>
       </SafeAreaView>
@@ -76,7 +76,7 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace('/anon-advice' as never)}
           hitSlop={12}
           style={{
             width: 36,

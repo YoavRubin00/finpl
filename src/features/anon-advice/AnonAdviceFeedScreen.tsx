@@ -42,7 +42,7 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(tabs)/friends' as never)}
           hitSlop={12}
           style={{
             width: 36,

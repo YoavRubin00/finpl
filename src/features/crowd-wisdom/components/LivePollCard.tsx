@@ -4,6 +4,7 @@ import { Brain, Clock, Zap } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { tapHaptic, mediumHaptic } from "../../../utils/haptics";
+import { BetPanel } from "./BetPanel";
 import type { CrowdWisdomQuestion } from "../types";
 
 interface LivePollCardProps {
@@ -45,9 +46,7 @@ export function LivePollCard({ question, onSubmit }: LivePollCardProps) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.brandName}>חכמת ההמונים</Text>
-            <Text style={styles.brandMeta}>
-              {question.seedTotalVoters.toLocaleString("he-IL")} משקיעים כבר הצביעו
-            </Text>
+            <Text style={styles.brandMeta}>ענו ותראו מה הקהילה חושבת</Text>
           </View>
         </View>
         <View style={styles.clockChip}>
@@ -100,6 +99,9 @@ export function LivePollCard({ question, onSubmit }: LivePollCardProps) {
         })}
       </View>
 
+      {/* Coin betting — parimutuel odds set by everyone's bets in real time */}
+      <BetPanel question={question} selectedChoiceId={selectedId} />
+
       {/* CTA */}
       <Pressable
         onPress={handleSubmit}
@@ -111,7 +113,7 @@ export function LivePollCard({ question, onSubmit }: LivePollCardProps) {
       >
         <View style={styles.xpChip}>
           <Zap size={12} color="#7c3aed" strokeWidth={2.6} />
-          <Text style={styles.xpChipText}>+50</Text>
+          <Text style={styles.xpChipText}>+100 🪙</Text>
         </View>
         <Text style={[styles.ctaText, !canSubmit && styles.ctaTextDisabled]}>
           {canSubmit ? "הצביעו כדי לראות את חכמת ההמונים" : "בחרו תשובה כדי להמשיך"}

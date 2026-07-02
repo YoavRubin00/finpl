@@ -1,4 +1,4 @@
-import { pgTable, unique, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial, bigserial, primaryKey } from "drizzle-orm/pg-core"
+import { pgTable, unique, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial, bigserial, primaryKey, doublePrecision } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -189,6 +189,28 @@ export const crowdQuestionVotes = pgTable("crowd_question_votes", {
 		}).onDelete("cascade"),
 	unique("crowd_question_votes_user_date_key").on(table.userId, table.voteDateIl),
 	check("crowd_question_votes_choice_check", sql`choice = ANY (ARRAY['a'::text, 'b'::text])`),
+]);
+
+export const crowdBets = pgTable("crowd_bets", {
+	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+	userId: uuid("user_id").notNull(),
+	questionId: text("question_id").notNull(),
+	choiceId: text("choice_id").notNull(),
+	stake: integer().notNull(),
+	/** Parimutuel odds locked at placement time (payout = stake × odds). */
+	lockedOdds: doublePrecision("locked_odds").notNull(),
+	status: text().notNull().default('pending'),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_crowd_bets_question").using("btree", table.questionId.asc()),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "crowd_bets_user_id_fkey"
+		}).onDelete("cascade"),
+	unique("crowd_bets_user_question_key").on(table.userId, table.questionId),
+	check("crowd_bets_stake_check", sql`stake >= 10 AND stake <= 1000`),
+	check("crowd_bets_status_check", sql`status = ANY (ARRAY['pending'::text, 'won'::text, 'lost'::text, 'refunded'::text])`),
 ]);
 
 export const banditVariants = pgTable("bandit_variants", {

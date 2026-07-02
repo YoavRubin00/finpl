@@ -56,7 +56,7 @@ export function CrowdWisdomHistoryScreen(): React.ReactElement {
         <Pressable
           onPress={() => {
             tapHaptic();
-            router.back();
+            router.replace('/crowd-wisdom' as never);
           }}
           style={styles.iconBtn}
           accessibilityRole="button"

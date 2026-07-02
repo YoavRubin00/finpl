@@ -58,7 +58,7 @@ export const A = {
   postSituation: 'המצב',
   postQuestion: 'הדילמה',
   postOptions: 'האופציות',
-  postReplies: (n: number) => `תגובות (${n})`,
+  postReplies: (_n: number) => `תגובות מהקהילה`,
   postNoReplies: 'אין עדיין תגובות. היו הראשונים לעזור.',
   postOptionVotePercent: (pct: number) => `${pct}%`,
   postSelfBadge: 'הפוסט שלי',

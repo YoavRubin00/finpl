@@ -104,7 +104,7 @@ export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
         ))}
         <View style={{ flex: 1 }} />
         <Text style={{ fontSize: 12, fontWeight: '700', color: DUO.blue }}>
-          💬 {post.replyCount}
+          💬 תגובות
         </Text>
       </View>
     </Pressable>
