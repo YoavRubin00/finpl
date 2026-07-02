@@ -811,7 +811,16 @@ export function CompoundSimScreen({ onComplete, suppressAudio = false }: Compoun
             lottieSources={[LOTTIE_DIVIDENDS, LOTTIE_GRAPH]}
             chapterColors={_th1.gradient}
         >
-            <View style={{ flex: 1, paddingHorizontal: 16 }}>
+            {/* flexGrow:1 keeps the fill-the-screen look on tall devices while
+                letting the content scroll (instead of clipping the bottom CTA)
+                on short ones. paddingBottom clears the home indicator in the
+                standalone tool route, whose SafeAreaView only insets the top
+                (user report 2026-07-03). */}
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingBottom: insets.bottom + 8 }}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Interactive Inputs */}
                 <Animated.View entering={FadeInDown.delay(100).duration(400)} style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
                     <StepperInput label="סכום התחלתי" value={state.initialAmount} step={INITIAL_STEP} onChange={updateInitialAmount} />
@@ -905,7 +914,7 @@ export function CompoundSimScreen({ onComplete, suppressAudio = false }: Compoun
                         </AnimatedPressable>
                     )}
                 </Animated.View>
-            </View>
+            </ScrollView>
 
             {/* Confetti for millionaire */}
             {showConfetti && <ConfettiExplosion onComplete={handleConfettiComplete} />}
