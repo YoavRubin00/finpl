@@ -290,11 +290,7 @@ export function FantasyLobbyScreen(): React.ReactElement {
             title="פנטזי ליג"
             back
             onBack={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/(tabs)/friends');
-              }
+              router.replace('/(tabs)/friends');
             }}
             right={<F2WalletCluster xp={xp} coins={coins} />}
           />
