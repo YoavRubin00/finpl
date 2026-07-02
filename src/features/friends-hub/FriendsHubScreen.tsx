@@ -17,6 +17,8 @@ import { Ta35ForecastCard } from './cards/Ta35ForecastCard';
 import { AnonymousPayslipCard } from './cards/AnonymousPayslipCard';
 import { PremiumFantasyButton } from './components/PremiumFantasyButton';
 import { PortfolioShareCard } from './components/PortfolioShareCard';
+import { TradeRoomsCard } from './components/TradeRoomsCard';
+import { FANTASY_ACTIVE_FRIENDS } from '../fantasy-league/fantasyData';
 
 // ─── Facebook-feed palette (light, social-first) ─────────────────────
 const FEED_BG = '#f3f4f6';
@@ -104,7 +106,7 @@ export function FriendsHubScreen(): React.ReactElement {
 
   const handleComposerPress = React.useCallback(() => {
     tapHaptic();
-    router.push('/crowd-wisdom' as never);
+    router.push('/trade-rooms' as never);
   }, [router]);
 
   return (
@@ -151,7 +153,7 @@ export function FriendsHubScreen(): React.ReactElement {
           >
             חברים
           </Text>
-          <PremiumFantasyButton variant="compact" activeFriends={4} />
+          <PremiumFantasyButton variant="compact" activeFriends={FANTASY_ACTIVE_FRIENDS} />
         </View>
 
         {/* ─── Story strip: live activity ─── */}
@@ -161,15 +163,24 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
-        {/* ─── Composer: tap → ask the community ─── */}
+        {/* ─── Composer: tap → talk markets in the trade rooms ─── */}
         <Composer onPress={handleComposerPress} />
+
+        <FeedDivider />
+
+        {/* ─── Trade rooms strip — the social heart of the hub ─── */}
+        <StaggeredEntry index={0}>
+          <View style={{ backgroundColor: '#ffffff' }}>
+            <TradeRoomsCard />
+          </View>
+        </StaggeredEntry>
 
         <FeedDivider />
 
         {/* ─── Pinned premium hero: Fantasy League ─── */}
         <StaggeredEntry index={0}>
           <View style={{ backgroundColor: '#ffffff', paddingVertical: 4 }}>
-            <PremiumFantasyButton variant="hero" activeFriends={4} />
+            <PremiumFantasyButton variant="hero" activeFriends={FANTASY_ACTIVE_FRIENDS} />
           </View>
         </StaggeredEntry>
 
