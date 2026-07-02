@@ -4,7 +4,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
-import { getMorningCopy, getStreakCopy, pickFinnCopy } from './finnNotificationCopy';
 import type { NotificationChannelId, NotificationState } from "./notificationTypes";
 
 // ─── Default handler, show banners in foreground ───────────────────────────
@@ -164,11 +163,29 @@ async function ensureAndroidChannels() {
 
 }
 
+/** Stamp the scheduling channel into the payload so the tap listener
+ *  (useNotifications) can attribute `push_opened` to a specific channel. */
+function withChannel(
+  content: Notifications.NotificationContentInput,
+  channel: NotificationChannelId | "breakingNews",
+): Notifications.NotificationContentInput {
+  return { ...content, data: { ...(content.data ?? {}), channel } };
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
+interface NotificationExtraState {
+  /** The appointment hour (8-22) the user picked in the permission primer's
+   *  time chips ("מתי להזכיר?"). Wins over computePersonalizedHour until the
+   *  user changes it — an explicit appointment beats an inferred habit. */
+  preferredReminderHour: number | null;
+}
+
 interface NotificationActions {
   /** Request OS notification permission. `source` tags the analytics event with
-   *  the entry point (e.g. 'permission' banner, 'breaking_news', 'settings'). */
-  requestPermission: (source?: string) => Promise<boolean>;
+   *  the entry point (e.g. 'permission' banner, 'breaking_news', 'settings').
+   *  `preferredHour` (8-22) — the appointment hour picked in the primer's time
+   *  chips; on a fresh grant the streak reminder is scheduled at this hour. */
+  requestPermission: (source?: string, preferredHour?: number) => Promise<boolean>;
   /** Reconcile the cached permissionGranted flag with the real OS permission
    *  state WITHOUT prompting. The cached flag can drift (granted in a past
    *  session then revoked in OS settings, or never synced), which would
@@ -209,13 +226,14 @@ interface NotificationActions {
   setLastFinnCopyTitle: (title: string | null) => void;
 }
 
-export const useNotificationStore = create<NotificationState & NotificationActions>()(
+export const useNotificationStore = create<NotificationState & NotificationExtraState & NotificationActions>()(
   persist(
     (set, get) => ({
       permissionGranted: false,
       scheduled: [],
       bannerDismissed: false,
       bannerDismissedAt: null as string | null,
+      preferredReminderHour: null as number | null,
       // Apple 4.5.4: ALL notification preferences default to OFF on fresh install.
       // Notifications are only scheduled after the user explicitly toggles a
       // preference ON in Settings, which triggers the system permission prompt.
@@ -228,7 +246,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
 
       resetBannerDismissed: () => set({ bannerDismissed: false, bannerDismissedAt: null }),
 
-      requestPermission: async (source?: string): Promise<boolean> => {
+      requestPermission: async (source?: string, preferredHour?: number): Promise<boolean> => {
         await ensureAndroidChannels();
         const { status: existing } = await Notifications.getPermissionsAsync();
         // `prompted` = the OS dialog was actually shown. When already granted we
@@ -250,11 +268,30 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         // OFF in Settings. The existing useFinnNotificationScheduler re-arms these
         // (personalised) on every subsequent app open.
         if (granted && prompted) {
-          set({ preferences: { ...get().preferences, streak: true, morning: true, inactivity: true } });
+          const appointmentHour = typeof preferredHour === 'number'
+            ? Math.max(8, Math.min(22, Math.round(preferredHour)))
+            : null;
+          set({
+            preferences: { ...get().preferences, streak: true, morning: true, inactivity: true, dailyChallenge: true },
+            ...(appointmentHour !== null ? { preferredReminderHour: appointmentHour } : {}),
+          });
           try {
             await ensureAndroidChannels();
-            await get().scheduleMorningMotivation({ ...pickFinnCopy(getMorningCopy()), data: { screen: "/(tabs)/learn" } });
-            await get().scheduleStreakReminderWithCopy({ ...pickFinnCopy(getStreakCopy('safe')), data: { screen: "/(tabs)/learn" } }, 20);
+            // 48h-pulse (RETENTION-PLAN 2026-07-02 §2.2): the first scheduled
+            // day is 12:00 daily-dilemma (an invitation-to-content, not guilt)
+            // + the evening streak saver at the user's chosen appointment hour
+            // — replacing the generic 09:00 morning push, the weakest copy in
+            // the pool, which also collided with the 09:00 retention email.
+            // Cap stays 2: one-shot dilemma + daily streak reminder.
+            await get().scheduleDailyChallenge(12);
+            await get().scheduleStreakReminderWithCopy(
+              {
+                title: 'יומיים ברצף במרחק 2 דקות',
+                body: 'התיבה של יום 2 מחכה. קבענו, לא?',
+                data: { screen: "/(tabs)/learn" },
+              },
+              appointmentHour ?? 20,
+            );
             track({ name: 'next_day_reminder_scheduled', props: { source: source ?? 'permission_grant' } });
           } catch { /* non-fatal — the daily scheduler re-arms on the next app open */ }
         }
@@ -282,7 +319,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         await cancelChannel("streak");
 
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: CONTENT.streak,
+          content: withChannel(CONTENT.streak, "streak"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour: hourOfDay,
@@ -309,7 +346,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         await cancelChannel("chest");
 
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: CONTENT.chest,
+          content: withChannel(CONTENT.chest, "chest"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
             seconds: Math.max(1, Math.round(delayMs / 1000)),
@@ -332,7 +369,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         if (!permissionGranted) return;
 
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: CONTENT.dailyChallenge,
+          content: withChannel(CONTENT.dailyChallenge, "dailyChallenge"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
             hour: hourOfDay,
@@ -356,7 +393,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         const hour = Math.max(0, Math.min(23, Math.round(hourOfDay)));
         await cancelChannel("breakingNews");
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: CONTENT.breakingNews,
+          content: withChannel(CONTENT.breakingNews, "breakingNews"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour,
@@ -381,7 +418,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         if (!permissionGranted) return;
 
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: CONTENT.challenge,
+          content: withChannel(CONTENT.challenge, "challenge"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
             seconds: 1,
@@ -403,7 +440,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         if (!permissionGranted) return;
 
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: CONTENT.squadInvite,
+          content: withChannel(CONTENT.squadInvite, "squadInvite"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
             seconds: 2, // Slight delay
@@ -424,7 +461,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         await cancelChannel("squadChest");
 
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: CONTENT.squadChest,
+          content: withChannel(CONTENT.squadChest, "squadChest"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
             seconds: 1,
@@ -466,7 +503,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         if (!permissionGranted) return;
         await cancelChannel("streak");
         const identifier = await Notifications.scheduleNotificationAsync({
-          content,
+          content: withChannel(content, "streak"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour: hourOfDay,
@@ -485,7 +522,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         if (!permissionGranted) return;
         await cancelChannel("streakFallback");
         const identifier = await Notifications.scheduleNotificationAsync({
-          content,
+          content: withChannel(content, "streakFallback"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour: hourOfDay,
@@ -502,7 +539,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         if (!permissionGranted) return;
         await cancelChannel("morning");
         const identifier = await Notifications.scheduleNotificationAsync({
-          content,
+          content: withChannel(content, "morning"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour: 9,
@@ -525,7 +562,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         await ensureAndroidChannels();
         await cancelChannel("tools");
         const identifier = await Notifications.scheduleNotificationAsync({
-          content,
+          content: withChannel(content, "tools"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour: hourOfDay,
@@ -546,7 +583,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         const newScheduled = [...scheduled.filter((s) => s.channelId !== "inactivity")];
         for (const { content, delayHours } of capped) {
           const identifier = await Notifications.scheduleNotificationAsync({
-            content,
+            content: withChannel(content, "inactivity"),
             trigger: {
               type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
               seconds: delayHours * 3600,
@@ -566,7 +603,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         await cancelChannel("marketHook");
         const delayDays = 3 + Math.random();
         const identifier = await Notifications.scheduleNotificationAsync({
-          content,
+          content: withChannel(content, "marketHook"),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
             seconds: Math.round(delayDays * 86400),
@@ -582,6 +619,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         scheduled: [],
         bannerDismissed: false,
         bannerDismissedAt: null,
+        preferredReminderHour: null,
         preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false, tools: false },
         lastScheduledDate: null,
         lastFinnCopyTitle: null,
@@ -596,6 +634,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         scheduled: s.scheduled,
         bannerDismissed: s.bannerDismissed,
         bannerDismissedAt: s.bannerDismissedAt,
+        preferredReminderHour: s.preferredReminderHour,
         preferences: s.preferences,
         lastScheduledDate: s.lastScheduledDate,
         lastFinnCopyTitle: s.lastFinnCopyTitle,

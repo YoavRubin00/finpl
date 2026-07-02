@@ -115,6 +115,7 @@ import { GlobalCrowdQuestionGate } from "../src/components/ui/GlobalCrowdQuestio
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
 import { PostWalkthroughProTeaserGate } from "../src/features/subscription/PostWalkthroughProTeaser";
 import { PostWalkthroughFirstChestGate } from "../src/features/onboarding/PostWalkthroughFirstChest";
+import { NotificationPermissionPrompt } from "../src/features/notifications/NotificationPermissionPrompt";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
@@ -739,6 +740,15 @@ function RootLayoutInner() {
                   register CTA (never stacks) + learn-map pathname. Restores the
                   paywall_viewed{post_walkthrough} moment without blocking. */}
               <PostWalkthroughProTeaserGate />
+              {/* Appointment-setting notification-permission primer
+                  (RETENTION-PLAN 2026-07-02, approved by Yoav 2.7): revived
+                  from dormancy — full-screen ask at the first-chest value
+                  moment with time chips ("מתי להזכיר?"); OS dialog only after
+                  a slot is picked. Self-gated: onboarding + walkthrough +
+                  first chest, and waits for the chest→Pro→register chain to
+                  clear so it never stacks on the monetization moment. The
+                  thin learn-screen banner remains the recurring fallback. */}
+              <NotificationPermissionPrompt />
               {/* Force-update gate. Internal fetch decides whether to block
                   based on remote config; rendered AFTER other modals so its
                   full-screen Modal sits on top of every other overlay when

@@ -25,9 +25,18 @@ import {
 
 
 /** US-007: personalized send hour from recent activity pattern.
- *  Returns hour-of-day (0-23). Falls back to 20 if insufficient data (<7 entries). */
+ *  Returns hour-of-day (0-23).
+ *  <7 samples (new user): anchor to the MOST RECENT activity hour — on day 0
+ *  that's the install/first-session hour, the strongest same-time-tomorrow
+ *  habit anchor available (RETENTION-PLAN 2026-07-02 §2.2). The old flat-20
+ *  fallback sent every new user a generic evening push regardless of when
+ *  they actually use the app. No samples at all → 20. */
 function computePersonalizedHour(recentHours: number[]): number {
-    if (recentHours.length < 7) return 20;
+    if (recentHours.length === 0) return 20;
+    if (recentHours.length < 7) {
+        const mostRecent = recentHours[recentHours.length - 1];
+        return Math.max(8, Math.min(22, Math.round(mostRecent) - 1));
+    }
     const avg = recentHours.reduce((a, b) => a + b, 0) / recentHours.length;
     // Schedule 2h before the habit window, clamp to a sane evening range (8-22)
     const target = Math.round(avg) - 2;
@@ -85,8 +94,11 @@ export function useFinnNotificationScheduler() {
                 const ctx = buildStreakContext(economyCompat as Parameters<typeof buildStreakContext>[0], level);
                 const store = useNotificationStore.getState();
 
-                // US-007: personalized send hour from recent activity pattern
-                const primaryHour = computePersonalizedHour(uiState.recentActivityHours ?? []);
+                // US-007: personalized send hour from recent activity pattern.
+                // An explicit appointment hour picked in the permission primer
+                // ("מתי להזכיר?") beats the inferred habit hour.
+                const primaryHour = store.preferredReminderHour
+                    ?? computePersonalizedHour(uiState.recentActivityHours ?? []);
 
                 // US-008: tone adapted to user's onboarding daily-goal answer
                 const goalMinutes = useAuthStore.getState().profile?.dailyGoalMinutes;

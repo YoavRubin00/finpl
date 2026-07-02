@@ -249,7 +249,16 @@ export type AppEvent =
   // a churning user never reaches). Plus a small next-day return reward on D1.
   | { name: 'next_day_reminder_scheduled'; props: { source?: string } }
   | { name: 'day1_return_reward_shown'; props: { coins: number } }
-  | { name: 'day1_return_reward_claimed'; props: { coins: number; freezes?: number } };
+  | { name: 'day1_return_reward_claimed'; props: { coins: number; freezes?: number } }
+
+  // ── Push attribution + appointment-setting (RETENTION-PLAN 2026-07-02) ──
+  // `push_opened` fires when the user taps an OS notification. Until this
+  // event existed push taps were completely dark — open-rate per channel and
+  // D1-attribution to a specific reminder were unmeasurable.
+  | { name: 'push_opened'; props: { channel?: string; screen?: string } }
+  // The permission primer's time-chip choice ("מתי להזכיר?") — the
+  // appointment hour (0-23, local) picked BEFORE the OS dialog opened.
+  | { name: 'reminder_time_selected'; props: { hour: number; source?: string } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event
