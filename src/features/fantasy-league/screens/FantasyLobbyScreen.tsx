@@ -62,7 +62,7 @@ const CATEGORY_TO_SECTOR: Record<StockCategoryId, FantasySectorId> = {
 const TIER_TO_SHIELD: Record<FantasyTier, TierKey> = {
   silver: 'silver',
   gold: 'gold',
-  diamond: 'gold',
+  diamond: 'diamond',
 };
 
 const TIER_LABEL: Record<FantasyTier, string> = {

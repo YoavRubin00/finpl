@@ -18,10 +18,6 @@ import type {
  *   Fri 23:05 → Sat 20:00  results (claim prizes, leagues settled)
  */
 export function getCompetitionPhase(now: Date = new Date()): CompetitionPhase {
-  // ⚠️ DEV OVERRIDE — always return 'draft' so the league can be entered any
-  // time during testing. Remove this early-return to restore real phase logic.
-  if (now) return 'draft';
-
   const day = now.getDay(); // 0=Sun … 6=Sat
   const hour = now.getHours();
   const minute = now.getMinutes();
@@ -89,6 +85,9 @@ export function getDraftClose(now: Date = new Date()): Date {
   d.setHours(9, 0, 0, 0);
   return d;
 }
+
+/** Social-proof count on the Fantasy CTA — placeholder until real friend presence exists. */
+export const FANTASY_ACTIVE_FRIENDS = 4;
 
 // ---------------------------------------------------------------------------
 // Tier configs
