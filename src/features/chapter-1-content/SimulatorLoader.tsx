@@ -44,42 +44,45 @@ const SIM_LOADERS: Record<string, () => SimScreen> = {
   "mod-1-7": () => require("./simulations/BankCombatScreen").BankCombatScreen,
   "mod-1-8": () => require("./simulations/ShoppingCartScreen").ShoppingCartScreen,
   "mod-1-9": () => require("./simulations/EmergencyFundScreen").EmergencyFundScreen,
-  // Chapter 2
-  "mod-2-10": () => require("../chapter-2-content/simulations").CreditScoreScreen,
-  "mod-2-11": () => require("../chapter-2-content/simulations").TaxPuzzleScreen,
-  "mod-2-12": () => require("../chapter-2-content/simulations").RetirementRaceScreen,
-  "mod-2-13": () => require("../chapter-2-content/simulations").TaxGrinderScreen,
-  "mod-2-14": () => require("../chapter-2-content/simulations").InsuranceShieldScreen,
-  // Chapter 3
-  "mod-3-15": () => require("../chapter-3-content/simulations").InflationRaceScreen,
-  "mod-3-16": () => require("../chapter-3-content/simulations").PanicIndexScreen,
-  "mod-3-17": () => require("../chapter-3-content/simulations").InvestmentPathScreen,
-  "mod-3-18": () => require("../chapter-3-content/simulations").TrackSelectorScreen,
-  // Chapter 4
-  "mod-4-19": () => require("../chapter-4-content/simulations").RiskSliderScreen,
-  "mod-4-20": () => require("../chapter-4-content/simulations").IndexLiveScreen,
-  "mod-4-21": () => require("../chapter-4-content/simulations").ETFBuilderScreen,
-  "mod-4-22": () => require("../chapter-4-content/simulations").TradingSimScreen,
-  "mod-4-23": () => require("../chapter-4-content/simulations").DividendTreeScreen,
-  "mod-4-24": () => require("../chapter-4-content/simulations").PortfolioManagerScreen,
-  "mod-4-25": () => require("../chapter-4-content/simulations").StatementDetectiveScreen,
-  "mod-4-26": () => require("../chapter-4-content/simulations").BrokerCompareScreen,
-  "mod-4-27": () => require("../chapter-4-content/simulations").CrisisManagerScreen,
-  "mod-4-28": () => require("../chapter-4-content/simulations").ChartReaderScreen,
-  "mod-4-29": () => require("../chapter-4-content/simulations").StockSorterScreen,
-  "mod-4-30": () => require("../chapter-4-content/simulations").IndexRaceScreen,
+  // Chapter 2 — per-file require (NOT the ./simulations barrel): the barrel
+  // eagerly evaluates ALL sims in the chapter on first access, blocking the JS
+  // thread and showing a WHITE SCREEN before the sim opens (same bug the
+  // chapter-1 note above fixed; extended to chapters 2-5, Yoav 2026-07-03).
+  "mod-2-10": () => require("../chapter-2-content/simulations/CreditScoreScreen").CreditScoreScreen,
+  "mod-2-11": () => require("../chapter-2-content/simulations/TaxPuzzleScreen").TaxPuzzleScreen,
+  "mod-2-12": () => require("../chapter-2-content/simulations/RetirementRaceScreen").RetirementRaceScreen,
+  "mod-2-13": () => require("../chapter-2-content/simulations/TaxGrinderScreen").TaxGrinderScreen,
+  "mod-2-14": () => require("../chapter-2-content/simulations/InsuranceShieldScreen").InsuranceShieldScreen,
+  // Chapter 3 — per-file require (see chapter-2 note)
+  "mod-3-15": () => require("../chapter-3-content/simulations/InflationRaceScreen").InflationRaceScreen,
+  "mod-3-16": () => require("../chapter-3-content/simulations/PanicIndexScreen").PanicIndexScreen,
+  "mod-3-17": () => require("../chapter-3-content/simulations/InvestmentPathScreen").InvestmentPathScreen,
+  "mod-3-18": () => require("../chapter-3-content/simulations/TrackSelectorScreen").TrackSelectorScreen,
+  // Chapter 4 — per-file require (see chapter-2 note)
+  "mod-4-19": () => require("../chapter-4-content/simulations/RiskSliderScreen").RiskSliderScreen,
+  "mod-4-20": () => require("../chapter-4-content/simulations/IndexLiveScreen").IndexLiveScreen,
+  "mod-4-21": () => require("../chapter-4-content/simulations/ETFBuilderScreen").ETFBuilderScreen,
+  "mod-4-22": () => require("../chapter-4-content/simulations/TradingSimScreen").TradingSimScreen,
+  "mod-4-23": () => require("../chapter-4-content/simulations/DividendTreeScreen").DividendTreeScreen,
+  "mod-4-24": () => require("../chapter-4-content/simulations/PortfolioManagerScreen").PortfolioManagerScreen,
+  "mod-4-25": () => require("../chapter-4-content/simulations/StatementDetectiveScreen").StatementDetectiveScreen,
+  "mod-4-26": () => require("../chapter-4-content/simulations/BrokerCompareScreen").BrokerCompareScreen,
+  "mod-4-27": () => require("../chapter-4-content/simulations/CrisisManagerScreen").CrisisManagerScreen,
+  "mod-4-28": () => require("../chapter-4-content/simulations/ChartReaderScreen").ChartReaderScreen,
+  "mod-4-29": () => require("../chapter-4-content/simulations/StockSorterScreen").StockSorterScreen,
+  "mod-4-30": () => require("../chapter-4-content/simulations/IndexRaceScreen").IndexRaceScreen,
   // Chapter 4, Graham bonus modules
   "mod-4-b1": () => require("../chapter-4-content/simulations/GrahamPortfolioScreen").GrahamPortfolioScreen,
   "mod-4-b2": () => require("../chapter-4-content/simulations/MarginSafetyScreen").MarginSafetyScreen,
   "mod-4-b3": () => require("../chapter-4-content/simulations/PriceValueScreen").PriceValueScreen,
   "mod-4-b4": () => require("../chapter-4-content/simulations/CrisisTimelineScreen").CrisisTimelineScreen,
-  // Chapter 5
-  "mod-5-25": () => require("../chapter-5-content/simulations").FIRECalcScreen,
-  "mod-5-26": () => require("../chapter-5-content/simulations").RealEstateScreen,
-  "mod-5-27": () => require("../chapter-5-content/simulations").REITScreen,
-  "mod-5-28": () => require("../chapter-5-content/simulations").RetirementCalcScreen,
-  "mod-5-29": () => require("../chapter-5-content/simulations").EstatePlanningScreen,
-  "mod-5-30": () => require("../chapter-5-content/simulations").CryptoSimScreen,
+  // Chapter 5 — per-file require (see chapter-2 note)
+  "mod-5-25": () => require("../chapter-5-content/simulations/FIRECalcScreen").FIRECalcScreen,
+  "mod-5-26": () => require("../chapter-5-content/simulations/RealEstateScreen").RealEstateScreen,
+  "mod-5-27": () => require("../chapter-5-content/simulations/REITScreen").REITScreen,
+  "mod-5-28": () => require("../chapter-5-content/simulations/RetirementCalcScreen").RetirementCalcScreen,
+  "mod-5-29": () => require("../chapter-5-content/simulations/EstatePlanningScreen").EstatePlanningScreen,
+  "mod-5-30": () => require("../chapter-5-content/simulations/CryptoSimScreen").CryptoSimScreen,
 };
 
 // Dev-only drift guard — SIM_MODULE_IDS (used by topicResolver to decide
@@ -103,7 +106,10 @@ export const SimulatorLoader = memo(function SimulatorLoader({
     const loader = SIM_LOADERS[moduleId];
     if (!loader) return null;
     try {
-      return loader();
+      // Coerce a missing/undefined export (e.g. a per-file require whose named
+      // export drifted) to null so the graceful-skip effect below fires instead
+      // of rendering nothing forever (stuck white screen).
+      return loader() ?? null;
     } catch (err) {
       // A broken/missing sim require used to throw → Hermes unmounts the tree
       // → WHITE SCREEN. Log and fall through to the graceful skip below.
