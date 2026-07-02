@@ -117,33 +117,28 @@ export function getDailyEventTopic(now: Date = new Date()): DailyEventTopic {
   return DAILY_EVENT_TOPICS[dayOfYear % DAILY_EVENT_TOPICS.length];
 }
 
-/** Deterministic per-day jitter so member counts feel alive but stable within a day. */
-export function getRoomMemberCount(room: TradeRoom, now: Date = new Date()): number {
-  const seed = now.getFullYear() * 366 + now.getMonth() * 31 + now.getDate();
-  const jitter = ((seed * 9301 + room.memberBase * 49297) % 233280) / 233280;
-  return room.memberBase + Math.floor(jitter * 40) - 20;
+/**
+ * Honest member count — no fake hundreds. Until real presence exists,
+ * every room shows the seed crew size (5) so it doesn't look empty.
+ */
+export function getRoomMemberCount(_room: TradeRoom): number {
+  return 5;
 }
 
 // ===== Community personas (recurring per room, feel like regulars) =====
-const COMMUNITY: AnonAlias[] = [
-  { emoji: '🦊', noun: 'החכם', number: 2841 },
-  { emoji: '🦅', noun: 'החזון', number: 7113 },
-  { emoji: '🐢', noun: 'הסבלני', number: 1584 },
-  { emoji: '🐝', noun: 'החרוץ', number: 4429 },
-  { emoji: '🦉', noun: 'הנבון', number: 9021 },
-  { emoji: '🐬', noun: 'החברותי', number: 3376 },
-  { emoji: '🦁', noun: 'הלוחם', number: 6540 },
-  { emoji: '🐱', noun: 'הסקרן', number: 2205 },
-  { emoji: '🦋', noun: 'הצעירה', number: 8817 },
-  { emoji: '🐧', noun: 'הענייני', number: 5192 },
+// Each carries a real game avatar id — AvatarImage renders the Pip mascots.
+const COMMUNITY: Array<AnonAlias & { avatarId: string }> = [
+  { emoji: '🦊', noun: 'החכם', number: 2841, avatarId: 'avatar-analyst' },
+  { emoji: '🦅', noun: 'החזון', number: 7113, avatarId: 'avatar-investor' },
+  { emoji: '🐢', noun: 'הסבלני', number: 1584, avatarId: 'avatar-saver' },
+  { emoji: '🐝', noun: 'החרוץ', number: 4429, avatarId: 'avatar-grower' },
+  { emoji: '🦉', noun: 'הנבון', number: 9021, avatarId: 'avatar-strategist' },
+  { emoji: '🐬', noun: 'החברותי', number: 3376, avatarId: 'avatar-learner' },
+  { emoji: '🦁', noun: 'הלוחם', number: 6540, avatarId: 'avatar-trader' },
+  { emoji: '🐱', noun: 'הסקרן', number: 2205, avatarId: 'avatar-explorer' },
+  { emoji: '🦋', noun: 'הצעירה', number: 8817, avatarId: 'avatar-strong-saver' },
+  { emoji: '🐧', noun: 'הענייני', number: 5192, avatarId: 'avatar-defender' },
 ];
-
-export function pickCommunityAlias(exclude?: AnonAlias | null): AnonAlias {
-  const pool = exclude
-    ? COMMUNITY.filter((a) => a.number !== exclude.number)
-    : COMMUNITY;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
 
 // ===== Seed conversations =====
 interface SeedLine {
@@ -217,97 +212,24 @@ function makeSeedId(roomId: string, idx: number): string {
 export function buildSeedMessages(roomId: TradeRoomId): TradeRoomMessage[] {
   const lines = SEED_LINES[roomId] ?? [];
   const now = Date.now();
-  return lines.map((line, idx) => ({
-    id: makeSeedId(roomId, idx),
-    roomId,
-    alias: line.isShark ? null : COMMUNITY[line.aliasIdx % COMMUNITY.length],
-    isSelf: false,
-    isShark: line.isShark === true,
-    body: line.body,
-    sentiment: line.sentiment,
-    ticker: line.ticker,
-    likes: line.likes ?? 0,
-    likedBySelf: false,
-    sentAt: new Date(now - line.minutesAgo * 60_000).toISOString(),
-  }));
+  return lines.map((line, idx) => {
+    const persona = COMMUNITY[line.aliasIdx % COMMUNITY.length];
+    return {
+      id: makeSeedId(roomId, idx),
+      roomId,
+      alias: line.isShark ? null : persona,
+      avatarId: line.isShark ? null : persona.avatarId,
+      isSelf: false,
+      isShark: line.isShark === true,
+      body: line.body,
+      sentiment: line.sentiment,
+      ticker: line.ticker,
+      likes: line.likes ?? 0,
+      likedBySelf: false,
+      sentAt: new Date(now - line.minutesAgo * 60_000).toISOString(),
+    };
+  });
 }
-
-// ===== Community reply pools (simulator picks from these while you're in a room) =====
-export const AUTO_REPLY_POOLS: Record<TradeRoomId, string[]> = {
-  'daily-event': [
-    'הנושא של היום חזק. מחכה לראות איך זה נסגר בסוף השבוע',
-    'קראתי על זה כתבה הבוקר, המספרים יותר מורכבים ממה שנראה',
-    'מי שיש לו דעה — שינמק. ככה לומדים פה',
-    'אני עוד לא סגור על הכיוון. יש טיעונים טובים לשני הצדדים',
-    'הצבעתי הפוך מהרוב בחכמת ההמונים. מישהו עוד נגד הזרם?',
-  ],
-  wallstreet: [
-    'הפרה-מרקט נראה ירוק. נראה אם זה מחזיק עד הפתיחה',
-    'מי שמפוזר על כמה סקטורים ישן טוב יותר השבוע',
-    'הדוחות של הרבעון הזה מפתיעים לטובה עד עכשיו',
-    'זוכרים שלפני חודש כולם היו בפאניקה? השוק כבר שכח',
-    'שאלה למחזיקי הטק — מישהו הוסיף בירידה של אתמול?',
-    'קרן מחקה וסבלנות. משעמם אבל עובד לי כבר שנתיים',
-  ],
-  telaviv: [
-    'המחזורים בת״א נמוכים היום, כולם בחופש כנראה',
-    'הבנקים שוב סוחבים את המדד. איזו עקביות',
-    'הדולר-שקל עושה דרמות. מי שמושקע בחו״ל מרגיש את זה',
-    'מניות הביטוח שקטות מדי. מריח לי לפני מהלך',
-    'שימו לב להחלטת הריבית הקרובה, זה יזיז את כל השוק',
-  ],
-  crypto: [
-    'הוולטיליות היום עדינה יחסית. חשוד',
-    'מי שעושה DCA קבוע לא מרגיש את הדרמות האלה בכלל',
-    'ראיתם את הזרימות לקרנות הביטקוין? מוסדיים נכנסים בשקט',
-    'תזכורת ידידותית: רק כסף שמותר לו להיעלם',
-    'האלטים זזים היום יותר מהביטקוין. סימן לתיאבון סיכון',
-  ],
-  beginners: [
-    'שאלתי פה שאלה לפני חודש שחשבתי שהיא מטופשת. קיבלתי 5 תשובות מעולות',
-    'ההבדל בין חיסכון להשקעה סוף סוף ברור לי. תודה לחדר הזה',
-    'מישהו יכול להסביר בפשטות מה זה ריבית דריבית? שמעתי שזה קסם',
-    'התחלתי עם סכום קטן רק בשביל ללמוד. הרגשה של שחקן אמיתי',
-    'הטעות הכי טובה שעשיתי — להתחיל קטן ולשאול הרבה',
-  ],
-  'league-talk': [
-    'התיק שלי ירוק והביטחון בשיא. תבדקו את הטבלה',
-    'מי שבחר קפטן ספקולטיבי השבוע — אמיץ או מטורף, נגלה בשישי',
-    'שלושה ימים לסוף התחרות ואני נושף בעורף של המקום הראשון',
-    'הדראפט הבא אני הולך על אסטרטגיה חדשה לגמרי. בלי ספוילרים',
-    'הליגה הזאת עשתה לי יותר לידע על מניות מכל סרטון ביוטיוב',
-  ],
-};
-
-// ===== Captain Shark tip pools (injected every few community messages) =====
-export const SHARK_TIP_POOLS: Record<TradeRoomId, string[]> = {
-  'daily-event': [
-    'דעה חזקה + נימוק חלש = דגל אדום. תשאלו "למה" לפני שמתיישרים עם הקהל.',
-    'ההמון צודק לעיתים קרובות — אבל בדיוק כשכולם בטוחים, שווה לבדוק שוב.',
-  ],
-  wallstreet: [
-    'מניה שעלתה אתמול לא "חייבת" לעלות היום. לשוק אין זיכרון, רק לנו יש.',
-    'לפני שקונים כי "כולם מדברים על זה" — בדקו מי מרוויח מזה שכולם מדברים.',
-    'פיזור זה לא פחד. זה להודות שאף אחד לא יודע את העתיד — וזו חוכמה.',
-  ],
-  telaviv: [
-    'יתרון הבית: את החברות הישראליות אתם מכירים מהחיים. חיסרון הבית: רגש.',
-    'מדד ת״א 35 = 35 החברות הגדולות בבורסה שלנו. לדעת מה בפנים = חצי מהעבודה.',
-  ],
-  crypto: [
-    'בקריפטו התנודות של יום אחד הן כמו שנה בבורסה. תזמנו את הלב בהתאם.',
-    'אם אתם בודקים את המחיר כל שעה — הסכום שהשקעתם גדול מדי בשבילכם.',
-  ],
-  beginners: [
-    'כל כריש התחיל כדג קטן. השאלות שלכם היום הן הביטחון של מחר.',
-    'אל תשוו את ההתחלה שלכם לאמצע של מישהו אחר. קצב אישי מנצח השוואות.',
-    'מי שעונה למתחילים בסבלנות — מסמנים אותו. אלה האנשים ללמוד מהם.',
-  ],
-  'league-talk': [
-    'הליגה היא מגרש אימונים: תרגישו חופשי להסתכן פה — הכיסים וירטואליים, הלקחים אמיתיים.',
-    'מי שמנצח בליגה שבוע אחד זה מזל. מי שבטופ 5 כל שבוע — זו שיטה. תלמדו מהשיטה.',
-  ],
-};
 
 // ===== Light chat moderation (client-side, fast) =====
 const ID_REGEX = /\b\d{9}\b/;

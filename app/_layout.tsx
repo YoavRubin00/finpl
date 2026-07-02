@@ -462,7 +462,7 @@ function RootLayoutInner() {
       "net-worth-dashboard", "financial-profile", "breaking-news",
       "tower-defense-boss", "interstitial", "ai-insights", "saved-items",
       "clan", "anon-advice", "payslip-analyzer", "shark-voice", "stock-analyst",
-      "trade-rooms", "crowd-wisdom",
+      "trade-rooms", "crowd-wisdom", "friends-list",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

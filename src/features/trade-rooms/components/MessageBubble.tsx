@@ -3,6 +3,7 @@ import { View, Text, Image, Pressable } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Heart } from 'lucide-react-native';
 import { formatAlias } from '../../anon-advice/anonAdviceData';
+import { AvatarImage } from '../../avatars/AvatarImage';
 import type { TradeRoomMessage } from '../tradeRoomsTypes';
 
 const TEXT_PRIMARY = '#1f2937';
@@ -78,7 +79,11 @@ export const MessageBubble = React.memo(function MessageBubble({
             resizeMode="contain"
           />
         ) : (
-          <Text style={{ fontSize: 16 }}>{message.alias?.emoji ?? '🐟'}</Text>
+          <AvatarImage
+            avatarId={message.avatarId ?? null}
+            size={28}
+            fallbackEmoji={message.alias?.emoji ?? '🐟'}
+          />
         )}
       </View>
 

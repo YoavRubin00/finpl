@@ -16,34 +16,14 @@ import { ChevronRight, Send, Pin } from 'lucide-react-native';
 
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useTradeRoomsStore } from './useTradeRoomsStore';
-import { useRoomSimulator } from './useRoomSimulator';
 import { getRoomById, getRoomMemberCount, getDailyEventTopic, MAX_MESSAGE_LENGTH } from './tradeRoomsData';
+import { moderateWithSharkBot } from '../moderation/sharkModeratorBot';
 import { MessageBubble } from './components/MessageBubble';
 import type { TradeRoomId, TradeRoomMessage, MessageSentiment } from './tradeRoomsTypes';
 
 const FEED_BG = '#f3f4f6';
 const TEXT_PRIMARY = '#1f2937';
 const TEXT_MUTED = '#6b7280';
-
-function TypingIndicator(): React.ReactElement {
-  return (
-    <Animated.View
-      entering={FadeInDown.duration(150)}
-      exiting={FadeOut.duration(150)}
-      style={{
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 16,
-        paddingVertical: 6,
-      }}
-    >
-      <Text style={{ fontSize: 12, color: TEXT_MUTED, writingDirection: 'rtl' }}>
-        מישהו מקליד…
-      </Text>
-    </Animated.View>
-  );
-}
 
 export function TradeRoomChatScreen(): React.ReactElement {
   const router = useRouter();
@@ -52,14 +32,12 @@ export function TradeRoomChatScreen(): React.ReactElement {
   const room = getRoomById(roomId);
 
   const messagesByRoom = useTradeRoomsStore((s) => s.messagesByRoom);
-  const typingRoomId = useTradeRoomsStore((s) => s.typingRoomId);
   const sendMessage = useTradeRoomsStore((s) => s.sendMessage);
   const toggleLike = useTradeRoomsStore((s) => s.toggleLike);
   const markRoomRead = useTradeRoomsStore((s) => s.markRoomRead);
   const getSentimentSummary = useTradeRoomsStore((s) => s.getSentimentSummary);
 
   const messages = messagesByRoom[roomId] ?? [];
-  const isTyping = typingRoomId === roomId;
   const sentiment = getSentimentSummary(roomId);
 
   const [draft, setDraft] = React.useState('');
@@ -68,9 +46,6 @@ export function TradeRoomChatScreen(): React.ReactElement {
   const [rewardBanner, setRewardBanner] = React.useState<{ coins: number; xp: number } | null>(null);
 
   const listRef = React.useRef<FlatList<TradeRoomMessage>>(null);
-
-  // Simulated community keeps the room alive while it's open.
-  useRoomSimulator(roomId, true);
 
   // Mark read on entry + exit so the unread badge clears.
   React.useEffect(() => {
@@ -95,6 +70,13 @@ export function TradeRoomChatScreen(): React.ReactElement {
       setRewardBanner(result.reward);
       setTimeout(() => setRewardBanner(null), 3000);
     }
+    // Shark moderator bot reviews async — deletes spam/off-topic/profanity.
+    void moderateWithSharkBot(body).then((verdict) => {
+      if (!verdict.ok) {
+        useTradeRoomsStore.getState().removeMessage(roomId, result.messageId);
+        setError(verdict.reason ?? 'ההודעה הוסרה על ידי קפטן שארק.');
+      }
+    });
   }, [draft, draftSentiment, roomId, sendMessage]);
 
   const dailyTopic = room.isDailyEvent ? getDailyEventTopic() : null;
@@ -122,10 +104,10 @@ export function TradeRoomChatScreen(): React.ReactElement {
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace('/trade-rooms' as never)}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="חזרה"
+          accessibilityLabel="חזרה לחדרי המסחר"
         >
           <ChevronRight size={26} color={TEXT_PRIMARY} strokeWidth={2.4} />
         </Pressable>
@@ -218,8 +200,6 @@ export function TradeRoomChatScreen(): React.ReactElement {
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
         />
-
-        {isTyping && <TypingIndicator />}
 
         {/* Reward banner — first message of the day */}
         {rewardBanner && (
@@ -330,6 +310,14 @@ export function TradeRoomChatScreen(): React.ReactElement {
               placeholder="מה דעתכם על השוק?"
               placeholderTextColor="#9ca3af"
               multiline
+              onKeyPress={(e) => {
+                // Web/desktop: Enter sends, Shift+Enter makes a new line.
+                const ne = e.nativeEvent as { key?: string; shiftKey?: boolean };
+                if (ne.key === 'Enter' && !ne.shiftKey && Platform.OS === 'web') {
+                  e.preventDefault?.();
+                  handleSend();
+                }
+              }}
               maxLength={MAX_MESSAGE_LENGTH}
               style={{
                 flex: 1,
@@ -349,17 +337,20 @@ export function TradeRoomChatScreen(): React.ReactElement {
               onPress={handleSend}
               disabled={draft.trim().length === 0}
               accessibilityRole="button"
-              accessibilityLabel="שליחה"
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 21,
-                backgroundColor: draft.trim().length > 0 ? '#1877f2' : '#d1d5db',
+              accessibilityLabel="שליחת הודעה"
+              style={({ pressed }) => ({
+                flexDirection: 'row-reverse',
                 alignItems: 'center',
-                justifyContent: 'center',
-              }}
+                gap: 6,
+                borderRadius: 22,
+                paddingHorizontal: 16,
+                height: 44,
+                backgroundColor: draft.trim().length > 0 ? '#1877f2' : '#cbd5e1',
+                opacity: pressed ? 0.85 : 1,
+              })}
             >
-              <Send size={18} color="#ffffff" strokeWidth={2.4} style={{ transform: [{ scaleX: -1 }] }} />
+              <Text style={{ fontSize: 14, fontWeight: '900', color: '#ffffff' }}>שליחה</Text>
+              <Send size={16} color="#ffffff" strokeWidth={2.4} style={{ transform: [{ scaleX: -1 }] }} />
             </Pressable>
           </View>
         </View>

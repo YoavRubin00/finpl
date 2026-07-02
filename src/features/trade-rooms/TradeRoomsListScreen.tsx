@@ -165,10 +165,10 @@ export function TradeRoomsListScreen(): React.ReactElement {
         }}
       >
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(tabs)/friends' as never)}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="חזרה"
+          accessibilityLabel="חזרה לעמוד החברים"
         >
           <ChevronRight size={26} color={TEXT_PRIMARY} strokeWidth={2.4} />
         </Pressable>

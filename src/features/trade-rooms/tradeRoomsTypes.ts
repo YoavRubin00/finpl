@@ -38,6 +38,8 @@ export interface TradeRoomMessage {
   roomId: TradeRoomId;
   /** null → Captain Shark (system persona). */
   alias: AnonAlias | null;
+  /** Game avatar id (AvatarImage mascot); falls back to alias emoji. */
+  avatarId?: string | null;
   isSelf: boolean;
   isShark: boolean;
   body: string;
