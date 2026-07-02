@@ -10,11 +10,12 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronRight, Send, Pin } from 'lucide-react-native';
 
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { getIsraelDateISO } from '../../utils/israelTime';
 import { useTradeRoomsStore } from './useTradeRoomsStore';
 import { getRoomById, getDailyEventTopic, MAX_MESSAGE_LENGTH } from './tradeRoomsData';
 import { moderateWithSharkBot } from '../moderation/sharkModeratorBot';
@@ -22,8 +23,65 @@ import { MessageBubble } from './components/MessageBubble';
 import type { TradeRoomId, TradeRoomMessage, MessageSentiment } from './tradeRoomsTypes';
 
 const FEED_BG = '#f3f4f6';
+const CHAT_BG = '#e9eef2'; // subtle WhatsApp-style chat wallpaper tint
 const TEXT_PRIMARY = '#1f2937';
 const TEXT_MUTED = '#6b7280';
+
+// ===== Day grouping + message-run helpers =====
+const GROUP_WINDOW_MS = 5 * 60 * 1000;
+
+function dayKeyOf(iso: string): string {
+  return getIsraelDateISO(new Date(iso));
+}
+
+function dayLabelOf(iso: string): string {
+  const key = dayKeyOf(iso);
+  const today = getIsraelDateISO();
+  const yesterday = getIsraelDateISO(new Date(Date.now() - 86_400_000));
+  if (key === today) return 'היום';
+  if (key === yesterday) return 'אתמול';
+  return new Date(iso).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: '2-digit' });
+}
+
+function messageSenderKey(m: TradeRoomMessage): string {
+  if (m.isSelf) return 'self';
+  if (m.isShark) return 'shark';
+  return m.alias ? `a:${m.alias.emoji}${m.alias.noun}${m.alias.number}` : 'anon';
+}
+
+function isGroupedWithPrev(prev: TradeRoomMessage | undefined, cur: TradeRoomMessage): boolean {
+  if (!prev) return false;
+  if (messageSenderKey(prev) !== messageSenderKey(cur)) return false;
+  if (dayKeyOf(prev.sentAt) !== dayKeyOf(cur.sentAt)) return false;
+  return new Date(cur.sentAt).getTime() - new Date(prev.sentAt).getTime() <= GROUP_WINDOW_MS;
+}
+
+function DateSeparator({ label }: { label: string }): React.ReactElement {
+  return (
+    <View style={{ alignItems: 'center', marginVertical: 10 }}>
+      <View
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.92)',
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 4,
+          shadowColor: '#000',
+          shadowOpacity: 0.05,
+          shadowRadius: 1,
+          shadowOffset: { width: 0, height: 1 },
+          elevation: 1,
+        }}
+      >
+        <Text
+          maxFontSizeMultiplier={1.3}
+          style={{ fontSize: 11, fontWeight: '800', color: '#475569', writingDirection: 'rtl' }}
+        >
+          {label}
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 export function TradeRoomChatScreen(): React.ReactElement {
   const router = useRouter();
@@ -42,6 +100,7 @@ export function TradeRoomChatScreen(): React.ReactElement {
   const messages = messagesByRoom[roomId] ?? [];
   const sentiment = getSentimentSummary(roomId);
 
+  const reduced = useReducedMotion();
   const [draft, setDraft] = React.useState('');
   const [draftSentiment, setDraftSentiment] = React.useState<MessageSentiment | undefined>(undefined);
   const [error, setError] = React.useState<string | null>(null);
@@ -83,11 +142,32 @@ export function TradeRoomChatScreen(): React.ReactElement {
 
   const dailyTopic = room.isDailyEvent ? getDailyEventTopic() : null;
 
+  // Honest subtitle: real bull/bear split once enough messages are tagged,
+  // otherwise the room's static descriptor — never a fabricated presence count.
+  const subtitle =
+    sentiment.taggedCount >= 3
+      ? `${sentiment.bullPercent}% שוריים · ${100 - sentiment.bullPercent}% דוביים`
+      : dailyTopic
+        ? dailyTopic.subtitle
+        : room.tagline;
+
   const renderMessage = React.useCallback(
-    ({ item }: { item: TradeRoomMessage }) => (
-      <MessageBubble message={item} onToggleLike={(id) => toggleLike(roomId, id)} />
-    ),
-    [roomId, toggleLike],
+    ({ item, index }: { item: TradeRoomMessage; index: number }) => {
+      const prev = index > 0 ? messages[index - 1] : undefined;
+      const showDate = !prev || dayKeyOf(prev.sentAt) !== dayKeyOf(item.sentAt);
+      const isFirstInGroup = !isGroupedWithPrev(prev, item);
+      return (
+        <>
+          {showDate && <DateSeparator label={dayLabelOf(item.sentAt)} />}
+          <MessageBubble
+            message={item}
+            isFirstInGroup={isFirstInGroup}
+            onToggleLike={(id) => toggleLike(roomId, id)}
+          />
+        </>
+      );
+    },
+    [messages, roomId, toggleLike],
   );
 
   return (
@@ -123,11 +203,12 @@ export function TradeRoomChatScreen(): React.ReactElement {
             justifyContent: 'center',
           }}
         >
-          <Text style={{ fontSize: 20 }}>{room.emoji}</Text>
+          <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 20 }}>{room.emoji}</Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text
             numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
             style={{
               fontSize: 16,
               fontWeight: '900',
@@ -140,6 +221,7 @@ export function TradeRoomChatScreen(): React.ReactElement {
           </Text>
           <Text
             numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
             style={{
               fontSize: 11,
               color: TEXT_MUTED,
@@ -147,7 +229,7 @@ export function TradeRoomChatScreen(): React.ReactElement {
               textAlign: 'right',
             }}
           >
-            {sentiment.taggedCount >= 3 ? `${sentiment.bullPercent}% שוריים` : ''}
+            {subtitle}
           </Text>
         </View>
       </View>
@@ -187,7 +269,7 @@ export function TradeRoomChatScreen(): React.ReactElement {
       </View>
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: CHAT_BG }}
         behavior="padding"
         keyboardVerticalOffset={0}
       >
@@ -205,8 +287,8 @@ export function TradeRoomChatScreen(): React.ReactElement {
         {/* Reward banner — first message of the day */}
         {rewardBanner && (
           <Animated.View
-            entering={FadeInDown.duration(200)}
-            exiting={FadeOut.duration(200)}
+            entering={reduced ? undefined : FadeInDown.duration(200)}
+            exiting={reduced ? undefined : FadeOut.duration(200)}
             style={{
               marginHorizontal: 16,
               marginBottom: 6,
@@ -340,18 +422,21 @@ export function TradeRoomChatScreen(): React.ReactElement {
               accessibilityRole="button"
               accessibilityLabel="שליחת הודעה"
               style={({ pressed }) => ({
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                gap: 6,
-                borderRadius: 22,
-                paddingHorizontal: 16,
+                width: 44,
                 height: 44,
+                borderRadius: 22,
+                alignItems: 'center',
+                justifyContent: 'center',
                 backgroundColor: draft.trim().length > 0 ? '#1877f2' : '#cbd5e1',
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ fontSize: 14, fontWeight: '900', color: '#ffffff' }}>שליחה</Text>
-              <Send size={16} color="#ffffff" strokeWidth={2.4} style={{ transform: [{ scaleX: -1 }] }} />
+              <Send
+                size={20}
+                color="#ffffff"
+                strokeWidth={2.4}
+                style={{ transform: [{ scaleX: -1 }], marginRight: 2 }}
+              />
             </Pressable>
           </View>
         </View>

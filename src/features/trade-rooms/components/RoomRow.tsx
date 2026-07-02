@@ -41,6 +41,7 @@ export function RoomRow({
           ? formatAlias(lastMessage.alias)
           : ''
     : '';
+  const hasUnread = unreadCount > 0;
 
   return (
     <Pressable
@@ -67,7 +68,7 @@ export function RoomRow({
           justifyContent: 'center',
         }}
       >
-        <Text style={{ fontSize: 26 }}>{room.emoji}</Text>
+        <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 26 }}>{room.emoji}</Text>
       </View>
 
       {/* Name + preview */}
@@ -75,6 +76,7 @@ export function RoomRow({
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
           <Text
             numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
             style={{
               flex: 1,
               fontSize: 16,
@@ -87,7 +89,10 @@ export function RoomRow({
             {room.name}
           </Text>
           {lastMessage && (
-            <Text style={{ fontSize: 11, color: unreadCount > 0 ? '#16a34a' : '#9ca3af', fontWeight: '700' }}>
+            <Text
+              maxFontSizeMultiplier={1.2}
+              style={{ fontSize: 11, color: hasUnread ? '#16a34a' : '#9ca3af', fontWeight: '700' }}
+            >
               {formatListTime(lastMessage.sentAt)}
             </Text>
           )}
@@ -96,10 +101,12 @@ export function RoomRow({
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 2 }}>
           <Text
             numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
             style={{
               flex: 1,
               fontSize: 13,
-              color: TEXT_MUTED,
+              color: hasUnread ? '#374151' : TEXT_MUTED,
+              fontWeight: hasUnread ? '600' : '400',
               writingDirection: 'rtl',
               textAlign: 'right',
             }}
@@ -118,7 +125,10 @@ export function RoomRow({
                 paddingHorizontal: 5,
               }}
             >
-              <Text style={{ fontSize: 11, fontWeight: '900', color: '#ffffff' }}>
+              <Text
+                maxFontSizeMultiplier={1.2}
+                style={{ fontSize: 11, fontWeight: '900', color: '#ffffff' }}
+              >
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Text>
             </View>

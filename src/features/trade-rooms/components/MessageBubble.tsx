@@ -1,17 +1,38 @@
 import React from 'react';
 import { View, Text, Image, Pressable } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { Heart } from 'lucide-react-native';
 import { formatAlias } from '../../anon-advice/anonAdviceData';
 import { AvatarImage } from '../../avatars/AvatarImage';
+import type { AnonAlias } from '../../anon-advice/anonAdviceTypes';
 import type { TradeRoomMessage } from '../tradeRoomsTypes';
 
 const TEXT_PRIMARY = '#1f2937';
 const TEXT_MUTED = '#6b7280';
-const SELF_BUBBLE = '#dcf2ff';
+const SELF_BUBBLE = '#d9fdd3'; // WhatsApp-green tint for the user's own messages
 const OTHER_BUBBLE = '#ffffff';
 const SHARK_BUBBLE = '#eff8ff';
 const SHARK_BORDER = '#7dd3fc';
+const SHARK_NAME = '#0284c7';
+const TIME_COLOR = '#94a3b8';
+
+const R = 18; // bubble corner radius
+const TAIL = 6; // sharp "tail" corner on the first bubble of a run
+
+// Stable per-sender name color (Telegram-style colored group names).
+const NAME_COLORS = [
+  '#d6336c', '#e8590c', '#2f9e44', '#1971c2', '#7048e8',
+  '#c2255c', '#0c8599', '#e67700', '#5f3dc4', '#087f5b',
+];
+
+function nameColor(alias: AnonAlias): string {
+  const seed = `${alias.emoji}${alias.noun}${alias.number}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  return NAME_COLORS[Math.abs(hash) % NAME_COLORS.length];
+}
 
 function formatTime(isoStr: string): string {
   const d = new Date(isoStr);
@@ -20,6 +41,8 @@ function formatTime(isoStr: string): string {
 
 interface MessageBubbleProps {
   message: TradeRoomMessage;
+  /** First bubble of a same-sender run — shows the avatar, name and the tail. */
+  isFirstInGroup: boolean;
   onToggleLike: (messageId: string) => void;
 }
 
@@ -36,7 +59,10 @@ function SentimentTag({ sentiment }: { sentiment: 'bull' | 'bear' }): React.Reac
         marginBottom: 4,
       }}
     >
-      <Text style={{ fontSize: 11, fontWeight: '800', color: isBull ? '#15803d' : '#b91c1c' }}>
+      <Text
+        maxFontSizeMultiplier={1.3}
+        style={{ fontSize: 11, fontWeight: '800', color: isBull ? '#15803d' : '#b91c1c' }}
+      >
         {isBull ? '🐂 שורי' : '🐻 דובי'}
       </Text>
     </View>
@@ -45,82 +71,114 @@ function SentimentTag({ sentiment }: { sentiment: 'bull' | 'bear' }): React.Reac
 
 export const MessageBubble = React.memo(function MessageBubble({
   message,
+  isFirstInGroup,
   onToggleLike,
 }: MessageBubbleProps): React.ReactElement {
   const { isSelf, isShark } = message;
+  const reduced = useReducedMotion();
   const showLikes = message.likes > 0 || message.likedBySelf;
+
+  const bubbleBg = isShark ? SHARK_BUBBLE : isSelf ? SELF_BUBBLE : OTHER_BUBBLE;
+  const senderName = isShark ? 'קפטן שארק' : message.alias ? formatAlias(message.alias) : '';
+  const senderColor = isShark ? SHARK_NAME : message.alias ? nameColor(message.alias) : TEXT_MUTED;
+
+  // Physical corners (app runs LTR): self hugs the right, others hug the left.
+  const tailOverride = isFirstInGroup
+    ? isSelf
+      ? { borderTopRightRadius: TAIL }
+      : { borderTopLeftRadius: TAIL }
+    : null;
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(180)}
+      entering={reduced ? undefined : FadeInDown.duration(160)}
       style={{
-        flexDirection: isSelf ? 'row' : 'row-reverse',
-        alignItems: 'flex-end',
-        marginVertical: 3,
-        marginHorizontal: 12,
+        flexDirection: isSelf ? 'row-reverse' : 'row',
+        alignItems: 'flex-start',
+        marginTop: isFirstInGroup ? 10 : 2,
+        marginHorizontal: 10,
         gap: 6,
       }}
     >
-      {/* Avatar */}
-      <View
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: 16,
-          backgroundColor: isShark ? '#e0f2fe' : '#f3f4f6',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {isShark ? (
-          <Image
-            source={require('../../../../assets/webp/fin-standard.webp')}
-            style={{ width: 24, height: 24 }}
-            resizeMode="contain"
-          />
-        ) : (
-          <AvatarImage
-            avatarId={message.avatarId ?? null}
-            size={28}
-            fallbackEmoji={message.alias?.emoji ?? '🐟'}
-          />
-        )}
-      </View>
+      {/* Avatar gutter — others only; avatar shown on the first bubble of a run */}
+      {!isSelf && (
+        <View style={{ width: 32, alignSelf: 'flex-end' }}>
+          {isFirstInGroup && (
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: isShark ? '#e0f2fe' : '#f1f5f9',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isShark ? (
+                <Image
+                  source={require('../../../../assets/webp/fin-standard.webp')}
+                  style={{ width: 24, height: 24 }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <AvatarImage
+                  avatarId={message.avatarId ?? null}
+                  size={28}
+                  fallbackEmoji={message.alias?.emoji ?? '🐟'}
+                />
+              )}
+            </View>
+          )}
+        </View>
+      )}
 
-      <View style={{ maxWidth: '76%', alignItems: isSelf ? 'flex-end' : 'flex-start' }}>
-        {/* Author name */}
-        {!isSelf && (
+      <View style={{ maxWidth: '78%', alignItems: isSelf ? 'flex-end' : 'flex-start' }}>
+        {/* Author name — others, first bubble of a run only */}
+        {!isSelf && isFirstInGroup && (
           <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
             style={{
-              fontSize: 11,
-              fontWeight: isShark ? '900' : '700',
-              color: isShark ? '#0284c7' : TEXT_MUTED,
+              fontSize: 12,
+              fontWeight: isShark ? '900' : '800',
+              color: senderColor,
               marginBottom: 2,
               marginHorizontal: 4,
               writingDirection: 'rtl',
               textAlign: 'right',
             }}
           >
-            {isShark ? 'קפטן שארק' : message.alias ? formatAlias(message.alias) : ''}
+            {senderName}
           </Text>
         )}
 
         {/* Bubble */}
         <Pressable
           onLongPress={() => onToggleLike(message.id)}
+          delayLongPress={220}
           style={{
-            backgroundColor: isShark ? SHARK_BUBBLE : isSelf ? SELF_BUBBLE : OTHER_BUBBLE,
-            borderRadius: 16,
-            ...(isSelf ? { borderBottomEndRadius: 4 } : { borderBottomStartRadius: 4 }),
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderWidth: 1,
-            borderColor: isShark ? SHARK_BORDER : '#e5e7eb',
+            backgroundColor: bubbleBg,
+            borderTopLeftRadius: R,
+            borderTopRightRadius: R,
+            borderBottomLeftRadius: R,
+            borderBottomRightRadius: R,
+            ...tailOverride,
+            paddingHorizontal: 11,
+            paddingTop: 7,
+            paddingBottom: 5,
+            borderWidth: isShark ? 1 : 0,
+            borderColor: isShark ? SHARK_BORDER : 'transparent',
+            shadowColor: '#000',
+            shadowOpacity: 0.06,
+            shadowRadius: 1.5,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 1,
           }}
         >
           {message.sentiment && <SentimentTag sentiment={message.sentiment} />}
           {message.ticker && (
             <Text
+              maxFontSizeMultiplier={1.3}
               style={{
                 fontSize: 11,
                 fontWeight: '800',
@@ -133,56 +191,72 @@ export const MessageBubble = React.memo(function MessageBubble({
             </Text>
           )}
           <Text
+            maxFontSizeMultiplier={1.6}
             style={{
               color: TEXT_PRIMARY,
               fontSize: 14,
               lineHeight: 20,
-              fontWeight: isSelf ? '600' : '400',
+              fontWeight: isSelf ? '500' : '400',
               writingDirection: 'rtl',
               textAlign: 'right',
             }}
           >
             {message.body}
           </Text>
+
+          {/* Inline timestamp in the bubble's bottom corner */}
+          <Text
+            maxFontSizeMultiplier={1.3}
+            style={{
+              alignSelf: 'flex-end',
+              fontSize: 10,
+              color: TIME_COLOR,
+              marginTop: 2,
+            }}
+          >
+            {formatTime(message.sentAt)}
+          </Text>
         </Pressable>
 
-        {/* Meta row: time + likes */}
-        <View
-          style={{
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 2,
-            marginHorizontal: 4,
-          }}
-        >
-          <Text style={{ fontSize: 10, color: '#9ca3af' }}>{formatTime(message.sentAt)}</Text>
+        {/* Like reaction chip — appears once the message has a like */}
+        {showLikes && (
           <Pressable
             onPress={() => onToggleLike(message.id)}
-            hitSlop={8}
+            hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel="אהבתי"
-            style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 3 }}
+            style={{
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              gap: 3,
+              marginTop: 3,
+              marginHorizontal: 2,
+              backgroundColor: '#ffffff',
+              borderRadius: 999,
+              paddingHorizontal: 7,
+              paddingVertical: 2,
+              borderWidth: 1,
+              borderColor: message.likedBySelf ? '#fbcfe0' : '#e5e7eb',
+            }}
           >
             <Heart
-              size={12}
+              size={11}
               color={message.likedBySelf ? '#ef4444' : '#9ca3af'}
               fill={message.likedBySelf ? '#ef4444' : 'transparent'}
               strokeWidth={2.4}
             />
-            {showLikes && (
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: '700',
-                  color: message.likedBySelf ? '#ef4444' : '#9ca3af',
-                }}
-              >
-                {message.likes}
-              </Text>
-            )}
+            <Text
+              maxFontSizeMultiplier={1.3}
+              style={{
+                fontSize: 10,
+                fontWeight: '800',
+                color: message.likedBySelf ? '#ef4444' : '#6b7280',
+              }}
+            >
+              {message.likes}
+            </Text>
           </Pressable>
-        </View>
+        )}
       </View>
     </Animated.View>
   );
