@@ -1,25 +1,63 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { MOCK_MEMBERS, SELF_ID } from '../../clan/clanData';
 import { STITCH, DUO } from '../../../constants/theme';
+import { useEconomyStore } from '../../economy/useEconomyStore';
+import { AvatarImage } from '../../avatars/AvatarImage';
+import { useAuthStore } from '../../auth/useAuthStore';
 import { FinnCue, type FinnCueVariant } from './FinnCue';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
-
 const TOP3_BG = ['#fef9c3', '#f8fafc', '#fff7ed'];
 const TOP3_BORDER = ['#fde68a', '#e2e8f0', '#fed7aa'];
 
-export function FriendsLeaderboardCard(): React.ReactElement {
-  const sorted = [...MOCK_MEMBERS].sort((a, b) => b.xp - a.xp);
-  const top5 = sorted.slice(0, 5);
-  const selfRank = sorted.findIndex((m) => m.id === SELF_ID) + 1;
+interface LeaderEntry {
+  id: string;
+  name: string;
+  avatarId: string | null;
+  coins: number;
+  isSelf?: boolean;
+}
 
-  const finn: { variant: FinnCueVariant; text: string } =
-    selfRank > 0 && selfRank <= 3
-      ? { variant: 'dancing', text: 'הפודיום שלך! החברים אוכלים אבק' }
-      : selfRank > 0 && selfRank <= 10
-      ? { variant: 'happy',   text: `מקום ${selfRank} — אתה במחזור הניצחון` }
-      : { variant: 'tablet',  text: 'ה-XP הזה לא ייצבר לבד. יאללה תלמד' };
+// All-game coin leaders — seeded until a real global leaderboard API exists.
+const GAME_LEADERS: LeaderEntry[] = [
+  { id: 'gl-1', name: 'נועה, המשקיעה', avatarId: 'avatar-investor', coins: 14_520 },
+  { id: 'gl-2', name: 'איתי, המגן', avatarId: 'avatar-defender', coins: 12_140 },
+  { id: 'gl-3', name: 'שירה, הסוחרת', avatarId: 'avatar-trader', coins: 9_860 },
+  { id: 'gl-4', name: 'דניאל, האסטרטג', avatarId: 'avatar-strategist', coins: 7_430 },
+  { id: 'gl-5', name: 'יעל, המנתחת', avatarId: 'avatar-analyst', coins: 6_210 },
+];
+
+export function FriendsLeaderboardCard(): React.ReactElement {
+  const myCoins = useEconomyStore((s) => s.coins);
+  const myAvatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
+  const displayName = useAuthStore((s) => s.displayName);
+
+  const selfEntry: LeaderEntry = {
+    id: 'self',
+    name: displayName?.trim() ? displayName : 'אני',
+    avatarId: myAvatarId,
+    coins: myCoins,
+    isSelf: true,
+  };
+
+  // Always the game-wide top 5 by coin profit; you join the board when you earn it.
+  const ranked = [...GAME_LEADERS, selfEntry].sort((a, b) => b.coins - a.coins);
+  const selfRank = ranked.findIndex((e) => e.isSelf) + 1;
+  const top5 = ranked.slice(0, 5);
+  const selfInTop5 = top5.some((e) => e.isSelf);
+
+  const nextTarget = selfInTop5
+    ? null
+    : GAME_LEADERS[GAME_LEADERS.length - 1].coins - myCoins + 1;
+
+  const finn: { variant: FinnCueVariant; text: string } = selfInTop5
+    ? selfRank === 1
+      ? { variant: 'dancing', text: 'מקום ראשון בכל המשחק! תפסתם בשיניים' }
+      : { variant: 'happy', text: `מקום ${selfRank} בכל המשחק — הצמרת בטווח נשיכה` }
+    : {
+        variant: 'tablet',
+        text: `עוד ${(nextTarget ?? 0).toLocaleString('he-IL')} מטבעות והשם שלכם על הלוח`,
+      };
 
   return (
     <View
@@ -68,25 +106,25 @@ export function FriendsLeaderboardCard(): React.ReactElement {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 17, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }}>
-            לוח תוצאות
+            אלופי המטבעות
           </Text>
           <Text style={{ fontSize: 12, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 1 }}>
-            דירוג לפי XP שנצבר
+            5 המרוויחים הגדולים בכל המשחק
           </Text>
         </View>
       </View>
 
       {/* ── Rows ── */}
-      {top5.map((member, i) => (
+      {top5.map((entry, i) => (
         <View
-          key={member.id}
+          key={entry.id}
           style={{
             flexDirection: 'row-reverse',
             alignItems: 'center',
             paddingVertical: 10,
             paddingHorizontal: 16,
             gap: 10,
-            backgroundColor: i < 3 ? TOP3_BG[i] : '#ffffff',
+            backgroundColor: entry.isSelf ? '#e0f2fe' : i < 3 ? TOP3_BG[i] : '#ffffff',
             borderBottomWidth: i < top5.length - 1 ? 1 : 0,
             borderBottomColor: i < 3 ? TOP3_BORDER[i] : STITCH.surfaceHighest,
           }}
@@ -98,24 +136,25 @@ export function FriendsLeaderboardCard(): React.ReactElement {
             </Text>
           </View>
 
-          {/* Avatar */}
-          <Text style={{ fontSize: 22 }}>{member.avatar}</Text>
+          {/* Avatar — the real game mascots */}
+          <AvatarImage avatarId={entry.avatarId} size={30} />
 
           {/* Name */}
           <Text
             style={{
               flex: 1,
               fontSize: 14,
-              fontWeight: i === 0 ? '900' : '700',
+              fontWeight: i === 0 || entry.isSelf ? '900' : '700',
               color: STITCH.onSurface,
               writingDirection: 'rtl',
               textAlign: 'right',
             }}
+            numberOfLines={1}
           >
-            {member.name}
+            {entry.name}{entry.isSelf ? ' (אני)' : ''}
           </Text>
 
-          {/* XP */}
+          {/* Coin profit */}
           <View
             style={{
               flexDirection: 'row-reverse',
@@ -128,14 +167,45 @@ export function FriendsLeaderboardCard(): React.ReactElement {
                 fontSize: 14,
                 fontWeight: '900',
                 color: i === 0 ? STITCH.tertiaryGold : DUO.blue,
+                fontVariant: ['tabular-nums'],
               }}
             >
-              {member.xp.toLocaleString('he-IL')}
+              {entry.coins.toLocaleString('he-IL')}
             </Text>
-            <Text style={{ fontSize: 10, color: STITCH.onSurfaceVariant }}>XP</Text>
+            <Text style={{ fontSize: 12 }}>🪙</Text>
           </View>
         </View>
       ))}
+
+      {/* ── Self rank when outside the board ── */}
+      {!selfInTop5 && (
+        <View
+          style={{
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            gap: 10,
+            backgroundColor: '#e0f2fe',
+            borderTopWidth: 1,
+            borderTopColor: '#bae6fd',
+          }}
+        >
+          <View style={{ width: 32, alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: DUO.blue }}>#{selfRank}</Text>
+          </View>
+          <AvatarImage avatarId={myAvatarId} size={30} />
+          <Text style={{ flex: 1, fontSize: 14, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }}>
+            {selfEntry.name} (אני)
+          </Text>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 3 }}>
+            <Text style={{ fontSize: 14, fontWeight: '900', color: DUO.blue, fontVariant: ['tabular-nums'] }}>
+              {myCoins.toLocaleString('he-IL')}
+            </Text>
+            <Text style={{ fontSize: 12 }}>🪙</Text>
+          </View>
+        </View>
+      )}
 
       {/* ── Finn coach line ── */}
       <View style={{ paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest }}>

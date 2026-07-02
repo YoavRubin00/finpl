@@ -161,6 +161,35 @@ async function fetchTA125(): Promise<RateItem> {
   return { value: '2,100', numericValue: 2100, changePct: 0, direction: 'stable', label: 'ת"א 125', symbol: '📈' };
 }
 
+// ── TA-35 (Yahoo Finance) ──────────────────────────────────────────────────
+async function fetchTA35(): Promise<RateItem> {
+  try {
+    const res = await fetch(
+      'https://query1.finance.yahoo.com/v8/finance/chart/%5ETA35.TA?interval=1d&range=2d',
+      { signal: sig() },
+    );
+    if (res.ok) {
+      const json = await res.json() as { chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: number[] }> } }> } };
+      const closes = json.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
+      const latest = closes[closes.length - 1];
+      const prev = closes.length >= 2 ? closes[closes.length - 2] : latest;
+      if (isFinite(latest)) {
+        const changePct = prev > 0 ? ((latest - prev) / prev) * 100 : 0;
+        const direction: RateItem['direction'] = changePct > 0.1 ? 'up' : changePct < -0.1 ? 'down' : 'stable';
+        return {
+          value: Math.round(latest).toLocaleString('en-US'),
+          numericValue: latest,
+          changePct: parseFloat(changePct.toFixed(2)),
+          direction,
+          label: 'ת"א 35',
+          symbol: '🇮🇱',
+        };
+      }
+    }
+  } catch { /* fall through */ }
+  return { value: '2,100', numericValue: 2100, changePct: 0, direction: 'stable', label: 'ת"א 35', symbol: '🇮🇱' };
+}
+
 // ── Bank of Israel interest rate ────────────────────────────────────────────
 async function fetchInterestRate(): Promise<RateItem> {
   try {
@@ -213,17 +242,19 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const [usdIls, btc, ta125, interest, eurIls] = await Promise.all([
+    const [usdIls, btc, ta125, interest, eurIls, ta35] = await Promise.all([
       fetchUsdIls(),
       fetchBtc(),
       fetchTA125(),
       fetchInterestRate(),
       fetchEurIls(),
+      fetchTA35(),
     ]);
 
     // rates[0..3] are the always-shown slots; rates[4] rotates into slot 3 on even days.
+    // ta35 rides at the end for consumers that look it up by label (TA-35 forecast card).
     const data: LiveMarketData = {
-      rates: [usdIls, btc, ta125, interest, eurIls],
+      rates: [usdIls, btc, ta125, interest, eurIls, ta35],
       fetchedAt: new Date().toISOString(),
     };
 

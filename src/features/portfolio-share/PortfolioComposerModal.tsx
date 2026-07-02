@@ -1,0 +1,426 @@
+import React, { useMemo, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  Modal,
+  Pressable,
+  ScrollView,
+  TextInput,
+  Image,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { X, Plus, Minus, Check, Wand2, Trash2 } from 'lucide-react-native';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+
+import { F2_SECTORS, type FantasySectorId } from '../../constants/theme';
+import { STOCK_CATEGORIES } from '../fantasy-league/fantasyData';
+import { tapHaptic, successHaptic, mediumHaptic } from '../../utils/haptics';
+import type { SharedPick } from './portfolioShareTypes';
+import {
+  MIN_PICKS,
+  MAX_PICKS,
+  ALLOCATION_STEP,
+  MAX_CAPTION_LENGTH,
+  SHARE_REWARD_COINS,
+} from './portfolioShareData';
+
+const TEXT_PRIMARY = '#1f2937';
+const TEXT_MUTED = '#6b7280';
+const FEED_BG = '#f3f4f6';
+const NUM_STYLE = { fontVariant: ['tabular-nums' as const] };
+const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
+
+interface DraftPick {
+  ticker: string;
+  name: string;
+  sector: FantasySectorId;
+  weeklyChange: number;
+  allocationPct: number;
+}
+
+interface PortfolioComposerModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onShare: (picks: SharedPick[], caption: string) => void;
+}
+
+function sectorColor(sector: FantasySectorId): string {
+  return (F2_SECTORS[sector] ?? F2_SECTORS.tech).g1;
+}
+
+/** Stacked 0→100% allocation bar — the heartbeat of the composer. */
+function AllocationBar({ picks }: { picks: DraftPick[] }): React.ReactElement {
+  const total = picks.reduce((sum, p) => sum + p.allocationPct, 0);
+  const complete = total === 100;
+  return (
+    <View style={{ gap: 6 }}>
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 6 }}>
+        <Text
+          style={[
+            { fontSize: 24, fontWeight: '900', color: complete ? '#16a34a' : total > 100 ? '#dc2626' : TEXT_PRIMARY },
+            NUM_STYLE,
+          ]}
+        >
+          {total}%
+        </Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: TEXT_MUTED }}>מתוך 100%</Text>
+        {complete && (
+          <Animated.View entering={FadeIn.duration(200)} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 3 }}>
+            <Check size={14} color="#16a34a" strokeWidth={3} />
+            <Text style={{ fontSize: 12, fontWeight: '900', color: '#16a34a' }}>תיק מאוזן</Text>
+          </Animated.View>
+        )}
+      </View>
+      <View
+        style={{
+          height: 18,
+          borderRadius: 9,
+          backgroundColor: '#e5e7eb',
+          overflow: 'hidden',
+          flexDirection: 'row-reverse',
+          borderWidth: total > 100 ? 1.5 : 0,
+          borderColor: '#dc2626',
+        }}
+      >
+        {picks.map((p) => (
+          <View
+            key={p.ticker}
+            style={{
+              width: `${Math.min(p.allocationPct, 100)}%`,
+              backgroundColor: sectorColor(p.sector),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {p.allocationPct >= 12 && (
+              <Text style={{ fontSize: 8, fontWeight: '900', color: '#ffffff' }} numberOfLines={1}>
+                {p.ticker}
+              </Text>
+            )}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export function PortfolioComposerModal({
+  visible,
+  onClose,
+  onShare,
+}: PortfolioComposerModalProps): React.ReactElement {
+  const [picks, setPicks] = useState<DraftPick[]>([]);
+  const [caption, setCaption] = useState('');
+
+  const total = useMemo(() => picks.reduce((sum, p) => sum + p.allocationPct, 0), [picks]);
+  const canShare = total === 100 && picks.length >= MIN_PICKS;
+
+  const reset = useCallback(() => {
+    setPicks([]);
+    setCaption('');
+  }, []);
+
+  const handleClose = (): void => {
+    reset();
+    onClose();
+  };
+
+  const togglePick = (ticker: string, name: string, sector: FantasySectorId, weeklyChange: number): void => {
+    tapHaptic();
+    setPicks((prev) => {
+      const exists = prev.find((p) => p.ticker === ticker);
+      if (exists) return prev.filter((p) => p.ticker !== ticker);
+      if (prev.length >= MAX_PICKS) return prev;
+      // Default allocation: whatever is left, capped at 25, floored at 5.
+      const used = prev.reduce((sum, p) => sum + p.allocationPct, 0);
+      const suggested = Math.max(ALLOCATION_STEP, Math.min(25, 100 - used));
+      return [...prev, { ticker, name, sector, weeklyChange, allocationPct: suggested }];
+    });
+  };
+
+  const bump = (ticker: string, delta: number): void => {
+    tapHaptic();
+    setPicks((prev) =>
+      prev.map((p) =>
+        p.ticker === ticker
+          ? { ...p, allocationPct: Math.max(ALLOCATION_STEP, Math.min(95, p.allocationPct + delta)) }
+          : p,
+      ),
+    );
+  };
+
+  const removePick = (ticker: string): void => {
+    tapHaptic();
+    setPicks((prev) => prev.filter((p) => p.ticker !== ticker));
+  };
+
+  /** Equal split across current picks, in 5% steps, remainder to the first pick. */
+  const autoBalance = (): void => {
+    if (picks.length === 0) return;
+    mediumHaptic();
+    setPicks((prev) => {
+      const base = Math.floor(100 / prev.length / ALLOCATION_STEP) * ALLOCATION_STEP;
+      const remainder = 100 - base * prev.length;
+      return prev.map((p, i) => ({ ...p, allocationPct: base + (i === 0 ? remainder : 0) }));
+    });
+  };
+
+  const handleShare = (): void => {
+    if (!canShare) return;
+    successHaptic();
+    onShare(
+      picks.map((p) => ({
+        ticker: p.ticker,
+        sector: p.sector,
+        weeklyChange: p.weeklyChange,
+        allocationPct: p.allocationPct,
+      })),
+      caption,
+    );
+    reset();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }} edges={['top']}>
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 10,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderBottomWidth: 1,
+            borderBottomColor: '#e5e7eb',
+          }}
+        >
+          <Image
+            source={require('../../../assets/webp/fin-standard.webp')}
+            style={{ width: 34, height: 34 }}
+            resizeMode="contain"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 17, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }}>
+              בונה התיקים
+            </Text>
+            <Text style={{ fontSize: 11, color: TEXT_MUTED, ...RTL }}>
+              בחרו מניות, חלקו אחוזים — עד 100% בדיוק
+            </Text>
+          </View>
+          <Pressable onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="סגירה">
+            <X size={22} color={TEXT_MUTED} strokeWidth={2.4} />
+          </Pressable>
+        </View>
+
+        {/* Sticky allocation gauge */}
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fafafa', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+          <AllocationBar picks={picks} />
+        </View>
+
+        <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+          {/* Selected picks — allocation editing */}
+          {picks.length > 0 && (
+            <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 8 }}>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }}>
+                  ההחזקות שלכם ({picks.length}/{MAX_PICKS})
+                </Text>
+                <Pressable
+                  onPress={autoBalance}
+                  accessibilityRole="button"
+                  accessibilityLabel="חלוקה שווה"
+                  style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, backgroundColor: '#ede9fe', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}
+                >
+                  <Wand2 size={12} color="#7c3aed" strokeWidth={2.4} />
+                  <Text style={{ fontSize: 11, fontWeight: '900', color: '#7c3aed' }}>חלוקה שווה</Text>
+                </Pressable>
+              </View>
+
+              {picks.map((p) => {
+                const sector = F2_SECTORS[p.sector] ?? F2_SECTORS.tech;
+                const positive = p.weeklyChange >= 0;
+                return (
+                  <Animated.View
+                    key={p.ticker}
+                    entering={FadeInDown.duration(200)}
+                    style={{
+                      flexDirection: 'row-reverse',
+                      alignItems: 'center',
+                      gap: 10,
+                      backgroundColor: '#ffffff',
+                      borderWidth: 1,
+                      borderColor: '#e5e7eb',
+                      borderRadius: 14,
+                      padding: 10,
+                    }}
+                  >
+                    <LinearGradient
+                      colors={[sector.g1, sector.g2]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: '#ffffff' }}>{p.ticker}</Text>
+                    </LinearGradient>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: TEXT_PRIMARY, ...RTL }}>
+                        {p.name}
+                      </Text>
+                      <Text style={[{ fontSize: 11, fontWeight: '800', color: positive ? '#16a34a' : '#dc2626' }, NUM_STYLE]}>
+                        {positive ? '+' : ''}{p.weeklyChange.toFixed(1)}% השבוע
+                      </Text>
+                    </View>
+
+                    {/* Stepper */}
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+                      <Pressable
+                        onPress={() => bump(p.ticker, ALLOCATION_STEP)}
+                        hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel={`הגדלת ${p.ticker}`}
+                        style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Plus size={16} color="#16a34a" strokeWidth={2.8} />
+                      </Pressable>
+                      <Text style={[{ fontSize: 16, fontWeight: '900', color: TEXT_PRIMARY, minWidth: 44, textAlign: 'center' }, NUM_STYLE]}>
+                        {p.allocationPct}%
+                      </Text>
+                      <Pressable
+                        onPress={() => bump(p.ticker, -ALLOCATION_STEP)}
+                        hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel={`הקטנת ${p.ticker}`}
+                        style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Minus size={16} color="#dc2626" strokeWidth={2.8} />
+                      </Pressable>
+                    </View>
+
+                    <Pressable onPress={() => removePick(p.ticker)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`הסרת ${p.ticker}`}>
+                      <Trash2 size={16} color="#9ca3af" strokeWidth={2.2} />
+                    </Pressable>
+                  </Animated.View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Stock universe — grouped by category */}
+          <View style={{ paddingTop: 16, gap: 14 }}>
+            {STOCK_CATEGORIES.map((cat) => (
+              <View key={cat.id} style={{ gap: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_PRIMARY, ...RTL, paddingHorizontal: 16 }}>
+                  {cat.emoji} {cat.label}
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ flexDirection: 'row-reverse', gap: 8, paddingHorizontal: 16 }}
+                >
+                  {cat.stocks.map((stock) => {
+                    const selected = picks.some((p) => p.ticker === stock.ticker);
+                    const atCap = !selected && picks.length >= MAX_PICKS;
+                    return (
+                      <Pressable
+                        key={stock.ticker}
+                        onPress={() => togglePick(stock.ticker, stock.name, cat.id as FantasySectorId, stock.mockWeeklyChange)}
+                        disabled={atCap}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${stock.name} ${selected ? 'הסרה' : 'הוספה'}`}
+                        style={{
+                          borderRadius: 12,
+                          borderWidth: 1.5,
+                          borderColor: selected ? sectorColor(cat.id as FantasySectorId) : '#e5e7eb',
+                          backgroundColor: selected ? `${sectorColor(cat.id as FantasySectorId)}18` : '#ffffff',
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          alignItems: 'center',
+                          gap: 2,
+                          opacity: atCap ? 0.4 : 1,
+                          minWidth: 86,
+                        }}
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_PRIMARY }}>
+                          {selected ? '✓ ' : ''}{stock.ticker}
+                        </Text>
+                        <Text numberOfLines={1} style={{ fontSize: 10, color: TEXT_MUTED }}>
+                          {stock.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ))}
+          </View>
+
+          {/* Caption */}
+          <View style={{ paddingHorizontal: 16, paddingTop: 18, gap: 6 }}>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }}>
+              כמה מילים על האסטרטגיה (לא חובה)
+            </Text>
+            <TextInput
+              value={caption}
+              onChangeText={setCaption}
+              placeholder="למה דווקא התיק הזה? ספרו לקהילה…"
+              placeholderTextColor="#9ca3af"
+              multiline
+              maxLength={MAX_CAPTION_LENGTH}
+              style={{
+                backgroundColor: FEED_BG,
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                minHeight: 64,
+                fontSize: 13,
+                color: TEXT_PRIMARY,
+                ...RTL,
+              }}
+            />
+          </View>
+        </ScrollView>
+
+        {/* Sticky share CTA */}
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#ffffff',
+            borderTopWidth: 1,
+            borderTopColor: '#e5e7eb',
+            padding: 14,
+            paddingBottom: 22,
+          }}
+        >
+          <Pressable
+            onPress={handleShare}
+            disabled={!canShare}
+            accessibilityRole="button"
+            accessibilityLabel="שיתוף התיק"
+            style={{
+              backgroundColor: canShare ? '#1877f2' : '#d1d5db',
+              borderRadius: 14,
+              paddingVertical: 14,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '900', color: '#ffffff' }}>
+              {canShare
+                ? `שתפו את התיק · +${SHARE_REWARD_COINS} מטבעות`
+                : picks.length < MIN_PICKS
+                  ? `בחרו לפחות ${MIN_PICKS} מניות`
+                  : total < 100
+                    ? `חסרים עוד ${100 - total}% לתיק מלא`
+                    : `יש ${total - 100}% עודף — הורידו קצת`}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
+}

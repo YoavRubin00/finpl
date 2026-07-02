@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Trophy, Clock, Zap } from "lucide-react-native";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
@@ -7,6 +7,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { STITCH } from "../../../constants/theme";
 import { tapHaptic, mediumHaptic } from "../../../utils/haptics";
 import { useCrowdWisdomStore } from "../../crowd-wisdom/useCrowdWisdomStore";
+import { getCurrentWeekId } from "../../fantasy-league/fantasyData";
+import type { LiveMarketData, RateItem } from "../../live-news/liveMarketTypes";
 
 interface ForecastBracket {
   id: string;
@@ -16,23 +18,85 @@ interface ForecastBracket {
   accentColor: string;
 }
 
-// Brackets from the plan: under 2050, 2050-2080, 2080-2110, 2110-2140, over 2140
-const BRACKETS: readonly ForecastBracket[] = [
-  { id: "below_2050",  label: "מתחת ל-2,050",  seedPercent: 9,  accentColor: "#dc2626" },
-  { id: "2050_2080",   label: "2,050 – 2,080", seedPercent: 20, accentColor: "#ea580c" },
-  { id: "2080_2110",   label: "2,080 – 2,110", seedPercent: 40, accentColor: "#facc15" },
-  { id: "2110_2140",   label: "2,110 – 2,140", seedPercent: 24, accentColor: "#10b981" },
-  { id: "above_2140",  label: "מעל 2,140",     seedPercent: 7,  accentColor: "#0891b2" },
-];
+const BRACKET_COLORS = ["#dc2626", "#ea580c", "#facc15", "#10b981", "#0891b2"] as const;
+const SEED_PERCENTS = [9, 20, 40, 24, 7] as const;
 
-const QUESTION_ID = "forecast_ta35_friday";
-const HOURS_TO_CLOSE = 84;
+/** Round an index level to a "clean" 5-point grid for readable bracket edges. */
+function roundTo5(n: number): number {
+  return Math.round(n / 5) * 5;
+}
+
+const fmt = (n: number): string => n.toLocaleString("en-US");
+
+/**
+ * Brackets derived from the LIVE index level: edges at ±0.5% and ±1.5%
+ * around today's price, so the question always stays relevant.
+ */
+function buildBrackets(level: number): ForecastBracket[] {
+  const e1 = roundTo5(level * 0.985);
+  const e2 = roundTo5(level * 0.995);
+  const e3 = roundTo5(level * 1.005);
+  const e4 = roundTo5(level * 1.015);
+  const labels = [
+    `מתחת ל-${fmt(e1)}`,
+    `${fmt(e1)} – ${fmt(e2)}`,
+    `${fmt(e2)} – ${fmt(e3)}`,
+    `${fmt(e3)} – ${fmt(e4)}`,
+    `מעל ${fmt(e4)}`,
+  ];
+  return labels.map((label, i) => ({
+    id: `b${i + 1}`,
+    label,
+    seedPercent: SEED_PERCENTS[i],
+    accentColor: BRACKET_COLORS[i],
+  }));
+}
+
+// Fallback when the live API is unreachable — roughly current index territory.
+const FALLBACK_LEVEL = 2100;
+const MAJORITY_ID = "b3"; // center bracket carries the 40% seed majority
+
+/** Hours left until Friday's TASE close (~14:30 IL; Mon-Fri trading week). */
+function hoursToFridayClose(now: Date = new Date()): number {
+  const d = new Date(now);
+  const daysUntilFri = (5 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + daysUntilFri);
+  d.setHours(14, 30, 0, 0);
+  if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 7);
+  return Math.max(1, Math.round((d.getTime() - now.getTime()) / 3_600_000));
+}
 
 export function Ta35ForecastCard(): React.ReactElement {
+  // One question per market week — resets every week automatically.
+  const questionId = `forecast_ta35_${getCurrentWeekId()}`;
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [liveTa35, setLiveTa35] = useState<RateItem | null>(null);
   const recordVote = useCrowdWisdomStore((s) => s.recordVote);
-  const previousVote = useCrowdWisdomStore((s) => s.votes[QUESTION_ID]);
+  const previousVote = useCrowdWisdomStore((s) => s.votes[questionId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/market/live");
+        if (!res.ok) return;
+        const data = (await res.json()) as LiveMarketData;
+        const ta35 = data.rates.find((r) => r.label === 'ת"א 35');
+        if (!cancelled && ta35 && isFinite(ta35.numericValue)) setLiveTa35(ta35);
+      } catch {
+        /* offline — fallback brackets stay */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const level = liveTa35?.numericValue ?? FALLBACK_LEVEL;
+  const BRACKETS = useMemo(() => buildBrackets(level), [level]);
+  const hoursToClose = useMemo(() => hoursToFridayClose(), []);
 
   // If the user already voted from the crowd-wisdom screen, surface the choice here.
   const effectiveSelectedId = previousVote?.choiceId ?? selectedId;
@@ -47,11 +111,9 @@ export function Ta35ForecastCard(): React.ReactElement {
   const handleSubmit = () => {
     if (!selectedId || effectiveSubmitted) return;
     mediumHaptic();
-    // Majority bracket here = "2080_2110" (40%). Determine with-crowd locally.
-    const majorityId = "2080_2110";
-    const withCrowd = selectedId === majorityId;
+    const withCrowd = selectedId === MAJORITY_ID;
     recordVote(
-      { questionId: QUESTION_ID, choiceId: selectedId, votedAt: Date.now() },
+      { questionId, choiceId: selectedId, votedAt: Date.now() },
       withCrowd,
     );
     setSubmitted(true);
@@ -72,13 +134,39 @@ export function Ta35ForecastCard(): React.ReactElement {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>תחזית ת״א 35 השבועית</Text>
-            <Text style={styles.headerSubtitle}>איפה המדד ייסגר ביום ה׳?</Text>
+            <Text style={styles.headerSubtitle}>איפה המדד ייסגר ביום ו׳?</Text>
           </View>
           <View style={styles.clockChip}>
             <Clock size={11} color="#ffffff" strokeWidth={2.4} />
-            <Text style={styles.clockText}>{HOURS_TO_CLOSE}ש׳</Text>
+            <Text style={styles.clockText}>{hoursToClose}ש׳</Text>
           </View>
         </View>
+
+        {/* Live index level */}
+        {liveTa35 && (
+          <Animated.View entering={FadeIn.duration(240)} style={styles.liveRow}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>
+              עכשיו: {liveTa35.value} נק׳
+            </Text>
+            <Text
+              style={[
+                styles.liveChange,
+                {
+                  color:
+                    liveTa35.direction === "up"
+                      ? "#4ade80"
+                      : liveTa35.direction === "down"
+                        ? "#fca5a5"
+                        : "rgba(255,255,255,0.8)",
+                },
+              ]}
+            >
+              {liveTa35.changePct > 0 ? "+" : ""}
+              {liveTa35.changePct}% היום
+            </Text>
+          </Animated.View>
+        )}
 
         {/* Brackets */}
         <View style={styles.brackets}>
@@ -151,7 +239,7 @@ export function Ta35ForecastCard(): React.ReactElement {
           <Animated.View entering={FadeIn.duration(280)} style={styles.successBanner}>
             <Text style={styles.successTitle}>נשמרה התחזית שלכם</Text>
             <Text style={styles.successBody}>
-              נסגר ביום ה׳ עם פרסום מחיר הסגירה. 10% החוזים הקרובים מקבלים גולדן.
+              נסגר ביום ו׳ עם פרסום מחיר הסגירה. 10% החוזים הקרובים מקבלים גולדן.
             </Text>
           </Animated.View>
         )}
@@ -218,6 +306,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     color: "#ffffff",
+  },
+  liveRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#4ade80",
+  },
+  liveText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+  },
+  liveChange: {
+    fontSize: 12,
+    fontWeight: "800",
   },
   brackets: {
     gap: 6,

@@ -3,18 +3,18 @@ import { ScrollView, View, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { Users, Edit3 } from 'lucide-react-native';
+import { Users, Edit3, UserPlus } from 'lucide-react-native';
+import { useShallow } from 'zustand/react/shallow';
+import { useFriendsStore } from '../friends/useFriendsStore';
 
 import { tapHaptic } from '../../utils/haptics';
 import { ActivityFeedStrip } from './components/ActivityFeedStrip';
 import { FriendsLeaderboardCard } from './components/FriendsLeaderboardCard';
 import { ReferralCard } from './components/ReferralCard';
-import { SharkChatCard } from './components/SharkChatCard';
 import { AnonAdviceHeroCard } from './components/AnonAdviceHeroCard';
 import { CrowdWisdomCard } from './components/CrowdWisdomCard';
 import { HotThisWeekCard } from './cards/HotThisWeekCard';
 import { Ta35ForecastCard } from './cards/Ta35ForecastCard';
-import { AnonymousPayslipCard } from './cards/AnonymousPayslipCard';
 import { PremiumFantasyButton } from './components/PremiumFantasyButton';
 import { PortfolioShareCard } from './components/PortfolioShareCard';
 import { TradeRoomsCard } from './components/TradeRoomsCard';
@@ -103,10 +103,16 @@ function Composer({ onPress }: { onPress: () => void }): React.ReactElement {
 
 export function FriendsHubScreen(): React.ReactElement {
   const router = useRouter();
+  const friendIds = useFriendsStore(useShallow((s) => s.friendIds));
 
   const handleComposerPress = React.useCallback(() => {
     tapHaptic();
     router.push('/trade-rooms' as never);
+  }, [router]);
+
+  const openFriendsList = React.useCallback(() => {
+    tapHaptic();
+    router.push('/friends-list' as never);
   }, [router]);
 
   return (
@@ -153,6 +159,26 @@ export function FriendsHubScreen(): React.ReactElement {
           >
             חברים
           </Text>
+          <Pressable
+            onPress={openFriendsList}
+            accessibilityRole="button"
+            accessibilityLabel="החברים שלך"
+            style={({ pressed }) => ({
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              gap: 5,
+              backgroundColor: '#e0f2fe',
+              borderRadius: 999,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <UserPlus size={15} color={FB_BLUE} strokeWidth={2.6} />
+            <Text style={{ fontSize: 12, fontWeight: '900', color: FB_BLUE }}>
+              החברים שלך{friendIds.length > 0 ? ` · ${friendIds.length}` : ''}
+            </Text>
+          </Pressable>
           <PremiumFantasyButton variant="compact" activeFriends={FANTASY_ACTIVE_FRIENDS} />
         </View>
 
@@ -211,14 +237,6 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
-        <StaggeredEntry index={4}>
-          <View style={{ backgroundColor: '#ffffff' }}>
-            <AnonymousPayslipCard />
-          </View>
-        </StaggeredEntry>
-
-        <FeedDivider />
-
         <StaggeredEntry index={5}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <AnonAdviceHeroCard />
@@ -230,14 +248,6 @@ export function FriendsHubScreen(): React.ReactElement {
         <StaggeredEntry index={6}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <FriendsLeaderboardCard />
-          </View>
-        </StaggeredEntry>
-
-        <FeedDivider />
-
-        <StaggeredEntry index={7}>
-          <View style={{ backgroundColor: '#ffffff' }}>
-            <SharkChatCard />
           </View>
         </StaggeredEntry>
 

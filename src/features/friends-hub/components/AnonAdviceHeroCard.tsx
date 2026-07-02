@@ -167,7 +167,7 @@ export function AnonAdviceHeroCard(): React.ReactElement {
               </View>
             ))}
             <View style={{ flex: 1 }} />
-            <Text style={{ fontSize: 12, color: STITCH.onSurfaceVariant }}>💬 {post.replyCount}</Text>
+            <Text style={{ fontSize: 12, color: STITCH.onSurfaceVariant }}>💬 תגובות</Text>
           </View>
         </Pressable>
       ))}
