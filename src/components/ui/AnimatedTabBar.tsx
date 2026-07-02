@@ -27,8 +27,6 @@ import { CLASH, DUO, STITCH } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { useWalkthroughGlowTab } from "../../features/onboarding/AppWalkthroughOverlay";
-import { useFriendsModeStore } from "../../features/friends-hub/useFriendsModeStore";
-import { FriendsTabRow } from "../../features/friends-hub/FriendsTabRow";
 
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
@@ -311,22 +309,6 @@ export function AnimatedTabBar({
   // Walkthrough glow, visual only, tabs always usable
   const glowTabKey = useWalkthroughGlowTab();
   const walkthroughActive = glowTabKey !== null;
-
-  // Friends Mode swap: if the user entered the Friends Hub, the bottom bar
-  // changes to a Friends-specific set (Home / Knowledge / Fantasy / Clan).
-  // Mode auto-exits when the user focuses a non-friends global tab.
-  const friendsModeEnabled = useFriendsModeStore((s) => s.enabled);
-  const exitFriendsMode = useFriendsModeStore((s) => s.exit);
-  const focusedRouteName = state.routes[state.index]?.name;
-  useEffect(() => {
-    if (friendsModeEnabled && focusedRouteName && focusedRouteName !== "friends") {
-      exitFriendsMode();
-    }
-  }, [friendsModeEnabled, focusedRouteName, exitFriendsMode]);
-
-  if (friendsModeEnabled) {
-    return <FriendsTabRow />;
-  }
 
   return (
     <View
