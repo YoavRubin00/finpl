@@ -5,6 +5,7 @@ import { ThumbsUp } from 'lucide-react-native';
 import type { AnonAdviceReply } from '../anonAdviceTypes';
 import { AnonAvatar } from './AnonAvatar';
 import { DUO } from '../../../constants/theme';
+import { formatVoteCount } from '../../friends-hub/lib/honestCounts';
 
 interface ReplyBubbleProps {
   reply: AnonAdviceReply;
@@ -23,6 +24,7 @@ export function ReplyBubble({
   onToggleUpvote,
 }: ReplyBubbleProps): React.ReactElement {
   const upvotes = reply.upvotes ?? 0;
+  const upvoteLabel = formatVoteCount(upvotes); // null hides the count below 100 real votes
 
   return (
     <Animated.View
@@ -48,7 +50,11 @@ export function ReplyBubble({
               paddingVertical: 3,
             }}
           >
-            <Text style={{ fontSize: 10, fontWeight: '900', color: '#b45309' }}>
+            <Text
+              style={{ fontSize: 10, fontWeight: '900', color: '#b45309' }}
+              maxFontSizeMultiplier={1.15}
+              numberOfLines={1}
+            >
               ⭐ תשובה מובילה
             </Text>
           </View>
@@ -63,7 +69,11 @@ export function ReplyBubble({
               paddingVertical: 3,
             }}
           >
-            <Text style={{ fontSize: 10, fontWeight: '800', color: '#ffffff' }}>
+            <Text
+              style={{ fontSize: 10, fontWeight: '800', color: '#ffffff' }}
+              maxFontSizeMultiplier={1.15}
+              numberOfLines={1}
+            >
               מסכים עם {reply.agreedWith === 0 ? 'א׳' : 'ב׳'}
             </Text>
           </View>
@@ -77,6 +87,7 @@ export function ReplyBubble({
           textAlign: 'right',
           lineHeight: 20,
         }}
+        maxFontSizeMultiplier={1.15}
       >
         {reply.body}
       </Text>
@@ -111,8 +122,9 @@ export function ReplyBubble({
               fontWeight: '800',
               color: upvotedBySelf ? DUO.blue : DUO.textMuted,
             }}
+            maxFontSizeMultiplier={1.15}
           >
-            {upvotes > 0 ? `מועיל · ${upvotes}` : 'מועיל'}
+            {upvoteLabel ? `מועיל · ${upvoteLabel}` : 'מועיל'}
           </Text>
         </Pressable>
       </View>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { MessageCircle } from 'lucide-react-native';
 import type { AnonAdvicePost } from '../anonAdviceTypes';
 import { AnonAvatar } from './AnonAvatar';
 import { DUO } from '../../../constants/theme';
@@ -35,9 +36,15 @@ export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
         opacity: pressed ? 0.92 : 1,
       })}
     >
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
         <AnonAvatar alias={post.alias} size={32} isSelf={post.isSelf} />
-        <Text style={{ fontSize: 11, color: DUO.textMuted }}>{formatTimeAgo(post.createdAt)}</Text>
+        <Text
+          style={{ fontSize: 11, color: DUO.textMuted, flexShrink: 0 }}
+          maxFontSizeMultiplier={1.15}
+          numberOfLines={1}
+        >
+          {formatTimeAgo(post.createdAt)}
+        </Text>
       </View>
 
       {post.isSelf && (
@@ -66,6 +73,7 @@ export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
           marginBottom: 8,
         }}
         numberOfLines={3}
+        maxFontSizeMultiplier={1.15}
       >
         {post.situation}
       </Text>
@@ -81,8 +89,9 @@ export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
           marginBottom: 10,
         }}
         numberOfLines={2}
+        maxFontSizeMultiplier={1.15}
       >
-        ❓ {post.question}
+        {post.question}
       </Text>
 
       {/* Tags + reply count */}
@@ -99,13 +108,18 @@ export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
               borderColor: DUO.border,
             }}
           >
-            <Text style={{ fontSize: 11, color: DUO.textMuted, fontWeight: '700' }}>{t}</Text>
+            <Text style={{ fontSize: 11, color: DUO.textMuted, fontWeight: '700' }} maxFontSizeMultiplier={1.15} numberOfLines={1}>
+              {t}
+            </Text>
           </View>
         ))}
         <View style={{ flex: 1 }} />
-        <Text style={{ fontSize: 12, fontWeight: '700', color: DUO.blue }}>
-          💬 תגובות
-        </Text>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          <MessageCircle size={15} color={DUO.blue} strokeWidth={2.4} />
+          <Text style={{ fontSize: 12, fontWeight: '700', color: DUO.blue }} maxFontSizeMultiplier={1.15} numberOfLines={1}>
+            {post.replyCount > 0 ? `${post.replyCount} תגובות` : 'הגיבו ראשונים'}
+          </Text>
+        </View>
       </View>
     </Pressable>
   );

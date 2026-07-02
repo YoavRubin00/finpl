@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Image, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { ThumbsUp, MessageCircle } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAnonAdviceStore } from './useAnonAdviceStore';
 import { AnonAvatar } from './components/AnonAvatar';
@@ -9,6 +10,9 @@ import { OptionPoll } from './components/OptionPoll';
 import { ReplyBubble } from './components/ReplyBubble';
 import { MAX_REPLY_LENGTH } from './anonAdviceData';
 import { DUO } from '../../constants/theme';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { formatVoteCount } from '../friends-hub/lib/honestCounts';
+import { tapHaptic } from '../../utils/haptics';
 import { A } from './strings';
 
 interface AnonAdvicePostScreenProps {
@@ -16,12 +20,17 @@ interface AnonAdvicePostScreenProps {
 }
 
 export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): React.ReactElement {
+  const insets = useSafeAreaInsets();
+  const inputRef = useRef<TextInput>(null);
   const post = useAnonAdviceStore((s) => s.getPostById)(postId);
   const replies = useAnonAdviceStore((s) => s.getRepliesFor)(postId);
   const submitReply = useAnonAdviceStore((s) => s.submitReply);
   const canReplyToday = useAnonAdviceStore((s) => s.canReplyToday);
   const toggleReplyUpvote = useAnonAdviceStore((s) => s.toggleReplyUpvote);
   const upvotedReplyIds = useAnonAdviceStore((s) => s.upvotedReplyIds);
+  const togglePostLike = useAnonAdviceStore((s) => s.togglePostLike);
+  const likedPostIds = useAnonAdviceStore((s) => s.likedPostIds);
+  const postLikes = useAnonAdviceStore((s) => s.postLikes);
 
   const [body, setBody] = useState('');
   const [agreedWith, setAgreedWith] = useState<0 | 1 | undefined>(undefined);
@@ -59,6 +68,10 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
     setAgreedWith(undefined);
     setReplyError(null);
   }
+
+  const likedBySelf = likedPostIds.includes(post.id);
+  const likeCountLabel = formatVoteCount(postLikes[post.id] ?? 0); // null hides sub-100 counts
+  const likeLabel = likeCountLabel ? `אהבתי · ${likeCountLabel}` : 'אהבתי';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: DUO.bg }} edges={['top']}>
@@ -180,11 +193,82 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
                       borderColor: DUO.border,
                     }}
                   >
-                    <Text style={{ fontSize: 11, color: DUO.textMuted, fontWeight: '700' }}>{t}</Text>
+                    <Text style={{ fontSize: 11, color: DUO.textMuted, fontWeight: '700' }} maxFontSizeMultiplier={1.15} numberOfLines={1}>
+                      {t}
+                    </Text>
                   </View>
                 ))}
               </View>
             )}
+
+            {/* Facebook-style action bar */}
+            <View
+              style={{
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                borderTopWidth: 1,
+                borderTopColor: DUO.border,
+                marginTop: 16,
+                paddingTop: 6,
+              }}
+            >
+              <Pressable
+                onPress={() => { tapHaptic(); togglePostLike(post.id); }}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityState={{ selected: likedBySelf }}
+                accessibilityLabel="אהבתי"
+                style={({ pressed }) => ({
+                  flex: 1,
+                  height: 44,
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  borderRadius: 10,
+                  backgroundColor: pressed ? DUO.blueSurface : 'transparent',
+                })}
+              >
+                <ThumbsUp
+                  size={18}
+                  color={likedBySelf ? DUO.blue : DUO.textMuted}
+                  fill={likedBySelf ? DUO.blue : 'transparent'}
+                  strokeWidth={2.2}
+                />
+                <Text
+                  style={{ fontSize: 13, fontWeight: '700', color: likedBySelf ? DUO.blue : DUO.textMuted, flexShrink: 1 }}
+                  maxFontSizeMultiplier={1.15}
+                  numberOfLines={1}
+                >
+                  {likeLabel}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => inputRef.current?.focus()}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="תגובה"
+                style={({ pressed }) => ({
+                  flex: 1,
+                  height: 44,
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  borderRadius: 10,
+                  backgroundColor: pressed ? DUO.bg : 'transparent',
+                })}
+              >
+                <MessageCircle size={18} color={DUO.textMuted} strokeWidth={2.2} />
+                <Text
+                  style={{ fontSize: 13, fontWeight: '700', color: DUO.textMuted, flexShrink: 1 }}
+                  maxFontSizeMultiplier={1.15}
+                  numberOfLines={1}
+                >
+                  תגובה
+                </Text>
+              </Pressable>
+            </View>
           </View>
 
           {/* Replies */}
@@ -238,7 +322,7 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
             borderTopColor: DUO.border,
             paddingHorizontal: 12,
             paddingTop: 10,
-            paddingBottom: 12,
+            paddingBottom: 12 + insets.bottom,
             gap: 8,
           }}
         >
@@ -289,12 +373,14 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
           {/* Input + send */}
           <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 8 }}>
             <TextInput
+              ref={inputRef}
               value={body}
               onChangeText={(t) => { setBody(t); setReplyError(null); }}
               placeholder={A.replyPlaceholder}
               placeholderTextColor="#94a3b8"
               multiline
               maxLength={MAX_REPLY_LENGTH}
+              maxFontSizeMultiplier={1.15}
               style={{
                 flex: 1,
                 backgroundColor: DUO.bg,
@@ -354,9 +440,10 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
             elevation: 4,
           }}
         >
-          <Text style={{ fontSize: 14, fontWeight: '900', color: '#ffffff' }}>
-            {A.rewardReplyEarned(coinToast)}
+          <Text style={{ fontSize: 14, fontWeight: '900', color: '#ffffff' }} maxFontSizeMultiplier={1.15}>
+            +{coinToast}
           </Text>
+          <GoldCoinIcon size={18} />
         </Animated.View>
       )}
     </SafeAreaView>

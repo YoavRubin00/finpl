@@ -27,6 +27,23 @@ export function formatAlias(alias: AnonAlias): string {
   return `${alias.emoji} ${alias.noun} #${alias.number}`;
 }
 
+/**
+ * Neutral anonymous label for the advice screens — "אנונימי · #NNNN".
+ * Replaces the animal-emoji persona identity so every author reads as a real,
+ * anonymous community member (not a game mascot). The 4-digit number is derived
+ * deterministically from the alias (no Math.random) so the same alias always
+ * renders the same tag across the feed and post screens.
+ */
+export function formatAnonLabel(alias: AnonAlias): string {
+  const seed = `${alias.emoji}|${alias.noun}|${alias.number}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  const n = 1000 + (Math.abs(hash) % 9000); // stable 1000..9999
+  return `אנונימי · #${n}`;
+}
+
 // ===== Reward configuration =====
 export const REWARD_POST_XP = 25;
 export const REWARD_POST_COINS = 50;

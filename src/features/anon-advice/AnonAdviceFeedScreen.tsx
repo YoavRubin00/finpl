@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Image, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Pencil } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAnonAdviceStore } from './useAnonAdviceStore';
 import { AnonAdviceComposeModal } from './AnonAdviceComposeModal';
 import { PostCard } from './components/PostCard';
 import type { AnonAdvicePost } from './anonAdviceTypes';
 import { DUO } from '../../constants/theme';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { A } from './strings';
 
 const FILTERS: { id: string | null; label: string }[] = [
@@ -19,6 +22,7 @@ const FILTERS: { id: string | null; label: string }[] = [
 ];
 
 export function AnonAdviceFeedScreen(): React.ReactElement {
+  const insets = useSafeAreaInsets();
   const allPosts = useAnonAdviceStore((s) => s.getPosts)();
   const [filter, setFilter] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
@@ -120,41 +124,58 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
           renderItem={({ item }) => (
             <PostCard post={item} onPress={() => router.push(`/anon-advice/post/${item.id}` as never)} />
           )}
-          contentContainerStyle={{ paddingTop: 12, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingTop: 12, paddingBottom: insets.bottom + 108 }}
           showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* FAB */}
+      {/* Ask-the-community — full-width premium button pinned above the safe area */}
       <Animated.View
         entering={FadeIn.delay(200).duration(280)}
         style={{
           position: 'absolute',
-          bottom: 24,
-          left: 24,
+          left: 16,
+          right: 16,
+          bottom: insets.bottom + 12,
         }}
       >
         <Pressable
           onPress={() => setComposing(true)}
+          accessibilityRole="button"
+          accessibilityLabel={A.feedComposeCta}
           style={({ pressed }) => ({
-            backgroundColor: pressed ? DUO.blueDark : DUO.blue,
-            borderRadius: 28,
-            paddingHorizontal: 18,
-            paddingVertical: 12,
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            gap: 8,
-            shadowColor: '#000',
-            shadowOpacity: 0.18,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 6,
+            borderRadius: 16,
+            opacity: pressed ? 0.94 : 1,
+            shadowColor: DUO.blueDark,
+            shadowOpacity: 0.38,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 9,
           })}
         >
-          <Text style={{ fontSize: 22, color: '#ffffff' }}>✏️</Text>
-          <Text style={{ fontSize: 14, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>
-            {A.feedComposeCta}
-          </Text>
+          <LinearGradient
+            colors={['#2d74ce', DUO.blue, DUO.blueDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: 16,
+              paddingVertical: 16,
+              paddingHorizontal: 20,
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+            }}
+          >
+            <Pencil size={20} color="#ffffff" strokeWidth={2.5} />
+            <Text
+              style={{ fontSize: 16, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl', flexShrink: 1 }}
+              maxFontSizeMultiplier={1.15}
+              numberOfLines={1}
+            >
+              {A.feedComposeCta}
+            </Text>
+          </LinearGradient>
         </Pressable>
       </Animated.View>
 
@@ -198,11 +219,26 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
             resizeMode="contain"
           />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '900', color: DUO.green, writingDirection: 'rtl', textAlign: 'right' }}>
-              {A.moderationApproved} {A.rewardPostEarned(reward.coins, reward.xp)}
-            </Text>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Text
+                style={{ fontSize: 14, fontWeight: '900', color: DUO.green, writingDirection: 'rtl', textAlign: 'right' }}
+                maxFontSizeMultiplier={1.15}
+              >
+                {A.moderationApproved} +{reward.coins}
+              </Text>
+              <GoldCoinIcon size={16} />
+              <Text
+                style={{ fontSize: 14, fontWeight: '900', color: DUO.green, writingDirection: 'rtl' }}
+                maxFontSizeMultiplier={1.15}
+              >
+                +{reward.xp} XP
+              </Text>
+            </View>
             {reward.firstBonus && (
-              <Text style={{ fontSize: 12, color: DUO.text, writingDirection: 'rtl', textAlign: 'right' }}>
+              <Text
+                style={{ fontSize: 12, color: DUO.text, writingDirection: 'rtl', textAlign: 'right' }}
+                maxFontSizeMultiplier={1.15}
+              >
                 {A.rewardFirstPostBonus}
               </Text>
             )}

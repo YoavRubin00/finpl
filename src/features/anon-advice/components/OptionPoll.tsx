@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { DUO } from '../../../constants/theme';
+import { formatVoteCount } from '../../friends-hub/lib/honestCounts';
 
 interface OptionPollProps {
   options: string[];
@@ -9,6 +10,7 @@ interface OptionPollProps {
 
 export function OptionPoll({ options, votes }: OptionPollProps): React.ReactElement {
   const total = votes.reduce((s, v) => s + v, 0);
+  const totalLabel = formatVoteCount(total); // null hides the count below 100 real votes
 
   return (
     <View style={{ gap: 8 }}>
@@ -67,12 +69,17 @@ export function OptionPoll({ options, votes }: OptionPollProps): React.ReactElem
                   color: DUO.text,
                   writingDirection: 'rtl',
                   textAlign: 'right',
+                  flexShrink: 1,
                 }}
+                maxFontSizeMultiplier={1.15}
               >
                 {opt}
               </Text>
               {total > 0 && (
-                <Text style={{ fontSize: 13, fontWeight: '900', color: i === 0 ? DUO.blue : DUO.green }}>
+                <Text
+                  style={{ fontSize: 13, fontWeight: '900', color: i === 0 ? DUO.blue : DUO.green }}
+                  maxFontSizeMultiplier={1.15}
+                >
                   {pct}%
                 </Text>
               )}
@@ -80,9 +87,12 @@ export function OptionPoll({ options, votes }: OptionPollProps): React.ReactElem
           </View>
         );
       })}
-      {total > 0 && (
-        <Text style={{ fontSize: 11, color: DUO.textMuted, writingDirection: 'rtl', textAlign: 'right', marginTop: 2 }}>
-          {total} הצביעו
+      {totalLabel && (
+        <Text
+          style={{ fontSize: 11, color: DUO.textMuted, writingDirection: 'rtl', textAlign: 'right', marginTop: 2 }}
+          maxFontSizeMultiplier={1.15}
+        >
+          {`${totalLabel} הצביעו`}
         </Text>
       )}
     </View>

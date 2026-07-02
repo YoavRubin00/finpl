@@ -39,6 +39,10 @@ interface AnonAdviceState {
   firstPostBonusGiven: boolean;
   // Reply ids this user marked helpful (toggle guard)
   upvotedReplyIds: string[];
+  // Post ids this user "liked" (Facebook-style like toggle)
+  likedPostIds: string[];
+  // Local like counts per post — only real user likes accumulate here
+  postLikes: Record<string, number>;
   // Filter state (not persisted)
 
   // Selectors
@@ -68,6 +72,7 @@ interface AnonAdviceState {
   }) => { reply: AnonAdviceReply; reward: { coins: number; xp: number } | null } | null;
   votePostOption: (postId: string, optionIndex: 0 | 1) => void;
   toggleReplyUpvote: (replyId: string) => void;
+  togglePostLike: (postId: string) => void;
   resetDailyIfNeeded: () => void;
 }
 
@@ -83,6 +88,8 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
       replyRewardsClaimed: [],
       firstPostBonusGiven: false,
       upvotedReplyIds: [],
+      likedPostIds: [],
+      postLikes: {},
 
       getPosts: () => {
         return [...get().posts]
@@ -277,6 +284,20 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
         }));
       },
 
+      togglePostLike: (postId) => {
+        const alreadyLiked = get().likedPostIds.includes(postId);
+        set((state) => {
+          const current = state.postLikes[postId] ?? 0;
+          const nextCount = Math.max(0, current + (alreadyLiked ? -1 : 1));
+          return {
+            likedPostIds: alreadyLiked
+              ? state.likedPostIds.filter((id) => id !== postId)
+              : [...state.likedPostIds, postId],
+            postLikes: { ...state.postLikes, [postId]: nextCount },
+          };
+        });
+      },
+
       votePostOption: (postId, optionIndex) => {
         set((state) => ({
           posts: state.posts.map((p) => {
@@ -301,11 +322,17 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
         replyRewardsClaimed: state.replyRewardsClaimed,
         firstPostBonusGiven: state.firstPostBonusGiven,
         upvotedReplyIds: state.upvotedReplyIds,
+        likedPostIds: state.likedPostIds,
+        postLikes: state.postLikes,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (!Array.isArray(state.replyRewardsClaimed)) state.replyRewardsClaimed = [];
         if (!Array.isArray(state.upvotedReplyIds)) state.upvotedReplyIds = [];
+        if (!Array.isArray(state.likedPostIds)) state.likedPostIds = [];
+        if (state.postLikes === null || typeof state.postLikes !== 'object' || Array.isArray(state.postLikes)) {
+          state.postLikes = {};
+        }
         if (typeof state.firstPostBonusGiven !== 'boolean') state.firstPostBonusGiven = false;
         if (typeof state.dailyPostsCount !== 'number') state.dailyPostsCount = 0;
         if (typeof state.dailyRepliesCount !== 'number') state.dailyRepliesCount = 0;

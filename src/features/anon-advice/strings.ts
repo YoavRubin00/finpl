@@ -38,7 +38,7 @@ export const A = {
 
   // Moderation states
   moderationChecking: 'בודקים את הפוסט שלכם...',
-  moderationCheckingSub: 'שארק עובר על התוכן ומוודא שהכל בסדר 🦈',
+  moderationCheckingSub: 'קפטן שארק עובר על התוכן ומוודא שהכל בסדר',
   moderationApproved: 'פורסם!',
   moderationApprovedSub: 'הפוסט שלכם זמין כעת לקהילה',
   moderationRejected: 'הפוסט לא אושר',
@@ -72,8 +72,8 @@ export const A = {
   replyEmptyError: 'הוסיפו טקסט לתגובה',
 
   // Rewards
-  rewardPostEarned: (coins: number, xp: number) => `+${coins} 🪙   +${xp} XP`,
-  rewardReplyEarned: (coins: number) => `+${coins} 🪙`,
+  rewardPostEarned: (coins: number, xp: number) => `+${coins} מטבעות · +${xp} XP`,
+  rewardReplyEarned: (coins: number) => `+${coins} מטבעות`,
   rewardFirstPostBonus: 'בונוס פוסט ראשון!',
   rewardDailyCapPost: 'הגעתם לתקרה היומית של פוסטים. חזרו מחר 🌙',
   rewardDailyCapReply: 'הגעתם לתקרה היומית של תגובות. חזרו מחר 🌙',
