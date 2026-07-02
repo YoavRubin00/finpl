@@ -103,6 +103,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       email: userProfiles.email,
       displayName: userProfiles.displayName,
       currentStreak: userProfiles.currentStreak,
+      longestStreak: userProfiles.longestStreak,
       createdAt: userProfiles.createdAt,
     })
     .from(userProfiles)
@@ -206,6 +207,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
               variantId: variantId as RetentionVariantId,
               name: user.displayName ?? 'חבר',
               streak: user.currentStreak ?? 0,
+              longestStreak: user.longestStreak ?? 0,
               ctaUrl: clickUrl,
               unsubscribeUrl,
               openPixelUrl,
