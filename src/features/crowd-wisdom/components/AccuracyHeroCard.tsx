@@ -12,6 +12,13 @@ interface AccuracyHeroCardProps {
   streak?: number;
   /** Lifetime votes — feeds the forecaster score. */
   totalVotes?: number;
+  /**
+   * "mini" = compact stat tile for embedding on the friends-hub CrowdWisdomCard.
+   * The mini tile shows MARKET accuracy only (real: dיוק-מול-שוק) — never the
+   * forecaster score, which blends the with-crowd streak derived from the
+   * invented baseline (A3 enforcement, Yoav 2026-07-02).
+   */
+  variant?: "full" | "mini";
 }
 
 /**
@@ -41,9 +48,38 @@ export function AccuracyHeroCard({
   resolvedCount,
   streak = 0,
   totalVotes = 0,
+  variant = "full",
 }: AccuracyHeroCardProps) {
   const pct = Math.round(accuracy * 100);
   const score = computeForecasterScore(accuracy, resolvedCount, streak, totalVotes);
+
+  if (variant === "mini") {
+    const hasData = resolvedCount > 0;
+    return (
+      <LinearGradient
+        colors={["#6d28d9", "#9333ea"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.miniCard}
+        accessible
+        accessibilityLabel={
+          hasData
+            ? `דיוק מול השוק ${pct} אחוז, מתוך ${resolvedCount} תוצאות סגורות`
+            : "דיוק מול השוק — טרם נסגרו תוצאות"
+        }
+      >
+        <Text style={styles.miniEyebrow} maxFontSizeMultiplier={1.2}>
+          דיוק מול השוק
+        </Text>
+        <Text style={styles.miniValue} maxFontSizeMultiplier={1.2}>
+          {hasData ? `${pct}%` : "—"}
+        </Text>
+        <Text style={styles.miniCaption} numberOfLines={1} maxFontSizeMultiplier={1.2}>
+          {hasData ? `מתוך ${resolvedCount} תוצאות` : "טרם נסגרו תוצאות"}
+        </Text>
+      </LinearGradient>
+    );
+  }
 
   return (
     <Animated.View entering={FadeInDown.duration(360)}>
@@ -81,6 +117,39 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 20,
     overflow: "hidden",
+  },
+  miniCard: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    overflow: "hidden",
+    minHeight: 88,
+    justifyContent: "center",
+  },
+  miniEyebrow: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.85)",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  miniValue: {
+    fontSize: 30,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+    textAlign: "right",
+    lineHeight: 34,
+    marginTop: 2,
+  },
+  miniCaption: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.8)",
+    writingDirection: "rtl",
+    textAlign: "right",
+    marginTop: 1,
   },
   row: {
     flexDirection: "row-reverse",

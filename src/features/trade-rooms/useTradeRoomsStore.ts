@@ -12,7 +12,6 @@ import type {
 } from './tradeRoomsTypes';
 import {
   TRADE_ROOMS,
-  buildSeedMessages,
   moderateChatMessage,
   DAILY_FIRST_MESSAGE_COINS,
   DAILY_FIRST_MESSAGE_XP,
@@ -27,12 +26,60 @@ function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function seedAllRooms(): Record<string, TradeRoomMessage[]> {
+/**
+ * A genuine message from another registered member — NOT the user themselves,
+ * and NOT Captain Shark's system opener. Only these may count as "unread".
+ * This is the iron-rule guard: with no real backend yet there are none, so no
+ * fake FOMO badge can ever appear.
+ */
+function isRealPeerMessage(m: TradeRoomMessage): boolean {
+  return !m.isSelf && !m.isShark;
+}
+
+/**
+ * A single, honest Captain Shark opener per room — a welcome, not fake chatter.
+ * It is a system message (isShark) and is therefore never counted as unread.
+ */
+function buildOpener(room: TradeRoom, sentAtISO: string): TradeRoomMessage {
+  return {
+    id: `opener-${room.id}`,
+    roomId: room.id,
+    alias: null,
+    avatarId: null,
+    isSelf: false,
+    isShark: true,
+    body: `ברוכים הבאים ל"${room.name}"! החדר שקט כרגע — וזו בדיוק ההזדמנות שלכם לפתוח אותו. שאלה טובה או דעה עם נימוק, ויוצאים לדרך. דעה בלי נימוק שווה כמו רשת בלי דגים.`,
+    likes: 0,
+    likedBySelf: false,
+    sentAt: sentAtISO,
+  };
+}
+
+function seedOpeners(sentAtISO: string): Record<string, TradeRoomMessage[]> {
   const map: Record<string, TradeRoomMessage[]> = {};
   for (const room of TRADE_ROOMS) {
-    map[room.id] = buildSeedMessages(room.id);
+    map[room.id] = [buildOpener(room, sentAtISO)];
   }
   return map;
+}
+
+/** Mark every built-in room read at seed time so the lone opener is not "unread". */
+function seedReadAt(atISO: string): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const room of TRADE_ROOMS) {
+    map[room.id] = atISO;
+  }
+  return map;
+}
+
+/** Real, self-only weekly summary of the user's activity in rooms (for A5 / BATCH 6). */
+export interface WeeklyRoomStats {
+  /** Messages the user themselves sent across all rooms in the last 7 days. */
+  messagesSent: number;
+  /** Distinct calendar days (last 7) on which the user posted at least once. */
+  activeDays: number;
+  /** Coins earned from rooms this week — the daily first-message reward per active day. */
+  coinsEarned: number;
 }
 
 interface TradeRoomsState {
@@ -50,6 +97,8 @@ interface TradeRoomsState {
   getLastMessage: (roomId: TradeRoomId) => TradeRoomMessage | null;
   getSentimentSummary: (roomId: TradeRoomId) => RoomSentimentSummary;
   getRoom: (roomId: TradeRoomId) => TradeRoom | null;
+  /** Read-only weekly self-summary — real data only, nothing about other people. */
+  getWeeklyRoomStats: () => WeeklyRoomStats;
 
   // Actions
   sendMessage: (
@@ -78,9 +127,11 @@ function appendBounded(
 
 export const useTradeRoomsStore = create<TradeRoomsState>()(
   persist(
-    (set, get) => ({
-      messagesByRoom: seedAllRooms(),
-      lastReadAt: {},
+    (set, get) => {
+      const seedNow = new Date().toISOString();
+      return {
+      messagesByRoom: seedOpeners(seedNow),
+      lastReadAt: seedReadAt(seedNow),
       chatRewardDate: null,
       customRooms: [],
 
@@ -93,10 +144,33 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
       },
 
       getUnreadCount: (roomId) => {
+        // Unread = only genuine peer messages after lastRead. The Captain Shark
+        // opener (isShark) and the user's own messages never count.
         const lastRead = get().lastReadAt[roomId];
-        const messages = get().messagesByRoom[roomId] ?? [];
-        if (!lastRead) return Math.min(messages.length, 9);
-        return messages.filter((m) => !m.isSelf && m.sentAt > lastRead).length;
+        const peers = (get().messagesByRoom[roomId] ?? []).filter(isRealPeerMessage);
+        if (!lastRead) return Math.min(peers.length, 9);
+        return peers.filter((m) => m.sentAt > lastRead).length;
+      },
+
+      getWeeklyRoomStats: () => {
+        // Self-data only: what the user themselves did in rooms this week.
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const days = new Set<string>();
+        let messagesSent = 0;
+        for (const list of Object.values(get().messagesByRoom)) {
+          for (const m of list) {
+            if (!m.isSelf) continue;
+            if (new Date(m.sentAt).getTime() < weekAgo) continue;
+            messagesSent += 1;
+            days.add(m.sentAt.slice(0, 10));
+          }
+        }
+        // Each active day earned exactly one first-message reward.
+        return {
+          messagesSent,
+          activeDays: days.size,
+          coinsEarned: days.size * DAILY_FIRST_MESSAGE_COINS,
+        };
       },
 
       getLastMessage: (roomId) => {
@@ -245,7 +319,8 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
           lastReadAt: { ...state.lastReadAt, [roomId]: new Date().toISOString() },
         }));
       },
-    }),
+      };
+    },
     {
       name: 'trade-rooms-storage',
       storage: createJSONStorage(() => zustandStorage),
@@ -258,15 +333,33 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (!Array.isArray(state.customRooms)) state.customRooms = [];
-        // Seed rooms that are missing (first install / new rooms added later).
-        const seeded = seedAllRooms();
-        const merged: Record<string, TradeRoomMessage[]> = { ...state.messagesByRoom };
-        for (const roomId of Object.keys(seeded)) {
-          if (!Array.isArray(merged[roomId]) || merged[roomId].length === 0) {
-            merged[roomId] = seeded[roomId];
-          }
+        const nowStr = new Date().toISOString();
+        const messages: Record<string, TradeRoomMessage[]> = { ...state.messagesByRoom };
+        const reads: Record<string, string> = { ...state.lastReadAt };
+
+        // Built-in rooms: drop the legacy multi-message seed (ids "seed-*") — it
+        // was fake FOMO — and guarantee exactly one Captain Shark opener up top.
+        for (const room of TRADE_ROOMS) {
+          const existing = Array.isArray(messages[room.id]) ? messages[room.id] : [];
+          const kept = existing.filter((m) => !m.id.startsWith('seed-'));
+          const opener = kept.find((m) => m.isShark) ?? buildOpener(room, nowStr);
+          const rest = kept.filter((m) => !m.isShark);
+          messages[room.id] = [opener, ...rest];
         }
-        state.messagesByRoom = merged;
+
+        // A room whose only content is the opener must never show as "unread"
+        // anywhere. Mark it read at the opener's time (keeping any later real read).
+        for (const roomId of Object.keys(messages)) {
+          const list = messages[roomId];
+          if (list.some(isRealPeerMessage)) continue;
+          const opener = list.find((m) => m.isShark);
+          const openerTime = opener ? opener.sentAt : nowStr;
+          const cur = reads[roomId];
+          if (!cur || cur < openerTime) reads[roomId] = openerTime;
+        }
+
+        state.messagesByRoom = messages;
+        state.lastReadAt = reads;
       },
     },
   ),

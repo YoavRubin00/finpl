@@ -10,16 +10,19 @@ import Animated, {
   Easing,
   useReducedMotion,
   interpolate,
+  FadeInDown,
 } from 'react-native-reanimated';
-import { UserRound, MessageCircle } from 'lucide-react-native';
+import { UserRound, MessageCircle, Bell } from 'lucide-react-native';
 import { useAnonAdviceStore } from '../../anon-advice/useAnonAdviceStore';
 import {
   formatAnonLabel,
   REWARD_POST_COINS,
   REWARD_REPLY_COINS,
 } from '../../anon-advice/anonAdviceData';
+import { formatVoteCount } from '../lib/honestCounts';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import { STITCH, DUO } from '../../../constants/theme';
+import { tapHaptic, successHaptic } from '../../../utils/haptics';
 
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -119,7 +122,10 @@ function PremiumCta({
 }
 
 export function AnonAdviceHeroCard(): React.ReactElement {
+  const reduced = useReducedMotion();
   const rawPosts = useAnonAdviceStore((s) => s.posts);
+  const unseenReplyPostIds = useAnonAdviceStore((s) => s.unseenReplyPostIds);
+  const markRepliesSeen = useAnonAdviceStore((s) => s.markRepliesSeen);
 
   const { recent, total } = useMemo(() => {
     const approved = rawPosts.filter((p) => p.status === 'approved');
@@ -128,6 +134,35 @@ export function AnonAdviceHeroCard(): React.ReactElement {
     );
     return { recent: sorted.slice(0, 2), total: approved.length };
   }, [rawPosts]);
+
+  // Honest count — a number is shown ONLY once there are ≥100 real questions.
+  // Below the threshold we show inviting copy with NO number (never a fake one).
+  const countLabel = formatVoteCount(total);
+  const isEmpty = total === 0;
+
+  const subtitle = isEmpty
+    ? 'עדיין אין שאלות פתוחות — היו הראשונים לשתף דילמה'
+    : countLabel
+      ? `תכל'ס, כולם לפעמים נתקעים · ${countLabel} שאלות פתוחות`
+      : "תכל'ס, כולם לפעמים נתקעים. שתפו — מישהו יענה";
+
+  const headerA11y = isEmpty
+    ? 'ייעוץ אנונימי. היו הראשונים לשתף דילמה. לחצו לצפייה'
+    : countLabel
+      ? `ייעוץ אנונימי, ${countLabel} שאלות פתוחות. לחצו לצפייה בכולן`
+      : 'ייעוץ אנונימי. לחצו לצפייה בשאלות הפתוחות';
+
+  // A4 — the most-recent of the user's own posts that got a NEW inbound reply.
+  // Dormant (null) until a real external reply exists — no fabricated nudge.
+  const unseenReplyTarget =
+    unseenReplyPostIds.length > 0 ? unseenReplyPostIds[unseenReplyPostIds.length - 1] : null;
+
+  function openUnseenReply(): void {
+    if (!unseenReplyTarget) return;
+    successHaptic();
+    markRepliesSeen(unseenReplyTarget);
+    router.push(`/anon-advice/post/${unseenReplyTarget}` as never);
+  }
 
   return (
     <View
@@ -148,9 +183,9 @@ export function AnonAdviceHeroCard(): React.ReactElement {
     >
       {/* ── Section header — tappable "see all" ── */}
       <Pressable
-        onPress={() => router.push('/anon-advice' as never)}
+        onPress={() => { tapHaptic(); router.push('/anon-advice' as never); }}
         accessibilityRole="button"
-        accessibilityLabel={`ייעוץ אנונימי, ${total} שאלות פתוחות. לחצו לצפייה בכולן`}
+        accessibilityLabel={headerA11y}
         style={({ pressed }) => ({
           flexDirection: 'row-reverse',
           alignItems: 'center',
@@ -190,7 +225,8 @@ export function AnonAdviceHeroCard(): React.ReactElement {
             ייעוץ אנונימי
           </Text>
           <Text
-            numberOfLines={1}
+            numberOfLines={2}
+            maxFontSizeMultiplier={1.3}
             style={{
               fontSize: 12,
               color: STITCH.onSurfaceVariant,
@@ -200,17 +236,119 @@ export function AnonAdviceHeroCard(): React.ReactElement {
               flexShrink: 1,
             }}
           >
-            תכל'ס, כולם לפעמים נתקעים. שתפו — מישהו יענה · {total} שאלות פתוחות
+            {subtitle}
           </Text>
         </View>
         <Text style={{ fontSize: 20, color: STITCH.primary }}>‹</Text>
       </Pressable>
 
-      {/* ── Preview posts ── */}
+      {/* ── A4 · "יש תגובה חדשה לשאלה שלך" — real inbound reciprocity only.
+           Renders ONLY when one of the user's own posts got a genuine external
+           reply they haven't opened. Silent until that's real. ── */}
+      {unseenReplyTarget && (
+        <Animated.View entering={reduced ? undefined : FadeInDown.duration(260).springify()}>
+          <Pressable
+            onPress={openUnseenReply}
+            accessibilityRole="button"
+            accessibilityLabel="יש תגובה חדשה לשאלה שלך. לחצו לצפייה"
+            style={({ pressed }) => ({
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              gap: 8,
+              marginHorizontal: 12,
+              marginBottom: 4,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              borderRadius: 12,
+              backgroundColor: pressed ? '#dbeafe' : DUO.blueSurface,
+              borderWidth: 1,
+              borderColor: '#bfdbfe',
+            })}
+          >
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: DUO.blue,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Bell size={15} color="#ffffff" strokeWidth={2.4} fill="#ffffff" />
+            </View>
+            <Text
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.3}
+              style={{
+                flex: 1,
+                fontSize: 13,
+                fontWeight: '800',
+                color: DUO.blueDark,
+                writingDirection: 'rtl',
+                textAlign: 'right',
+              }}
+            >
+              יש תגובה חדשה לשאלה שלך
+            </Text>
+            <Text style={{ fontSize: 18, color: DUO.blue }}>‹</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {/* ── C0 · honest empty state (no seed → no fake feed) ── */}
+      {isEmpty && (
+        <View
+          accessible
+          accessibilityLabel="המים שקטים כאן. שתפו דילמה ראשונה ופתחו את הדיון"
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: STITCH.surfaceHighest,
+            alignItems: 'center',
+            paddingHorizontal: 22,
+            paddingVertical: 18,
+            gap: 8,
+          }}
+        >
+          <Image
+            source={require('../../../../assets/webp/fin-empathic.webp')}
+            style={{ width: 72, height: 72 }}
+            resizeMode="contain"
+            accessible={false}
+          />
+          <Text
+            maxFontSizeMultiplier={1.3}
+            style={{
+              fontSize: 14,
+              fontWeight: '800',
+              color: STITCH.onSurface,
+              writingDirection: 'rtl',
+              textAlign: 'center',
+              lineHeight: 20,
+            }}
+          >
+            המים שקטים כאן
+          </Text>
+          <Text
+            maxFontSizeMultiplier={1.3}
+            style={{
+              fontSize: 12,
+              color: STITCH.onSurfaceVariant,
+              writingDirection: 'rtl',
+              textAlign: 'center',
+              lineHeight: 18,
+            }}
+          >
+            שתפו דילמה ראשונה ופתחו את הדיון — אנונימי לחלוטין
+          </Text>
+        </View>
+      )}
+
+      {/* ── Preview posts (real posts only) ── */}
       {recent.map((post) => (
         <Pressable
           key={post.id}
-          onPress={() => router.push(`/anon-advice/post/${post.id}` as never)}
+          onPress={() => { tapHaptic(); router.push(`/anon-advice/post/${post.id}` as never); }}
           accessibilityRole="button"
           accessibilityLabel={`פוסט: ${post.question}`}
           style={({ pressed }) => ({
@@ -261,6 +399,7 @@ export function AnonAdviceHeroCard(): React.ReactElement {
 
           {/* Question */}
           <Text
+            maxFontSizeMultiplier={1.3}
             style={{
               fontSize: 14,
               fontWeight: '700',
@@ -333,6 +472,8 @@ export function AnonAdviceHeroCard(): React.ReactElement {
         }}
       >
         <View
+          accessible
+          accessibilityLabel={`${REWARD_POST_COINS} מטבעות על פוסט, ${REWARD_REPLY_COINS} על תגובה`}
           style={{
             backgroundColor: '#fffbeb',
             borderRadius: 10,
@@ -379,7 +520,7 @@ export function AnonAdviceHeroCard(): React.ReactElement {
           colors={['#38bdf8', DUO.blue]}
           glow={DUO.blue}
           accessibilityLabel="פתחו ייעוץ אנונימי ושאלו את הקהילה"
-          onPress={() => router.push('/anon-advice' as never)}
+          onPress={() => { tapHaptic(); router.push('/anon-advice' as never); }}
         />
       </View>
     </View>

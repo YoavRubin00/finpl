@@ -3,8 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { AnonAdvicePost, AnonAdviceReply, AnonAlias, ModerationStatus } from './anonAdviceTypes';
 import {
-  SEED_POSTS,
-  SEED_REPLIES,
   generateAlias,
   REWARD_POST_XP,
   REWARD_POST_COINS,
@@ -18,8 +16,31 @@ import {
   MIN_REPLY_LENGTH_FOR_REWARD,
 } from './anonAdviceData';
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * A5 (read-only, real self-data only) — the signed-in user's own weekly activity
+ * in the anonymous-advice community. Every field is derived exclusively from the
+ * user's real posts/replies/coin-earnings — never from other people. Consumed by
+ * BATCH 6 ("השבוע שלך בקהילה") which only READS this getter.
+ */
+export interface AnonWeeklyCommunityStats {
+  /** Approved posts the user authored in the last 7 days. */
+  posts: number;
+  /** Replies the user wrote in the last 7 days. */
+  replies: number;
+  /** Coins actually awarded to the user from advice (posts+replies) in the last 7 days. */
+  coinsEarned: number;
+}
+
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** True when an ISO timestamp falls within the last 7 days. */
+function withinLastWeek(iso: string): boolean {
+  const t = new Date(iso).getTime();
+  return Number.isFinite(t) && t >= Date.now() - WEEK_MS;
 }
 
 function makeId(prefix: string): string {
@@ -43,6 +64,15 @@ interface AnonAdviceState {
   likedPostIds: string[];
   // Local like counts per post — only real user likes accumulate here
   postLikes: Record<string, number>;
+  // A4 — ids of the user's OWN posts that received a NEW inbound (non-self)
+  // reply the author hasn't opened yet. Drives the "יש תגובה חדשה לשאלה שלך"
+  // nudge. Stays empty until a genuine external reply arrives (honest — a
+  // self-reply on your own post never counts as inbound interaction).
+  unseenReplyPostIds: string[];
+  // A5 — append-only ledger of coins ACTUALLY awarded to the user from advice
+  // (posts + replies), each stamped with the award time. The weekly-summary
+  // getter sums entries in the last 7 days — 100% real self-data.
+  adviceCoinLedger: { at: string; coins: number }[];
   // Filter state (not persisted)
 
   // Selectors
@@ -54,6 +84,10 @@ interface AnonAdviceState {
   canReplyToday: () => boolean;
   remainingPostsToday: () => number;
   remainingRepliesToday: () => number;
+  // A4 — ids of self posts with unseen inbound replies (read-only view of state)
+  getUnseenReplyPostIds: () => string[];
+  // A5 — the user's real weekly community stats (read-only; BATCH 6 consumes this)
+  getWeeklyCommunityStats: () => AnonWeeklyCommunityStats;
 
   // Actions
   submitPost: (input: {
@@ -73,14 +107,17 @@ interface AnonAdviceState {
   votePostOption: (postId: string, optionIndex: 0 | 1) => void;
   toggleReplyUpvote: (replyId: string) => void;
   togglePostLike: (postId: string) => void;
+  // A4 — clear the "new reply" flag once the author has looked at that post
+  markRepliesSeen: (postId: string) => void;
   resetDailyIfNeeded: () => void;
 }
 
 export const useAnonAdviceStore = create<AnonAdviceState>()(
   persist(
     (set, get) => ({
-      posts: SEED_POSTS,
-      replies: SEED_REPLIES,
+      // P0-5: no seed. The feed is empty until real posts exist (isSelf/server).
+      posts: [],
+      replies: [],
       selfAlias: null,
       dailyPostsCount: 0,
       dailyRepliesCount: 0,
@@ -90,6 +127,8 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
       upvotedReplyIds: [],
       likedPostIds: [],
       postLikes: {},
+      unseenReplyPostIds: [],
+      adviceCoinLedger: [],
 
       getPosts: () => {
         return [...get().posts]
@@ -136,6 +175,23 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
       remainingRepliesToday: () => {
         get().resetDailyIfNeeded();
         return Math.max(0, DAILY_REPLY_CAP - get().dailyRepliesCount);
+      },
+
+      getUnseenReplyPostIds: () => get().unseenReplyPostIds,
+
+      getWeeklyCommunityStats: () => {
+        const state = get();
+        const posts = state.posts.filter(
+          (p) => p.isSelf && p.status === 'approved' && withinLastWeek(p.createdAt),
+        ).length;
+        const replies = state.replies.filter(
+          (r) => r.isSelf && withinLastWeek(r.createdAt),
+        ).length;
+        const coinsEarned = state.adviceCoinLedger.reduce(
+          (sum, e) => (withinLastWeek(e.at) ? sum + e.coins : sum),
+          0,
+        );
+        return { posts, replies, coinsEarned };
       },
 
       resetDailyIfNeeded: () => {
@@ -193,6 +249,11 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
           /* economy store unavailable — silently skip */
         }
 
+        // A5 — record the real coins earned so the weekly summary can sum them.
+        set((state) => ({
+          adviceCoinLedger: [...state.adviceCoinLedger, { at: new Date().toISOString(), coins: totalCoins }],
+        }));
+
         return {
           post,
           reward: { coins: totalCoins, xp: REWARD_POST_XP, firstBonus: isFirstPost },
@@ -234,6 +295,17 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
             const economyMod = require('../economy/useEconomyUIStore');
             economyMod.useEconomyUIStore.getState().addXP(POST_AUTHOR_REPLY_XP, 'challenge_complete');
           } catch { /* skip */ }
+
+          // A4 — only a genuine INBOUND reply (someone else, not the author) counts
+          // as "יש תגובה חדשה לשאלה שלך". A self-reply on your own post never does.
+          // Stays dormant/honest until real external replies exist (server graph).
+          if (!reply.isSelf) {
+            set((state) => ({
+              unseenReplyPostIds: state.unseenReplyPostIds.includes(parentPost.id)
+                ? state.unseenReplyPostIds
+                : [...state.unseenReplyPostIds, parentPost.id],
+            }));
+          }
         }
 
         // Reply reward — eligibility checks
@@ -266,6 +338,11 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
           economyMod.useEconomyUIStore.getState().addCoins(coins);
           economyMod.useEconomyUIStore.getState().addXP(REWARD_REPLY_XP, 'challenge_complete');
         } catch { /* skip */ }
+
+        // A5 — record the real coins earned so the weekly summary can sum them.
+        set((state) => ({
+          adviceCoinLedger: [...state.adviceCoinLedger, { at: new Date().toISOString(), coins }],
+        }));
 
         return { reply, reward: { coins, xp: REWARD_REPLY_XP } };
       },
@@ -308,6 +385,13 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
           }),
         }));
       },
+
+      markRepliesSeen: (postId) => {
+        if (!get().unseenReplyPostIds.includes(postId)) return;
+        set((state) => ({
+          unseenReplyPostIds: state.unseenReplyPostIds.filter((id) => id !== postId),
+        }));
+      },
     }),
     {
       name: 'anon-advice-storage',
@@ -324,23 +408,25 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
         upvotedReplyIds: state.upvotedReplyIds,
         likedPostIds: state.likedPostIds,
         postLikes: state.postLikes,
+        unseenReplyPostIds: state.unseenReplyPostIds,
+        adviceCoinLedger: state.adviceCoinLedger,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (!Array.isArray(state.replyRewardsClaimed)) state.replyRewardsClaimed = [];
         if (!Array.isArray(state.upvotedReplyIds)) state.upvotedReplyIds = [];
         if (!Array.isArray(state.likedPostIds)) state.likedPostIds = [];
+        if (!Array.isArray(state.unseenReplyPostIds)) state.unseenReplyPostIds = [];
+        if (!Array.isArray(state.adviceCoinLedger)) state.adviceCoinLedger = [];
         if (state.postLikes === null || typeof state.postLikes !== 'object' || Array.isArray(state.postLikes)) {
           state.postLikes = {};
         }
         if (typeof state.firstPostBonusGiven !== 'boolean') state.firstPostBonusGiven = false;
         if (typeof state.dailyPostsCount !== 'number') state.dailyPostsCount = 0;
         if (typeof state.dailyRepliesCount !== 'number') state.dailyRepliesCount = 0;
-        // Ensure seeds exist (first-time install or after data wipe)
-        if (!Array.isArray(state.posts) || state.posts.length === 0) {
-          state.posts = SEED_POSTS;
-          state.replies = SEED_REPLIES;
-        }
+        // P0-5: NO re-seed. Posts/replies come only from real data (isSelf/server).
+        if (!Array.isArray(state.posts)) state.posts = [];
+        if (!Array.isArray(state.replies)) state.replies = [];
       },
     }
   )

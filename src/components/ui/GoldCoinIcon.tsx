@@ -9,7 +9,13 @@ const ZERO_SHADOW_OFFSET = { width: 0, height: 0 } as const;
 export function GoldCoinIcon({ size = 22 }: { size?: number }) {
   const r = size / 2;
   return (
-    <View style={{
+    <View
+      // Decorative currency glyph — the meaningful value lives in the adjacent
+      // number, which call-sites wrap in an accessibilityLabel ("1,200 מטבעות").
+      // Hide the icon itself so screen readers don't read a stray element.
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{
       width: size,
       height: size,
       borderRadius: r,

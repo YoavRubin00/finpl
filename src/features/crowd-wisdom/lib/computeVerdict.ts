@@ -3,6 +3,44 @@ import type {
   PostVoteSnapshot,
   SentimentSnapshot,
 } from "../types";
+import type { CrowdOption, CrowdQuestion } from "../../crowd-question/types";
+
+/** A real, directional market move for a weekly index question. */
+export type MarketDirection = "up" | "down";
+
+export interface CrowdVerdict {
+  /** The option id that reality proved right. */
+  winningOptionId: CrowdOption["id"];
+  /** True when the user's own recorded pick matched reality. */
+  userWasRight: boolean;
+}
+
+/**
+ * Resolve a daily/weekly crowd question against a REAL market direction
+ * (A2 — Yoav 2026-07-02). The OUTCOME here is 100% market data (the caller
+ * passes the live direction of the exact instrument the question is about);
+ * the "win" is purely the user's own recorded pick.
+ *
+ * HARD honesty guard: this only resolves pure directional index questions
+ * whose two options are green ↔ red (up ↔ down). It returns `null` for any
+ * yes/no question (rate-cut, VIX-up, dollar-strength, earnings-beat, …) whose
+ * sentiment does NOT map cleanly onto a single index direction — so a caller
+ * can never fabricate a verdict for a question we can't honestly resolve.
+ */
+export function computeVerdict(
+  question: CrowdQuestion,
+  direction: MarketDirection,
+  userChoiceId: CrowdOption["id"],
+): CrowdVerdict | null {
+  const isDirectional = question.options.every(
+    (o) => o.sentiment === "green" || o.sentiment === "red",
+  );
+  if (!isDirectional) return null;
+  const winningSentiment = direction === "up" ? "green" : "red";
+  const winner = question.options.find((o) => o.sentiment === winningSentiment);
+  if (!winner) return null;
+  return { winningOptionId: winner.id, userWasRight: winner.id === userChoiceId };
+}
 
 /**
  * Given a question and the user's chosen choiceId, build a post-vote snapshot:

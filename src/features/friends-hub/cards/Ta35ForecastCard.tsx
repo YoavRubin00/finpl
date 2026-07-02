@@ -133,12 +133,18 @@ export function Ta35ForecastCard(): React.ReactElement {
             <Trophy size={20} color="#facc15" strokeWidth={2.6} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>תחזית ת״א 35 השבועית</Text>
-            <Text style={styles.headerSubtitle}>איפה המדד ייסגר ביום ה׳?</Text>
+            <Text style={styles.headerTitle} maxFontSizeMultiplier={1.2}>תחזית ת״א 35 השבועית</Text>
+            <Text style={styles.headerSubtitle} maxFontSizeMultiplier={1.2}>איפה המדד ייסגר ביום ה׳?</Text>
           </View>
-          <View style={styles.clockChip}>
+          <View
+            style={styles.clockChip}
+            accessible
+            accessibilityLabel={`נותרו ${hoursToClose} שעות עד הסגירה`}
+          >
             <Clock size={11} color="#ffffff" strokeWidth={2.4} />
-            <Text style={styles.clockText}>{hoursToClose}ש׳</Text>
+            <Text style={styles.clockText} maxFontSizeMultiplier={1.2} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              {hoursToClose}ש׳
+            </Text>
           </View>
         </View>
 
@@ -146,10 +152,11 @@ export function Ta35ForecastCard(): React.ReactElement {
         {liveTa35 && (
           <Animated.View entering={FadeIn.duration(240)} style={styles.liveRow}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveText}>
+            <Text style={styles.liveText} maxFontSizeMultiplier={1.2}>
               עכשיו: {liveTa35.value} נק׳
             </Text>
             <Text
+              maxFontSizeMultiplier={1.2}
               style={[
                 styles.liveChange,
                 {
@@ -169,13 +176,18 @@ export function Ta35ForecastCard(): React.ReactElement {
         )}
 
         {/* Brackets */}
-        <View style={styles.brackets}>
+        <View
+          style={styles.brackets}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="טווחי סגירה אפשריים לת״א 35"
+        >
           {BRACKETS.map((bracket) => {
             const isSelected = effectiveSelectedId === bracket.id;
             return (
               <Pressable
                 key={bracket.id}
                 onPress={() => handleSelect(bracket.id)}
+                hitSlop={8}
                 style={[
                   styles.bracket,
                   isSelected && styles.bracketSelected,
@@ -190,7 +202,7 @@ export function Ta35ForecastCard(): React.ReactElement {
                     isSelected && { borderColor: "#facc15", backgroundColor: "#facc15" },
                   ]}
                 />
-                <Text style={styles.bracketLabel}>{bracket.label}</Text>
+                <Text style={styles.bracketLabel} maxFontSizeMultiplier={1.2}>{bracket.label}</Text>
               </Pressable>
             );
           })}
@@ -207,23 +219,31 @@ export function Ta35ForecastCard(): React.ReactElement {
             accessibilityState={{ disabled: !selectedId }}
           >
             <View style={styles.xpChips}>
-              <View style={styles.xpChip}>
+              <View
+                style={styles.xpChip}
+                accessible
+                accessibilityLabel="עשרים וחמש נקודות ניסיון"
+              >
                 <Zap size={11} color="#7c3aed" strokeWidth={2.6} />
-                <Text style={styles.xpChipValue}>+25</Text>
+                <Text style={styles.xpChipValue} maxFontSizeMultiplier={1.2}>+25</Text>
               </View>
-              <View style={[styles.xpChip, styles.xpChipGold]}>
+              <View
+                style={[styles.xpChip, styles.xpChipGold]}
+                accessible
+                accessibilityLabel="גולדן, מאה מטבעות"
+              >
                 <Trophy size={11} color="#78350f" strokeWidth={2.6} />
-                <Text style={[styles.xpChipValue, { color: "#78350f" }]}>גולדן +100</Text>
+                <Text style={[styles.xpChipValue, { color: "#78350f" }]} maxFontSizeMultiplier={1.2}>גולדן +100</Text>
               </View>
             </View>
-            <Text style={styles.ctaText}>
+            <Text style={styles.ctaText} maxFontSizeMultiplier={1.2}>
               {selectedId ? "הצביעו על התחזית" : "בחרו טווח כדי להמשיך"}
             </Text>
           </Pressable>
         ) : (
           <Animated.View entering={FadeIn.duration(280)} style={styles.successBanner}>
-            <Text style={styles.successTitle}>נשמרה התחזית שלכם</Text>
-            <Text style={styles.successBody}>
+            <Text style={styles.successTitle} maxFontSizeMultiplier={1.2}>נשמרה התחזית שלכם</Text>
+            <Text style={styles.successBody} maxFontSizeMultiplier={1.2}>
               התוצאה נסגרת ביום ה׳ עם שער הסגירה של הבורסה בת״א.
             </Text>
           </Animated.View>
