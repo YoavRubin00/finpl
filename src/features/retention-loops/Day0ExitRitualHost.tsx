@@ -15,6 +15,17 @@ import { economyQueryKey } from '../economy/useEconomy';
 import type { Economy } from '../../lib/api/economy';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
 import { track } from '../../lib/analytics/events';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+
+/** Amount + the app's gold-coin glyph (the one in the top wallet) inline. */
+function CoinAmount({ amount }: { amount: number }): React.ReactElement {
+  return (
+    <View style={styles.coinAmt}>
+      <Text style={styles.wagerHeadline} allowFontScaling={false}>{amount}</Text>
+      <GoldCoinIcon size={16} />
+    </View>
+  );
+}
 
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 
@@ -40,8 +51,13 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
   const lastResolution = useSharkWagerStore((s) => s.lastResolution);
 
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
+  const isGuest = useAuthStore((s) => s.isGuest);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const isMod01Complete = useCompletedModulesStore((s) => s.completedIds.includes('mod-0-1'));
+  // The mod-0-1 signup gate (guests) stamps this when it OPENS — which happens
+  // on the chest's onClose. Gating on it guarantees the ritual shows AFTER the
+  // chest is opened AND after the signup gate, never before (Yoav 2026-07-03).
+  const mod01GateShown = useTutorialStore((s) => s.moduleEndGateShown['mod-0-1'] ?? false);
   const pendingFirstChest = useTutorialStore((s) => s.pendingPostWalkthroughFirstChest);
   const pendingProTeaser = useTutorialStore((s) => s.pendingPostWalkthroughProTeaser);
   const pendingRegisterCTA = useTutorialStore((s) => s.pendingPostWalkthroughCTA);
@@ -74,6 +90,9 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
     hasCompletedOnboarding &&
     hasSeenWalkthrough &&
     isMod01Complete &&
+    // Guests: wait for the signup gate (which fires on chest-open). Registered
+    // users get no gate, so they pass once the chest sequence has completed.
+    (mod01GateShown || !isGuest) &&
     !pendingFirstChest &&
     !pendingProTeaser &&
     !pendingRegisterCTA &&
@@ -189,9 +208,13 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
                 </Animated.View>
 
                 <Animated.View entering={FadeIn.delay(240).duration(320)} style={styles.wagerCard}>
-                  <Text style={[styles.wagerHeadline, RTL_CENTER]} allowFontScaling={false}>
-                    מתערבים? {WAGER_STAKE} ממך, 100 ממני.
-                  </Text>
+                  <View style={styles.wagerHeadlineRow}>
+                    <Text style={styles.wagerHeadline} allowFontScaling={false}>מתערבים?</Text>
+                    <CoinAmount amount={WAGER_STAKE} />
+                    <Text style={styles.wagerHeadline} allowFontScaling={false}>ממך,</Text>
+                    <CoinAmount amount={100} />
+                    <Text style={styles.wagerHeadline} allowFontScaling={false}>ממני.</Text>
+                  </View>
                   <Text style={[styles.wagerTerms, RTL_CENTER]} allowFontScaling={false}>
                     חזרה מחר = {WAGER_PAYOUT} בחזרה. בלי חזרה — ה-{WAGER_STAKE} שלי.
                   </Text>
@@ -293,6 +316,18 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '900',
     color: '#0c4a6e',
+  },
+  wagerHeadlineRow: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  coinAmt: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 3,
   },
   wagerTerms: {
     marginTop: 6,
