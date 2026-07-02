@@ -32,6 +32,8 @@ export interface AnonAdviceReply {
   body: string;                // 1-300 chars
   agreedWith?: 0 | 1;          // optional vote on parent's options
   createdAt: string;
+  /** Community "helpful" votes — drives sort order + the top-answer badge. */
+  upvotes?: number;
 }
 
 export interface ModerationResult {

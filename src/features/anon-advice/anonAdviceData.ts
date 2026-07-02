@@ -145,6 +145,7 @@ export const SEED_REPLIES: AnonAdviceReply[] = [
   // Post 1 replies
   {
     id: 'seed-reply-1a',
+    upvotes: 12,
     postId: 'seed-post-1',
     alias: { emoji: '🐺', noun: 'הצייד', number: 7212 },
     isSelf: false,
@@ -162,6 +163,7 @@ export const SEED_REPLIES: AnonAdviceReply[] = [
   },
   {
     id: 'seed-reply-1c',
+    upvotes: 7,
     postId: 'seed-post-1',
     alias: { emoji: '🦅', noun: 'החזון', number: 4521 },
     isSelf: false,
@@ -171,6 +173,7 @@ export const SEED_REPLIES: AnonAdviceReply[] = [
   },
   {
     id: 'seed-reply-1d',
+    upvotes: 3,
     postId: 'seed-post-1',
     alias: { emoji: '🐢', noun: 'הסבלני', number: 8841 },
     isSelf: false,
@@ -182,6 +185,7 @@ export const SEED_REPLIES: AnonAdviceReply[] = [
   // Post 2 replies
   {
     id: 'seed-reply-2a',
+    upvotes: 9,
     postId: 'seed-post-2',
     alias: { emoji: '🦉', noun: 'הנבון', number: 6234 },
     isSelf: false,

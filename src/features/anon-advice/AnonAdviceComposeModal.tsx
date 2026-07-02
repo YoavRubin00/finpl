@@ -32,6 +32,35 @@ interface AnonAdviceComposeModalProps {
   onPosted?: (postId: string, reward: { coins: number; xp: number; firstBonus: boolean } | null) => void;
 }
 
+// Post templates — lower the shame barrier by giving the confession a shape.
+interface PostTemplate {
+  id: string;
+  chip: string;
+  situationStarter: string;
+  questionStarter: string;
+}
+
+const POST_TEMPLATES: PostTemplate[] = [
+  {
+    id: 'dilemma',
+    chip: '💭 יש לי דילמה',
+    situationStarter: 'קצת רקע: הגיל שלי __, ההכנסה בערך __ בחודש. המצב: ',
+    questionStarter: 'מה הייתם עושים במקומי?',
+  },
+  {
+    id: 'mistake',
+    chip: '🙊 טעות שלמדתי ממנה',
+    situationStarter: 'עשיתי טעות עם כסף ואני רוצה שאחרים ילמדו ממנה. מה שקרה: ',
+    questionStarter: 'איך הייתם ממשיכים מכאן?',
+  },
+  {
+    id: 'beginner',
+    chip: '🌱 שאלת מתחיל',
+    situationStarter: 'אני בתחילת הדרך בעולם הכסף, בלי שיפוט בבקשה. מה שמבלבל אותי: ',
+    questionStarter: 'מישהו יכול להסביר בפשטות?',
+  },
+];
+
 function pickImageWeb(): Promise<string | null> {
   return new Promise((resolve) => {
     const g = globalThis as unknown as {
@@ -87,6 +116,21 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
   const [rephrasing, setRephrasing] = useState(false);
   const [originalDraft, setOriginalDraft] = useState<{ s: string; q: string; o1: string; o2: string } | null>(null);
   const [rejection, setRejection] = useState<string | null>(null);
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+
+  function applyTemplate(tpl: PostTemplate): void {
+    setActiveTemplateId(tpl.id);
+    // Fill only untouched fields (or ones still holding another template's starter),
+    // so a template tap never wipes the user's own words.
+    const situationUntouched =
+      situation.trim().length === 0 ||
+      POST_TEMPLATES.some((t) => situation === t.situationStarter);
+    const questionUntouched =
+      question.trim().length === 0 ||
+      POST_TEMPLATES.some((t) => question === t.questionStarter);
+    if (situationUntouched) setSituation(tpl.situationStarter);
+    if (questionUntouched) setQuestion(tpl.questionStarter);
+  }
 
   const reset = useCallback(() => {
     setSituation('');
@@ -97,6 +141,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
     setError(null);
     setOriginalDraft(null);
     setRejection(null);
+    setActiveTemplateId(null);
   }, []);
 
   function handleClose(): void {
@@ -280,6 +325,41 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+          {/* Template chips — one tap gives the post a shape */}
+          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+            {POST_TEMPLATES.map((tpl) => {
+              const active = activeTemplateId === tpl.id;
+              return (
+                <Pressable
+                  key={tpl.id}
+                  onPress={() => applyTemplate(tpl)}
+                  disabled={moderating || rephrasing}
+                  accessibilityRole="button"
+                  accessibilityLabel={tpl.chip}
+                  style={{
+                    backgroundColor: active ? '#e0f2fe' : '#ffffff',
+                    borderWidth: 1.5,
+                    borderColor: active ? DUO.blue : DUO.border,
+                    borderRadius: 999,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '800',
+                      color: active ? DUO.blue : DUO.textMuted,
+                      writingDirection: 'rtl',
+                    }}
+                  >
+                    {tpl.chip}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           {/* Section 1 — תיאור */}
           <SectionLabel num={1} title={A.composeSituationLabel} />
           <TextInput

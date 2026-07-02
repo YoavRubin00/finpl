@@ -37,6 +37,8 @@ interface AnonAdviceState {
   // Anti-double-reward: postIds where this user already received reply reward
   replyRewardsClaimed: string[];
   firstPostBonusGiven: boolean;
+  // Reply ids this user marked helpful (toggle guard)
+  upvotedReplyIds: string[];
   // Filter state (not persisted)
 
   // Selectors
@@ -65,6 +67,7 @@ interface AnonAdviceState {
     agreedWith?: 0 | 1;
   }) => { reply: AnonAdviceReply; reward: { coins: number; xp: number } | null } | null;
   votePostOption: (postId: string, optionIndex: 0 | 1) => void;
+  toggleReplyUpvote: (replyId: string) => void;
   resetDailyIfNeeded: () => void;
 }
 
@@ -79,6 +82,7 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
       dailyLimitDate: null,
       replyRewardsClaimed: [],
       firstPostBonusGiven: false,
+      upvotedReplyIds: [],
 
       getPosts: () => {
         return [...get().posts]
@@ -89,9 +93,14 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
       getPostById: (id) => get().posts.find((p) => p.id === id),
 
       getRepliesFor: (postId) => {
+        // Most-helpful first (Reddit-style), ties fall back to oldest-first.
         return [...get().replies]
           .filter((r) => r.postId === postId)
-          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          .sort((a, b) => {
+            const upvoteDiff = (b.upvotes ?? 0) - (a.upvotes ?? 0);
+            if (upvoteDiff !== 0) return upvoteDiff;
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          });
       },
 
       ensureSelfAlias: () => {
@@ -254,6 +263,20 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
         return { reply, reward: { coins, xp: REWARD_REPLY_XP } };
       },
 
+      toggleReplyUpvote: (replyId) => {
+        const alreadyUpvoted = get().upvotedReplyIds.includes(replyId);
+        set((state) => ({
+          upvotedReplyIds: alreadyUpvoted
+            ? state.upvotedReplyIds.filter((id) => id !== replyId)
+            : [...state.upvotedReplyIds, replyId],
+          replies: state.replies.map((r) => {
+            if (r.id !== replyId) return r;
+            const current = r.upvotes ?? 0;
+            return { ...r, upvotes: Math.max(0, current + (alreadyUpvoted ? -1 : 1)) };
+          }),
+        }));
+      },
+
       votePostOption: (postId, optionIndex) => {
         set((state) => ({
           posts: state.posts.map((p) => {
@@ -277,10 +300,12 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
         dailyLimitDate: state.dailyLimitDate,
         replyRewardsClaimed: state.replyRewardsClaimed,
         firstPostBonusGiven: state.firstPostBonusGiven,
+        upvotedReplyIds: state.upvotedReplyIds,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (!Array.isArray(state.replyRewardsClaimed)) state.replyRewardsClaimed = [];
+        if (!Array.isArray(state.upvotedReplyIds)) state.upvotedReplyIds = [];
         if (typeof state.firstPostBonusGiven !== 'boolean') state.firstPostBonusGiven = false;
         if (typeof state.dailyPostsCount !== 'number') state.dailyPostsCount = 0;
         if (typeof state.dailyRepliesCount !== 'number') state.dailyRepliesCount = 0;

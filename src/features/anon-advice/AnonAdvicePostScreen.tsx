@@ -20,6 +20,8 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
   const replies = useAnonAdviceStore((s) => s.getRepliesFor)(postId);
   const submitReply = useAnonAdviceStore((s) => s.submitReply);
   const canReplyToday = useAnonAdviceStore((s) => s.canReplyToday);
+  const toggleReplyUpvote = useAnonAdviceStore((s) => s.toggleReplyUpvote);
+  const upvotedReplyIds = useAnonAdviceStore((s) => s.upvotedReplyIds);
 
   const [body, setBody] = useState('');
   const [agreedWith, setAgreedWith] = useState<0 | 1 | undefined>(undefined);
@@ -215,7 +217,16 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
               </Text>
             </View>
           ) : (
-            replies.map((r, i) => <ReplyBubble key={r.id} reply={r} index={i} />)
+            replies.map((r, i) => (
+              <ReplyBubble
+                key={r.id}
+                reply={r}
+                index={i}
+                isTopAnswer={i === 0 && (r.upvotes ?? 0) > 0 && replies.length > 1}
+                upvotedBySelf={upvotedReplyIds.includes(r.id)}
+                onToggleUpvote={toggleReplyUpvote}
+              />
+            ))
           )}
         </ScrollView>
 
