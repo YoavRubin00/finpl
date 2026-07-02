@@ -17,8 +17,11 @@ import { useVideoPlayer, VideoView } from "expo-video";
 // (eas build --platform android --profile preview / production --auto-submit).
 const VIDEO_SOURCE = require("../../../assets/splash/finn-daily-return.mp4");
 
-/** Cold-start intro splash: plays finn-daily-return for ~3s, tap to skip. */
-const DISPLAY_MS = 3000;
+/** Cold-start intro splash: plays finn-daily-return, tap to skip.
+ *  1.5s (ים 2026-07-02, was 3000): every cold-open second before the first
+ *  interactive screen is pure top-of-funnel wait — the clip reads fine at
+ *  1.5s and impatient first-opens reach the welcome screen twice as fast. */
+const DISPLAY_MS = 1500;
 
 interface Props {
   onDismiss: () => void;

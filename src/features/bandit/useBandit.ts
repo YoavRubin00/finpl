@@ -58,7 +58,9 @@ export function useBandit<E extends ExperimentId>(
     // Thompson-converged signal yet.
     const exp = useBanditStore.getState().experiments[experimentId];
     const WARMUP_FLOOR = 30;
-    const uniformSampling = !exp || exp.variants.some((v) => v.impressions < WARMUP_FLOOR);
+    const pinned = cfg?.pinned === variantId;
+    const uniformSampling =
+      !pinned && (!exp || exp.variants.some((v) => v.impressions < WARMUP_FLOOR));
 
     track({
       name: 'bandit_variant_assigned',
@@ -67,6 +69,7 @@ export function useBandit<E extends ExperimentId>(
         variant_id: variantId,
         variant_label: variantLabel,
         uniform_sampling: uniformSampling,
+        pinned,
       },
     });
 

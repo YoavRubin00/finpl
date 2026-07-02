@@ -10,6 +10,13 @@ type VariantConfig<E extends ExperimentId> = {
 type ExperimentConfig<E extends ExperimentId> = {
   goal: ConversionGoal;
   variants: VariantConfig<E>[];
+  /**
+   * Hard-pin the experiment to one variant id: selectVariant returns it for
+   * every user (bypassing warm-up and Thompson sampling) while impressions /
+   * conversions keep recording, so the winning arm's performance stays
+   * measurable and the pin is reversible by deleting this field.
+   */
+  pinned?: string;
 };
 
 type AllExperimentConfigs = {
@@ -338,6 +345,10 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
   // tapping. Copy follows BRAND.md: Captain Shark, singular gender-neutral.
   onboarding_welcome_hook: {
     goal: 'retention',
+    // Pinned to the active-question arm (ים 2026-07-02): it wins on conversion
+    // in the bandit data, and post-26.6 the welcome screen is the funnel's
+    // biggest leak (74.5% pass) — no more traffic spent on the losing control.
+    pinned: 'welcome_hook_v4_active',
     variants: [
       {
         id: 'welcome_hook_v0',

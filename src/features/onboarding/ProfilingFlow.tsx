@@ -1866,6 +1866,11 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
+  // Reactive auth error. setAuthError was already called on Google failures but
+  // NOTHING rendered it, and the email-login handler used to navigate even on
+  // failure — so any error (network/500) was invisible and the user just bounced
+  // back to welcome. Subscribe here so the banner below can surface it.
+  const authError = useAuthStore((s) => s.authError);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const introRouter = useRouter();
   // Welcome-hook bandit (Yoav 2026-06-26): the welcome screen loses ~20-30% who
@@ -1887,6 +1892,15 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   const idleScale = useSharedValue(1);
   useEffect(() => {
     trackWelcomeImpression();
+    // Screen-1 view event with the arm baked in: welcome_viewed → welcome_primary_clicked
+    // is the clean per-variant pass-through funnel (the step_name='intro' completion
+    // can't be broken down by layout on its own).
+    try {
+      captureEvent('welcome_viewed', {
+        variant: welcomeVariantId,
+        layout: isActiveLayout ? 'active_question' : 'passive',
+      });
+    } catch { /* non-fatal */ }
     // The welcome screen has no explicit reject button — leaving the app without
     // tapping the CTA is the bandit's "dismiss" (failure) signal. Fire once.
     const subscription = AppState.addEventListener('change', (next) => {
@@ -2227,6 +2241,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
       <Pressable
         onPress={() => {
           try { captureEvent('login_back_chevron_clicked'); } catch { /* non-fatal */ }
+          useAuthStore.getState().clearAuthError();
           setSubStep("welcome");
         }}
         style={{ position: "absolute", top: 16, right: 16, zIndex: 10, padding: 8 }}
@@ -2246,6 +2261,12 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
         <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 24 }]}>
           <Text style={introStyles.title}>{"התחברות או הרשמה"}</Text>
         </Animated.View>
+
+        {authError ? (
+          <View style={{ width: "100%", backgroundColor: "#fef2f2", borderColor: "#fecaca", borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14 }}>
+            <Text style={{ color: "#b91c1c", fontFamily: "Heebo_500Medium", fontSize: 13, textAlign: "center" }}>{authError}</Text>
+          </View>
+        ) : null}
 
         <Animated.View style={[ctaAnimStyle, { width: "100%", gap: 10 }]}>
           {/* Apple Sign-In, required by App Store Guideline 4.8 (iOS only) */}
@@ -2354,6 +2375,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
             disabled={!isLoginValid}
             onPress={async () => {
               if (!isLoginValid) return;
+              useAuthStore.getState().clearAuthError();
               try {
                 const res = await fetch(`${getApiBase()}/api/auth/verify`, {
                   method: 'POST',
@@ -2376,9 +2398,18 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
                   // redirect guard bounces the user straight back into onboarding
                   // after sign-in. (Same fix that LoginScreen.tsx already does.)
                   useAuthStore.getState().setOnboardingCompleted(true);
+                  onLoginSuccess();
+                  return;
                 }
-              } catch { /* non-fatal — let onLoginSuccess route */ }
-              onLoginSuccess();
+                // Login failed (bad response / no profile / no token). DON'T call
+                // onLoginSuccess — it does router.replace("/"), which for a still-
+                // unauthenticated user just bounces back to welcome: an invisible
+                // loop with no feedback. Surface the error and stay on the form.
+                useAuthStore.getState().setAuthError('לא הצלחנו להתחבר. בדקו את כתובת המייל ונסו שוב.');
+              } catch {
+                // Network / server error — same rule: report, don't navigate.
+                useAuthStore.getState().setAuthError('אין חיבור לרשת כרגע. נסו שוב בעוד רגע.');
+              }
             }}
             accessibilityRole="button"
             accessibilityLabel="המשך"
@@ -2824,10 +2855,23 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
             if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
             else { slide("goal", { financialDream: v }); }
           }}
-          onBack={isGuest ? () => {
-            try { captureEvent('onboarding_dream_back_clicked'); } catch { /* non-fatal */ }
-            setStep("intro");
-          } : undefined}
+          onBack={
+            // Order matters. In redo mode `dream` is the first step and
+            // `step === "intro"` renders NOTHING (the intro branch is gated on
+            // !isRedo), so setStep("intro") here left a guest on a blank screen
+            // with no way out (QA 2026-07-02). Route: edit-from-summary → back
+            // to summary; redo → exit the redo flow; else guest → welcome.
+            returnToSummary
+              ? () => { setReturnToSummary(false); slide("profile-summary", {}); }
+              : isRedo
+                ? onRedoComplete
+                : isGuest
+                  ? () => {
+                      try { captureEvent('onboarding_dream_back_clicked'); } catch { /* non-fatal */ }
+                      setStep("intro");
+                    }
+                  : undefined
+          }
         />}
         {step === "goal" && <GoalStep
           dream={collected.financialDream}

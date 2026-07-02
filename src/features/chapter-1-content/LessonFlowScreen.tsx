@@ -118,6 +118,7 @@ import { LiveNewsQuizCard } from "../live-news/LiveNewsQuizCard";
 import { TA125WarRecoveryChart } from "../chapter-4-content/components/TA125WarRecoveryChart";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
+import { SharkLoader } from "../../components/ui/SharkLoader";
 import { useAuthStore } from "../auth/useAuthStore";
 import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { pearlConfigFor } from "../pearls/pearlConfig";
@@ -133,6 +134,7 @@ import { useSavedItemsStore } from "../saved-items/useSavedItemsStore";
 import { LifelineModal } from "../social/LifelineModal";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { captureEvent } from "../../lib/posthog";
+import { track } from "../../lib/analytics/events";
 import { PizzaIndexScreen } from "../fun/PizzaIndexScreen";
 import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
@@ -165,7 +167,7 @@ function FallbackToPhaseEffect({ run }: { run: () => void }) {
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
 import { FlashcardInfographic, FINN_MAP, INFOGRAPHIC_MAP } from "./FlashcardInfographic";
-import { useModulePrefetch, getCachedVideoPath } from "../../hooks/useModulePrefetch";
+import { useModulePrefetch, getCachedVideoPath, prefetchModuleAudio } from "../../hooks/useModulePrefetch";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
 import type { LessonContext } from "../chat/buildChatPrompt";
@@ -2266,16 +2268,34 @@ export function LessonFlowScreen() {
   // videos so useIntroAudio can read it from the file cache instead of cold-
   // downloading on mount — eliminates the silent-Finn period that drove the
   // `intro_audio_delayed` event spike.
+  // INTRO ONLY on purpose: audioReady (the intro-narration go-signal) must not
+  // wait on any other file — card audio is warmed separately below.
   const prefetchAudioUris = useMemo<readonly string[]>(() => {
     if (!mod?.introAudio?.uri) return [];
     return [mod.introAudio.uri];
+  }, [mod]);
+
+  // Warm the first flashcards' narration (topAudio) fire-and-forget — ים
+  // 2026-07-02: the shark went silent on card 1 while its MP3 cold-fetched,
+  // right after the intro on the activation path. First 4 only; the shared
+  // download pool (3 slots, dedup, FIFO behind the intro audio already queued)
+  // keeps this under the Vercel-Blob burst limit while later cards fetch as
+  // the user reads the early ones. Does NOT touch audioReady.
+  useEffect(() => {
+    (mod?.flashcards ?? []).slice(0, 4).forEach((fc) => {
+      prefetchModuleAudio(fc.topAudio?.uri);
+    });
   }, [mod]);
   const { imagesReady, audioReady } = useModulePrefetch(prefetchUris, prefetchVideoUris, prefetchAudioUris);
 
   // When the user finishes the intro, we'd like the first flashcard's image
   // already cached so they don't stare at a blank box. Block the transition
-  // until imagesReady — but cap the wait at 4s so a slow CDN never strands
-  // the user on the intro forever.
+  // until imagesReady — but cap the wait so a slow CDN never strands the user
+  // on the intro. Cap 4000→1500ms (ים 2026-07-02): this sits on the
+  // intro→cards seam of the activation path; a slightly-later image pop-in
+  // beats a long full-screen wait. SharkLoader's content_loader_shown
+  // (context 'intro_to_cards') measures the real durations + %hit_cap.
+  const POST_INTRO_CAP_MS = 1500;
   const [pendingPostIntroPhase, setPendingPostIntroPhase] = useState<FlowPhase | null>(null);
   useEffect(() => {
     if (!pendingPostIntroPhase) return;
@@ -2287,7 +2307,7 @@ export function LessonFlowScreen() {
     const t = setTimeout(() => {
       setPhase(pendingPostIntroPhase);
       setPendingPostIntroPhase(null);
-    }, 4000);
+    }, POST_INTRO_CAP_MS);
     return () => clearTimeout(t);
   }, [pendingPostIntroPhase, imagesReady]);
 
@@ -2876,6 +2896,34 @@ export function LessonFlowScreen() {
     useContinuousRunStore.getState().setActive(id);
     return () => { useContinuousRunStore.getState().clear(); };
   }, [autoFlow, id]);
+
+  // Per-chip VIEW telemetry (ים 2026-07-02): stamp the chip whose content the
+  // user actually entered. Complements the store's topic_completed so PostHog
+  // reads per-kind pass-through (topic_viewed → topic_completed) — the black
+  // box behind "~35% of lesson entrants never reach the chest" opens here.
+  // Re-entering a phase re-fires deliberately: a revisit IS a view.
+  useEffect(() => {
+    if (!mod) return;
+    const kind = TT_PHASE_TO_KIND[phase];
+    if (!kind) return;
+    const topic = resolveTopics(mod).find((t) => t.kind === kind);
+    if (!topic) return;
+    try {
+      track({
+        name: 'topic_viewed',
+        props: {
+          module_id: mod.id,
+          topic_id: topic.id,
+          topic_kind: topic.kind,
+          chapter_id: typeof chapterId === 'string' ? chapterId : undefined,
+          via: autoFlow ? 'continuous' : 'chip',
+        },
+      });
+    } catch { /* non-fatal */ }
+    // Only a real phase change (or module swap) should re-fire — autoFlow/
+    // chapterId are stable for the lesson's lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, mod]);
 
   // "למידה רציפה" per-phase progress sync (Yoav 2026-06-11). When the
   // continuous "autopilot" flow is active (ttProgress=1, no topic-tree
@@ -4738,29 +4786,16 @@ export function LessonFlowScreen() {
           </Animated.View>
         )}
 
-        {/* Loading overlay shown after the user finishes the intro but before
-            module images have finished prefetching. Capped at 4s by an effect
-            so it never blocks the user indefinitely on a slow network. */}
+        {/* Branded loading beat between intro and cards, while module images
+            finish prefetching. Capped at POST_INTRO_CAP_MS by the effect above
+            so it never blocks the user on a slow network. */}
         {pendingPostIntroPhase && (
-          <View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor: "rgba(255,255,255,0.92)",
-              zIndex: 50,
-            }}
-            pointerEvents="auto"
-          >
-            <ActivityIndicator size="large" color="#0891b2" />
-            <Text style={{ marginTop: 12, fontSize: 14, fontWeight: "700", color: "#475569", textAlign: "center", writingDirection: "rtl" }}>
-              טוענים תכנים...
-            </Text>
-          </View>
+          <SharkLoader
+            variant="overlay"
+            subtitle="קפטן שארק מכין את הכרטיסיות"
+            context="intro_to_cards"
+            capMs={POST_INTRO_CAP_MS}
+          />
         )}
 
         {/* ── Flashcards phase ── */}
@@ -4830,8 +4865,11 @@ export function LessonFlowScreen() {
           <Animated.View style={[contentStyle, { flex: 1 }]}>
             {/* Energy display — hidden for Pro (unlimited; no ∞ advertising).
                 Tappable: when empty → straight to the Pro paywall (Yoav 18/06);
-                otherwise open the refill modal (timer + ad + coins). */}
-            {!isPro && (
+                otherwise open the refill modal (timer + ad + coins).
+                Also hidden when energy is OFF for this module (mod-0-1): the
+                meter there was pure noise pointing at a paywall mid-first-quiz
+                (ים 2026-07-02, activation pass). */}
+            {!isPro && energyOn && (
             <Pressable
               onPress={() => {
                 tapHaptic();

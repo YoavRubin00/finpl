@@ -12,7 +12,9 @@ export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
   "mod-0-1": {
     moduleId: "mod-0-1",
     title: "בואו נתרגל!",
-    intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
+    // ים 2026-07-02: the set has 2 prompts (the copy said "3"), and in mod-0-1
+    // recall now sits AFTER the chest+quiz — so no "לפני הקוויז".
+    intro: "2 תרגילים מהירים לחיזוק. נוודא שהמושגים יושבים.",
     prompts: [
       {
         type: "fill-blank",

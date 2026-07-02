@@ -15,18 +15,23 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { FINN_HAPPY, SHARK_CALL_TALKING, FINN_DANCING } from '../retention-loops/finnMascotConfig';
-import { heavyHaptic } from '../../utils/haptics';
+import { heavyHaptic, tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
+import { captureEvent } from '../../lib/posthog';
 
 const { width: SW } = Dimensions.get('window');
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const STAGE_W = SW - 48;
 
-const PHASE_DURATIONS: [number, number, number] = [5000, 6000, Infinity];
+// ים 2026-07-02: was 5000/6000 — 11s of forced waiting before the first
+// interaction, on the ACTIVATION-critical first lesson. Now 5.5s total and
+// every beat is tap-to-advance (the timer is just the ceiling for passive
+// watchers). Brawl Stars rule: the user should be acting, not watching.
+const PHASE_DURATIONS: [number, number, number] = [3000, 2500, Infinity];
 const PHASE_CAPTIONS: [string, string, string] = [
   'פעם היינו מחליפים תרנגולות בלחם. קצת קשה לקנות ככה אוזניות, נכון? 🎧',
   'אז בני האדם המציאו את הכסף, נייר, מטבע, מספרים במסך. הכל מבוסס על אמון. 🤝',
-  'גרור את המטבע לקופה כדי להתחיל! 💰',
+  'לוחצים על המטבע ומתחילים! 💰',
 ];
 
 interface Props {
@@ -135,20 +140,57 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
       }
     });
 
+  // ים 2026-07-02: a plain TAP on the coin starts the lesson too — the drag
+  // stays as a bonus, but the first lesson no longer gates on discovering a
+  // drag affordance. The coin still flies into the bag so the payoff reads.
+  const tapGesture = Gesture.Tap().onEnd(() => {
+    if (dropped.value) return;
+    dropped.value = true;
+    coinY.value = withSpring(-150, { damping: 20, stiffness: 180 });
+    runOnJS(handleDrop)();
+  });
+  const coinGesture = Gesture.Exclusive(panGesture, tapGesture);
+
+  // Tap-to-advance for the two scripted beats (phase 0/1) — converts the
+  // forced wait into user pacing without removing the passive auto-advance.
+  const advancePhase = useCallback(() => {
+    tapHaptic();
+    setPhase((p) => (p === 0 ? 1 : 2));
+  }, []);
+
   return (
     <View style={{ flex: 1 }}>
-      {/* Skip button */}
+      {/* Skip button — a real pill, not a whisper (ים 2026-07-02: the old
+          13px #94a3b8 text was invisible on the activation-critical intro). */}
       <Pressable
-        onPress={onStart}
+        onPress={() => {
+          try { captureEvent('skip_intro_clicked', { source: 'lesson_intro_what_is_money' }); } catch { /* non-fatal */ }
+          onStart();
+        }}
         accessibilityLabel="דלג על ההקדמה"
         accessibilityRole="button"
-        hitSlop={16}
-        style={{ position: 'absolute', top: 0, right: 0, padding: 10, zIndex: 10 }}
+        hitSlop={12}
+        style={{ position: 'absolute', top: 4, right: 4, zIndex: 10 }}
       >
-        <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: '600' }}>דלג ›</Text>
+        <View style={{
+          backgroundColor: 'rgba(255,255,255,0.92)',
+          borderRadius: 999,
+          borderWidth: 1.5,
+          borderColor: '#cbd5e1',
+          paddingVertical: 7,
+          paddingHorizontal: 14,
+        }}>
+          <Text style={{ color: '#475569', fontSize: 14, fontWeight: '800' }}>דלג ›</Text>
+        </View>
       </Pressable>
 
-      <View style={{ flex: 1, justifyContent: 'space-evenly', alignItems: 'center', paddingHorizontal: 16 }}>
+      <Pressable
+        onPress={advancePhase}
+        disabled={phase >= 2}
+        accessible={phase < 2}
+        accessibilityLabel={phase < 2 ? 'המשך לשלב הבא של ההקדמה' : undefined}
+        style={{ flex: 1, justifyContent: 'space-evenly', alignItems: 'center', paddingHorizontal: 16 }}
+      >
 
         {/* ── Finn cross-fade cluster ────────────────────────────────────── */}
         <View style={{ width: 120, height: 120 }}>
@@ -231,13 +273,13 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
                 <Text style={[RTL, { color: '#64748b', fontSize: 11, fontWeight: '600', marginTop: -4 }]}>שחרר כאן</Text>
               </View>
 
-              {/* Draggable coin */}
-              <GestureDetector gesture={panGesture}>
+              {/* Coin — tap OR drag both start the lesson */}
+              <GestureDetector gesture={coinGesture}>
                 <Animated.View
                   style={[coinStyle, { position: 'absolute', bottom: 10 }]}
-                  accessibilityLabel="מטבע, גרור למעלה לקופה"
+                  accessibilityLabel="מטבע, לחיצה מתחילה את השיעור"
                   accessibilityRole="button"
-                  accessibilityHint="גרור כלפי מעלה"
+                  accessibilityHint="אפשר גם לגרור כלפי מעלה לקופה"
                 >
                   <LottieView
                     source={require('../../../assets/lottie/wired-flat-291-coin-dollar-hover-pinch.json')}
@@ -270,7 +312,7 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
             {PHASE_CAPTIONS[phase]}
           </Text>
         </Animated.View>
-      </View>
+      </Pressable>
     </View>
   );
 }

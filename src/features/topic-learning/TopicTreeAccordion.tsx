@@ -21,7 +21,7 @@ import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import type { Module } from '../chapter-1-content/types';
 import type { Topic, ChestRarity } from './types';
-import { CHEST_RARITY_BONUS, chestThresholdFor } from './types';
+import { CHEST_RARITY_BONUS, chipsToChestFor } from './types';
 import { resolveTopics } from './topicResolver';
 import { getModuleTool, buildToolTopic } from './moduleToolMap';
 import { getModuleCarousel, buildCarouselTopic } from './moduleCarouselMap';
@@ -161,11 +161,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   );
 
   // Chips still needed to open the chest — drives the SharkChipCallout
-  // proximity copy. Read the per-module threshold (0.75 default / 0.5 for
-  // mod-0-1) the same way the store does; never hardcode it.
+  // proximity copy. MUST go through chipsToChestFor (not raw ceil(total*pct)):
+  // it carries both the chat-outside clamp and the explicit per-module chip
+  // override (mod-0-1 = 3), exactly like the store's chest gate.
   const chestRemaining = Math.max(
     0,
-    Math.ceil(summary.total * chestThresholdFor(module.id)) - summary.completed,
+    chipsToChestFor(module.id, summary.total) - summary.completed,
   );
   // "First chest" framing must reflect REALITY, not the module id — it used to
   // fire for every user in mod-0-1/mod-0-2 even if they'd already opened chests
@@ -770,7 +771,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           coins={chestState?.coins ?? MODULE_TT_COINS}
           energy={chestState?.energy ?? CHEST_ENERGY_REWARD}
           isFinale={chestState?.isFinale ?? false}
-          thresholdPct={Math.round(chestThresholdFor(module.id) * 100)}
+          // Honest percent for "סיימת X% מהשיעור": derive from the actual chip
+          // gate (carries the mod-0-1 3-chip override), not the raw threshold.
+          thresholdPct={Math.round((chipsToChestFor(module.id, Math.max(1, summary.total)) / Math.max(1, summary.total)) * 100)}
           rarity={chestState?.rarity ?? 'common'}
           onContinueModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }

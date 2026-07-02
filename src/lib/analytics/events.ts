@@ -82,6 +82,11 @@ export type AppEvent =
   //   'chip'       — user tapped the chip directly and ran that single phase
   //   'continuous' — phase was crossed inside a "למידה רציפה" autopilot run
   | { name: 'topic_chip_tapped'; props: { module_id: string; topic_id: string; topic_kind: string; chapter_id?: string; recommended?: boolean } }
+  // Fired when a chip's CONTENT actually renders (lesson phase entered) — the
+  // missing "viewed" half of the per-chip funnel (ים 2026-07-02). Reading
+  // topic_viewed → topic_completed per topic_kind exposes exactly WHICH chip
+  // loses the ~35% of lesson-entrants who never reach the chest.
+  | { name: 'topic_viewed'; props: { module_id: string; topic_id: string; topic_kind: string; chapter_id?: string; via?: 'chip' | 'continuous' } }
   | { name: 'topic_completed'; props: { module_id: string; topic_id: string; topic_kind: string; chapter_id?: string; via?: 'chip' | 'continuous' } }
   // "למידה רציפה" — the autopilot/master-style flow runs the whole module
   // as one linear lesson, stamping each phase into useTopicProgressStore as

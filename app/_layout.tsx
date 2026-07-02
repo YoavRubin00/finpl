@@ -316,8 +316,21 @@ function RootLayoutInner() {
   // rejects ad-supported apps that load AdMob without prompting (Guideline 5.1.2).
   // The user's choice (granted/denied/restricted) flows into AdMob's RequestConfiguration
   // automatically via the SDK's IDFA reads. We just need to ask before init.
+  //
+  // Deferred until AFTER onboarding (ים 2026-07-02): the ATT dialog used to pop
+  // at root mount — on top of the welcome screen, the funnel's most fragile
+  // moment (74.5% pass post-26.6). Existing users (flag already true) still get
+  // the exact old behavior: init on first mount. New users get ATT + the ads/FB
+  // SDKs only when hasCompletedOnboarding flips, i.e. entering mod-0-1. Ads are
+  // not needed earlier (rewarded ads / ad-bonus are all post-onboarding
+  // surfaces). Tradeoff, deliberate: FB install-attribution now only logs users
+  // who finish onboarding.
+  const adsInitRanRef = useRef(false);
+  const hasOnboardedForAds = useAuthStore((s) => s.hasCompletedOnboarding);
   useEffect(() => {
     if (Platform.OS === "web") return;
+    if (!hasOnboardedForAds || adsInitRanRef.current) return;
+    adsInitRanRef.current = true;
     (async () => {
       let attGranted = false;
       if (Platform.OS === "ios") {
@@ -361,7 +374,7 @@ function RootLayoutInner() {
           .catch(() => {});
       } catch { /* SDK not available in dev without native build */ }
     })();
-  }, []);
+  }, [hasOnboardedForAds]);
 
   // ── RevenueCat init ──
   useEffect(() => {
@@ -598,6 +611,13 @@ function RootLayoutInner() {
       // R7 — dedicated full-screen game route reached from the `game`
       // topic chip; mirror reasoning to topic-chat above.
       "topic-game",
+      // Deep-link + post-purchase targets the redirect guard below was
+      // bouncing to /(tabs): `quest` is the daily-dilemma push/email CTA
+      // target (the P4 retention loop — sent 29.6, was dead on arrival);
+      // `pro-welcome` is the post-purchase screen (also carries the returnTo
+      // back to the lesson); plus the daily-challenge deep link, the support
+      // screen, and the live shark-voice screen.
+      "quest", "pro-welcome", "daily-challenge", "support", "shark-voice",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

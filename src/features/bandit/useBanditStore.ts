@@ -46,6 +46,12 @@ export const useBanditStore = create<BanditState>()(
         const exp = get().experiments[experimentId];
         if (!exp || exp.variants.length === 0) return '';
 
+        // Config-level pin wins over sampling (see ExperimentConfig.pinned).
+        const pinned = EXPERIMENT_CONFIGS[experimentId]?.pinned;
+        if (pinned && exp.variants.some((v) => v.id === pinned)) {
+          return pinned;
+        }
+
         // Activation threshold (Yoav 2026-05-31): until EVERY variant has at
         // least WARMUP_IMPRESSIONS exposures, sample uniformly. Below this
         // floor the prior Beta(1,1) is essentially flat — a single early

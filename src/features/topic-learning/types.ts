@@ -157,10 +157,23 @@ export function chestThresholdFor(moduleId: string): number {
   return moduleId.startsWith('mod-0') ? TOPIC_COMPLETION_THRESHOLD : 0.9;
 }
 
+/** Explicit per-module CHIP-COUNT override for the chest gate — wins over the
+ *  percentage math. mod-0-1 = 3 (ים 2026-07-02): post-26.6 the first lesson is
+ *  the activation lever (63.5% enter→chest); one row of chips to the first
+ *  chest = intro → cards → quiz → 🎁. The quiz-pin in topicResolver derives
+ *  from the same number, so "בואו נתרגל" (recall, the leakiest chip) slides to
+ *  AFTER the chest with no extra ordering code. Rollback = delete the entry
+ *  (criterion: daily lesson→chest < 60% for 3 days). */
+export const MODULE_CHIPS_TO_CHEST: Record<string, number> = {
+  'mod-0-1': 3,
+};
+
 /** Number of completed chips that opens the chest. Clamped to `total - 1` so the
  *  LAST chip (always `chat`) stays OUTSIDE the chest (Yoav 2026-06-27: "רק הצ'אט
  *  מחוץ לתיבה"). Single source of truth — used by the resolver's quiz-move, the
  *  accordion's isModuleDone, and the LessonFlowScreen auto-flow seam. */
 export function chipsToChestFor(moduleId: string, total: number): number {
+  const explicit = MODULE_CHIPS_TO_CHEST[moduleId];
+  if (explicit != null) return Math.min(explicit, Math.max(1, total - 1));
   return Math.min(Math.ceil(chestThresholdFor(moduleId) * total), Math.max(1, total - 1));
 }
