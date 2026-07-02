@@ -235,7 +235,8 @@ export const useFantasyStore = create<FantasyStore>()(
         if (!currentEntry) return;
 
         const updatedPicks = currentEntry.picks.map((pick): DraftPick => {
-          const returnPct = simulateWeeklyReturn(pick.ticker, currentEntry.weekId);
+          const { getLiveWeeklyReturn } = require('./useLiveReturnsStore');
+          const returnPct = getLiveWeeklyReturn(pick.ticker) ?? simulateWeeklyReturn(pick.ticker, currentEntry.weekId);
           const finalPrice = pick.entryPrice * (1 + returnPct / 100);
           return { ...pick, finalPrice, returnPercent: returnPct };
         });

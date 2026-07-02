@@ -15,6 +15,7 @@ import {
   simulateWeeklyReturn,
   TIER_CONFIGS,
 } from '../fantasyData';
+import { useLiveReturnsStore } from '../useLiveReturnsStore';
 import {
   F2Header,
   F2Ambient,
@@ -215,16 +216,23 @@ export function FantasyLobbyScreen(): React.ReactElement {
     return () => clearInterval(id);
   }, []);
 
-  // Per-pick live returns simulated from ticker + week + tick bucket
+  // Real weekly returns from Yahoo when available; the deterministic
+  // simulation keeps the league alive offline. Refresh rides the minute tick.
+  const realReturns = useLiveReturnsStore((s) => s.returns);
+  useEffect(() => {
+    const tickers = STOCK_CATEGORIES.flatMap((cat) => cat.stocks.map((s) => s.ticker));
+    void useLiveReturnsStore.getState().refresh(tickers);
+  }, [tick]);
+
   const liveReturns = useMemo(() => {
     if (!currentEntry) return {} as Record<string, number>;
     const weekKey = currentEntry.weekId + String(Math.floor(tick / 5));
     const result: Record<string, number> = {};
     currentEntry.picks.forEach((pick) => {
-      result[pick.ticker] = simulateWeeklyReturn(pick.ticker, weekKey);
+      result[pick.ticker] = realReturns[pick.ticker] ?? simulateWeeklyReturn(pick.ticker, weekKey);
     });
     return result;
-  }, [currentEntry, tick]);
+  }, [currentEntry, tick, realReturns]);
 
   // Effective return — allocation-weighted with ×2 leverage on captain pick
   const { avgReturn, effReturn } = useMemo(() => {
