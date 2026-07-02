@@ -119,6 +119,7 @@ import { TA125WarRecoveryChart } from "../chapter-4-content/components/TA125WarR
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { SharkLoader } from "../../components/ui/SharkLoader";
+import { PopModal } from "../../components/ui/PopModal";
 import { useAuthStore } from "../auth/useAuthStore";
 import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { pearlConfigFor } from "../pearls/pearlConfig";
@@ -5397,8 +5398,7 @@ export function LessonFlowScreen() {
 
       {/* Ad bonus, double coins by watching ad (non-PRO only) */}
       {showAdBonus && !isProForAds && adLoaded && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => setShowAdBonus(false)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(8, 20, 40, 0.75)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }}>
+        <PopModal visible onRequestClose={() => setShowAdBonus(false)} backdropColor="rgba(8, 20, 40, 0.75)">
             <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(56,189,248,0.15)" }}>
               <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>
@@ -5432,112 +5432,13 @@ export function LessonFlowScreen() {
                 <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>דלג</Text>
               </Pressable>
             </View>
-          </View>
-        </Modal>
+        </PopModal>
       )}
 
-      {/* Full-screen chest reward takeover */}
-      {/* Blue chest modal removed, chest opens in-place */}
-      <Modal visible={false} transparent={false} animationType="fade" statusBarTranslucent accessibilityViewIsModal>
-        <Pressable
-          style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-          accessibilityRole="button"
-          accessibilityLabel="סגור"
-          onPress={() => {
-            setChestFullScreen(false);
-            setChestClaimed(true);
-            // Trigger flying rewards AFTER modal closes so they're visible
-            const rewards = chestRewards;
-            if (rewards) {
-              safeTimeout(() => {
-                if (rewards.xp > 0) setFlyingXp(rewards.xp);
-                if (rewards.coins > 0) setFlyingCoins(rewards.coins);
-              }, 300);
-            }
-            // After coins land: show DoN (if triggered) or wisdom
-            if (shouldTriggerDoNRef.current) {
-              shouldTriggerDoNRef.current = false;
-              safeTimeout(() => {
-                setShowDoubleOrNothing(true);
-                playSound('modal_open_4');
-              }, 1500);
-            } else if (!isLastModule) {
-              safeTimeout(() => {
-                useWisdomStore.getState().showRandomWisdom();
-                setShowWisdom(true);
-              }, 1800);
-            }
-          }}
-        >
-          {/* Blue gradient background */}
-          <LinearGradient
-            colors={['#1e3a5f', '#1e5a8a', '#1e3a5f']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          {/* Diamond overlay pattern (like shop) */}
-          {/* PERF TODO: 14×8 = 112 absolute Views rebuilt every render — extract to a memoized/static decorative component (e.g. a single pre-rendered background) instead of mapping 112 Views inline. */}
-          <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
-            {Array.from({ length: 14 }).map((_, row) =>
-              Array.from({ length: 8 }).map((_, col) => (
-                <View
-                  key={`d-${row}-${col}`}
-                  style={{
-                    position: 'absolute',
-                    width: 44,
-                    height: 44,
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.06)',
-                    transform: [{ rotate: '45deg' }],
-                    top: row * 52 - 10,
-                    left: col * 52 + (row % 2 === 0 ? 0 : 26) - 10,
-                  }}
-                />
-              ))
-            )}
-          </View>
-          <View style={{ width: 280, height: 280, overflow: "hidden", zIndex: 2 }}>
-            <LottieView
-              source={require("../../../assets/lottie/3D Treasure Box.json")}
-              style={{ width: 280, height: 280 }}
-              autoPlay
-              loop={false}
-            />
-          </View>
-          {chestRewards && (
-            <Animated.View entering={FadeInDown.delay(700).springify()} style={{ flexDirection: 'row', gap: 16, marginTop: 28, zIndex: 2 }}>
-              <View style={{ alignItems: 'center', backgroundColor: 'rgba(212,160,23,0.22)', borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(250,204,21,0.3)' }}>
-                <LottieView source={require("../../../assets/lottie/wired-flat-291-coin-dollar-hover-pinch.json")} style={{ width: 36, height: 36, marginBottom: 4 }} autoPlay loop />
-                <Text style={{ fontSize: 22, fontWeight: '900', color: '#facc15' }}>+{chestRewards.coins}</Text>
-                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                  <GoldCoinIcon size={14} />
-                  <Text style={{ fontSize: 12, color: '#fde68a' }}>מטבעות</Text>
-                </View>
-              </View>
-              {chestRewards.xp > 0 && (
-                <View style={{ alignItems: 'center', backgroundColor: 'rgba(14,165,233,0.18)', borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(56,189,248,0.3)' }}>
-                  <LottieView source={require("../../../assets/lottie/wired-flat-2431-number-5-hover-pinch.json")} style={{ width: 36, height: 36, marginBottom: 4 }} autoPlay loop />
-                  <Text style={{ fontSize: 22, fontWeight: '900', color: '#38bdf8' }}>+{chestRewards.xp}</Text>
-                  <Text style={{ fontSize: 12, color: '#7dd3fc', marginTop: 2 }}>XP</Text>
-                </View>
-              )}
-              {chestRewards.gems > 0 && (
-                <View style={{ alignItems: 'center', backgroundColor: 'rgba(59,130,246,0.22)', borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(96,165,250,0.3)' }}>
-                  <LottieView source={require("../../../assets/lottie/Diamond.json")} style={{ width: 36, height: 36, marginBottom: 4 }} autoPlay loop />
-                  <Text style={{ fontSize: 22, fontWeight: '900', color: '#60a5fa' }}>+{chestRewards.gems}</Text>
-                  <Text style={{ fontSize: 12, color: '#93c5fd', marginTop: 2 }}>💎</Text>
-                </View>
-              )}
-            </Animated.View>
-          )}
-          <Animated.Text
-            entering={FadeInDown.delay(1200)}
-            style={{ color: 'rgba(255,255,255,0.5)', marginTop: 44, fontSize: 14, zIndex: 2 }}
-          >
-            לחץ בכל מקום לסגור
-          </Animated.Text>
-        </Pressable>
-      </Modal>
+      {/* Full-screen "blue chest" takeover DELETED (ים 2026-07-02): it had been
+          dead since the chest moved in-place (<Modal visible={false}> hardcoded),
+          but its ~112-View diamond JSX was still re-created on every render of
+          this screen. The in-place chest render is untouched. */}
 
       {/* Energy-loss animation is now global (EnergyAnimationProvider) — fired
           by the useHeart() store signal, no local overlay needed. */}
@@ -5743,8 +5644,7 @@ export function LessonFlowScreen() {
       <SharkChipCallout seq={complimentSeq} remaining={99} isFirstChest={false} message={complimentMsg ?? undefined} />
 
       {/* Energy intro — one-shot at mod-0-1b's first chip (first encounter with energy). */}
-      <Modal visible={showEnergyIntro} transparent animationType="fade" onRequestClose={dismissEnergyIntro}>
-        <View style={{ flex: 1, backgroundColor: "rgba(15, 23, 42, 0.45)", justifyContent: "center", alignItems: "center", paddingHorizontal: 22 }}>
+      <PopModal visible={showEnergyIntro} onRequestClose={dismissEnergyIntro} backdropColor="rgba(15, 23, 42, 0.45)">
           <View style={{ backgroundColor: "#f7fbff", borderRadius: 28, paddingVertical: 20, paddingHorizontal: 12, width: "100%", maxWidth: 360, alignItems: "center", borderWidth: 2, borderColor: "#ddd6fe", shadowColor: "#a855f7", shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 14 }}>
             {/* The real, live energy band — Captain Shark + the bar — copied from the
                 learn map (EnergyStationCard). Renders null for Pro (infinite energy). */}
@@ -5766,8 +5666,7 @@ export function LessonFlowScreen() {
               <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff" }}>המשך</Text>
             </Pressable>
           </View>
-        </View>
-      </Modal>
+      </PopModal>
 
       {/* Exit interception modal, Duolingo-style */}
       {showExitConfirm && (() => {
@@ -5787,8 +5686,7 @@ export function LessonFlowScreen() {
         const minutesLeft = fractionDone < 1 / 3 ? 3 : fractionDone < 2 / 3 ? 2 : 1;
         const minutesWord = minutesLeft === 1 ? "עוד דקה" : `עוד ${minutesLeft} דקות`;
         return (
-        <Modal visible transparent animationType="fade" onRequestClose={() => setShowExitConfirm(false)}>
-          <View style={{ flex: 1, backgroundColor: "rgba(8, 20, 40, 0.75)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }}>
+        <PopModal visible onRequestClose={() => setShowExitConfirm(false)} backdropColor="rgba(8, 20, 40, 0.75)">
             <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(56,189,248,0.15)" }}>
               <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 90, height: 90, marginBottom: 16 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>
@@ -5814,8 +5712,7 @@ export function LessonFlowScreen() {
                 <Text style={{ fontSize: 14, fontWeight: "700", color: "#ef4444" }}>צא</Text>
               </Pressable>
             </View>
-          </View>
-        </Modal>
+        </PopModal>
         );
       })()}
 
@@ -5991,22 +5888,21 @@ export function LessonFlowScreen() {
 
       {/* Registration nudge for guests after mod-0-3/4/5 (fires from goToNextSequentialModule) */}
       {showRegisterNudge && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => {
-          try { captureEvent('register_cta_dismissed', { module_id: id, source: 'lesson', trigger: 'system_back' }); } catch { /* non-fatal */ }
-          setShowRegisterNudge(false);
-          navigateToNextModuleNormally();
-        }}>
-          <Pressable
-            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
-            onPress={() => {
-              try { captureEvent('register_cta_dismissed', { module_id: id, source: 'lesson', trigger: 'backdrop' }); } catch { /* non-fatal */ }
-              setShowRegisterNudge(false);
-              navigateToNextModuleNormally();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="סגור"
-          >
-            <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}} accessible={false}>
+        <PopModal
+          visible
+          backdropColor="rgba(0,0,0,0.6)"
+          onRequestClose={() => {
+            try { captureEvent('register_cta_dismissed', { module_id: id, source: 'lesson', trigger: 'system_back' }); } catch { /* non-fatal */ }
+            setShowRegisterNudge(false);
+            navigateToNextModuleNormally();
+          }}
+          onBackdropPress={() => {
+            try { captureEvent('register_cta_dismissed', { module_id: id, source: 'lesson', trigger: 'backdrop' }); } catch { /* non-fatal */ }
+            setShowRegisterNudge(false);
+            navigateToNextModuleNormally();
+          }}
+        >
+            <View style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }}>
               <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
                 כבר למדנו ביחד 💪
@@ -6044,9 +5940,8 @@ export function LessonFlowScreen() {
               >
                 <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>המשך</Text>
               </Pressable>
-            </Pressable>
-          </Pressable>
-        </Modal>
+            </View>
+        </PopModal>
       )}
 
       {/* Pizza Index, one-time modal after mod-2-12 summary */}
