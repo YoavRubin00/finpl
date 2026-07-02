@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { Dices, TrendingUp } from 'lucide-react-native';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  FadeInDown,
+  FadeIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+  useReducedMotion,
+  interpolate,
+} from 'react-native-reanimated';
 
 import { tapHaptic, successHaptic, errorHaptic } from '../../../utils/haptics';
 import { useEconomy, useSpendCoins } from '../../economy/useEconomy';
@@ -31,6 +42,7 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
   const { data: economyData } = useEconomy();
   const coins = economyData?.coins ?? 0;
   const spendCoins = useSpendCoins();
+  const reduced = useReducedMotion();
 
   const [open, setOpen] = useState(false);
   const [stakeText, setStakeText] = useState<string>('100');
@@ -61,6 +73,24 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, question.id]);
+
+  // Premium CTA shimmer (matches PremiumFantasyButton), respecting reduced motion.
+  const shimmer = useSharedValue(0);
+  useEffect(() => {
+    if (reduced) {
+      shimmer.value = 0;
+      return;
+    }
+    shimmer.value = withRepeat(
+      withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [reduced, shimmer]);
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(shimmer.value, [0, 0.5, 1], [0, 0.5, 0]),
+    transform: [{ translateX: interpolate(shimmer.value, [0, 1], [-90, 90]) }],
+  }));
 
   if (!selectedChoiceId && !placed) return null;
 
@@ -137,11 +167,40 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
           setOpen(true);
         }}
         accessibilityRole="button"
-        accessibilityLabel="הימור מטבעות על התשובה"
-        style={styles.openChip}
+        accessibilityLabel="שימו מטבעות על התוצאה — השער נקבע בזמן אמת"
+        hitSlop={6}
+        style={({ pressed }) => [styles.ctaOuter, { opacity: pressed ? 0.92 : 1 }]}
       >
-        <Dices size={14} color="#7c3aed" strokeWidth={2.4} />
-        <Text style={styles.openChipText}>רוצים לשים מטבעות על זה? השער נקבע בזמן אמת</Text>
+        <LinearGradient
+          colors={['#a78bfa', '#7c3aed', '#6d28d9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.ctaGradient}
+        >
+          <Animated.View pointerEvents="none" style={[styles.ctaShimmer, shimmerStyle]}>
+            <LinearGradient
+              colors={['transparent', 'rgba(255,255,255,0.8)', 'transparent']}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+
+          <View style={styles.ctaRow}>
+            <View style={styles.ctaIconWrap}>
+              <Dices size={22} color="#ffffff" strokeWidth={2.6} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.ctaTitle} maxFontSizeMultiplier={1.15} numberOfLines={1}>
+                שימו מטבעות על התוצאה
+              </Text>
+              <Text style={styles.ctaSub} maxFontSizeMultiplier={1.15} numberOfLines={1}>
+                השער נקבע בזמן אמת לפי הקהל
+              </Text>
+            </View>
+            <GoldCoinIcon size={22} />
+          </View>
+        </LinearGradient>
       </Pressable>
     );
   }
@@ -209,14 +268,25 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
         </View>
       </View>
 
-      {/* Live odds line */}
-      {selectedOdds !== null && potential !== null ? (
-        <View style={styles.oddsRow}>
-          <TrendingUp size={14} color="#15803d" strokeWidth={2.4} />
-          <Text style={styles.oddsText} numberOfLines={2} maxFontSizeMultiplier={1.15}>
-            שער חי: פי {selectedOdds} · רווח פוטנציאלי {potential.toLocaleString('he-IL')}
-          </Text>
-          <GoldCoinIcon size={13} />
+      {/* Live payout at the real, server-locked odds */}
+      {selectedOdds !== null ? (
+        <View style={styles.payoutCard}>
+          <View style={styles.payoutTopRow}>
+            <Text style={styles.payoutLabel} maxFontSizeMultiplier={1.15}>רווח פוטנציאלי</Text>
+            <View style={styles.payoutOddsPill}>
+              <TrendingUp size={13} color="#15803d" strokeWidth={2.6} />
+              <Text style={styles.payoutOddsText} maxFontSizeMultiplier={1.15}>שער חי · פי {selectedOdds}</Text>
+            </View>
+          </View>
+          <View style={styles.payoutValueRow}>
+            <Text style={styles.payoutBig} maxFontSizeMultiplier={1.15}>
+              {potential !== null ? potential.toLocaleString('he-IL') : '—'}
+            </Text>
+            <GoldCoinIcon size={18} />
+            <Text style={styles.payoutUnit} maxFontSizeMultiplier={1.15} numberOfLines={1}>
+              מטבעות אם צדקתם
+            </Text>
+          </View>
         </View>
       ) : (
         !loading && (
@@ -256,24 +326,60 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
 }
 
 const styles = StyleSheet.create({
-  openChip: {
+  ctaOuter: {
+    borderRadius: 16,
+    shadowColor: '#7c3aed',
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 8,
+  },
+  ctaGradient: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#c4b5fd',
+  },
+  ctaShimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 100,
+  },
+  ctaRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#f5f3ff',
-    borderWidth: 1,
-    borderColor: '#ddd6fe',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    gap: 12,
+    minHeight: 30,
   },
-  openChipText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#7c3aed',
+  ctaIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  ctaTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#ffffff',
     writingDirection: 'rtl',
     textAlign: 'right',
+    letterSpacing: -0.2,
+  },
+  ctaSub: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.9)',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    marginTop: 2,
+    flexShrink: 1,
   },
   panel: {
     backgroundColor: '#f5f3ff',
@@ -395,16 +501,59 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     padding: 0,
   },
-  oddsRow: {
+  payoutCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#bbf7d0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  payoutTopRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  payoutLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#15803d',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  payoutOddsPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  payoutOddsText: {
+    fontSize: 11.5,
+    fontWeight: '900',
+    color: '#15803d',
+    fontVariant: ['tabular-nums'],
+  },
+  payoutValueRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
   },
-  oddsText: {
-    flex: 1,
-    fontSize: 12,
+  payoutBig: {
+    fontSize: 22,
     fontWeight: '900',
     color: '#15803d',
+    fontVariant: ['tabular-nums'],
+  },
+  payoutUnit: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#166534',
     writingDirection: 'rtl',
     textAlign: 'right',
     flexShrink: 1,
