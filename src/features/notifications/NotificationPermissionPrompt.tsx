@@ -141,11 +141,13 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
             </View>
 
             <Animated.View entering={FadeIn.delay(180).duration(360)}>
+              {/* Copy = Yoav verbatim (2026-07-02): persistence framing over
+                  chest-FOMO — "growth comes from showing up, not from once". */}
               <Text style={[styles.title, RTL_CENTER]} allowFontScaling={false}>
-                התיבה של מחר כבר שמורה לכם
+                צמיחה אמיתית מגיעה מהתמדה
               </Text>
               <Text style={[styles.subtitle, RTL_CENTER]} allowFontScaling={false}>
-                מתי להזכיר? תזכורת אחת ביום, 2 דקות והרצף חי.{'\n'}בלי ספאם — מילה של קפטן.
+                לא מפעם אחת. אשרו לי להזכיר לכם לשחק —{'\n'}2 דקות ביום, בשעה שתבחרו. בלי ספאם.
               </Text>
             </Animated.View>
 
@@ -177,11 +179,11 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
                 onPress={handleAllow}
                 style={[styles.cta, styles.ctaPrimary]}
                 accessibilityRole="button"
-                accessibilityLabel="קבעו לי תזכורת"
+                accessibilityLabel="תזכירו לי לשחק"
               >
                 <Bell size={22} color="#ffffff" strokeWidth={2.4} />
                 <Text style={[styles.ctaText, RTL]} allowFontScaling={false}>
-                  קבעו לי תזכורת
+                  תזכירו לי לשחק
                 </Text>
               </Pressable>
               <Pressable
