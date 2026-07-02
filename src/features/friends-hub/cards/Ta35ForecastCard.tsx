@@ -13,13 +13,10 @@ import type { LiveMarketData, RateItem } from "../../live-news/liveMarketTypes";
 interface ForecastBracket {
   id: string;
   label: string;
-  /** Seed vote percentage shown in the distribution bar. */
-  seedPercent: number;
   accentColor: string;
 }
 
 const BRACKET_COLORS = ["#dc2626", "#ea580c", "#facc15", "#10b981", "#0891b2"] as const;
-const SEED_PERCENTS = [9, 20, 40, 24, 7] as const;
 
 /** Round an index level to a "clean" 5-point grid for readable bracket edges. */
 function roundTo5(n: number): number {
@@ -47,21 +44,24 @@ function buildBrackets(level: number): ForecastBracket[] {
   return labels.map((label, i) => ({
     id: `b${i + 1}`,
     label,
-    seedPercent: SEED_PERCENTS[i],
     accentColor: BRACKET_COLORS[i],
   }));
 }
 
 // Fallback when the live API is unreachable — roughly current index territory.
 const FALLBACK_LEVEL = 2100;
-const MAJORITY_ID = "b3"; // center bracket carries the 40% seed majority
+// "No big move" center bracket — the statistical prior for a weekly index
+// move, used only for the internal herd-bias streak (never displayed).
+const MAJORITY_ID = "b3";
 
-/** Hours left until Friday's TASE close (~14:30 IL; Mon-Fri trading week). */
-function hoursToFridayClose(now: Date = new Date()): number {
+/** Hours left until Thursday's TASE close (~17:25 IL). The Tel-Aviv stock
+ *  exchange trades Sunday-Thursday, so the WEEKLY close is Thursday — not
+ *  Friday like the US market (Yoav 2026-07-02). */
+function hoursToThursdayClose(now: Date = new Date()): number {
   const d = new Date(now);
-  const daysUntilFri = (5 - d.getDay() + 7) % 7;
-  d.setDate(d.getDate() + daysUntilFri);
-  d.setHours(14, 30, 0, 0);
+  const daysUntilThu = (4 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + daysUntilThu);
+  d.setHours(17, 25, 0, 0);
   if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 7);
   return Math.max(1, Math.round((d.getTime() - now.getTime()) / 3_600_000));
 }
@@ -96,7 +96,7 @@ export function Ta35ForecastCard(): React.ReactElement {
 
   const level = liveTa35?.numericValue ?? FALLBACK_LEVEL;
   const BRACKETS = useMemo(() => buildBrackets(level), [level]);
-  const hoursToClose = useMemo(() => hoursToFridayClose(), []);
+  const hoursToClose = useMemo(() => hoursToThursdayClose(), []);
 
   // If the user already voted from the crowd-wisdom screen, surface the choice here.
   const effectiveSelectedId = previousVote?.choiceId ?? selectedId;
@@ -134,7 +134,7 @@ export function Ta35ForecastCard(): React.ReactElement {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>תחזית ת״א 35 השבועית</Text>
-            <Text style={styles.headerSubtitle}>איפה המדד ייסגר ביום ו׳?</Text>
+            <Text style={styles.headerSubtitle}>איפה המדד ייסגר ביום ה׳?</Text>
           </View>
           <View style={styles.clockChip}>
             <Clock size={11} color="#ffffff" strokeWidth={2.4} />
@@ -191,21 +191,6 @@ export function Ta35ForecastCard(): React.ReactElement {
                   ]}
                 />
                 <Text style={styles.bracketLabel}>{bracket.label}</Text>
-
-                {effectiveSubmitted ? (
-                  <View style={styles.bracketBarTrack}>
-                    <View
-                      style={[
-                        styles.bracketBarFill,
-                        {
-                          width: `${bracket.seedPercent}%`,
-                          backgroundColor: bracket.accentColor,
-                        },
-                      ]}
-                    />
-                    <Text style={styles.bracketBarPct}>{bracket.seedPercent}%</Text>
-                  </View>
-                ) : null}
               </Pressable>
             );
           })}
@@ -239,7 +224,7 @@ export function Ta35ForecastCard(): React.ReactElement {
           <Animated.View entering={FadeIn.duration(280)} style={styles.successBanner}>
             <Text style={styles.successTitle}>נשמרה התחזית שלכם</Text>
             <Text style={styles.successBody}>
-              נסגר ביום ו׳ עם פרסום מחיר הסגירה. 10% החוזים הקרובים מקבלים גולדן.
+              התוצאה נסגרת ביום ה׳ עם שער הסגירה של הבורסה בת״א.
             </Text>
           </Animated.View>
         )}
