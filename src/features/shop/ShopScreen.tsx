@@ -297,6 +297,13 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
   );
 }
 
+// Stable empty-array reference for the ownedAvatars selector below. A `?? []`
+// fallback inside the selector returns a fresh array on every store snapshot,
+// which under Zustand v5's useSyncExternalStore trips "getSnapshot should be
+// cached" → infinite re-render loop (same class as the 23.6 daily-challenge
+// boot crash). Returning this frozen constant keeps the reference stable.
+const EMPTY_AVATARS: readonly string[] = [];
+
 // ── ShopScreen ───────────────────────────────────────────────────────────────
 export function ShopScreen() {
   const isFocused = useIsFocused();
@@ -314,7 +321,7 @@ export function ShopScreen() {
   const restoreAllHearts = useHeartsStore((s) => s.restoreAllHearts);
   const isPro = useIsPro();
   const avatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
-  const ownedAvatars = useAuthStore((s) => s.profile?.ownedAvatars ?? []);
+  const ownedAvatars = useAuthStore((s) => s.profile?.ownedAvatars ?? EMPTY_AVATARS);
   const setAvatar = useAuthStore((s) => s.setAvatar);
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
   const displayName = useAuthStore((s) => s.displayName);

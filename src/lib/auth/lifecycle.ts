@@ -113,7 +113,13 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
   await tokenStore.set(token);
 
   configureRevenueCat(profile.id);
-  await loginRevenueCat(profile.id).then(
+
+  // RevenueCat login is a native round-trip independent of the server prefetch,
+  // so run them concurrently instead of serially — this serial chain was the
+  // single largest blocker on sign-in / cold boot. Backfill must finish before
+  // prefetchAll (so the prefetch reads migrated data), so it stays sequenced
+  // with prefetch on its own branch.
+  const rcLogin = loginRevenueCat(profile.id).then(
     (customerInfo) => {
       const hasEntitlements = customerInfo
         ? Object.keys(customerInfo.entitlements.active).length > 0
@@ -125,17 +131,19 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
     },
   );
 
-  if (!(await backfillFlag.isDone())) {
-    try {
-      await runBackfillV1();
-      await backfillFlag.markDone();
-    } catch (e) {
-      if (__DEV__) console.warn('[backfill] failed:', e);
+  const serverHydrate = (async () => {
+    if (!(await backfillFlag.isDone())) {
+      try {
+        await runBackfillV1();
+        await backfillFlag.markDone();
+      } catch (e) {
+        if (__DEV__) console.warn('[backfill] failed:', e);
+      }
     }
-  }
+    await prefetchAll();
+  })();
 
-  await prefetchAll();
-  await syncRevenueCatToServer();
+  await Promise.all([rcLogin, serverHydrate]);
 
   useAuthStore.getState().signIn({
     userId: profile.id,
@@ -180,6 +188,14 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
   if (wasGuest && method !== 'email') {
     captureEvent('guest_converted_to_user', { method });
   }
+
+  // Push the device's RevenueCat entitlement state to the server, then let the
+  // subscription query refetch. Fire-and-forget AFTER prefetch so its invalidate
+  // can't race the prefetch's getSubscription, and so a slow native RC read never
+  // blocks the first render. (Web has no RC SDK — syncRevenueCatToServer no-ops.)
+  void syncRevenueCatToServer().catch((err: unknown) => {
+    captureEvent('rc_server_sync_failed', { reason: err instanceof Error ? err.message : String(err) });
+  });
 }
 
 // In-flight guard: prefetchAll's 6 parallel 401s used to fan out to 6 concurrent
@@ -306,7 +322,12 @@ export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
   if (!profile) return { isAuthenticated: false };
 
   configureRevenueCat(profile.id);
-  await loginRevenueCat(profile.id).then(
+
+  // RevenueCat login is a native round-trip independent of the server prefetch,
+  // so run them concurrently instead of serially (same optimization as
+  // signInWithProfile). Backfill stays sequenced before prefetchAll so the
+  // prefetch reads migrated data.
+  const rcLogin = loginRevenueCat(profile.id).then(
     (customerInfo) => {
       const hasEntitlements = customerInfo
         ? Object.keys(customerInfo.entitlements.active).length > 0
@@ -318,17 +339,19 @@ export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
     },
   );
 
-  if (!(await backfillFlag.isDone())) {
-    try {
-      await runBackfillV1();
-      await backfillFlag.markDone();
-    } catch (e) {
-      if (__DEV__) console.warn('[backfill] failed at boot:', e);
+  const serverHydrate = (async () => {
+    if (!(await backfillFlag.isDone())) {
+      try {
+        await runBackfillV1();
+        await backfillFlag.markDone();
+      } catch (e) {
+        if (__DEV__) console.warn('[backfill] failed at boot:', e);
+      }
     }
-  }
+    await prefetchAll();
+  })();
 
-  await prefetchAll();
-  await syncRevenueCatToServer();
+  await Promise.all([rcLogin, serverHydrate]);
 
   useAuthStore.getState().signIn({
     userId: profile.id,
@@ -349,6 +372,14 @@ export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
     auth_method: 'token-restore',
     is_pro: cachedSubscription?.isPro === true,
     is_guest: false,
+  });
+
+  // Push the device's RevenueCat entitlement state to the server, then let the
+  // subscription query refetch. Fire-and-forget AFTER prefetch so its invalidate
+  // can't race the prefetch's getSubscription, and so a slow native RC read never
+  // blocks the first render. (Web has no RC SDK — syncRevenueCatToServer no-ops.)
+  void syncRevenueCatToServer().catch((err: unknown) => {
+    captureEvent('rc_server_sync_failed', { reason: err instanceof Error ? err.message : String(err) });
   });
 
   return { isAuthenticated: true };

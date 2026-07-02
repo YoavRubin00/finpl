@@ -3,7 +3,8 @@ import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
-import { Anchor, Coins, Shield } from 'lucide-react-native';
+import { Anchor, Shield } from 'lucide-react-native';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { FINN_HELLO } from './finnMascotConfig';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
 
@@ -92,7 +93,7 @@ export function ComebackRewardModal({
             {/* Gift bullets — coins + streak freeze */}
             <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(240).duration(360)} style={styles.giftWrap}>
               <View style={styles.giftRow}>
-                <Coins size={22} color="#b45309" strokeWidth={2.6} />
+                <GoldCoinIcon size={22} />
                 <Text style={[styles.giftText, RTL]} allowFontScaling={false}>
                   {`+${COMEBACK_COINS} מטבעות`}
                 </Text>

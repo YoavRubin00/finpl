@@ -471,6 +471,93 @@ const pickerStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
+/*  MessageBubble — one chat row, memoized                            */
+/* ------------------------------------------------------------------ */
+
+// Extracted from an inline `renderMessage` closure and wrapped in React.memo so
+// that typing in the composer (setInput fires per keystroke → ChatScreen
+// re-renders) no longer re-renders every settled bubble + its ExpoImage avatar.
+// Settled messages keep referential identity (status updates return the same `m`
+// for non-matching rows; content is committed once and never mutated), so the
+// default shallow prop compare skips them — only the streaming bubble, whose
+// isStreaming/networkDone flip, re-renders.
+const MessageBubble = React.memo(function MessageBubble({
+  msg,
+  isPro,
+  isStreaming,
+  networkDone,
+  onRevealEnd,
+  onUpgradePress,
+}: {
+  msg: ChatMessage;
+  isPro: boolean;
+  isStreaming: boolean;
+  networkDone: boolean;
+  onRevealEnd: () => void;
+  onUpgradePress: () => void;
+}) {
+  const isBot = msg.role === "assistant";
+  return (
+    <View style={[msgStyles.messageRow, isBot ? msgStyles.messageRowBot : msgStyles.messageRowUser]}>
+      {isBot && (
+        <View style={msgStyles.avatarCircle}>
+          <ExpoImage
+            source={FINN_STANDARD}
+            style={{ width: 22, height: 22 }}
+            contentFit="contain"
+            accessible={false}
+          />
+        </View>
+      )}
+      <View
+        style={[
+          msgStyles.bubble,
+          isBot ? msgStyles.botBubble : msgStyles.userBubble,
+          !isBot && isPro && { borderColor: "#fde68a" },
+        ]}
+      >
+        {/* While the reply is streaming, render it with the Gemini-style reveal
+            (full text laid out once + sliding fade — no bubble-height animation).
+            Once done it hands off to a plain, fully-visible Text. */}
+        {isBot && isStreaming ? (
+          <StreamingBotText
+            content={msg.content}
+            textStyle={[msgStyles.botText, msgStyles.rtlText]}
+            networkDone={networkDone}
+            onRevealEnd={onRevealEnd}
+          />
+        ) : isBot ? (
+          // Settled bot reply — render the light markdown the model produced.
+          <MarkdownText content={msg.content} baseStyle={[msgStyles.botText, msgStyles.rtlText]} />
+        ) : (
+          <Text style={[msgStyles.userText, msgStyles.rtlText]}>
+            {/* RLI (U+2067) ... PDI (U+2069): strong RTL bidi isolate so
+                neutral chars (/, ", ,, .) don't drift around. */}
+            {"⁧" + msg.content + "⁩"}
+          </Text>
+        )}
+        {msg.kind === "upgrade_prompt" && (
+          <Pressable
+            onPress={onUpgradePress}
+            accessibilityRole="button"
+            accessibilityLabel="שדרג לפרו"
+            style={msgStyles.upgradeCta}
+          >
+            <Text style={msgStyles.upgradeCtaText}>שדרג לפרו 💎</Text>
+          </Pressable>
+        )}
+        {/* Timestamp + Read Receipt row */}
+        <View style={msgStyles.metaRow}>
+          {!isBot && isPro && <ProBadge size="sm" />}
+          {!isBot && <ReadReceipt status={msg.status} />}
+          <Text style={msgStyles.timestamp}>{formatTime(msg.timestamp)}</Text>
+        </View>
+      </View>
+    </View>
+  );
+});
+
+/* ------------------------------------------------------------------ */
 /*  ChatScreen, WhatsApp-style                                        */
 /* ------------------------------------------------------------------ */
 
@@ -948,70 +1035,23 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     if (messages[i].role === "user") { anchorIdx = i; break; }
   }
 
-  const renderMessage = (msg: ChatMessage, index: number) => {
-    const isBot = msg.role === "assistant";
-    return (
-      <View
-        key={index}
-        style={[msgStyles.messageRow, isBot ? msgStyles.messageRowBot : msgStyles.messageRowUser]}
-      >
-        {isBot && (
-          <View style={msgStyles.avatarCircle}>
-            <ExpoImage
-              source={FINN_STANDARD}
-              style={{ width: 22, height: 22 }}
-              contentFit="contain"
-              accessible={false}
-            />
-          </View>
-        )}
-        <View
-          style={[
-            msgStyles.bubble,
-            isBot ? msgStyles.botBubble : msgStyles.userBubble,
-            !isBot && isPro && { borderColor: "#fde68a" },
-          ]}
-        >
-          {/* While the reply is streaming, render it with the Gemini-style
-              reveal (full text laid out once + sliding fade \u2014 no bubble-height
-              animation). Once done it hands off to a plain, fully-visible Text. */}
-          {isBot && msg.timestamp === streamingTs ? (
-            <StreamingBotText
-              content={msg.content}
-              textStyle={[msgStyles.botText, msgStyles.rtlText]}
-              networkDone={streamDoneTs === msg.timestamp}
-              onRevealEnd={handleRevealEnd}
-            />
-          ) : isBot ? (
-            // Settled bot reply \u2014 render the light markdown the model produced.
-            <MarkdownText content={msg.content} baseStyle={[msgStyles.botText, msgStyles.rtlText]} />
-          ) : (
-            <Text style={[msgStyles.userText, msgStyles.rtlText]}>
-              {/* RLI (U+2067) ... PDI (U+2069): strong RTL bidi isolate so
-                  neutral chars (/, ", ,, .) don't drift around. */}
-              {"\u2067" + msg.content + "\u2069"}
-            </Text>
-          )}
-          {msg.kind === "upgrade_prompt" && (
-            <Pressable
-              onPress={() => router.push("/pricing" as never)}
-              accessibilityRole="button"
-              accessibilityLabel="שדרג לפרו"
-              style={msgStyles.upgradeCta}
-            >
-              <Text style={msgStyles.upgradeCtaText}>שדרג לפרו 💎</Text>
-            </Pressable>
-          )}
-          {/* Timestamp + Read Receipt row */}
-          <View style={msgStyles.metaRow}>
-            {!isBot && isPro && <ProBadge size="sm" />}
-            {!isBot && <ReadReceipt status={msg.status} />}
-            <Text style={msgStyles.timestamp}>{formatTime(msg.timestamp)}</Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
+  const handleUpgradePress = useCallback(() => router.push("/pricing" as never), [router]);
+
+  // Thin wrapper over the memoized MessageBubble. Index keys are safe here: the
+  // message list is append-only (never reordered/inserted), so each row keeps a
+  // stable key and React reuses its instance, letting the memo's shallow compare
+  // skip settled rows on every keystroke.
+  const renderMessage = (msg: ChatMessage, index: number) => (
+    <MessageBubble
+      key={index}
+      msg={msg}
+      isPro={isPro}
+      isStreaming={msg.role === "assistant" && msg.timestamp === streamingTs}
+      networkDone={streamDoneTs === msg.timestamp}
+      onRevealEnd={handleRevealEnd}
+      onUpgradePress={handleUpgradePress}
+    />
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
