@@ -609,6 +609,9 @@ function RootLayoutInner() {
       // guard below bounces the user back to /(tabs) before the screen
       // can paint (Yoav: "בפועל הוא לא מצוביל לצאט").
       "topic-chat",
+      // Friends-page social suite (ported from feature/flag) — the friends
+      // tab's sub-screens live outside (tabs) and need the same allowance.
+      "trade-rooms", "crowd-wisdom", "friends-list", "anon-advice",
       // R7 — dedicated full-screen game route reached from the `game`
       // topic chip; mirror reasoning to topic-chat above.
       "topic-game",
