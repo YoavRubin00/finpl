@@ -17,8 +17,12 @@ import type { ToolKey } from '../toolsRegistry';
 import type { ToolTutorialStep } from '../data/toolTutorials';
 
 interface Props {
-  toolKey: ToolKey;
+  /** Tool hosts: marks `hasSeenToolTutorial[toolKey]` on close. */
+  toolKey?: ToolKey;
   steps: ToolTutorialStep[];
+  /** Non-tool hosts (e.g. the friends hub) persist their own seen-flag here.
+   *  Receives whether the user finished all steps (false = X-dismissed). */
+  onSeen?: (completed: boolean) => void;
 }
 
 // Static glow — pulsing animation removed (אודרי restraint: with the dot row
@@ -42,7 +46,7 @@ function FinnPulse() {
  * dots, RTL) — kept intentionally consistent so users recognize the
  * "tutorial moment" without re-learning the UI.
  */
-export function ToolTutorialOverlay({ toolKey, steps }: Props): React.ReactElement | null {
+export function ToolTutorialOverlay({ toolKey, steps, onSeen }: Props): React.ReactElement | null {
   const markSeen = useTutorialStore((s) => s.markToolTutorialSeen);
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
@@ -77,10 +81,14 @@ export function ToolTutorialOverlay({ toolKey, steps }: Props): React.ReactEleme
     };
   }, [stepAudioUrl, visible]);
 
-  const close = useCallback(() => {
-    setVisible(false);
-    markSeen(toolKey);
-  }, [markSeen, toolKey]);
+  const close = useCallback(
+    (completed: boolean) => {
+      setVisible(false);
+      if (toolKey) markSeen(toolKey);
+      onSeen?.(completed);
+    },
+    [markSeen, toolKey, onSeen],
+  );
 
   const handleNext = useCallback(() => {
     try {
@@ -94,7 +102,7 @@ export function ToolTutorialOverlay({ toolKey, steps }: Props): React.ReactEleme
       } catch {
         /* ignore */
       }
-      close();
+      close(true);
       return;
     }
     setStep((s) => s + 1);
@@ -107,7 +115,7 @@ export function ToolTutorialOverlay({ toolKey, steps }: Props): React.ReactEleme
     } catch {
       /* ignore */
     }
-    close();
+    close(false);
   }, [close]);
 
   if (!visible || !stepConfig) return null;

@@ -29,6 +29,10 @@ interface TutorialState {
   hasSeenIndicesOnlyNudge: boolean;
   /** Per-tool first-visit guard for the in-tool Captain Shark tutorial overlay. */
   hasSeenToolTutorial: Partial<Record<ToolKey, boolean>>;
+  /** First-visit guard for the friends-hub Captain Shark tour (fantasy,
+   *  crowd wisdom, anon advice, portfolio share…). Set on finish OR skip so
+   *  the user is never interrupted twice. Yoav 2026-07-02. */
+  hasSeenFriendsHubIntro: boolean;
   /** Per-module guard for the end-of-module signup gate (guests, mod-0-2+).
    *  Shown once per module after the chest sequence. Yoav 2026-06-15. */
   moduleEndGateShown: Record<string, boolean>;
@@ -113,6 +117,7 @@ interface TutorialState {
   markAssetUnlockIntroSeen: () => void;
   markIndicesOnlyNudgeSeen: () => void;
   markToolTutorialSeen: (toolKey: ToolKey) => void;
+  markFriendsHubIntroSeen: () => void;
   markModuleEndGateShown: (moduleId: string) => void;
   markMod05BridgeCTASeen: () => void;
   markPearlTooltipSeen: () => void;
@@ -152,6 +157,7 @@ export const useTutorialStore = create<TutorialState>()(
       hasSeenAssetUnlockIntro: false,
       hasSeenIndicesOnlyNudge: false,
       hasSeenToolTutorial: {},
+      hasSeenFriendsHubIntro: false,
       moduleEndGateShown: {},
       hasSeenMod05BridgeCTA: false,
       hasUsedFreeSharkCall: false,
@@ -183,6 +189,7 @@ export const useTutorialStore = create<TutorialState>()(
       markAssetUnlockIntroSeen: () => set({ hasSeenAssetUnlockIntro: true }),
       markIndicesOnlyNudgeSeen: () => set({ hasSeenIndicesOnlyNudge: true }),
       markToolTutorialSeen: (toolKey: ToolKey) => set((s) => ({ hasSeenToolTutorial: { ...s.hasSeenToolTutorial, [toolKey]: true } })),
+      markFriendsHubIntroSeen: () => set({ hasSeenFriendsHubIntro: true }),
       markModuleEndGateShown: (moduleId: string) => set((s) => ({ moduleEndGateShown: { ...s.moduleEndGateShown, [moduleId]: true } })),
       markMod05BridgeCTASeen: () => set({ hasSeenMod05BridgeCTA: true }),
       markFreeSharkCallUsed: () => set({ hasUsedFreeSharkCall: true }),
@@ -201,7 +208,7 @@ export const useTutorialStore = create<TutorialState>()(
       markRated: () => set({ ratePromptHandled: true }),
       markNotifPromptShown: () => set({ notifPromptShown: true }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenFriendsHubIntro: false, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",

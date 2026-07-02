@@ -18,6 +18,7 @@ import { Ta35ForecastCard } from './cards/Ta35ForecastCard';
 import { PremiumFantasyButton } from './components/PremiumFantasyButton';
 import { PortfolioShareCard } from './components/PortfolioShareCard';
 import { TradeRoomsCard } from './components/TradeRoomsCard';
+import { FriendsHubTutorialMount } from './components/FriendsHubTutorialMount';
 import { FANTASY_ACTIVE_FRIENDS } from '../fantasy-league/fantasyData';
 
 // ─── Facebook-feed palette (light, social-first) ─────────────────────
@@ -266,6 +267,10 @@ export function FriendsHubScreen(): React.ReactElement {
           <PortfolioShareCard />
         </StaggeredEntry>
       </ScrollView>
+
+      {/* First-visit Captain Shark tour — absolute overlay, must be a
+          sibling of the ScrollView so it anchors to the full screen. */}
+      <FriendsHubTutorialMount />
     </SafeAreaView>
   );
 }
