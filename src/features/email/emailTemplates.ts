@@ -287,6 +287,13 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/** Hebrew grammar for a streak count: 1→'יום אחד', 2→'יומיים', else 'N ימים'. */
+function streakLabel(n: number): string {
+  if (n === 1) return 'יום אחד';
+  if (n === 2) return 'יומיים';
+  return `${n} ימים`;
+}
+
 let _welcomeTemplateCache: string | null = null;
 function loadWelcomeTemplate(): string {
   if (_welcomeTemplateCache !== null) return _welcomeTemplateCache;
@@ -361,7 +368,8 @@ export type RetentionVariantId =
   | 'shark_sad_v1'
   | 'shark_streak_v1'
   | 'shark_minimal_v1'
-  | 'shark_welcome_v1';
+  | 'shark_welcome_v1'
+  | 'shark_roast_v1';
 
 interface RetentionVariantCopy {
   subject: string;
@@ -439,6 +447,21 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     ctaText: 'כן, בואו נחזור ☀️',
     cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-welcome.png',
   },
+
+  // V6 — ROAST / streak-shame (Duolingo "longest streak" burn, Bar/CMO 2026-07-03)
+  // Uses {{longestStreakLabel}} — the user's HISTORICAL best (userProfiles.longest_streak),
+  // NOT the live streak — so the burn is factually true. The guilt-trip tone is
+  // an explicit product choice (Yoav), see the kept broken-streak copy.
+  shark_roast_v1: {
+    subject: 'פרסומת | {{longestStreakLabel}}. זה השיא שלך, {{name}}?',
+    headline: 'הרצף הכי ארוך שלך: {{longestStreakLabel}}',
+    bodyHtml: `<p style="margin:0 0 14px;">וזהו. נגמר שם. יש פה בעיות מחויבות רציניות.</p>
+      <p style="margin:0;">מי שבר לך ככה את הלב? יאללה — נתחיל רצף חדש, הפעם ברצינות.</p>`,
+    sharkImg: SHARK_STANDARD,
+    sharkAlt: 'קפטן שארק מאוכזב',
+    ctaText: 'יאללה, שיא חדש ←',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-roast.png',
+  },
 };
 
 export const RETENTION_VARIANT_IDS: readonly RetentionVariantId[] = Object.keys(
@@ -466,6 +489,10 @@ export function buildRetentionEmailHtml(params: {
   variantId: RetentionVariantId;
   name: string;
   streak: number;
+  /** Historical best streak (userProfiles.longest_streak). Powers the
+   *  {{longestStreakLabel}} roast copy so the burn is factually true. Falls
+   *  back to `streak` when omitted (e.g. preview scripts). */
+  longestStreak?: number;
   ctaUrl: string;
   unsubscribeUrl: string;
   /** Absolute URL of the open-tracking pixel (/api/email/track-open?u=..&v=..).
@@ -477,9 +504,16 @@ export function buildRetentionEmailHtml(params: {
 
   const safeName = escapeHtml(params.name);
   const safeStreak = String(params.streak);
+  const longest = params.longestStreak ?? params.streak;
+  const safeLongest = String(longest);
+  const longestLabel = streakLabel(longest);
 
   const interpolate = (s: string): string =>
-    s.split('{{name}}').join(safeName).split('{{streak}}').join(safeStreak);
+    s
+      .split('{{name}}').join(safeName)
+      .split('{{streak}}').join(safeStreak)
+      .split('{{longestStreak}}').join(safeLongest)
+      .split('{{longestStreakLabel}}').join(longestLabel);
 
   const subject = interpolate(v.subject);
 
@@ -491,6 +525,8 @@ export function buildRetentionEmailHtml(params: {
     .split('{{subject}}').join(escapeHtml(subject))
     .split('{{name}}').join(safeName)
     .split('{{streak}}').join(safeStreak)
+    .split('{{longestStreak}}').join(safeLongest)
+    .split('{{longestStreakLabel}}').join(escapeHtml(longestLabel))
     .split('{{headline}}').join(escapeHtml(interpolate(v.headline)))
     .split('{{bodyHtml}}').join(interpolate(v.bodyHtml))
     .split('{{sharkImg}}').join(v.sharkImg)
