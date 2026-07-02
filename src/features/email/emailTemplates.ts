@@ -464,9 +464,16 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
   },
 };
 
-export const RETENTION_VARIANT_IDS: readonly RetentionVariantId[] = Object.keys(
-  RETENTION_VARIANTS,
-) as RetentionVariantId[];
+// shark_roast_v1 is fully defined, wired, and image-ready — but HELD OUT of the
+// live A/B rotation until Yoav approves the send (2026-07-03). It reached master
+// via the other session's WIP consolidation, which would otherwise arm it in the
+// 06:00-UTC email cron before anyone reviewed the rendered roast. TO SHIP: delete
+// this held list (and the .filter below) so Object.keys includes it again.
+const HELD_RETENTION_VARIANTS: readonly RetentionVariantId[] = ['shark_roast_v1'];
+
+export const RETENTION_VARIANT_IDS: readonly RetentionVariantId[] = (
+  Object.keys(RETENTION_VARIANTS) as RetentionVariantId[]
+).filter((id) => !HELD_RETENTION_VARIANTS.includes(id));
 
 let _retentionTemplateCache: string | null = null;
 function loadRetentionTemplate(): string {
