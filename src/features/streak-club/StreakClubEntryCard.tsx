@@ -21,9 +21,9 @@ import { SCENE_URI } from "./loungeConfig";
 /**
  * מועדון הרצף — באדג'-הכניסה על מפת-הלמידה. יושב בשורת-הבאדג'ים מתחת
  * לכוכבי-האתגרים של השארק (ליד המונדיאל/חדשות), באותו דפוס בדיוק.
- * שני מצבים (פסיקת ים 30.6): streak=1 → teaser נעול ("עוד יום אחד");
- * streak>1 → חבר: זהב פועם + נקודת-"חדש" כשיש דרופ שלא נצפה היום.
- * ההורה מגדר נראות (streak>=1 בלבד; אורחים לא רואים כלום).
+ * חבר מלא כבר מיום-1 (streak>=1, יואב 2.7): זהב פועם + נקודת-"חדש"
+ * כשיש דרופ שלא נצפה היום. ההורה מגדר נראות (streak>=1 בלבד;
+ * אורחים/streak=0 לא רואים כלום). מצב-נעול נשאר דורמנטי (streak<1).
  */
 export function StreakClubEntryCard({
   streak,
@@ -36,7 +36,7 @@ export function StreakClubEntryCard({
 }): React.ReactElement {
   const { playSound } = useSoundEffect();
   const reduceMotion = useReducedMotion();
-  const locked = streak <= 1;
+  const locked = streak < 1; // יום-1 פותח את הטרקלין המלא (יואב 2.7)
   const isNew = !locked && hasUnseenToday;
 
   // prefetch של סצנת-הטרקלין ברגע שהבאדג' נראה — הכניסה מרגישה מיידית

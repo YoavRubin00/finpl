@@ -42,9 +42,9 @@ import { TableDeck } from "./TableDeck";
  * חדר-חברים תת-ימי: סצנת Higgsfield (עם fallback גרדיאנט פרימיום עד
  * שהנכס חי — התמונה נשענת על שכבת-הרקע, כך שכשל-טעינה לעולם לא נראה
  * שבור), שארק מארח, ו-3 שולחנות-hotspot. לחיצה על שולחן = זום קולנועי
- * (useLoungeCamera) והדרופ היומי נפתח כפאנל מעל הסצנה. מצב-נעול
- * (streak=1, פסיקת ים 30.6): מציצים פנימה מעומעם + "עוד יום אחד" —
- * pre-commitment, לא עונש.
+ * (useLoungeCamera) והדרופ היומי נפתח כפאנל מעל הסצנה. הטרקלין המלא
+ * נפתח כבר מיום-1 (streak>=1, יואב 2.7 — ערך מוקדם = משיכה חזקה יותר
+ * לחזור). מצב-נעול נשמר דורמנטי ל-streak=0 בלבד (לא מגיע — ההורה מסנן).
  */
 type LoungeView = "lounge" | TableId;
 
@@ -172,7 +172,7 @@ export function StreakLoungeSheet({
   const reducedMotion = useReducedMotion();
   const { playSound } = useSoundEffect();
 
-  const locked = streak <= 1; // teaser-mode (streak=1); streak>1 = חבר מלא
+  const locked = streak < 1; // יום-1 (streak>=1) = חבר מלא (יואב 2.7); streak=0 (אורח) לא מגיע לכאן — ההורה מסנן
   const dateKey = todayIsraelDate();
 
   const recordVisit = useStreakClubStore((s) => s.recordVisit);

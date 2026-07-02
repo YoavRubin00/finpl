@@ -1616,8 +1616,9 @@ export function DuoLearnScreen() {
     localCompletedModuleIds.length > 0 &&
     localDateISO() >= MONDIAL_LAUNCH_DATE &&
     !mondialOpenedAt;
-  // מועדון הרצף — באדג' באותה שורה: streak>=1 בלבד (teaser נעול ב-1, חבר
-  // מ-2; אורחים מקבלים streak=0 מה-query המדולג → מוסתר). פסיקת ים 30.6.
+  // מועדון הרצף — באדג' באותה שורה: streak>=1 = חבר מלא כבר מיום-1 (יואב
+  // 2.7 — ערך מוקדם > loss-aversion של דלת נעולה). אורחים מקבלים streak=0
+  // מה-query המדולג → מוסתר לגמרי. (שינוי מפסיקת-ים המקורית: teaser ב-1.)
   const [clubSheetVisible, setClubSheetVisible] = useState(false);
   const clubHasUnseen = useStreakClubStore((s) => s.hasUnseenToday());
   // ⚠️⚠️ DEV-ONLY זמני (יואב 2.7, בדיקת הטרקלין בווב): רצף-5 מדומה לשער-
@@ -2767,9 +2768,31 @@ export function DuoLearnScreen() {
       {/* ⚠️⚠️ DEV-ONLY זמני (יואב 2.7): כפתור-מועדון צף לבדיקה מקומית —
           עוקף את מיקום שורת-הבאדג'ים. להסיר לפני OTA! ⚠️⚠️ */}
       {__DEV__ && (
-        <View style={{ position: "absolute", top: 96, left: 12, zIndex: 60 }}>
-          <StreakClubEntryCard streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
-        </View>
+        <Pressable
+          testID="club-dev-pill"
+          onPress={handleStreakClubPress}
+          style={{
+            position: "absolute",
+            bottom: 110,
+            alignSelf: "center",
+            zIndex: 999,
+            elevation: 30,
+            backgroundColor: "#0e3a5c",
+            borderColor: "#fbbf24",
+            borderWidth: 2,
+            borderRadius: 999,
+            paddingHorizontal: 24,
+            paddingVertical: 14,
+            shadowColor: "#000",
+            shadowOpacity: 0.4,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 6 },
+          }}
+        >
+          <Text style={{ color: "#fbbf24", fontSize: 17, fontWeight: "900", writingDirection: "rtl" }} allowFontScaling={false}>
+            🛋️ הטרקלין — בדיקה
+          </Text>
+        </Pressable>
       )}
       {/* Swipe quest modal. Hosts whichever of the 3 rotating swipe-games is
           assigned to today (see dailySwipeKind above). finishSwipeQuest is
