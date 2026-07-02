@@ -90,7 +90,8 @@ export function FinnCue({ variant, text, size = 'sm', tone = 'blue' }: Props): R
         />
       </View>
       <Text
-        numberOfLines={1}
+        numberOfLines={2}
+        maxFontSizeMultiplier={1.3}
         style={{
           flex: 1,
           fontSize: 12,

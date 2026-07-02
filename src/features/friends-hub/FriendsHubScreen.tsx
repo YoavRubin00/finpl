@@ -17,6 +17,7 @@ import { PortfolioShareCard } from './components/PortfolioShareCard';
 import { TradeRoomsCard } from './components/TradeRoomsCard';
 import { FriendsListButton } from './components/FriendsListButton';
 import { FriendsHubTutorialMount } from './components/FriendsHubTutorialMount';
+import { WeeklyCommunityStrip } from './components/WeeklyCommunityStrip';
 
 // ─── Facebook-feed palette (light, social-first) ─────────────────────
 const FEED_BG = '#f3f4f6';
@@ -161,6 +162,11 @@ export function FriendsHubScreen(): React.ReactElement {
           <FriendsListButton />
           <PremiumFantasyButton variant="compact" />
         </View>
+
+        <FeedDivider />
+
+        {/* ─── "השבוע שלכם בקהילה" — real self-only weekly summary (A5) ─── */}
+        <WeeklyCommunityStrip />
 
         <FeedDivider />
 
