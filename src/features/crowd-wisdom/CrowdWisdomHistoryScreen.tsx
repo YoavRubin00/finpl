@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 
+import { useShallow } from "zustand/react/shallow";
 import {
   useCrowdWisdomStore,
   selectMonthlyAccuracy,
@@ -19,7 +20,10 @@ export function CrowdWisdomHistoryScreen(): React.ReactElement {
   const router = useRouter();
   const votes = useCrowdWisdomStore((s) => s.votes);
   const outcomes = useCrowdWisdomStore((s) => s.outcomes);
-  const accuracyInfo = useCrowdWisdomStore(selectMonthlyAccuracy);
+  // Fresh-object selector — useShallow prevents the zustand v5 render loop.
+  const accuracyInfo = useCrowdWisdomStore(useShallow(selectMonthlyAccuracy));
+  const streak = useCrowdWisdomStore((s) => s.streak);
+  const totalVotes = useCrowdWisdomStore((s) => s.totalVotes);
 
   // Build history rows from the persisted vote map.
   const historyEntries = useMemo<HistoryEntry[]>(() => {
@@ -76,6 +80,8 @@ export function CrowdWisdomHistoryScreen(): React.ReactElement {
         <AccuracyHeroCard
           accuracy={accuracyInfo.accuracy}
           resolvedCount={accuracyInfo.resolvedCount}
+          streak={streak}
+          totalVotes={totalVotes}
         />
 
         <Text style={styles.sectionTitle}>הצבעות אחרונות</Text>

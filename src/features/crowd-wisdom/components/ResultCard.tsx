@@ -110,11 +110,11 @@ export function ResultCard({ snapshot, closesInHours }: ResultCardProps) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.verdictTitle}>
-            {userIsWithCrowd ? "אתה עם ההמון" : "אתה נגד הזרם"}
+            {userIsWithCrowd ? "הצבעתם עם ההמון" : "הצבעתם נגד הזרם"}
           </Text>
           <Text style={styles.verdictSubtitle}>
             {userIsWithCrowd
-              ? `הצטרפת לרוב של ${majorityPercent}% מהמשקיעים`
+              ? `הצטרפתם לרוב של ${majorityPercent}% מהמשקיעים`
               : `רוב המשקיעים (${majorityPercent}%) חשבו אחרת`}
           </Text>
         </View>
@@ -126,11 +126,35 @@ export function ResultCard({ snapshot, closesInHours }: ResultCardProps) {
           )}
         </View>
       </Animated.View>
+
+      {/* Captain Shark on herd bias — the crowd is a signal, not proof */}
+      <Animated.View entering={FadeInDown.delay(420).duration(360)} style={styles.sharkNote}>
+        <Text style={styles.sharkNoteText}>
+          {userIsWithCrowd
+            ? "קפטן שארק: ההמון צודק לא מעט — אבל נוטה לאופטימיות יתר. רוב גדול זה סנטימנט, לא הוכחה."
+            : "קפטן שארק: לשחות נגד הזרם דורש אומץ — החזאים הכי טובים יודעים מתי ההמון מתלהב מדי."}
+        </Text>
+      </Animated.View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  sharkNote: {
+    backgroundColor: "#eff8ff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  sharkNoteText: {
+    fontSize: 12,
+    color: "#075985",
+    lineHeight: 17,
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 22,

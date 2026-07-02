@@ -8,15 +8,42 @@ interface AccuracyHeroCardProps {
   accuracy: number;
   /** Total resolved votes used to compute the ratio. */
   resolvedCount: number;
+  /** Current with-crowd streak — feeds the forecaster score. */
+  streak?: number;
+  /** Lifetime votes — feeds the forecaster score. */
+  totalVotes?: number;
+}
+
+/**
+ * Forecaster Score: rewards being right CONSISTENTLY, not one lucky call —
+ * accuracy carries the weight, streak and participation top it up.
+ */
+function computeForecasterScore(accuracy: number, resolvedCount: number, streak: number, totalVotes: number): number {
+  const accuracyPoints = Math.round(accuracy * 100) * Math.min(1, resolvedCount / 5);
+  const streakPoints = Math.min(streak * 4, 40);
+  const volumePoints = Math.min(totalVotes, 30);
+  return Math.round(accuracyPoints + streakPoints + volumePoints);
+}
+
+function forecasterTitle(score: number): string {
+  if (score >= 120) return "כריש-על חזאי";
+  if (score >= 80) return "כריש צעיר";
+  if (score >= 40) return "דולפין מחושב";
+  return "דג סקרן";
 }
 
 /**
  * Purple gradient hero card at the top of CrowdWisdomHistoryScreen.
- * Shows the user's monthly prediction accuracy as a huge percentage with a
- * brain emoji and a "מתוך X הצבעות" subtitle.
+ * Shows the user's Forecaster Score (ציון חזאי) + monthly accuracy.
  */
-export function AccuracyHeroCard({ accuracy, resolvedCount }: AccuracyHeroCardProps) {
+export function AccuracyHeroCard({
+  accuracy,
+  resolvedCount,
+  streak = 0,
+  totalVotes = 0,
+}: AccuracyHeroCardProps) {
   const pct = Math.round(accuracy * 100);
+  const score = computeForecasterScore(accuracy, resolvedCount, streak, totalVotes);
 
   return (
     <Animated.View entering={FadeInDown.duration(360)}>
@@ -30,15 +57,20 @@ export function AccuracyHeroCard({ accuracy, resolvedCount }: AccuracyHeroCardPr
           <Text style={styles.brainEmoji}>🧠</Text>
 
           <View style={styles.statBlock}>
-            <Text style={styles.eyebrow}>דיוק החיזוי שלך</Text>
-            <Text style={styles.percent}>{pct}%</Text>
+            <Text style={styles.eyebrow}>ציון החזאי שלך</Text>
+            <Text style={styles.percent}>{score}</Text>
+            <Text style={styles.levelTitle}>{forecasterTitle(score)}</Text>
             <Text style={styles.subtitle}>
               {resolvedCount > 0
-                ? `מתוך ${resolvedCount} הצבעות החודש`
+                ? `דיוק ${pct}% מתוך ${resolvedCount} הצבעות החודש`
                 : "עדיין אין הצבעות סגורות החודש"}
             </Text>
           </View>
         </View>
+
+        <Text style={styles.footnote}>
+          הציון עולה כשצודקים לאורך זמן — לא מניחוש אחד בר-מזל
+        </Text>
       </LinearGradient>
     </Animated.View>
   );
@@ -83,6 +115,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "rgba(255,255,255,0.9)",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  levelTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#fde68a",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  footnote: {
+    marginTop: 12,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.75)",
     writingDirection: "rtl",
     textAlign: "right",
   },
