@@ -4,22 +4,15 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import type { CommunityProfile } from './friendsTypes';
 import { FRIEND_PROFILES } from './friendsData';
 
-/** Simulated approval delay: 20-45 seconds. */
-const APPROVE_DELAY_MIN_MS = 20_000;
-const APPROVE_DELAY_MAX_MS = 45_000;
-
-function randomApproveDelayMs(): number {
-  return (
-    APPROVE_DELAY_MIN_MS +
-    Math.floor(Math.random() * (APPROVE_DELAY_MAX_MS - APPROVE_DELAY_MIN_MS))
-  );
-}
-
 interface FriendsState {
   friendIds: string[];
   pendingIds: string[];
 
-  /** Adds to pending; auto-approves (moves to friendIds) after 20-45s. */
+  /**
+   * Adds the id to pending. P0-2: there is NO auto-approval simulation — a real
+   * friend graph will move pending→friend via a server callback. Until then a
+   * request stays honestly pending (no fabricated "accepted" bot).
+   */
   sendFriendRequest: (id: string) => void;
   removeFriend: (id: string) => void;
   /** FRIEND_PROFILES merged with the current friendship state. */
@@ -35,21 +28,11 @@ export const useFriendsStore = create<FriendsState>()(
       sendFriendRequest: (id) => {
         const { friendIds, pendingIds } = get();
         if (friendIds.includes(id) || pendingIds.includes(id)) return;
+        // Only real, known profiles can be befriended. FRIEND_PROFILES is empty
+        // until a real friend-graph endpoint exists, so this is a safe no-op
+        // today. NO auto-approve timer — no fabricated acceptance.
         if (!FRIEND_PROFILES.some((p) => p.id === id)) return;
-
         set((state) => ({ pendingIds: [...state.pendingIds, id] }));
-
-        // Simulated remote approval — the "friend" accepts after a short wait.
-        setTimeout(() => {
-          const current = get();
-          if (!current.pendingIds.includes(id)) return; // request was cancelled/removed
-          set((state) => ({
-            pendingIds: state.pendingIds.filter((p) => p !== id),
-            friendIds: state.friendIds.includes(id)
-              ? state.friendIds
-              : [...state.friendIds, id],
-          }));
-        }, randomApproveDelayMs());
       },
 
       removeFriend: (id) => {
@@ -77,18 +60,18 @@ export const useFriendsStore = create<FriendsState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        if (!Array.isArray(state.friendIds)) state.friendIds = [];
-        if (!Array.isArray(state.pendingIds)) state.pendingIds = [];
-        // Approval timers don't survive an app restart — treat requests that
-        // were pending when the app closed as approved ("accepted while away").
-        if (state.pendingIds.length > 0) {
-          const merged = [...state.friendIds];
-          for (const id of state.pendingIds) {
-            if (!merged.includes(id)) merged.push(id);
-          }
-          state.friendIds = merged;
-          state.pendingIds = [];
-        }
+        // Prune to ids that correspond to a real known profile. Because the old
+        // build auto-"approved" fabricated bots, any persisted friendIds/
+        // pendingIds are stale fakes; with FRIEND_PROFILES empty this clears
+        // them, so no fabricated friend count leaks into the UI. NO pending→
+        // friend auto-flip.
+        const valid = new Set(FRIEND_PROFILES.map((p) => p.id));
+        state.friendIds = Array.isArray(state.friendIds)
+          ? state.friendIds.filter((id) => valid.has(id))
+          : [];
+        state.pendingIds = Array.isArray(state.pendingIds)
+          ? state.pendingIds.filter((id) => valid.has(id))
+          : [];
       },
     }
   )

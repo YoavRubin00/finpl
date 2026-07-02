@@ -25,6 +25,9 @@ import { FinnCue } from './FinnCue';
 
 const DIVIDEND_PERCENT = Math.round(REFERRAL_DAILY_DIVIDEND_RATE * 100);
 
+/** A8: real invite ladder — milestones at 1 → 3 → 5 referred friends. */
+const REFERRAL_MILESTONES = [1, 3, 5] as const;
+
 /**
  * Premium CTA button — fantasy-league button language: gradient + border +
  * glow shadow + bold label + shimmer that respects reduced-motion.
@@ -126,6 +129,20 @@ export function ReferralCard(): React.ReactElement {
   const router = useRouter();
   const referredCount = useReferralStore((s) => s.referredFriends.length);
 
+  // A8: every number below is derived ONLY from the real referredFriends count
+  // and the real signup-bonus constant — no fabricated milestone jackpots.
+  const earnedCoins = referredCount * REFERRAL_SIGNUP_BONUS_COINS;
+  const nextMilestone = REFERRAL_MILESTONES.find((m) => referredCount < m) ?? null;
+  const toNext = nextMilestone ? nextMilestone - referredCount : 0;
+  const nextReward = nextMilestone ? nextMilestone * REFERRAL_SIGNUP_BONUS_COINS : 0;
+
+  /** Fill fraction (0..1) of the connector between two adjacent milestones. */
+  const segFill = (from: number, to: number): number => {
+    if (referredCount <= from) return 0;
+    if (referredCount >= to) return 1;
+    return (referredCount - from) / (to - from);
+  };
+
   const openReferral = (): void => {
     tapHaptic();
     router.push('/referral' as never);
@@ -205,6 +222,102 @@ export function ReferralCard(): React.ReactElement {
 
       {/* ── Reward summary + CTA ── */}
       <View style={{ paddingHorizontal: 16, paddingBottom: 14, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest, paddingTop: 14, gap: 12 }}>
+        {/* ── A8: real milestone ladder (1 → 3 → 5) — progress + earned coins ── */}
+        <View>
+          <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <Text style={{ fontSize: 12.5, fontWeight: '800', color: STITCH.onSurface, writingDirection: 'rtl' }}>
+              {referredCount === 0 ? 'סולם ההזמנות' : `${referredCount} חברים הצטרפו`}
+            </Text>
+            <View
+              style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}
+              accessible
+              accessibilityLabel={`הרווחתם ${earnedCoins.toLocaleString('he-IL')} מטבעות מהזמנות`}
+            >
+              <Text
+                maxFontSizeMultiplier={1.15}
+                style={{ fontSize: 12.5, fontWeight: '900', color: '#15803d', fontVariant: ['tabular-nums'] }}
+              >
+                {earnedCoins.toLocaleString('he-IL')}
+              </Text>
+              <GoldCoinIcon size={13} />
+            </View>
+          </View>
+
+          {/* Stepper: nodes 1 · 3 · 5 with fill connectors (RTL: 1 on the right) */}
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
+            {REFERRAL_MILESTONES.map((m, i) => {
+              const reached = referredCount >= m;
+              const stepCoins = m * REFERRAL_SIGNUP_BONUS_COINS;
+              return (
+                <React.Fragment key={m}>
+                  {i > 0 && (
+                    <View style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: '#dcfce7', marginHorizontal: 2, overflow: 'hidden' }}>
+                      <View
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: `${segFill(REFERRAL_MILESTONES[i - 1], m) * 100}%`,
+                          backgroundColor: '#16a34a',
+                        }}
+                      />
+                    </View>
+                  )}
+                  <View
+                    accessible
+                    accessibilityLabel={`מדרגה ${m} חברים — ${stepCoins.toLocaleString('he-IL')} מטבעות${reached ? ', הושלם' : ''}`}
+                    style={{ alignItems: 'center', width: 42 }}
+                  >
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: reached ? '#15803d' : '#ffffff',
+                        borderWidth: 2,
+                        borderColor: reached ? '#15803d' : '#86efac',
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '900', color: reached ? '#ffffff' : '#15803d' }}>
+                        {m}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 2, marginTop: 4 }}>
+                      <Text
+                        maxFontSizeMultiplier={1.1}
+                        style={{ fontSize: 9.5, fontWeight: reached ? '900' : '700', color: reached ? '#15803d' : STITCH.onSurfaceVariant, fontVariant: ['tabular-nums'] }}
+                      >
+                        {stepCoins.toLocaleString('he-IL')}
+                      </Text>
+                      <GoldCoinIcon size={10} />
+                    </View>
+                  </View>
+                </React.Fragment>
+              );
+            })}
+          </View>
+
+          {/* Next-step nudge — real remaining count + real cumulative reward */}
+          {nextMilestone ? (
+            <Text
+              maxFontSizeMultiplier={1.15}
+              style={{ fontSize: 11.5, fontWeight: '700', color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 10 }}
+            >
+              עוד {toNext} {toNext === 1 ? 'חבר' : 'חברים'} עד מדרגה {nextMilestone} — סה"כ {nextReward.toLocaleString('he-IL')} מטבעות
+            </Text>
+          ) : (
+            <Text
+              maxFontSizeMultiplier={1.15}
+              style={{ fontSize: 11.5, fontWeight: '800', color: '#15803d', writingDirection: 'rtl', textAlign: 'right', marginTop: 10 }}
+            >
+              השלמתם את הסולם! כל חבר נוסף = עוד {REFERRAL_SIGNUP_BONUS_COINS.toLocaleString('he-IL')} מטבעות.
+            </Text>
+          )}
+        </View>
+
         {/* Real reward line — signup bonus for both sides */}
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           <GoldCoinIcon size={14} />

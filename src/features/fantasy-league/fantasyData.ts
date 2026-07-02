@@ -535,42 +535,38 @@ export const STOCK_CATEGORIES: StockCategory[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Mock leaderboard per tier
+// Leaderboard (P0-1: fabrication + real-economy leak REMOVED)
 // ---------------------------------------------------------------------------
+//
+// This board used to be fabricated from a fixed MOCK_NAMES list + seededRandom,
+// and `claimResults` paid REAL coins/XP/diamonds based on the user's rank vs
+// those invented opponents — both fabrication AND a genuine coin leak.
+//
+// Under the founder's iron rule (zero fabricated data) there are NO fake
+// competitors. Until a server-side cron settles real, registered competitors,
+// `getMockLeaderboard` returns an EMPTY array. The only honest entry is the
+// user's own row (added by `getLeaderboardWithLocal` in the store), and the
+// prize payout is frozen (see useFantasyStore.claimResults).
 
-const MOCK_NAMES = [
-  'נועה כהן', 'איתי לוי', 'מאיה אברהם', 'עומר דוד', 'שירה מזרחי',
-  'יונתן פרץ', 'תמר ביטון', 'אורי גולדשטיין', 'הילה רוזנברג', 'דניאל שמעוני',
-  'רועי בן-דוד', 'אופיר יוסף', 'ליאת נחום', 'גל כץ', 'ניב שלום',
-];
+/** Honest empty-state copy for the fantasy leaderboard (no fake opponents). */
+export const FANTASY_LEAGUE_EMPTY_STATE_TITLE = 'הליגה הראשונה נפתחת — היו הראשונים';
 
 function seededRandom(seed: number): number {
   const x = Math.sin(seed + 1) * 10000;
   return x - Math.floor(x);
 }
 
+/**
+ * Real registered competitors only. There is no server settle yet, so there
+ * are no opponents to show — returns an empty board (honest empty state).
+ * Signature is preserved so existing consumers keep compiling; when a real
+ * server endpoint lands it can populate this list.
+ */
 export function getMockLeaderboard(
-  tier: string,
-  weekId: string,
+  _tier: string,
+  _weekId: string,
 ): FantasyLeaderboardEntry[] {
-  const seed = weekId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) +
-    tier.charCodeAt(0);
-
-  return MOCK_NAMES.map((name, i) => {
-    const r = seededRandom(seed + i * 17);
-    const returnPct = (r * 30 - 10); // -10% to +20%
-    const change = i % 3 === 0 ? '+1' : i % 3 === 1 ? '-1' : 'same';
-    // No promotion/relegation — every entry is 'stable'.
-    return {
-      rank: i + 1,
-      playerId: `ai-${String(i).padStart(2, '0')}`,
-      displayName: name,
-      returnPercent: Math.round(returnPct * 10) / 10,
-      isLocal: false,
-      change: change as FantasyLeaderboardEntry['change'],
-      leaguePosition: 'stable' as const,
-    };
-  });
+  return [];
 }
 
 // ---------------------------------------------------------------------------

@@ -11,30 +11,15 @@ import Animated, {
   useReducedMotion,
   interpolate,
 } from 'react-native-reanimated';
-import { useShallow } from 'zustand/react/shallow';
 import { UserPlus } from 'lucide-react-native';
 
 import { STITCH, DUO } from '../../../constants/theme';
 import { useEconomy } from '../../economy/useEconomy';
 import { AvatarImage } from '../../avatars/AvatarImage';
 import { useAuthStore } from '../../auth/useAuthStore';
-import { useFriendsStore } from '../../friends/useFriendsStore';
-import { FRIEND_PROFILES } from '../../friends/friendsData';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import { tapHaptic } from '../../../utils/haptics';
-import { FinnCue, type FinnCueVariant } from './FinnCue';
-
-const MEDAL = ['🥇', '🥈', '🥉'];
-const TOP3_BG = ['#fef9c3', '#f8fafc', '#fff7ed'];
-const TOP3_BORDER = ['#fde68a', '#e2e8f0', '#fed7aa'];
-
-interface LeaderEntry {
-  id: string;
-  name: string;
-  avatarId: string | null;
-  coins: number;
-  isSelf?: boolean;
-}
+import { FinnCue } from './FinnCue';
 
 /**
  * Premium CTA button — fantasy-league button language: gradient + border +
@@ -128,40 +113,23 @@ function PremiumCta({
   );
 }
 
+/**
+ * "אלופי המטבעות" — the friends coin leaderboard.
+ *
+ * P0-2: the fabricated board (10 invented FRIEND_PROFILES with made-up
+ * `coinsWon`, plus a 20-45s auto-approve timer) has been removed. There is no
+ * real server leaderboard endpoint yet and the only real social graph is
+ * `referrals`, so this card shows an HONEST self-standing (the user's own real
+ * coins) + an honest empty state + the real invite CTA. When a server
+ * friends-leaderboard lands, the ranked rows come back — with real people only.
+ */
 export function FriendsLeaderboardCard(): React.ReactElement {
   const router = useRouter();
   const { data: economyData } = useEconomy();
   const myCoins = economyData?.coins ?? 0;
   const myAvatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
   const displayName = useAuthStore((s) => s.displayName);
-
-  // The board is the user's REAL friends — resolved reactively from the
-  // friends store (no fabricated leaders).
-  const friendIds = useFriendsStore(useShallow((s) => s.friendIds));
-  const isEmpty = friendIds.length === 0;
-
-  const friendEntries: LeaderEntry[] = FRIEND_PROFILES.filter((p) =>
-    friendIds.includes(p.id),
-  ).map((p) => ({ id: p.id, name: p.name, avatarId: p.avatarId, coins: p.coinsWon }));
-
-  const selfEntry: LeaderEntry = {
-    id: 'self',
-    name: displayName?.trim() ? displayName : 'אני',
-    avatarId: myAvatarId,
-    coins: myCoins,
-    isSelf: true,
-  };
-
-  const ranked = [...friendEntries, selfEntry].sort((a, b) => b.coins - a.coins);
-  const selfRank = ranked.findIndex((e) => e.isSelf) + 1;
-  const top5 = ranked.slice(0, 5);
-  const selfInTop5 = top5.some((e) => e.isSelf);
-
-  const finn: { variant: FinnCueVariant; text: string } = isEmpty
-    ? { variant: 'tablet', text: 'הלוח מחכה לחברים הראשונים שלכם' }
-    : selfRank === 1
-      ? { variant: 'dancing', text: 'מקום ראשון מול החברים! תפסתם בשיניים' }
-      : { variant: 'happy', text: `מקום ${selfRank} מול החברים — הצמרת בטווח נשיכה` };
+  const selfName = displayName?.trim() ? displayName : 'אני';
 
   return (
     <View
@@ -213,129 +181,74 @@ export function FriendsLeaderboardCard(): React.ReactElement {
             אלופי המטבעות
           </Text>
           <Text style={{ fontSize: 12, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 1 }}>
-            אתם מול החברים שלכם
+            הלוח מול החברים שלכם
           </Text>
         </View>
       </View>
 
-      {/* ── Rows ── */}
-      {top5.map((entry, i) => (
-        <View
-          key={entry.id}
-          style={{
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            paddingVertical: 10,
-            paddingHorizontal: 16,
-            gap: 10,
-            backgroundColor: entry.isSelf ? '#e0f2fe' : i < 3 ? TOP3_BG[i] : '#ffffff',
-            borderBottomWidth: i < top5.length - 1 ? 1 : 0,
-            borderBottomColor: i < 3 ? TOP3_BORDER[i] : STITCH.surfaceHighest,
-          }}
-        >
-          {/* Rank */}
-          <View style={{ width: 32, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: STITCH.onSurfaceVariant, textAlign: 'center' }}>
-              {MEDAL[i] ?? `#${i + 1}`}
-            </Text>
-          </View>
-
-          {/* Avatar — the real game mascots */}
-          <AvatarImage avatarId={entry.avatarId} size={30} />
-
-          {/* Name */}
+      {/* ── Your real standing (self-data only) — C11: grouped into one label,
+           C2: the coins number + decorative coin read as "N מטבעות" ── */}
+      <View
+        accessible
+        accessibilityLabel={`${selfName} (אני), המטבעות שלכם: ${myCoins.toLocaleString('he-IL')} מטבעות`}
+        style={{
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          gap: 10,
+          backgroundColor: '#e0f2fe',
+        }}
+      >
+        <AvatarImage avatarId={myAvatarId} size={32} />
+        <View style={{ flex: 1 }}>
           <Text
-            style={{
-              flex: 1,
-              fontSize: 14,
-              fontWeight: i === 0 || entry.isSelf ? '900' : '700',
-              color: STITCH.onSurface,
-              writingDirection: 'rtl',
-              textAlign: 'right',
-            }}
+            style={{ fontSize: 14, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }}
             numberOfLines={1}
           >
-            {entry.name}{entry.isSelf ? ' (אני)' : ''}
+            {selfName} (אני)
           </Text>
-
-          {/* Coin profit */}
-          <View
-            style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              gap: 4,
-            }}
+          <Text style={{ fontSize: 11, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 1 }}>
+            המטבעות שלכם
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }} importantForAccessibility="no-hide-descendants">
+          <Text
+            maxFontSizeMultiplier={1.15}
+            style={{ fontSize: 15, fontWeight: '900', color: DUO.blue, fontVariant: ['tabular-nums'] }}
           >
-            <Text
-              maxFontSizeMultiplier={1.15}
-              style={{
-                fontSize: 14,
-                fontWeight: '900',
-                color: i === 0 ? STITCH.tertiaryGold : DUO.blue,
-                fontVariant: ['tabular-nums'],
-              }}
-            >
-              {entry.coins.toLocaleString('he-IL')}
-            </Text>
-            <GoldCoinIcon size={14} />
-          </View>
-        </View>
-      ))}
-
-      {/* ── Self rank when outside the board ── */}
-      {!isEmpty && !selfInTop5 && (
-        <View
-          style={{
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            paddingVertical: 10,
-            paddingHorizontal: 16,
-            gap: 10,
-            backgroundColor: '#e0f2fe',
-            borderTopWidth: 1,
-            borderTopColor: '#bae6fd',
-          }}
-        >
-          <View style={{ width: 32, alignItems: 'center' }}>
-            <Text style={{ fontSize: 13, fontWeight: '900', color: DUO.blue }}>#{selfRank}</Text>
-          </View>
-          <AvatarImage avatarId={myAvatarId} size={30} />
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }}>
-            {selfEntry.name} (אני)
+            {myCoins.toLocaleString('he-IL')}
           </Text>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-            <Text
-              maxFontSizeMultiplier={1.15}
-              style={{ fontSize: 14, fontWeight: '900', color: DUO.blue, fontVariant: ['tabular-nums'] }}
-            >
-              {myCoins.toLocaleString('he-IL')}
-            </Text>
-            <GoldCoinIcon size={14} />
-          </View>
+          <GoldCoinIcon size={14} />
         </View>
-      )}
-
-      {/* ── Finn coach line ── */}
-      <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: isEmpty ? 8 : 12, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest }}>
-        <FinnCue variant={finn.variant} text={finn.text} tone="gold" />
       </View>
 
-      {/* ── Empty-state CTA — add your first friends ── */}
-      {isEmpty && (
-        <View style={{ paddingHorizontal: 12, paddingBottom: 14 }}>
-          <PremiumCta
-            label="הוסיפו חברים"
-            colors={['#38bdf8', DUO.blue]}
-            glow={DUO.blue}
-            icon={<UserPlus size={17} color="#ffffff" strokeWidth={2.6} />}
-            accessibilityLabel="הוסיפו חברים ללוח"
-            onPress={() => {
-              tapHaptic();
-              router.push('/friends-list' as never);
-            }}
-          />
-        </View>
-      )}
+      {/* ── Honest empty state — no fabricated opponents ── */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        <Text style={{ fontSize: 12.5, fontWeight: '600', color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', lineHeight: 18 }}>
+          הלוח מול חברים ייפתח כשהחברים הראשונים שלכם יצטרפו. הזמינו חבר — ותהיו הראשונים בצמרת.
+        </Text>
+      </View>
+
+      {/* ── Finn coach line ── */}
+      <View style={{ paddingHorizontal: 12, paddingTop: 12 }}>
+        <FinnCue variant="tablet" text="הזמינו חבר ותפתחו את לוח האלופים" tone="gold" />
+      </View>
+
+      {/* ── Invite CTA — the real social graph (referrals) ── */}
+      <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 14 }}>
+        <PremiumCta
+          label="הזמינו חברים"
+          colors={['#38bdf8', DUO.blue]}
+          glow={DUO.blue}
+          icon={<UserPlus size={17} color="#ffffff" strokeWidth={2.6} />}
+          accessibilityLabel="הזמינו חברים — פתחו את מסך ההזמנות"
+          onPress={() => {
+            tapHaptic();
+            router.push('/referral' as never);
+          }}
+        />
+      </View>
     </View>
   );
 }

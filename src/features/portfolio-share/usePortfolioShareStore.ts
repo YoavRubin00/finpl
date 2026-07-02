@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { SharedPick, SharedPortfolio, PortfolioComment } from './portfolioShareTypes';
 import {
-  SEED_PORTFOLIOS,
   SHARE_REWARD_COINS,
   computePortfolioReturn,
 } from './portfolioShareData';
@@ -22,6 +21,14 @@ interface PortfolioShareState {
   shareRewardDate: string | null;
 
   getFeed: () => SharedPortfolio[];
+  /**
+   * A7 — REAL reactions from OTHER people on the user's own shared portfolios:
+   * comments not authored by the user + likes beyond the user's own tap. Never
+   * counts the user's own interactions, so it stays 0 until genuine cross-user
+   * activity exists — the "reacted to your portfolio" surface is silent until
+   * it's truly earned.
+   */
+  getSelfReactionCount: () => number;
   sharePortfolio: (input: {
     picks: SharedPick[];
     caption: string;
@@ -35,13 +42,22 @@ interface PortfolioShareState {
 export const usePortfolioShareStore = create<PortfolioShareState>()(
   persist(
     (set, get) => ({
-      portfolios: SEED_PORTFOLIOS,
+      portfolios: [],
       shareRewardDate: null,
 
       getFeed: () => {
         return [...get().portfolios].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
+      },
+
+      getSelfReactionCount: () => {
+        return get().portfolios.reduce((sum, pf) => {
+          if (!pf.isSelf) return sum;
+          const othersComments = pf.comments.filter((c) => !c.isSelf).length;
+          const othersLikes = Math.max(0, pf.likes - (pf.likedBySelf ? 1 : 0));
+          return sum + othersComments + othersLikes;
+        }, 0);
       },
 
       sharePortfolio: ({ picks, caption, authorName, avatarId }) => {
@@ -121,8 +137,10 @@ export const usePortfolioShareStore = create<PortfolioShareState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        if (!Array.isArray(state.portfolios) || state.portfolios.length === 0) {
-          state.portfolios = SEED_PORTFOLIOS;
+        // No re-seeding: an empty feed is the honest default. Only guard against
+        // a corrupt (non-array) persisted value.
+        if (!Array.isArray(state.portfolios)) {
+          state.portfolios = [];
         }
       },
     },

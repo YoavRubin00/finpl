@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  FadeOut,
+  useReducedMotion,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+} from 'react-native-reanimated';
 import { Heart, MessageCircle, Send, ChevronDown, ShieldCheck, ScrollText, Plus } from 'lucide-react-native';
 import { FANTASY, F2_SECTORS, type FantasySectorId } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
@@ -18,7 +26,9 @@ import type {
 
 const TEXT_PRIMARY = '#1f2937';
 const TEXT_MUTED = '#6b7280';
-const TEXT_FAINT = '#9ca3af';
+// C1 (a11y): darkened #9ca3af → #6b7280 so info-bearing meta text (allocation %,
+// timestamps, day X/5, labels, placeholder) passes WCAG AA (~4.8:1 on white).
+const TEXT_FAINT = '#6b7280';
 const FEED_BG = '#f3f4f6';
 
 const NUM_STYLE = { fontVariant: ['tabular-nums' as const] };
@@ -183,8 +193,25 @@ function PortfolioPost({ pf }: { pf: SharedPortfolio }): React.ReactElement {
   const addComment = usePortfolioShareStore((s) => s.addComment);
   const myAvatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
 
+  const reduced = useReducedMotion();
+  const likeScale = useSharedValue(1);
+  const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: likeScale.value }] }));
+
   const positive = pf.totalReturn >= 0;
   const visibleComments = expanded ? pf.comments : pf.comments.slice(0, 1);
+
+  const onLikePress = (): void => {
+    const willLike = !pf.likedBySelf;
+    tapHaptic();
+    toggleLike(pf.id);
+    // Juice: a spring pop only when adding a like, and only if motion is allowed.
+    if (willLike && !reduced) {
+      likeScale.value = withSequence(
+        withSpring(1.35, { damping: 6, stiffness: 260 }),
+        withSpring(1, { damping: 9, stiffness: 220 }),
+      );
+    }
+  };
 
   const submitComment = (): void => {
     if (!draft.trim()) return;
@@ -297,7 +324,13 @@ function PortfolioPost({ pf }: { pf: SharedPortfolio }): React.ReactElement {
         paddingHorizontal: 14,
         marginTop: 10,
       }}>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+        {/* C13: read as one node "N אהבו" (heart is decorative). */}
+        <View
+          style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}
+          accessible
+          accessibilityRole="text"
+          accessibilityLabel={`${pf.likes} אהבו`}
+        >
           <View style={{
             width: 16, height: 16, borderRadius: 8,
             backgroundColor: '#ef4444', alignItems: 'center', justifyContent: 'center',
@@ -323,9 +356,11 @@ function PortfolioPost({ pf }: { pf: SharedPortfolio }): React.ReactElement {
         paddingTop: 6,
       }}>
         <Pressable
-          onPress={() => { tapHaptic(); toggleLike(pf.id); }}
+          onPress={onLikePress}
           accessibilityRole="button"
           accessibilityLabel="אהבתי"
+          accessibilityState={{ selected: pf.likedBySelf }}
+          hitSlop={{ top: 8, bottom: 8 }}
           style={({ pressed }) => ({
             flex: 1,
             flexDirection: 'row-reverse',
@@ -336,12 +371,14 @@ function PortfolioPost({ pf }: { pf: SharedPortfolio }): React.ReactElement {
             opacity: pressed ? 0.6 : 1,
           })}
         >
-          <Heart
-            size={16}
-            color={pf.likedBySelf ? '#ef4444' : TEXT_MUTED}
-            fill={pf.likedBySelf ? '#ef4444' : 'transparent'}
-            strokeWidth={2}
-          />
+          <Animated.View style={heartStyle}>
+            <Heart
+              size={16}
+              color={pf.likedBySelf ? '#ef4444' : TEXT_MUTED}
+              fill={pf.likedBySelf ? '#ef4444' : 'transparent'}
+              strokeWidth={2}
+            />
+          </Animated.View>
           <Text style={{
             fontSize: 12,
             fontWeight: '800',
@@ -354,6 +391,7 @@ function PortfolioPost({ pf }: { pf: SharedPortfolio }): React.ReactElement {
           onPress={() => { tapHaptic(); setExpanded((v) => !v); }}
           accessibilityRole="button"
           accessibilityLabel="הגב"
+          hitSlop={{ top: 8, bottom: 8 }}
           style={({ pressed }) => ({
             flex: 1,
             flexDirection: 'row-reverse',
@@ -412,6 +450,7 @@ function PortfolioPost({ pf }: { pf: SharedPortfolio }): React.ReactElement {
             onChangeText={setDraft}
             placeholder="כתבו תגובה…"
             placeholderTextColor={TEXT_FAINT}
+            accessibilityLabel="כתבו תגובה"
             onSubmitEditing={submitComment}
             style={{
               flex: 1,
@@ -425,6 +464,7 @@ function PortfolioPost({ pf }: { pf: SharedPortfolio }): React.ReactElement {
           {draft.length > 0 && (
             <Pressable
               onPress={submitComment}
+              accessibilityRole="button"
               accessibilityLabel="שלח תגובה"
               hitSlop={8}
             >
@@ -441,8 +481,17 @@ function PortfolioPost({ pf }: { pf: SharedPortfolio }): React.ReactElement {
 export function PortfolioShareCard(): React.ReactElement {
   const portfolios = usePortfolioShareStore((s) => s.portfolios);
   const sharePortfolio = usePortfolioShareStore((s) => s.sharePortfolio);
+  // A7: count of REAL reactions from others on the user's own shared portfolios
+  // (primitive — reactive & safe under zustand v5, no useShallow needed).
+  const selfReactions = usePortfolioShareStore((s) => s.getSelfReactionCount());
   const displayName = useAuthStore((s) => s.displayName);
   const myAvatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
+  const reduced = useReducedMotion();
+
+  const reactionLabel =
+    selfReactions === 1
+      ? 'מישהו הגיב לתיק שלך'
+      : `${selfReactions} אנשים הגיבו לתיק שלך`;
 
   const [composerOpen, setComposerOpen] = useState(false);
   const [rewardToast, setRewardToast] = useState<number | null>(null);
@@ -545,11 +594,48 @@ export function PortfolioShareCard(): React.ReactElement {
         </Pressable>
       </View>
 
+      {/* A7 — REAL reactions from others on YOUR shared portfolio. Silent until
+          someone genuinely reacts (selfReactions is 0 by design when there are
+          no real cross-user interactions — no fabricated activity). */}
+      {selfReactions > 0 && (
+        <Animated.View
+          entering={reduced ? undefined : FadeInDown.duration(240)}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="text"
+          accessibilityLabel={reactionLabel}
+          style={{
+            marginHorizontal: 14,
+            marginTop: 8,
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: '#fef2f2',
+            borderWidth: 1,
+            borderColor: '#fecaca',
+            borderRadius: 12,
+            paddingVertical: 9,
+            paddingHorizontal: 12,
+          }}
+        >
+          <View style={{
+            width: 22, height: 22, borderRadius: 11,
+            backgroundColor: '#ef4444', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Heart size={12} color="#fff" fill="#fff" strokeWidth={2.5} />
+          </View>
+          <Text style={{ fontSize: 13, fontWeight: '900', color: '#b91c1c', flex: 1, ...RTL }}>
+            {reactionLabel}
+          </Text>
+        </Animated.View>
+      )}
+
       {/* Moderation note */}
       {moderationNote && (
         <Animated.View
           entering={FadeInDown.duration(220)}
           exiting={FadeOut.duration(220)}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
           style={{
             marginHorizontal: 14,
             marginTop: 8,
@@ -572,6 +658,8 @@ export function PortfolioShareCard(): React.ReactElement {
         <Animated.View
           entering={FadeInDown.duration(220)}
           exiting={FadeOut.duration(220)}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
           style={{
             marginHorizontal: 14,
             marginTop: 8,

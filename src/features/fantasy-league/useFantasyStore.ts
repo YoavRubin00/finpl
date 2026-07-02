@@ -248,48 +248,44 @@ export const useFantasyStore = create<FantasyStore>()(
       },
 
       claimResults: () => {
-        const { currentEntry, leaderboard } = get();
+        const { currentEntry } = get();
         if (!currentEntry || currentEntry.claimed) return;
 
-        // Find rank among leaderboard (local player)
-        const localEntry = leaderboard.find((e) => e.isLocal);
-        const rank = localEntry?.rank ?? leaderboard.length + 1;
-
-        // Place-based prizes (top 5) — uses tier's prize multipliers vs entryCost.
-        // Outside top 5: consolation 0.1× of entry to soften the loss.
-        const tierConfig = TIER_CONFIGS[currentEntry.tier];
-        let coinsReturned = Math.round(currentEntry.coinsPaid * 0.1);
+        // ── P0-1: RANK-BASED PRIZE PAYOUT FROZEN ────────────────────────────
+        // There is NO server-side settle against real, registered competitors
+        // yet. Paying rank-based prizes (5×/3×/2× coins, tier prizeXP, diamonds)
+        // computed against a FABRICATED leaderboard was both fabrication AND a
+        // real coin leak — a "1st place vs bots" could pay 5× the entry.
+        //
+        // Until a real settle exists we credit ONLY the fixed, non-rank-based
+        // participation floor that already existed (10% consolation + base 25
+        // XP), plus the user's OWN self-earned bonuses (draft-streak XP +
+        // completed-mission XP). NO rank, NO tier multipliers, NO diamonds.
+        const coinsReturned = Math.round(currentEntry.coinsPaid * 0.1);
         let xpEarned = 25;
-        let diamondsEarned = 0;
-        if (rank >= 1 && rank <= 5) {
-          coinsReturned = Math.round(currentEntry.coinsPaid * tierConfig.prizeMultipliers[rank - 1]);
-          xpEarned = tierConfig.prizeXP[rank - 1];
-          diamondsEarned = tierConfig.prizeDiamonds[rank - 1];
-        }
 
-        // Streak bonus XP
+        // Streak bonus XP — self-data (the user's own consecutive draft weeks).
         const streakBonus = DRAFT_STREAK_BONUSES
           .filter((b) => currentEntry.draftStreakWeeks >= b.weeks)
           .reduce((max, b) => Math.max(max, b.bonusXP), 0);
         xpEarned += streakBonus;
 
-        // Mission bonus XP
+        // Mission bonus XP — self-data (missions the user actually completed).
         const { missions } = get();
         const missionBonus = missions.filter((m) => m.completed).reduce((s, m) => s + m.bonusXP, 0);
         xpEarned += missionBonus;
 
-        // Apply to economy (UI store — fires the animated counters)
+        // Apply to economy (UI store — fires the animated counters). No gems:
+        // diamonds were a rank-based prize vs fabricated opponents.
         const { useEconomyUIStore } = require('../economy/useEconomyUIStore');
         useEconomyUIStore.getState().addCoins(coinsReturned);
         useEconomyUIStore.getState().addXP(xpEarned, 'challenge_complete');
-        if (diamondsEarned > 0) {
-          useEconomyUIStore.getState().addGems(diamondsEarned);
-        }
 
         set({
           currentEntry: {
             ...currentEntry,
-            finalRank: rank,
+            // No fabricated rank without real competitors.
+            finalRank: null,
             coinsReturned,
             xpEarned,
             claimed: true,

@@ -1,119 +1,16 @@
 import type { CommunityProfile } from './friendsTypes';
 
 /**
- * Simulated community — 10 fixed profiles.
- * avatarIds are REAL ids from src/features/avatars/avatarData.ts
- * so AvatarImage renders the actual in-game SVG avatars.
+ * Real friend graph only (P0-2: fabrication REMOVED).
+ *
+ * This used to hold 10 invented profiles with fabricated levels + `coinsWon`,
+ * which the "אלופי המטבעות" board rendered as real competitors, and which the
+ * friends store auto-"approved" on a 20-45s timer — pure fabrication.
+ *
+ * Under the founder's iron rule (zero fabricated data) there are NO invented
+ * people. This list is empty until a real friend-graph endpoint exists; the
+ * only real social graph today is `referrals` (referredFriends). The array +
+ * type are kept so existing consumers keep compiling and can be populated from
+ * the server later.
  */
-export const FRIEND_PROFILES: CommunityProfile[] = [
-  {
-    id: 'cf-noa',
-    name: 'נועה',
-    title: 'המשקיעה',
-    avatarId: 'avatar-investor',
-    level: 14,
-    coinsWon: 9800,
-    favoriteRoom: 'חדר המניות',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-itay',
-    name: 'איתי',
-    title: 'האנליסט',
-    avatarId: 'avatar-analyst',
-    level: 11,
-    coinsWon: 6400,
-    favoriteRoom: 'חדר הקריפטו',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-maya',
-    name: 'מאיה',
-    title: 'החוסכת',
-    avatarId: 'avatar-saver',
-    level: 5,
-    coinsWon: 1750,
-    favoriteRoom: 'חדר החיסכון',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-daniel',
-    name: 'דניאל',
-    title: 'המגדל',
-    avatarId: 'avatar-grower',
-    level: 8,
-    coinsWon: 3200,
-    favoriteRoom: 'חדר ההשקעות',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-shira',
-    name: 'שירה',
-    title: 'האסטרטגית',
-    avatarId: 'avatar-strategist',
-    level: 18,
-    coinsWon: 14500,
-    favoriteRoom: 'חדר המניות',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-yuval',
-    name: 'יובל',
-    title: 'הלומד',
-    avatarId: 'avatar-learner',
-    level: 3,
-    coinsWon: 800,
-    favoriteRoom: 'חדר המתחילים',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-omer',
-    name: 'עומר',
-    title: 'הסוחר',
-    avatarId: 'avatar-trader',
-    level: 16,
-    coinsWon: 12300,
-    favoriteRoom: 'חדר המסחר המהיר',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-tamar',
-    name: 'תמר',
-    title: 'החוקרת',
-    avatarId: 'avatar-explorer',
-    level: 9,
-    coinsWon: 4100,
-    favoriteRoom: 'חדר הקריפטו',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-lior',
-    name: 'ליאור',
-    title: 'החוסך החזק',
-    avatarId: 'avatar-strong-saver',
-    level: 7,
-    coinsWon: 2600,
-    favoriteRoom: 'חדר החיסכון',
-    isFriend: false,
-    requestPending: false,
-  },
-  {
-    id: 'cf-roni',
-    name: 'רוני',
-    title: 'המגינה',
-    avatarId: 'avatar-defender',
-    level: 12,
-    coinsWon: 7900,
-    favoriteRoom: 'חדר ההשקעות',
-    isFriend: false,
-    requestPending: false,
-  },
-];
+export const FRIEND_PROFILES: CommunityProfile[] = [];
