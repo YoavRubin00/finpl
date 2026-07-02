@@ -52,8 +52,8 @@ type LoungeView = "lounge" | TableId;
 
 // דייזי — הקו-מארחת של המועדון (הדואו של הפודקאסט, וובפים שקופים)
 /* eslint-disable @typescript-eslint/no-require-imports */
-const DAISY_STANDARD = require("../../../assets/webp/daisy/daisy-standard.webp") as number;
-const DAISY_CELEBRATE = require("../../../assets/webp/daisy/daisy-happy-celebrate.webp") as number;
+const DAISY_STANDARD = require("../../../assets/webp/daisy/daisy-standard-clean.webp") as number;
+const DAISY_CELEBRATE = require("../../../assets/webp/daisy/daisy-celebrate-clean.webp") as number;
 // אש-הרצף — הלוטי הקנוני של האפליקציה (אותו קובץ כמו ה-header/חגיגות)
 const FIRE_LOTTIE = require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number;
 // שארק+דייזי עם האוצר — נכס שנוצר בדיוק לרגע-הפינאלה
@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
   hostWrap: { position: "absolute", alignSelf: "center", alignItems: "center", zIndex: 15 },
   hostRow: { flexDirection: "row-reverse", alignItems: "flex-end", gap: -6 },
   hostImg: { width: 96, height: 96 },
-  daisyImg: { width: 72, height: 72, marginBottom: 2 },
+  daisyImg: { width: 84, height: 84, marginBottom: 2 },
   finaleImg: { width: 132, height: 104, marginBottom: 8 },
   hostBubble: {
     marginTop: 4,

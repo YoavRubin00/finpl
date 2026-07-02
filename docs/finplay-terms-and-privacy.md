@@ -1,6 +1,6 @@
 # FinPlay — תנאי שימוש ומדיניות פרטיות
 
-**עדכון אחרון: 4 ביוני 2026**
+**עדכון אחרון: 3 ביולי 2026**
 
 ---
 
@@ -22,7 +22,9 @@ FinPlay היא פלטפורמה טכנולוגית-חינוכית ללימוד �
 
 ### 3. כלכלת משחק והיעדר אלמנט הימורים
 
-התקדמות באפליקציה, צבירת נקודות (XP), מטבעות וירטואליים (FinCoins) ופריטים וירטואליים מבוססת אך ורק על מיומנות, ידע, למידה והתמדה (Skill-Based), ואינה כוללת יסוד של מזל או גורל. לפיכך, פעילות זו אינה מהווה "משחק אסור" או הימור כהגדרתם בחוק העונשין.
+התקדמות באפליקציה, צבירת נקודות (XP), מטבעות וירטואליים (FinCoins) ופריטים וירטואליים מבוססת בעיקרה על מיומנות, ידע, למידה והתמדה (Skill-Based).
+
+חלק מפיצ'רי הקהילה כוללים **תחזיות והתערבויות וירטואליות** על אירועי שוק עתידיים (למשל "חכמת ההמונים", הימור פארי-מוצ'ואל על תוצאת מדד, וליגת הפנטזי). פעילות זו עשויה לכלול אלמנט של אי-ודאות התלוי בתנועות שוק. עם זאת, מאחר שהיא מתבצעת **אך ורק במטבעות וירטואליים חסרי כל ערך כספי, שאינם ניתנים להמרה למזומן ואינם נרכשים בכסף אמיתי לצורך ההתערבות** — היא אינה מהווה "משחק אסור", הגרלה או הימור כהגדרתם בחוק העונשין, התשל"ז-1977. אין באפליקציה כל אפשרות לזכות בכסף אמיתי או בשווה-כסף.
 
 למטבעות הווירטואליים אין כל ערך כספי או מסחרי מחוץ לאפליקציה, והם אינם ניתנים להמרה למזומן מול החברה. אנו שומרים את הזכות הבלעדית לשנות את "מחירי" ההטבות בחנות, להתנות או להגביל את מימושן, או לבטל את תוכנית התגמולים בכל עת, ללא הודעה מוקדמת וללא כל חובת פיצוי.
 
@@ -83,6 +85,18 @@ FinPlay אינה מבצעת בעצמה את החיוב או את ההחזר — 
 
 האפליקציה מציגה מודעות חיצוניות דרך Google AdMob. עבור משתמשים בני 16–17 (קטינים לפי חוק הכשרות המשפטית והאפוטרופסות, התשכ"ב-1962), מופעל באופן אוטומטי הדגל **TFUA** (Tag For Under Age of Consent) המבקש מ-Google למנוע מיקוד פרסומי מבוסס התנהגות, בהתאם למדיניות Google Play Families Policy.
 
+### 13. קהילה, תוכן גולשים ופרופיל ציבורי
+
+האפליקציה כוללת פיצ'רים חברתיים בעמוד "חברים": חדרי שיח קהילתיים, ייעוץ אנונימי, חכמת ההמונים, שיתוף תיקי השקעות (וירטואליים), ליגת פנטזי, לוחות מובילים ומאגר חברים.
+
+- **פרופיל ציבורי (בהסכמה בלבד):** כברירת מחדל אינך גלוי/ה למשתמשים אחרים. בכניסה הראשונה לעמוד החברים תוצג בקשת הצטרפות מפורשת (Opt-In); רק אם תאשר/י, **שם התצוגה, האווטאר, הרמה ומספר המטבעות הווירטואליים שלך** יוצגו למשתמשים אחרים בלוחות המובילים ובמאגר החברים. **לעולם לא יוצגו** אימייל, טלפון, תאריך לידה, נתונים פיננסיים אמיתיים או פרטים מזהים אחרים. תוכל/י לבטל את הגלוּת בכל עת בהגדרות ולחזור למצב לא-גלוי.
+- **תוכן גולשים (UGC):** הודעות בחדרי השיח, פוסטים ותגובות בייעוץ האנונימי, ותיקי השקעות וירטואליים ששיתפת — נשמרים בשרתי FinPlay ומוצגים למשתמשים אחרים בקהילה. אתה/את הבעלים והאחראי/ת הבלעדי/ת לתוכן שאת/ה מפרסם/ת.
+- **מודרציה:** התוכן עובר סינון אוטומטי (לרבות באמצעות שירותי AI) והסרה של ספאם, תוכן פוגעני, פרטים מזהים או תוכן שאינו הולם. אנו רשאים להסיר תוכן, להשעות או לחסום משתמש שמפר את כללי הקהילה, לפי שיקול דעתנו. חל איסור על הטרדה, הסתה, פרסום פרטים מזהים של אחרים, ותוכן בלתי-חוקי.
+- **דיווח וחסימה:** ניתן לדווח על תוכן או משתמש ולחסום משתמשים ישירות מהאפליקציה.
+- **תחזיות והתערבויות:** ההשתתפות בחכמת ההמונים, בהימור הפארי-מוצ'ואל ובליגת הפנטזי היא במטבעות וירטואליים בלבד, בכפוף לסעיף 3 (היעדר אלמנט הימורים).
+
+השימוש בפיצ'רים החברתיים מהווה הסכמה לכללים אלה. עבור קטינים (בני 16–17), הגלוּת הציבורית כפופה להסכמת ההצטרפות ולהגנות המוגברות המפורטות במדיניות הפרטיות.
+
 ---
 
 ## מדיניות פרטיות
@@ -97,6 +111,8 @@ FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לח
 - **תוכן שנשלח לעיבוד AI:** שאלות שאת/ה שולח/ת לצ'אט עם Captain Shark, קבצי תלוש שכר (לזמן עיבוד בלבד), טיקרים של מניות לניתוח, ופרמטרים שמוזרמים לבקשות תובנות/Banner Tip (שם, XP, סטריק, יעדים פיננסיים).
 - **קלט בכלים פיננסיים:** ערכים שתזין/י במחשבונים השונים (משכורת, הוצאות, גיל פרישה, יעדי חיסכון וכו') — נשמרים מקומית במכשיר בלבד.
 - **סטטיסטיקות מצרפיות אנונימיות:** של תלושי שכר (טווחים בלבד, ללא סכומים מדויקים), לטובת השיתוף עם הקלאן. נשמרות מקומית במכשיר.
+- **תוכן חברתי וקהילתי:** הודעות שאת/ה שולח/ת בחדרי השיח, פוסטים ותגובות בייעוץ האנונימי, תיקי השקעות וירטואליים ששיתפת, הצבעות ותחזיות בחכמת ההמונים והתערבויות במטבעות וירטואליים, בחירות בליגת הפנטזי, וקשרי החברוּת שיצרת (מי הזמנת / מי חבר/ה שלך). מידע זה נשמר בשרתי FinPlay לצורך הפעלת הפיצ'רים החברתיים.
+- **פרופיל ציבורי (בהסכמת Opt-In):** אם בחרת להיות גלוי/ה, שם התצוגה, האווטאר, הרמה ומספר המטבעות הווירטואליים שלך גלויים למשתמשים אחרים.
 - **שיוך לוריאנט בניסוי (A/B):** מזהה וריאנט אנונימי לטובת מדידת אפקטיביות של מסכים/טקסטים.
 
 ### 2. מטרות השימוש במידע
@@ -109,12 +125,13 @@ FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לח
 
 החברה לעולם לא תמכור את המידע האישי המזהה שלך. שיתוף מידע יתבצע במקרים הבאים:
 
+- **חשיפה למשתמשים אחרים בקהילה (בהסכמת Opt-In בלבד):** אם בחרת להצטרף לקהילה, שם התצוגה, האווטאר, הרמה ומספר המטבעות הווירטואליים שלך גלויים למשתמשים אחרים בלוחות המובילים ובמאגר החברים. **לעולם לא** נחשפים אימייל, טלפון, תאריך לידה או נתונים פיננסיים אמיתיים. כמו כן, תוכן שאת/ה מפרסם/ת בקהילה (הודעות בחדרים, פוסטים בייעוץ האנונימי, תיקים משותפים) מוצג למשתמשים אחרים. ניתן לבטל את הגלוּת בכל עת דרך ההגדרות, ולדווח/לחסום משתמשים.
 - **העברת לידים למימוש הטבות:** בעת לחיצה על "מימוש הטבה" דרך חנות ההטבות, הנך נותן/ת הסכמה מפורשת להעברת פרטי הקשר שלך לאותו גוף ספציפי.
 - **ספקי שירות AI:**
   - **שירותי AI חיצוניים** — לעיבוד אוטומטי של צ'אט, תלוש שכר, תובנות אישיות, Banner Tip וניתוח מניות (מהיר ועומק). העיבוד מתבצע בשרתי הספקים, בארה"ב או באירופה.
 - **ספקי שירות טכנולוגיים:** שירותי ענן, אחסון וניתוח נתונים הפועלים מטעמנו ותחת הסכמי סודיות קפדניים:
   - **RevenueCat** — ניהול מנויים והרשמות.
-  - **Supabase** — ניהול חשבונות משתמש ובסיס נתונים.
+  - **Supabase / Neon** — ניהול חשבונות משתמש ובסיסי נתונים (כולל התוכן החברתי והקהילתי).
   - **Vercel** — אירוח ה-API והשרת.
   - **Cloudflare R2 / Vercel Blob** — אחסון תמונות וקבצים.
   - **PostHog** — אנליטיקה, A/B testing ו-session replay (עם מיסוך אוטומטי של שדות קלט).
@@ -160,6 +177,8 @@ FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לח
 
 השימוש באפליקציה מותר מגיל 16 ומעלה. איננו אוספים מידע ביודעין מילדים מתחת לגיל 16. אם נודע לנו שילד מתחת לגיל זה מסר מידע, נמחק אותו מיידית.
 
+**קטינים (בני 16–17) והפיצ'רים החברתיים:** הגלוּת הציבורית (הצגת שם התצוגה, אווטאר ורמה למשתמשים אחרים) כבויה כברירת מחדל ומחייבת הסכמת הצטרפות מפורשת (Opt-In). התוכן החברתי עובר מודרציה, ואיסור מוחלט חל על פרסום פרטים מזהים. הורה רשאי לפנות אלינו ב-support@finplay.me לבקשת הסתרה או הסרה של פרטי הקטין מהפיצ'רים החברתיים.
+
 ### 8. שינויים במדיניות
 
 אנו עשויים לעדכן את מדיניות הפרטיות מעת לעת. שינויים מהותיים יפורסמו באפליקציה ויעודכנו בתאריך "עדכון אחרון" בראש מסך זה.
@@ -186,9 +205,9 @@ The "sandbox" simulator operates in a virtual environment with no financial risk
 
 ### 3. Game Economy & No Gambling
 
-Progress is based solely on skill, knowledge, learning, and persistence (Skill-Based), with no element of chance or luck. Virtual coins have no monetary or commercial value outside the App and cannot be converted to cash.
+Progress is based primarily on skill, knowledge, learning, and persistence (Skill-Based). Some community features include **virtual predictions and wagers** on future market events (e.g. "crowd wisdom", parimutuel wagers on an index outcome, and the fantasy league), which may involve uncertainty tied to market movements. However, since these use **only virtual coins that have no monetary value, cannot be converted to cash, and are not purchased with real money to place the wager**, they do not constitute prohibited gaming, a lottery, or gambling under the Penal Law, 5737-1977. There is no way to win real money or money's-worth in the App.
 
-We reserve the exclusive right to change benefit prices, limit redemptions, or cancel the rewards program at any time without prior notice.
+Virtual coins have no monetary or commercial value outside the App and cannot be converted to cash. We reserve the exclusive right to change benefit prices, limit redemptions, or cancel the rewards program at any time without prior notice.
 
 ### 4. Age Restriction
 
@@ -231,6 +250,18 @@ The App offers nine financial calculators (mortgage, pension, payslip breakdown,
 
 To improve user experience, FinPlay runs automated experiments on different variants of screens, copy, and offers (Multi-Armed Bandit). Variant assignment is anonymous, not tied to personal identity, and stored in PostHog for analytics and improvement purposes only.
 
+### 11. Community, User-Generated Content & Public Profile
+
+The App includes social features on the "Friends" hub: community chat rooms, anonymous advice, crowd wisdom, (virtual) portfolio sharing, a fantasy league, leaderboards, and a friends directory.
+
+- **Public profile (opt-in only):** by default you are not visible to other users. On first entry to the Friends hub you are shown an explicit opt-in request; only if you approve, your **display name, avatar, level, and virtual-coin count** are shown to other users in leaderboards and the directory. Email, phone, date of birth, and real financial data are **never** shown. You can turn visibility off at any time in Settings.
+- **User-generated content (UGC):** messages in chat rooms, posts and replies in anonymous advice, and virtual portfolios you share are stored on FinPlay servers and shown to other community members. You are the sole owner of and responsible for the content you post.
+- **Moderation:** content is filtered automatically (including via AI services) to remove spam, offensive content, personal identifiers, or inappropriate material. We may remove content, suspend, or block a user who violates community rules. Harassment, incitement, publishing others' identifying details, and unlawful content are prohibited.
+- **Report & block:** you can report content or users and block users directly in the App.
+- **Predictions & wagers:** participation in crowd wisdom, parimutuel wagers, and the fantasy league is in virtual coins only, subject to Section 3 (No Gambling).
+
+Use of the social features constitutes agreement to these rules. For minors (16–17), public visibility is subject to the opt-in and the enhanced protections in the Privacy Policy.
+
 ---
 
 ## Privacy Policy (English)
@@ -245,6 +276,8 @@ FinPlay is committed to protecting your privacy and operates in accordance with 
 - **Content sent for AI processing:** questions you send to the Captain Shark chat, payslip files (for processing duration only), stock tickers for analysis, and parameters streamed into insights/Banner Tip requests (name, XP, streak, financial goals).
 - **Input to financial tools:** values you enter into the various calculators (salary, expenses, retirement age, savings goals, etc.) — stored locally on device only.
 - **Anonymized aggregate statistics:** of payslips (ranges only, no exact amounts) for the clan-sharing feature. Stored locally on device.
+- **Social & community content:** messages you send in chat rooms, posts and replies in anonymous advice, virtual portfolios you share, votes/predictions and virtual-coin wagers in crowd wisdom, fantasy-league picks, and the friendships you form. Stored on FinPlay servers to operate the social features.
+- **Public profile (opt-in):** if you choose to be visible, your display name, avatar, level, and virtual-coin count are visible to other users.
 - **A/B test variant assignment:** anonymous variant identifier for measuring screen/copy effectiveness.
 
 ### 2. Purpose of Use
@@ -257,12 +290,13 @@ FinPlay is committed to protecting your privacy and operates in accordance with 
 
 We will never sell your personally identifiable information. Sharing occurs in the following cases:
 
+- **Visibility to other community users (opt-in only):** if you join the community, your display name, avatar, level, and virtual-coin count are visible to other users in leaderboards and the friends directory. Email, phone, date of birth, and real financial data are **never** exposed. Content you post to the community (room messages, anonymous-advice posts, shared portfolios) is shown to other users. You can turn visibility off at any time in Settings, and report/block users.
 - **Benefit redemption:** when you actively click "Redeem Benefit" through the rewards store, you give explicit consent to share your contact details with that specific entity.
 - **AI service providers:**
   - **External AI services** — for automated processing of chat, payslip, personal insights, Banner Tip, and stock analysis (quick and deep). Processing occurs on the providers' servers, in the US or Europe.
 - **Technology providers:** cloud, storage, and analytics services operating on our behalf under strict confidentiality agreements:
   - **RevenueCat** — subscription and purchase management.
-  - **Supabase** — user accounts and database.
+  - **Supabase / Neon** — user accounts and databases (including social/community content).
   - **Vercel** — API and server hosting.
   - **Cloudflare R2 / Vercel Blob** — image and file storage.
   - **PostHog** — analytics, A/B testing, and session replay (with automatic input field masking).
@@ -307,6 +341,8 @@ We employ strict technological and organizational security measures to protect y
 ### 7. Children
 
 Use is permitted from age 16. We do not knowingly collect information from children under 16. If we learn that a child under 16 has provided information, we will delete it immediately.
+
+**Minors (16–17) and social features:** public visibility (showing display name, avatar, and level to other users) is off by default and requires explicit opt-in consent. Social content is moderated, and publishing identifying details is strictly prohibited. A parent may contact us at support@finplay.me to request hiding or removal of a minor's details from the social features.
 
 ### 8. Changes to This Policy
 

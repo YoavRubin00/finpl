@@ -49,6 +49,8 @@ export const LOUNGE_TABLES: LoungeTable[] = [
     subtitleHe: "דירה, משכנתא והחלטות גדולות",
     emoji: "🏠",
     accent: "#fbbf24",
+    // קפטן שארק כאדריכל — מעוגן על דמות-שוק-ההון המאושרת (nano_banana_pro, שקוף)
+    cardArtUri: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/club/cards/shark-realestate-v2.webp",
     // מכויל מול lounge-scene-v1 (שולחן-הבניינים המוזהב, מרכז-תחתון)
     hotspot: { cxPct: 47, cyPct: 78 },
     zoomScale: 1.9,
@@ -59,6 +61,8 @@ export const LOUNGE_TABLES: LoungeTable[] = [
     subtitleHe: "קרן חירום, מינוס והרגלים",
     emoji: "🪙",
     accent: "#34d399",
+    // קפטן שארק חוסך — מעוגן על דמות-שוק-ההון המאושרת (nano_banana_pro, שקוף)
+    cardArtUri: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/club/cards/shark-savings-v2.webp",
     // מכויל מול lounge-scene-v1 (שולחן תיבת-האוצר, ימין-מרכז)
     hotspot: { cxPct: 78, cyPct: 60 },
     zoomScale: 1.9,

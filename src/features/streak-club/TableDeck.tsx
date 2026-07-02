@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  countPillText: { fontSize: 12, fontWeight: "900", color: "#0b1220" },
+  countPillText: { fontSize: 12, fontWeight: "900", color: "#0b1220", writingDirection: "rtl" },
   insightArea: { flex: 1, alignSelf: "stretch", alignItems: "center", justifyContent: "flex-start", gap: 10 },
   headline: {
     fontSize: 22,

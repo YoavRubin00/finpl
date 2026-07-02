@@ -23,6 +23,11 @@ export const CURRENT_TERMS_VERSION = '2026-06-04b';
  * Each bullet under ~110 chars.
  */
 export const TERMS_UPDATE_SUMMARY_HE: ReadonlyArray<string> = [
+  // 2026-07-03 cycle — social / community features
+  'נפתח עמוד "חברים" חברתי: חדרי שיח, ייעוץ אנונימי, חכמת ההמונים, שיתוף תיקים (וירטואליים), ליגת פנטזי, לוחות מובילים ומאגר חברים.',
+  'פרופיל ציבורי בהסכמה בלבד (Opt-In): רק אם תאשר/י, שם התצוגה, האווטאר, הרמה ומספר המטבעות הווירטואליים שלך יוצגו למשתמשים אחרים. אימייל ופרטים אישיים לעולם לא נחשפים. ניתן לבטל את הגלוּת בכל עת.',
+  'תוכן שאת/ה מפרסם/ת בקהילה (הודעות, פוסטים, תיקים משותפים) נשמר בשרת, מוצג לאחרים ועובר מודרציה. ניתן לדווח ולחסום. חל איסור על הטרדה ותוכן פוגעני.',
+  'תחזיות והתערבויות בחכמת ההמונים ובפנטזי הן במטבעות וירטואליים בלבד, ללא כל ערך כספי וללא אפשרות להמרה לכסף — אין באפליקציה הימור בכסף אמיתי.',
   // 2026-06-04 cycle — parental-consent flow shipped
   'בני 16–17 שמעוניינים במנוי Pro יכולים כעת לקבל אישור הורה ישירות באפליקציה: מזינים אימייל של הורה ושולחים קישור אישור. רכישה תיפתח רק לאחר שההורה ילחץ על האישור.',
   // 2026-06-03 cycle — legal-compliance pass
@@ -36,6 +41,11 @@ export const TERMS_UPDATE_SUMMARY_HE: ReadonlyArray<string> = [
 
 /** Same consolidated summary in English. Keep ordering identical to HE. */
 export const TERMS_UPDATE_SUMMARY_EN: ReadonlyArray<string> = [
+  // 2026-07-03 cycle — social / community features
+  'A social "Friends" hub launched: chat rooms, anonymous advice, crowd wisdom, (virtual) portfolio sharing, a fantasy league, leaderboards, and a friends directory.',
+  'Public profile by consent only (opt-in): only if you approve, your display name, avatar, level, and virtual-coin count become visible to other users. Email and personal details are never exposed. You can turn visibility off at any time.',
+  'Content you post to the community (messages, posts, shared portfolios) is stored on the server, shown to others, and moderated. You can report and block. Harassment and offensive content are prohibited.',
+  'Predictions and wagers in crowd wisdom and fantasy use virtual coins only — no monetary value and no cash conversion. There is no real-money gambling in the app.',
   // 2026-06-04 cycle
   'Users aged 16–17 can now obtain parental consent for a Pro subscription directly in the app: enter a parent\'s email, an approval link is sent, and purchase unlocks once the parent clicks to confirm.',
   // 2026-06-03 cycle

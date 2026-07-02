@@ -95,7 +95,7 @@ export function TermsUpdateModal({ visible, onAccepted }: Props): React.ReactEle
         >
           <View style={styles.card}>
             <Text style={[styles.cardTitle, RTL]} allowFontScaling={false}>
-              מה השתנה ביוני 2026:
+              מה השתנה ביולי 2026:
             </Text>
             {TERMS_UPDATE_SUMMARY_HE.map((line, i) => (
               <View key={i} style={styles.bulletRow}>
