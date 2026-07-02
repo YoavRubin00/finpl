@@ -231,11 +231,21 @@ export function ChestCelebrationModal({
     if (!visible || !opened || wisdomFiredRef.current) return;
     wisdomFiredRef.current = true;
     // T1: DoN modal opens — independent of wisdom.
+    // אודרי (RETENTION-PLAN 2026-07-02, one-gamble-per-session): the chest's
+    // double-or-nothing is MUTED on the user's first IL-day — the day-0 exit
+    // ritual's shark wager is the single bet of the first session. Muting =
+    // auto-resolve as ×1 kept, so the parent multiplier state and the coin
+    // flight behave exactly like a "keep" choice.
     const tDoN = setTimeout(() => {
-      if (onDoNResolve) {
+      const firstDay = useEconomyUIStore.getState().activeDates.length <= 1;
+      if (onDoNResolve && !firstDay) {
         setShowDoN((prev) => prev || true);
       } else {
         setDonResolved(true);
+        if (onDoNResolve) {
+          setFlyingCoins(true);
+          onDoNResolve(1);
+        }
       }
     }, 700);
     // T2: Wisdom popup appears as a parallel ornament. If DoN is still
@@ -261,10 +271,15 @@ export function ChestCelebrationModal({
     prevWisdomActiveRef.current = isActive;
     if (!justDismissed) return;
     if (!wisdomFiredRef.current || donResolved) return;
-    if (onDoNResolve) {
+    // Same first-day mute as the primary DoN trigger above.
+    if (onDoNResolve && useEconomyUIStore.getState().activeDates.length > 1) {
       setShowDoN(true);
     } else {
       setDonResolved(true);
+      if (onDoNResolve) {
+        setFlyingCoins(true);
+        onDoNResolve(1);
+      }
     }
   }, [wisdomActive, donResolved, onDoNResolve]);
 

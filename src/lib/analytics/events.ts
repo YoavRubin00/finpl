@@ -263,7 +263,18 @@ export type AppEvent =
   | { name: 'push_opened'; props: { channel?: string; screen?: string } }
   // The permission primer's time-chip choice ("מתי להזכיר?") — the
   // appointment hour (0-23, local) picked BEFORE the OS dialog opened.
-  | { name: 'reminder_time_selected'; props: { hour: number; source?: string } };
+  | { name: 'reminder_time_selected'; props: { hour: number; source?: string } }
+
+  // ── Day-0 exit ritual + shark wager (RETENTION-PLAN 2026-07-02 §2.4) ────
+  // The end-of-first-session "נתראה מחר" moment: tomorrow's promise + the
+  // shark's commitment wager (escrow 50 → return tomorrow → 150). One offer
+  // per lifetime; resolution by IL calendar day. KPI (אודרי): accept-rate AND
+  // D7 of losers vs holdout — if losing churns people, the switch goes off.
+  | { name: 'day0_exit_ritual_shown'; props: { streak: number } }
+  | { name: 'streak_wager_offered'; props: { stake: number; payout: number } }
+  | { name: 'streak_wager_accepted'; props: { stake: number; payout: number } }
+  | { name: 'streak_wager_declined'; props: { stake: number; payout: number } }
+  | { name: 'streak_wager_resolved'; props: { outcome: 'won' | 'lost'; stake: number; payout: number } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event

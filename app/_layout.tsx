@@ -116,6 +116,7 @@ import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthr
 import { PostWalkthroughProTeaserGate } from "../src/features/subscription/PostWalkthroughProTeaser";
 import { PostWalkthroughFirstChestGate } from "../src/features/onboarding/PostWalkthroughFirstChest";
 import { NotificationPermissionPrompt } from "../src/features/notifications/NotificationPermissionPrompt";
+import { Day0ExitRitualHost } from "../src/features/retention-loops/Day0ExitRitualHost";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
@@ -769,6 +770,12 @@ function RootLayoutInner() {
                   clear so it never stacks on the monetization moment. The
                   thin learn-screen banner remains the recurring fallback. */}
               <NotificationPermissionPrompt />
+              {/* Day-0 exit ritual "נתראה מחר" + shark wager (RETENTION-PLAN
+                  2026-07-02, מוני 50→150 escrow / אודרי GO-with-conditions).
+                  Fires once at the end of the first session (mod-0-1 done,
+                  first IL-day, all CTA chains cleared); also hosts the
+                  next-day win/loss resolution modal. */}
+              <Day0ExitRitualHost />
               {/* Force-update gate. Internal fetch decides whether to block
                   based on remote config; rendered AFTER other modals so its
                   full-screen Modal sits on top of every other overlay when

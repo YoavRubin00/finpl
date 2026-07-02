@@ -91,8 +91,7 @@
 | # | פריט | בעלים | KPI + צפי |
 |---|---|---|---|
 | 3.1 | streak-club / מועדון-100 — **כבר בבנייה** (`src/features/streak-club/` בעץ) — משתלב, לא מתוכנן מחדש | דואו | streak≥2 `PidmxOUl` 9%→15% |
-| 3.2 | טקס יציאה יום-0 "נתראה מחר" (מסך אחד: רווחים → מחר → התערבות → "קבענו ל-X") | יפיופי + אודרי (רזון) | `day0_exit_ritual_shown/completed` · +2–4pt activated |
-| 3.3 | "ההתערבות של הכריש" (50→150, bandit+holdout חובה — סלקציה עצמית) | דואו + מוני (תמחור) + אודרי (taste) | `streak_wager_*` · +3–6pt activated בקרב acceptors |
+| 3.2+3.3 | ✅ **בקוד 2.7 (הוקדם)** — טקס יציאה + ההתערבות אוחדו למודל רזה אחד (TRIM של אודרי): הבטחת-המחר ככותרת, כרטיס ההתערבות כאלמנט היחיד, "קבענו ל-X" בתחתית. מוני: 50→150, escrow מיידי, one-shot לכל החיים, יום קלנדרי IL, דילוג במאזן<50. אודרי: GO-בתנאים — framing "הכריש מתערב", כפתורים שווי-משקל, הפסד מכבד בלי re-offer, **DoN של התיבה מושתק ביום-0** (הימור אחד לסשן), פוש-הלילה נוקב בפרס. `Day0ExitRitualHost` + `useSharkWagerStore` | בוצע (נותר: holdout דרך bandit) | `day0_exit_ritual_shown` · `streak_wager_offered/accepted/declined/resolved` · KPI אודרי: D7 מפסידים מול holdout |
 | 3.4 | בקשת הרשאה שנייה אחרי חגיגת יום-2 | רטנשן | permission_result{source:'day2_celebration'} |
 
 ### שבוע 4 (22–31.7) — נשאר NSM + retro
