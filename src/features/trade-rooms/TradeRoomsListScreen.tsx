@@ -1,12 +1,12 @@
 import React from 'react';
 import { ScrollView, View, Text, Pressable, Modal, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronRight, MessagesSquare, Plus, X } from 'lucide-react-native';
 
 import { tapHaptic } from '../../utils/haptics';
 import { useTradeRoomsStore } from './useTradeRoomsStore';
-import { TRADE_ROOMS, getDailyEventTopic, getRoomMemberCount } from './tradeRoomsData';
+import { TRADE_ROOMS, getDailyEventTopic } from './tradeRoomsData';
 import { RoomRow } from './components/RoomRow';
 import type { TradeRoom } from './tradeRoomsTypes';
 
@@ -114,8 +114,11 @@ function DailyEventCard({
             backgroundColor: '#22c55e',
           }}
         />
-        <Text style={{ fontSize: 12, fontWeight: '700', color: '#15803d' }}>
-          {getRoomMemberCount(room)} מדברים על זה עכשיו
+        <Text
+          style={{ fontSize: 12, fontWeight: '700', color: '#15803d', flexShrink: 1 }}
+          maxFontSizeMultiplier={1.15}
+        >
+          הקהילה מדברת על זה עכשיו
         </Text>
       </View>
     </Pressable>
@@ -291,6 +294,7 @@ function CreateRoomModal({
 
 export function TradeRoomsListScreen(): React.ReactElement {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   // Subscribing to the maps keeps rows fresh as messages arrive.
   const messagesByRoom = useTradeRoomsStore((s) => s.messagesByRoom);
   const lastReadAt = useTradeRoomsStore((s) => s.lastReadAt);
@@ -400,7 +404,10 @@ export function TradeRoomsListScreen(): React.ReactElement {
         </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+      >
         {/* Daily event hero */}
         {dailyRoom && (
           <DailyEventCard

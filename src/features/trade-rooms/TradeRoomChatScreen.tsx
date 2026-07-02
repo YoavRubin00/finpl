@@ -9,14 +9,14 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronRight, Send, Pin } from 'lucide-react-native';
 
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useTradeRoomsStore } from './useTradeRoomsStore';
-import { getRoomById, getRoomMemberCount, getDailyEventTopic, MAX_MESSAGE_LENGTH } from './tradeRoomsData';
+import { getRoomById, getDailyEventTopic, MAX_MESSAGE_LENGTH } from './tradeRoomsData';
 import { moderateWithSharkBot } from '../moderation/sharkModeratorBot';
 import { MessageBubble } from './components/MessageBubble';
 import type { TradeRoomId, TradeRoomMessage, MessageSentiment } from './tradeRoomsTypes';
@@ -27,6 +27,7 @@ const TEXT_MUTED = '#6b7280';
 
 export function TradeRoomChatScreen(): React.ReactElement {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ roomId: string }>();
   const roomId = (params.roomId ?? 'wallstreet') as TradeRoomId;
   const customRooms = useTradeRoomsStore((s) => s.customRooms);
@@ -146,8 +147,7 @@ export function TradeRoomChatScreen(): React.ReactElement {
               textAlign: 'right',
             }}
           >
-            {getRoomMemberCount(room)} חברים
-            {sentiment.taggedCount >= 3 ? ` · ${sentiment.bullPercent}% שוריים` : ''}
+            {sentiment.taggedCount >= 3 ? `${sentiment.bullPercent}% שוריים` : ''}
           </Text>
         </View>
       </View>
@@ -188,8 +188,8 @@ export function TradeRoomChatScreen(): React.ReactElement {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+        behavior="padding"
+        keyboardVerticalOffset={0}
       >
         {/* Messages */}
         <FlatList
@@ -256,7 +256,7 @@ export function TradeRoomChatScreen(): React.ReactElement {
             borderTopColor: '#e5e7eb',
             paddingHorizontal: 12,
             paddingTop: 8,
-            paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+            paddingBottom: Math.max(insets.bottom, 12),
             gap: 8,
           }}
         >

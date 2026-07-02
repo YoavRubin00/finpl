@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { formatAlias } from '../../anon-advice/anonAdviceData';
-import { getRoomMemberCount } from '../tradeRoomsData';
 import type { TradeRoom, TradeRoomMessage } from '../tradeRoomsTypes';
 
 const TEXT_PRIMARY = '#1f2937';
@@ -126,18 +125,6 @@ export function RoomRow({
           )}
         </View>
 
-        {/* Members line */}
-        <Text
-          style={{
-            fontSize: 11,
-            color: '#9ca3af',
-            marginTop: 2,
-            writingDirection: 'rtl',
-            textAlign: 'right',
-          }}
-        >
-          {getRoomMemberCount(room)} חברים בחדר
-        </Text>
       </View>
     </Pressable>
   );
