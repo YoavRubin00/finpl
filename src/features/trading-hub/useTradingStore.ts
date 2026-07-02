@@ -6,6 +6,7 @@ import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
 import { queryClient } from '../../lib/queryClient';
 import { economyQueryKey } from '../economy/useEconomy';
 import { fireEconomyDelta } from '../economy/useEconomyUIStore';
+import { captureEvent } from '../../lib/posthog';
 import type { Economy } from '../../lib/api/economy';
 
 /**
@@ -148,6 +149,17 @@ export const useTradingStore = create<TradingStore>()(
         set((state) => ({
           positions: [...state.positions, position],
         }));
+        // The trading hub was fully analytics-dark (only the autocaptured
+        // $screen view) — position open/close are the two events that turn
+        // "visited the simulator" into "actually used it". Yoav 2026-07-02.
+        try {
+          captureEvent('trading_position_opened', {
+            asset_id: assetId,
+            trade_type: type,
+            amount_invested: amountInvested,
+            open_positions: get().positions.length,
+          });
+        } catch { /* analytics must never break trading */ }
         logTradeFireAndForget(
           assetId,
           type === 'buy' ? 'BUY' : 'SELL',
@@ -182,6 +194,16 @@ export const useTradingStore = create<TradingStore>()(
         if (returned > 0) {
           fireEconomyDelta({ coinsDelta: returned });
         }
+        try {
+          captureEvent('trading_position_closed', {
+            asset_id: position.assetId,
+            trade_type: position.type,
+            amount_invested: position.amountInvested,
+            pnl_percent: Math.round(position.pnlPercent * 10) / 10,
+            returned_coins: returned,
+            hold_minutes: Math.max(0, Math.round((Date.now() - position.openedAt) / 60000)),
+          });
+        } catch { /* analytics must never break trading */ }
         // Closing a long → SELL (decrements portfolio).
         // Closing a short → BUY, but skipPortfolio=true so no phantom long is created.
         logTradeFireAndForget(
@@ -277,6 +299,13 @@ export const useTradingStore = create<TradingStore>()(
         set((state) => ({
           pendingOrders: [...state.pendingOrders, order],
         }));
+        try {
+          captureEvent('trading_limit_order_placed', {
+            asset_id: assetId,
+            limit_price: limitPrice,
+            amount_invested: amountInvested,
+          });
+        } catch { /* analytics must never break trading */ }
         return id;
       },
 
