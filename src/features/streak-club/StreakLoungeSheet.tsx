@@ -32,7 +32,7 @@ import { FINN_HELLO, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 
 import { LOUNGE_TABLES, SCENE_URI, SCENE_BLUR_URI, SCENE_AR, HOTSPOT_TOUCH, type LoungeTable, type TableId } from "./loungeConfig";
 import { getDropForDate, getTomorrowTease } from "./clubContent";
-import { useStreakClubStore } from "./useStreakClubStore";
+import { useStreakClubStore, dateKeyDaysAgo } from "./useStreakClubStore";
 import { useLoungeCamera } from "./useLoungeCamera";
 import { TableDeck } from "./TableDeck";
 
@@ -68,6 +68,66 @@ function greetingByHour(h: number): string {
   let out = GREETINGS[0][1];
   for (const [from, text] of GREETINGS) if (h >= from) out = text;
   return out;
+}
+
+/** זמן שנותר עד חצות-ישראל (הדרופים הבאים) — "H:MM" */
+function timeToNextDrops(): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jerusalem",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
+  const [h, m] = parts.split(":").map((n) => parseInt(n, 10));
+  const remainMin = 24 * 60 - (h * 60 + m);
+  const rh = Math.floor(remainMin / 60);
+  const rm = remainMin % 60;
+  return `${rh}:${String(rm).padStart(2, "0")}`;
+}
+
+/** קרני-אור תת-ימיות — שתי אלומות מוטות בפולס-שקיפות איטי (UI-thread) */
+function GodRay({ leftPct, angleDeg, delay }: { leftPct: number; angleDeg: number; delay: number }) {
+  const reducedMotion = useReducedMotion();
+  const glow = useSharedValue(0.07);
+  useEffect(() => {
+    if (reducedMotion) return;
+    glow.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(0.16, { duration: 2600, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0.06, { duration: 2600, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+        true,
+      ),
+    );
+    return () => cancelAnimation(glow);
+  }, [glow, delay, reducedMotion]);
+  const style = useAnimatedStyle(() => ({ opacity: glow.value }));
+  if (reducedMotion) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: "absolute",
+          top: -40,
+          left: `${leftPct}%`,
+          width: 120,
+          height: "62%",
+          transform: [{ rotate: `${angleDeg}deg` }],
+        },
+        style,
+      ]}
+    >
+      <LinearGradient
+        colors={["rgba(255,241,196,0.9)", "rgba(255,241,196,0.25)", "transparent"]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+    </Animated.View>
+  );
 }
 
 /** בועות אמביינט — 6 בועות קלות עולות בלופ (UI-thread בלבד) */
@@ -119,13 +179,38 @@ export function StreakLoungeSheet({
   const markTableSeen = useStreakClubStore((s) => s.markTableSeen);
   const totalVisits = useStreakClubStore((s) => s.totalVisits);
   const seenMap = useStreakClubStore((s) => s.seenByDate[dateKey]);
+  const seenByDateAll = useStreakClubStore((s) => s.seenByDate);
 
   const [view, setView] = useState<LoungeView>("lounge");
   const [stage, setStage] = useState({ w: 0, h: 0 });
   const [showFinale, setShowFinale] = useState(false);
   const [entryBeat, setEntryBeat] = useState(false);
   const [sharkDancing, setSharkDancing] = useState(false);
+  const [isFirstEverVisit, setIsFirstEverVisit] = useState(false);
+  const [nextDropsIn, setNextDropsIn] = useState<string>("");
   const dancingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const seenCount = LOUNGE_TABLES.reduce((n, t) => n + (seenMap?.[t.id] ? 1 : 0), 0);
+  const allDoneToday = seenCount === LOUNGE_TABLES.length;
+
+  // חותמות-ביקור שבועיות: 7 הימים האחרונים (הישן→שמאל, היום→ימין ב-RTL);
+  // חותמת מלאה = נסגרו כל 3 השולחנות באותו יום. "אל תשבור את השרשרת" של המועדון.
+  const weekStamps = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const key = dateKeyDaysAgo(dateKey, 6 - i);
+      const day = seenByDateAll[key];
+      const count = LOUNGE_TABLES.reduce((n, t) => n + (day?.[t.id] ? 1 : 0), 0);
+      return { key, full: count === LOUNGE_TABLES.length, partial: count > 0, isToday: i === 6 };
+    });
+  }, [seenByDateAll, dateKey]);
+
+  // שעון-הדרופים: מתקתק רק כשהטרקלין פתוח והיום סגור — אנטיציפציה, לא רעש
+  useEffect(() => {
+    if (!visible || !allDoneToday) return;
+    setNextDropsIn(timeToNextDrops());
+    const t = setInterval(() => setNextDropsIn(timeToNextDrops()), 30_000);
+    return () => clearInterval(t);
+  }, [visible, allDoneToday]);
 
   const camera = useLoungeCamera();
 
@@ -187,7 +272,9 @@ export function StreakLoungeSheet({
     setView("lounge");
     setShowFinale(false);
     camera.reset();
-    const firstVisitToday = useStreakClubStore.getState().lastVisitDate !== dateKey;
+    const st = useStreakClubStore.getState();
+    const firstVisitToday = st.lastVisitDate !== dateKey;
+    setIsFirstEverVisit(!locked && st.totalVisits === 0);
     if (!locked) recordVisit();
     playSound("modal_open_2");
     try {
@@ -220,6 +307,8 @@ export function StreakLoungeSheet({
       const px = frame.x + (table.hotspot.cxPct / 100) * frame.w;
       const py = frame.y + (table.hotspot.cyPct / 100) * frame.h;
       camera.focusPoint(px, py, table.zoomScale, stage.w || screenW, stage.h || screenH);
+      // haptic-נחיתה כשהספרינג מתיישב על השולחן — הזום מקבל "משקל"
+      setTimeout(() => tapHaptic(), 380);
       setView(table.id);
       try {
         captureEvent("streak_table_opened", { table: table.id, date_key: dateKey, streak });
@@ -265,7 +354,16 @@ export function StreakLoungeSheet({
 
   if (!visible) return null;
 
-  const greeting = locked ? "עוד יום אחד ונכנסים" : greetingByHour(new Date().getHours());
+  // המארח חי: הבועה משתנה לפי מצב-היום — הכוונה, לא קישוט
+  const greeting = locked
+    ? "עוד יום אחד ונכנסים"
+    : isFirstEverVisit
+      ? "ברוך הבא למועדון! כל יום — 3 דרופים חדשים"
+      : allDoneToday
+        ? `סגרת הכל! דרופים חדשים בעוד ${nextDropsIn || timeToNextDrops()}`
+        : seenCount > 0
+          ? `נשאר${LOUNGE_TABLES.length - seenCount === 1 ? " שולחן אחד" : `ו ${LOUNGE_TABLES.length - seenCount} שולחנות`} להיום`
+          : greetingByHour(new Date().getHours());
   const activeTable = view === "lounge" ? null : LOUNGE_TABLES.find((t) => t.id === view) ?? null;
   const tomorrowTease = getTomorrowTease("stocks", dateKey);
 
@@ -302,16 +400,22 @@ export function StreakLoungeSheet({
                   />
                 ) : null}
 
+                {/* קרני-אור תת-ימיות — מזדחפות עם הסצנה */}
+                <GodRay leftPct={30} angleDeg={16} delay={0} />
+                <GodRay leftPct={58} angleDeg={-11} delay={1400} />
+
                 {/* ── hotspots — בתוך ה-frame (מזדחפים עם הזום), נמוגים בכניסה ── */}
                 <Animated.View style={[StyleSheet.absoluteFill, camera.hotspotFadeStyle]} pointerEvents={view === "lounge" && !locked ? "auto" : "none"}>
-                  {LOUNGE_TABLES.map((t) => {
+                  {LOUNGE_TABLES.map((t, i) => {
                     const seen = Boolean(seenMap?.[t.id]);
                     return (
                       <TableHotspot
                         key={t.id}
                         table={t}
+                        index={i}
                         seen={seen}
                         locked={locked}
+                        tomorrowTeaseHe={seen ? getTomorrowTease(t.id, dateKey) : undefined}
                         onPress={() => openTable(t)}
                       />
                     );
@@ -361,6 +465,22 @@ export function StreakLoungeSheet({
           <Text style={styles.memberLine} allowFontScaling={false}>
             {locked ? `רצף ${streak} 🔥` : `רצף ${streak} 🔥 · ביקור מס' ${Math.max(totalVisits, 1)}`}
           </Text>
+          {/* חותמות-השבוע: יום שסגרת בו את המועדון = חותמת זהב. אל תשבור את השרשרת. */}
+          {!locked && (
+            <View style={styles.stampsRow} accessible accessibilityLabel={`חותמות השבוע: ${weekStamps.filter((s) => s.full).length} מתוך 7 ימים הושלמו`}>
+              {weekStamps.map((s) => (
+                <View
+                  key={s.key}
+                  style={[
+                    styles.stamp,
+                    s.full && styles.stampFull,
+                    !s.full && s.partial && styles.stampPartial,
+                    s.isToday && styles.stampToday,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
         </View>
 
         {/* ── הדואו המארח: קפטן שארק + דייזי (וובפים חיים, בטרקלין בלבד) ── */}
@@ -437,6 +557,9 @@ export function StreakLoungeSheet({
               />
               <Text style={styles.finaleTitle} allowFontScaling={false}>סגרת את הטרקלין להיום 🔥</Text>
               <Text style={styles.finaleBody}>מחר על השולחן: {tomorrowTease}</Text>
+              <Text style={styles.finaleCountdown} allowFontScaling={false}>
+                נפתח בעוד {nextDropsIn || timeToNextDrops()} ⏳
+              </Text>
               <Pressable
                 onPress={() => {
                   tapHaptic();
@@ -466,16 +589,20 @@ export function StreakLoungeSheet({
   );
 }
 
-/** צ'יפ-שולחן על הסצנה: halo-pulse כשטרי, מעומעם כשנצפה */
+/** צ'יפ-שולחן על הסצנה: halo-pulse כשטרי, טיזר-מחר כשנצפה, כניסה מדורגת */
 function TableHotspot({
   table,
+  index,
   seen,
   locked,
+  tomorrowTeaseHe,
   onPress,
 }: {
   table: LoungeTable;
+  index: number;
   seen: boolean;
   locked: boolean;
+  tomorrowTeaseHe?: string;
   onPress: () => void;
 }) {
   const reducedMotion = useReducedMotion();
@@ -525,17 +652,25 @@ function TableHotspot({
           haloStyle,
         ]}
       />
-      <Pressable
-        onPress={onPress}
-        disabled={locked}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={`שולחן ${table.titleHe}${seen ? ", הדרופ של היום נצפה" : ", דרופ חדש מחכה"}`}
-        style={[hotspotStyles.chip, { borderColor: table.accent, opacity: seen ? 0.55 : 1 }]}
-      >
-        <Text style={hotspotStyles.emoji} allowFontScaling={false}>{seen ? "✓" : table.emoji}</Text>
-        <Text style={hotspotStyles.label} allowFontScaling={false}>{table.titleHe}</Text>
-      </Pressable>
+      <Animated.View entering={FadeInDown.delay(180 + index * 110).duration(320)}>
+        <Pressable
+          onPress={onPress}
+          disabled={locked}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`שולחן ${table.titleHe}${seen ? ", הדרופ של היום נצפה, מחר דרופ חדש" : ", דרופ חדש מחכה"}`}
+          style={[hotspotStyles.chip, { borderColor: table.accent, opacity: seen ? 0.62 : 1 }]}
+        >
+          <Text style={hotspotStyles.emoji} allowFontScaling={false}>{seen ? "✓" : table.emoji}</Text>
+          <Text style={hotspotStyles.label} allowFontScaling={false}>{table.titleHe}</Text>
+          {seen && tomorrowTeaseHe ? (
+            // קליפהנגר פר-שולחן: מה מחכה כאן מחר — 3 סיבות קטנות לחזור
+            <Text style={hotspotStyles.tease} allowFontScaling={false} numberOfLines={1}>
+              מחר: {tomorrowTeaseHe}
+            </Text>
+          ) : null}
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
@@ -552,6 +687,14 @@ const hotspotStyles = StyleSheet.create({
   },
   emoji: { fontSize: 26, marginBottom: 2 },
   label: { fontSize: 13, fontWeight: "900", color: "#f1f5f9", writingDirection: "rtl" },
+  tease: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#fbbf24",
+    writingDirection: "rtl",
+    marginTop: 3,
+    maxWidth: 118,
+  },
 });
 
 const styles = StyleSheet.create({
@@ -574,6 +717,33 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
     marginTop: 2,
+  },
+  stampsRow: {
+    flexDirection: "row-reverse",
+    alignSelf: "center",
+    gap: 6,
+    marginTop: 7,
+  },
+  stamp: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "rgba(255,255,255,0.16)",
+  },
+  stampPartial: {
+    backgroundColor: "rgba(251,191,36,0.35)",
+  },
+  stampFull: {
+    backgroundColor: "#fbbf24",
+    shadowColor: "#fbbf24",
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 2,
+  },
+  stampToday: {
+    borderWidth: 1.5,
+    borderColor: "rgba(251,191,36,0.9)",
   },
   hostWrap: { position: "absolute", alignSelf: "center", alignItems: "center", zIndex: 15 },
   hostRow: { flexDirection: "row-reverse", alignItems: "flex-end", gap: -6 },
@@ -638,6 +808,13 @@ const styles = StyleSheet.create({
     color: "#e2e8f0",
     textAlign: "center",
     writingDirection: "rtl",
+  },
+  finaleCountdown: {
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: "rgba(251,191,36,0.9)",
+    writingDirection: "rtl",
+    marginTop: 8,
   },
   finaleCta: {
     marginTop: 16,

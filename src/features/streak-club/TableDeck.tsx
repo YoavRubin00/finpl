@@ -73,7 +73,8 @@ export function TableDeck({
   const cardW = Math.min(width - 48, 420);
 
   return (
-    <Animated.View entering={FadeInUp.duration(260)} style={styles.wrap} pointerEvents="box-none">
+    // delay קטן אחרי תחילת-הזום — המצלמה "מספרת" קודם, הדק נוחת אחריה
+    <Animated.View entering={FadeInUp.delay(140).duration(260)} style={styles.wrap} pointerEvents="box-none">
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.card, { width: cardW, borderColor: table.accent }, cardStyle]}>
           <View style={[styles.tableTag, { backgroundColor: `${table.accent}22`, borderColor: table.accent }]}>

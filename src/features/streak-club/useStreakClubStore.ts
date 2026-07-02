@@ -6,11 +6,12 @@ import { todayIsraelDate } from "../economy/useStreak";
 import type { TableId } from "./loungeConfig";
 
 /**
- * מועדון הרצף — state מקומי: אילו שולחנות נצפו היום + מונה-ביקורים.
+ * מועדון הרצף — state מקומי: אילו שולחנות נצפו + מונה-ביקורים.
  *
  * seenByDate ממופתח לפי dateKey (יום-ישראלי, כמו הרצף) — כך "נצפה"
  * מתאפס אוטומטית בחצות-ישראל בלי טיימרים: מחר הוא פשוט מפתח אחר.
- * שומרים רק את היום הנוכחי (prune בכתיבה) כדי שה-storage יישאר זעיר.
+ * שומרים חלון של 7 ימים (prune בכתיבה) — ההיסטוריה מזינה את שורת
+ * חותמות-הביקור השבועית בטרקלין ("אל תשבור את השרשרת" בתוך המועדון).
  */
 interface StreakClubState {
   seenByDate: Record<string, Partial<Record<TableId, true>>>;
@@ -26,9 +27,30 @@ interface StreakClubState {
   seenToday: (table: TableId) => boolean;
   allSeenToday: () => boolean;
   hasUnseenToday: () => boolean;
+  seenCountToday: () => number;
 }
 
 const ALL_TABLES: TableId[] = ["stocks", "realestate", "savings"];
+const HISTORY_DAYS = 7;
+
+/** dateKey של לפני N ימים (עוגן חצות-UTC של התאריך הקלנדרי — בטוח לחישוב ימים) */
+export function dateKeyDaysAgo(todayKey: string, daysAgo: number): string {
+  const t = Date.parse(`${todayKey}T00:00:00Z`) - daysAgo * 86_400_000;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/** חלון 7 הימים האחרונים בלבד — שומר את ה-storage זעיר */
+function pruneHistory(
+  seenByDate: Record<string, Partial<Record<TableId, true>>>,
+  todayKey: string,
+): Record<string, Partial<Record<TableId, true>>> {
+  const keep: Record<string, Partial<Record<TableId, true>>> = {};
+  for (let i = 0; i < HISTORY_DAYS; i++) {
+    const k = dateKeyDaysAgo(todayKey, i);
+    if (seenByDate[k]) keep[k] = seenByDate[k];
+  }
+  return keep;
+}
 
 export const useStreakClubStore = create<StreakClubState>()(
   persist(
@@ -42,15 +64,17 @@ export const useStreakClubStore = create<StreakClubState>()(
         set((s) => ({
           totalVisits: s.totalVisits + 1,
           lastVisitDate: today,
-          // prune: משאירים רק את היום — העבר לא נחוץ לאף מסך
-          seenByDate: { [today]: s.seenByDate[today] ?? {} },
+          seenByDate: pruneHistory(s.seenByDate, today),
         }));
       },
 
       markTableSeen: (table) => {
         const today = todayIsraelDate();
         set((s) => ({
-          seenByDate: { [today]: { ...(s.seenByDate[today] ?? {}), [table]: true } },
+          seenByDate: {
+            ...pruneHistory(s.seenByDate, today),
+            [today]: { ...(s.seenByDate[today] ?? {}), [table]: true },
+          },
         }));
       },
 
@@ -64,6 +88,10 @@ export const useStreakClubStore = create<StreakClubState>()(
       hasUnseenToday: () => {
         const today = get().seenByDate[todayIsraelDate()];
         return ALL_TABLES.some((t) => !today?.[t]);
+      },
+      seenCountToday: () => {
+        const today = get().seenByDate[todayIsraelDate()];
+        return ALL_TABLES.reduce((n, t) => n + (today?.[t] ? 1 : 0), 0);
       },
     }),
     {
