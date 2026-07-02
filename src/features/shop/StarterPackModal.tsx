@@ -31,8 +31,6 @@ import { purchaseGemBundle } from '../../services/revenueCat';
 import {
   getTodaysStarterPack,
   STARTER_PACK_PRICE_LABEL,
-  STARTER_PACK_ORIGINAL_PRICE_LABEL,
-  STARTER_PACK_DISCOUNT_PCT,
 } from './starterPack';
 
 interface Props {
@@ -167,10 +165,12 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
                 <X size={18} color="#fef3c7" />
               </Pressable>
 
-              {/* Header */}
+              {/* Header — "היום בלבד" is the honest hook (the bundle really
+                  rotates at IL midnight); the fabricated "67% הנחה" badge was
+                  removed (integrity fix, MONETIZATION-PLAN 2026-07-02). */}
               <View style={styles.discountBadge}>
                 <Text style={styles.discountText} allowFontScaling={false}>
-                  {STARTER_PACK_DISCOUNT_PCT}% הנחה
+                  ההצעה של היום
                 </Text>
               </View>
               <Text style={styles.title} allowFontScaling={false}>חבילת מתחילים</Text>
@@ -213,10 +213,9 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
                 </View>
               </View>
 
-              {/* Price */}
+              {/* Price — no fabricated strikethrough anchor. */}
               <View style={styles.priceRow}>
                 <Text style={styles.salePrice} allowFontScaling={false}>{STARTER_PACK_PRICE_LABEL}</Text>
-                <Text style={styles.origPrice} allowFontScaling={false}>{STARTER_PACK_ORIGINAL_PRICE_LABEL}</Text>
               </View>
 
               {/* CTA / minor gate */}

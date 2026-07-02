@@ -10,8 +10,10 @@
  *     anchor while keeping the offer fresh — "I missed yesterday's pack but
  *     today's looks even better" is the FOMO lever, not the discount.
  *   • Heavy on consumables (coins/gems) + 2 cheap permanent unlocks (avatars).
- *     Perceived value held roughly constant across days (~₪75 worth of stuff
- *     for ₪19.90 → "75% off" claim stays honest).
+ *     Integrity (מוני, MONETIZATION-PLAN 2026-07-02): by our own internal
+ *     exchange rates the contents are worth ~₪12-23, so the old "₪59.90 /
+ *     -67%" strikethrough anchor was fabricated and was REMOVED. The honest
+ *     hook is the daily rotation ("today only"), not an invented discount.
  *
  * Retention (ריטנשן):
  *   • Daily rotation = a reason to open the shop daily (D1/D7 retention lift).
@@ -130,8 +132,6 @@ export function getTodaysStarterPack(now: Date = new Date()): StarterPackContent
 }
 
 export const STARTER_PACK_PRICE_LABEL = '₪19.90';
-export const STARTER_PACK_ORIGINAL_PRICE_LABEL = '₪59.90';
-export const STARTER_PACK_DISCOUNT_PCT = 67;
 
 /** Stable RevenueCat / store product ID. The contents change daily but the
  *  IAP product is the same — we charge the same price for "today's bundle". */

@@ -8,7 +8,7 @@ import { getShopSvgIcon } from '../../components/svg/shop/ShopIcons';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
 import { FlashOfferBanner } from '../../components/ui/FlashOfferBanner';
 import { StarterPackModal } from './StarterPackModal';
-import { STARTER_PACK_PRICE_LABEL, STARTER_PACK_ORIGINAL_PRICE_LABEL, STARTER_PACK_DISCOUNT_PCT } from './starterPack';
+import { STARTER_PACK_PRICE_LABEL } from './starterPack';
 import { generateDailyDeals } from './dailyDeals';
 import { ConfirmModal } from './ConfirmModal';
 import { useEconomy, useSpendCoins, useSpendGems, useAwardGems } from '../economy/useEconomy';
@@ -156,10 +156,11 @@ export function DailyDealsSection() {
           users we already block from buying. */}
       {!isMinor && (
         <View style={{ marginBottom: 14 }}>
+          {/* No discount/originalPrice on purpose — the old ₪59.90/-67% anchor
+              was fabricated (integrity fix, MONETIZATION-PLAN 2026-07-02).
+              The banner falls back to the honest "היום בלבד" burst. */}
           <FlashOfferBanner
             title="חבילת מתחילים"
-            discount={STARTER_PACK_DISCOUNT_PCT}
-            originalPrice={STARTER_PACK_ORIGINAL_PRICE_LABEL}
             salePrice={STARTER_PACK_PRICE_LABEL}
             timeLeftSeconds={Math.floor(remaining / 1000)}
             onPress={() => setStarterPackOpen(true)}

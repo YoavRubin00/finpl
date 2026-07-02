@@ -37,11 +37,15 @@ function formatHMS(s: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
 
+// Integrity (מוני+אודרי, MONETIZATION-PLAN 2026-07-02): discount/originalPrice
+// have NO defaults — a fabricated ₪59.90 anchor used to render even when the
+// caller passed nothing. Omit them and the banner sells on its real hook (the
+// daily rotation) instead of an invented discount.
 export const FlashOfferBanner = React.memo(function FlashOfferBanner({
   title = 'חבילת מתחילים',
-  discount = 50,
-  originalPrice = '₪59.90',
-  salePrice = '₪29.90',
+  discount,
+  originalPrice,
+  salePrice = '₪19.90',
   timeLeftSeconds,
   onPress,
 }: Props) {
@@ -69,7 +73,11 @@ export const FlashOfferBanner = React.memo(function FlashOfferBanner({
   }));
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}, הנחת ${discount}%, ${salePrice}`}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={discount !== undefined ? `${title}, הנחת ${discount}%, ${salePrice}` : `${title}, ${salePrice}, היום בלבד`}
+    >
       <LinearGradient
         colors={['#dc2626', '#f59e0b']}
         start={{ x: 0, y: 0 }}
@@ -96,8 +104,18 @@ export const FlashOfferBanner = React.memo(function FlashOfferBanner({
               </Svg>
             </Animated.View>
             <View style={styles.burstText}>
-              <Text style={styles.burstPct} allowFontScaling={false}>{discount}%</Text>
-              <Text style={styles.burstLabel} allowFontScaling={false}>הנחה</Text>
+              {discount !== undefined ? (
+                <>
+                  <Text style={styles.burstPct} allowFontScaling={false}>{discount}%</Text>
+                  <Text style={styles.burstLabel} allowFontScaling={false}>הנחה</Text>
+                </>
+              ) : (
+                // The honest hook: the bundle really does rotate at IL midnight.
+                <>
+                  <Text style={styles.burstToday} allowFontScaling={false}>היום</Text>
+                  <Text style={styles.burstLabel} allowFontScaling={false}>בלבד</Text>
+                </>
+              )}
             </View>
           </View>
 
@@ -111,7 +129,9 @@ export const FlashOfferBanner = React.memo(function FlashOfferBanner({
             </Text>
             <View style={styles.priceRow}>
               <Text style={styles.salePrice} allowFontScaling={false}>{salePrice}</Text>
-              <Text style={styles.origPrice} allowFontScaling={false}>{originalPrice}</Text>
+              {originalPrice !== undefined && (
+                <Text style={styles.origPrice} allowFontScaling={false}>{originalPrice}</Text>
+              )}
             </View>
             <View style={styles.timerPill}>
               <Text style={styles.timerEmoji}>⏱️</Text>
@@ -159,6 +179,12 @@ const styles = StyleSheet.create({
     color: '#7c2d12',
     fontVariant: ['tabular-nums'] as const,
     lineHeight: 22,
+  },
+  burstToday: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#7c2d12',
+    lineHeight: 18,
   },
   burstLabel: {
     fontSize: 9,

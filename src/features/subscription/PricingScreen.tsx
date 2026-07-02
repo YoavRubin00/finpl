@@ -555,16 +555,20 @@ export function PricingScreen() {
                 contentFit="contain"
                 accessible={false}
               />
-              {/* Speech bubble to the LEFT of Captain Shark — reinforces the
-                  free-trial value prop. Shown on every visit (יואב 2026-06). */}
+              {/* Speech bubble to the LEFT of Captain Shark. Integrity fix
+                  (MONETIZATION-PLAN 2026-07-02): it used to promise "שבוע
+                  בחינם" unconditionally, but hasTrial depends on introPrice
+                  being configured store-side — when it isn't, the promise was
+                  false the moment the user read the price line below. Trial
+                  copy now renders ONLY when a trial actually exists. */}
               <Animated.View
                 entering={FadeInDown.delay(350).duration(420)}
                 style={styles.trialBubble}
                 accessibilityRole="text"
-                accessibilityLabel="הצעה: נסו שבוע בחינם, ללא סיכון"
+                accessibilityLabel={hasTrial ? `הצעה: נסו ${trialDays} ימים בחינם, ללא סיכון` : 'הצעה: ביטול חופשי בכל עת, בלי התחייבות'}
               >
                 <Text style={styles.trialBubbleText} allowFontScaling={false}>
-                  נסו שבוע בחינם,{"\n"}ללא סיכון
+                  {hasTrial ? `נסו ${trialDays} ימים בחינם,\nללא סיכון` : 'ביטול חופשי בכל עת,\nבלי התחייבות'}
                 </Text>
                 <View style={styles.trialBubbleTail} pointerEvents="none" />
               </Animated.View>

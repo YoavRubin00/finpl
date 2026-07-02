@@ -2,6 +2,12 @@ import type { GemBundle } from './types';
 
 const DIAMOND_LOTTIE = require('../../../assets/lottie/Diamond.json');
 
+// Integrity (מוני, MONETIZATION-PLAN 2026-07-02): bonus tags are the REAL
+// gems-per-₪ improvement vs the ₪3.50 anchor (80/3.50 = 22.9 gems/₪),
+// rounded DOWN. The old tags overstated the top tiers (+80% was +58%,
+// +100% was +75%) — fixed to truthful values, and isBestValue moved to the
+// tier that actually has the best rate (spire, 40.0 gems/₪).
+
 export const GEM_BUNDLES: GemBundle[] = [
   {
     id: 'gems-fistful',
@@ -20,7 +26,7 @@ export const GEM_BUNDLES: GemBundle[] = [
     priceLabel: '₪17.90',
     emoji: '💎',
     lottieSource: DIAMOND_LOTTIE,
-    bonusLabel: '+25%',
+    bonusLabel: '+20%',
   },
   {
     id: 'gems-bucket',
@@ -30,7 +36,7 @@ export const GEM_BUNDLES: GemBundle[] = [
     priceLabel: '₪35.90',
     emoji: '💎💎',
     lottieSource: DIAMOND_LOTTIE,
-    bonusLabel: '+33% • הכי פופולרי',
+    bonusLabel: '+45% • הכי פופולרי',
   },
   {
     id: 'gems-barrel',
@@ -40,7 +46,7 @@ export const GEM_BUNDLES: GemBundle[] = [
     priceLabel: '₪69.90',
     emoji: '💎💎💎',
     lottieSource: DIAMOND_LOTTIE,
-    bonusLabel: '+50% • המועדף',
+    bonusLabel: '+55% • המועדף',
   },
   {
     id: 'gems-wagon',
@@ -50,8 +56,7 @@ export const GEM_BUNDLES: GemBundle[] = [
     priceLabel: '₪179.90',
     emoji: '💎💎💎💎',
     lottieSource: DIAMOND_LOTTIE,
-    isBestValue: true,
-    bonusLabel: '+80%',
+    bonusLabel: '+55%',
   },
   {
     id: 'gems-spire',
@@ -61,7 +66,8 @@ export const GEM_BUNDLES: GemBundle[] = [
     priceLabel: '₪349.90',
     emoji: '💎💎💎💎💎',
     lottieSource: DIAMOND_LOTTIE,
-    bonusLabel: '+100%',
+    bonusLabel: '+75%',
+    isBestValue: true,
     isPromo: true,
   },
 ];

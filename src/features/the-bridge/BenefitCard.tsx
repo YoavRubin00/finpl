@@ -262,7 +262,18 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
         )}
 
         {!canAfford && !isRedeemed && benefit.isAvailable && !lockedByPro && (
-          <Text style={styles.coinsNeededText}>חסרים {coinsNeeded.toLocaleString()} מטבעות</Text>
+          <>
+            <Text style={styles.coinsNeededText}>חסרים {coinsNeeded.toLocaleString()} מטבעות</Text>
+            {/* Completion paths (MONETIZATION-PLAN 2026-07-02): "חסרים X" was a
+                dead-end — no next step. Earn paths only, never a cash/shop
+                link (אודרי: completion is EARNED, not bought — we profit from
+                the redemption, selling coins toward it would smell). Amounts
+                verified in code: daily quests base 300, post-chest ad bonus
+                AD_BONUS_COINS=500. */}
+            <Text style={styles.coinsPathText}>
+              משלימים עם: המשימות היומיות (+300) · תיבות שיעור · בונוס צפייה אחרי תיבה (+500)
+            </Text>
+          </>
         )}
       </View>
     </Pressable>
@@ -527,6 +538,12 @@ const styles = StyleSheet.create({
   coinsNeededText: {
     fontSize: 11,
     color: '#64748b',
+    ...RTL,
+  },
+  coinsPathText: {
+    fontSize: 10,
+    color: '#94a3b8',
+    marginTop: 3,
     ...RTL,
   },
 });

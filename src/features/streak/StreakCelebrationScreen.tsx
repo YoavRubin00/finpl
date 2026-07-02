@@ -59,6 +59,7 @@ export function StreakCelebrationScreen({
   // through the first-72h window where have-streak>=2 currently dies (~5%).
   const isHabitDay = streak === 2 || streak === 3;
   const [habitReward, setHabitReward] = useState(0);
+  const [starterCapital, setStarterCapital] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const safeTimeout = useTimeoutCleanup();
 
@@ -68,6 +69,17 @@ export function StreakCelebrationScreen({
     if (!isHabitDay) return;
     const granted = useEconomyUIStore.getState().awardStreakDayReward(streak);
     if (granted > 0) setHabitReward(granted);
+    // Starter capital (ים, MONETIZATION-PLAN 2026-07-02): the one-time 2,500
+    // grant lands HERE — day 2, the habit ritual — and NOT on day 0, so it
+    // (a) concentrates on users who actually returned instead of the 82%
+    // one-and-done, (b) doesn't crush the shark-wager's 50-coin pain band,
+    // and (c) ends the day-2 session right at the Bridge's 2,500 redemption
+    // tiers. Unannounced beforehand by design; the grant itself celebrates.
+    // grantStarterCapital is idempotent (starterCapitalGranted flag).
+    if (streak === 2) {
+      const capitalGranted = useEconomyUIStore.getState().grantStarterCapital();
+      if (capitalGranted) setStarterCapital(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -350,6 +362,12 @@ export function StreakCelebrationScreen({
           {habitReward > 0 && (
             <View style={styles.freezeRewardRow}>
               <Text style={styles.freezeRewardText}>🪙 +{habitReward} מטבעות</Text>
+            </View>
+          )}
+          {/* One-time day-2 starter capital — the Bridge affordability grant */}
+          {starterCapital && (
+            <View style={styles.freezeRewardRow}>
+              <Text style={styles.freezeRewardText}>💼 הון פתיחה מקפטן שארק: +2,500 מטבעות</Text>
             </View>
           )}
         </Animated.View>
