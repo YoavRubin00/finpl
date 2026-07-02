@@ -119,6 +119,9 @@ import { usePearlsStore } from "../pearls/usePearlsStore";
 import { MondialMailBadge } from "../mondial/MondialMailBadge";
 import { MondialCarouselSheet } from "../mondial/MondialCarouselSheet";
 import { useMondialStore } from "../mondial/useMondialStore";
+import { StreakClubEntryCard } from "../streak-club/StreakClubEntryCard";
+import { StreakLoungeSheet } from "../streak-club/StreakLoungeSheet";
+import { useStreakClubStore } from "../streak-club/useStreakClubStore";
 import { MONDIAL_LAUNCH_DATE, localDateISO } from "../mondial/mondialCarouselData";
 
 // ---------------------------------------------------------------------------
@@ -1609,6 +1612,10 @@ export function DuoLearnScreen() {
     localCompletedModuleIds.length > 0 &&
     localDateISO() >= MONDIAL_LAUNCH_DATE &&
     !mondialOpenedAt;
+  // מועדון הרצף — באדג' באותה שורה: streak>=1 בלבד (teaser נעול ב-1, חבר
+  // מ-2; אורחים מקבלים streak=0 מה-query המדולג → מוסתר). פסיקת ים 30.6.
+  const [clubSheetVisible, setClubSheetVisible] = useState(false);
+  const clubHasUnseen = useStreakClubStore((s) => s.hasUnseenToday());
   // Per-session memory of which modules already triggered the
   // PROFILE_QUESTION_BACKSTOPS modal. Skipping the modal doesn't flip the
   // store flag — without this guard a user could be re-prompted on every
@@ -2698,13 +2705,20 @@ export function DuoLearnScreen() {
     try { captureEvent("mondial_carousel_opened", { source: "learn_map" }); } catch { /* non-fatal */ }
   }, [mondialMarkOpened]);
 
+  const handleStreakClubPress = useCallback(() => {
+    setClubSheetVisible(true);
+  }, []);
+
   const activeNewsBadgeNode = useMemo(() => (
     <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
       {mondialBadgeVisible ? (
         <MondialMailBadge isNew={!mondialOpenedAt} onPress={handleMondialBadgePress} />
       ) : null}
+      {streak >= 1 ? (
+        <StreakClubEntryCard streak={streak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
+      ) : null}
     </View>
-  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress]);
+  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, streak, clubHasUnseen, handleStreakClubPress]);
 
   const activeQuestPathNodeProps = useMemo(() => ({
     completedCount: questCompletedCount,
@@ -2737,6 +2751,11 @@ export function DuoLearnScreen() {
         visible={newsSheetVisible}
         entrySource={newsEntrySource}
         onClose={() => setNewsSheetVisible(false)}
+      />
+      <StreakLoungeSheet
+        visible={clubSheetVisible}
+        streak={streak}
+        onClose={() => setClubSheetVisible(false)}
       />
       {/* Swipe quest modal. Hosts whichever of the 3 rotating swipe-games is
           assigned to today (see dailySwipeKind above). finishSwipeQuest is
