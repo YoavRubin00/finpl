@@ -16,14 +16,11 @@ import Animated, {
 import { tapHaptic } from '../../../utils/haptics';
 
 interface PremiumFantasyButtonProps {
-  /** Number of friends currently active in the league — drives the social-proof badge. */
-  activeFriends?: number;
   /** Visual variant: "hero" = full-width pinned post, "compact" = header chip. */
   variant?: 'hero' | 'compact';
 }
 
 export function PremiumFantasyButton({
-  activeFriends = 4,
   variant = 'compact',
 }: PremiumFantasyButtonProps): React.ReactElement {
   const router = useRouter();
@@ -84,9 +81,15 @@ export function PremiumFantasyButton({
               <Sparkles size={12} color="#7c2d12" strokeWidth={2.6} style={styles.heroSparkle} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroTitle}>פנטזי ליג</Text>
-              <Text style={styles.heroSub}>
-                {activeFriends} חברים פעילים השבוע · בחר 5 מניות
+              <Text style={styles.heroTitle} maxFontSizeMultiplier={1.15}>
+                פנטזי ליג
+              </Text>
+              <Text
+                style={styles.heroSub}
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.15}
+              >
+                בוחרים 5 מניות · תחרות שבועית
               </Text>
             </View>
             <Text style={styles.heroArrow}>‹</Text>
@@ -119,12 +122,9 @@ export function PremiumFantasyButton({
           />
         </Animated.View>
         <Trophy size={15} color="#7c2d12" strokeWidth={2.8} />
-        <Text style={styles.compactText}>פנטזי ליג</Text>
-        {activeFriends > 0 && (
-          <View style={styles.compactBadge}>
-            <Text style={styles.compactBadgeText}>{activeFriends}</Text>
-          </View>
-        )}
+        <Text style={styles.compactText} maxFontSizeMultiplier={1.15}>
+          פנטזי ליג
+        </Text>
       </LinearGradient>
     </Pressable>
   );
@@ -190,6 +190,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     textAlign: 'right',
     marginTop: 2,
+    flexShrink: 1,
   },
   heroArrow: {
     fontSize: 22,
@@ -227,20 +228,6 @@ const styles = StyleSheet.create({
     color: '#7c2d12',
     writingDirection: 'rtl',
     letterSpacing: -0.1,
-  },
-  compactBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 5,
-    backgroundColor: '#7c2d12',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 2,
-  },
-  compactBadgeText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#fef3c7',
+    flexShrink: 1,
   },
 });

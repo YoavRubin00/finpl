@@ -1,27 +1,135 @@
-import React from 'react';
-import { View, Text, Pressable } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import React, { useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+  useReducedMotion,
+  interpolate,
+} from 'react-native-reanimated';
+import { Gift } from 'lucide-react-native';
+
 import { useReferralStore } from '../../social/useReferralStore';
-import { STITCH, DUO } from '../../../constants/theme';
-import { tapHaptic, successHaptic } from '../../../utils/haptics';
+import {
+  REFERRAL_SIGNUP_BONUS_COINS,
+  REFERRAL_DAILY_DIVIDEND_RATE,
+} from '../../social/referralConstants';
+import { STITCH } from '../../../constants/theme';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
+import { tapHaptic } from '../../../utils/haptics';
 import { FinnCue } from './FinnCue';
 
+const DIVIDEND_PERCENT = Math.round(REFERRAL_DAILY_DIVIDEND_RATE * 100);
+
+/**
+ * Premium CTA button — fantasy-league button language: gradient + border +
+ * glow shadow + bold label + shimmer that respects reduced-motion.
+ */
+function PremiumCta({
+  label,
+  colors,
+  glow,
+  onPress,
+  icon,
+  accessibilityLabel,
+}: {
+  label: string;
+  colors: readonly [string, string, ...string[]];
+  glow: string;
+  onPress: () => void;
+  icon?: React.ReactNode;
+  accessibilityLabel?: string;
+}): React.ReactElement {
+  const reduced = useReducedMotion();
+  const shimmer = useSharedValue(0);
+  useEffect(() => {
+    if (reduced) {
+      shimmer.value = 0;
+      return;
+    }
+    shimmer.value = withRepeat(
+      withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [reduced, shimmer]);
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(shimmer.value, [0, 0.5, 1], [0, 0.5, 0]),
+    transform: [{ translateX: interpolate(shimmer.value, [0, 1], [-70, 70]) }],
+  }));
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      hitSlop={8}
+      style={({ pressed }) => ({
+        borderRadius: 14,
+        shadowColor: glow,
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
+        opacity: pressed ? 0.92 : 1,
+      })}
+    >
+      <LinearGradient
+        colors={colors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          borderRadius: 14,
+          paddingVertical: 13,
+          paddingHorizontal: 16,
+          overflow: 'hidden',
+          borderWidth: 1.5,
+          borderColor: 'rgba(255,255,255,0.55)',
+        }}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[{ position: 'absolute', top: 0, bottom: 0, width: 70 }, shimmerStyle]}
+        >
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.8)', 'transparent']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        {icon}
+        <Text
+          maxFontSizeMultiplier={1.15}
+          style={{ fontSize: 15, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}
+        >
+          {label}
+        </Text>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+/**
+ * Friends-feed invite card — the SAME invite-friends action used in the
+ * profile (deep-links to the real /referral screen). Rewards shown are the
+ * real referral mechanic (single source of truth in referralConstants).
+ */
 export function ReferralCard(): React.ReactElement {
-  const referralCode = useReferralStore((s) => s.referralCode);
-  const canCollectFn = useReferralStore((s) => s.canCollectDividend);
-  const collectDividend = useReferralStore((s) => s.collectDividend);
-  const referredFriends = useReferralStore((s) => s.referredFriends);
-  const referredCount = referredFriends.length;
-  const canCollect = canCollectFn();
+  const router = useRouter();
+  const referredCount = useReferralStore((s) => s.referredFriends.length);
 
-  const [copied, setCopied] = React.useState(false);
-
-  async function handleCopy(): Promise<void> {
+  const openReferral = (): void => {
     tapHaptic();
-    await Clipboard.setStringAsync(referralCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2200);
-  }
+    router.push('/referral' as never);
+  };
 
   return (
     <View
@@ -68,10 +176,13 @@ export function ReferralCard(): React.ReactElement {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 17, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }}>
-            הזמן חברים
+            הזמינו חברים
           </Text>
-          <Text style={{ fontSize: 12, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 1 }}>
-            {referredCount > 0 ? `${referredCount} חברים הצטרפו דרכך` : 'שתף את הקוד ותרוויח ביחד'}
+          <Text
+            numberOfLines={1}
+            style={{ fontSize: 12, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 1, flexShrink: 1 }}
+          >
+            {referredCount > 0 ? `${referredCount} כבר הצטרפו דרככם` : 'פרסים אמיתיים לכם ולחברים'}
           </Text>
         </View>
         {referredCount > 0 && (
@@ -85,96 +196,49 @@ export function ReferralCard(): React.ReactElement {
               borderColor: '#86efac',
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '900', color: '#15803d' }}>{referredCount}</Text>
+            <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 13, fontWeight: '900', color: '#15803d' }}>
+              {referredCount}
+            </Text>
           </View>
         )}
       </View>
 
-      {/* ── Code box ── */}
-      <View style={{ paddingHorizontal: 16, paddingBottom: 14, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest, paddingTop: 14, gap: 10 }}>
-        <Pressable
-          onPress={handleCopy}
-          accessibilityRole="button"
-          accessibilityLabel={`העתק קוד הזמנה: ${referralCode}`}
-          style={({ pressed }) => ({
-            backgroundColor: pressed ? STITCH.surfaceLow : STITCH.surfaceLowest,
-            borderRadius: 14,
-            borderWidth: 1.5,
-            borderColor: copied ? '#86efac' : STITCH.surfaceHighest,
-            borderStyle: 'dashed',
-            padding: 14,
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          })}
-        >
+      {/* ── Reward summary + CTA ── */}
+      <View style={{ paddingHorizontal: 16, paddingBottom: 14, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest, paddingTop: 14, gap: 12 }}>
+        {/* Real reward line — signup bonus for both sides */}
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <GoldCoinIcon size={14} />
           <Text
-            style={{
-              fontSize: 20,
-              fontWeight: '900',
-              color: STITCH.onSurface,
-              letterSpacing: 3,
-              fontVariant: ['tabular-nums'],
-            }}
+            maxFontSizeMultiplier={1.15}
+            style={{ fontSize: 13, fontWeight: '800', color: STITCH.onSurface, writingDirection: 'rtl', flexShrink: 1 }}
           >
-            {referralCode}
+            {REFERRAL_SIGNUP_BONUS_COINS} מטבעות לכם + {REFERRAL_SIGNUP_BONUS_COINS} לחבר
           </Text>
-          <View
-            style={{
-              backgroundColor: copied ? '#dcfce7' : DUO.blueSurface,
-              borderRadius: 8,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: '800',
-                color: copied ? '#16a34a' : DUO.blue,
-              }}
-            >
-              {copied ? 'הועתק ✓' : 'העתק'}
-            </Text>
-          </View>
-        </Pressable>
+        </View>
+        {/* Daily dividend — real 5% mechanic */}
+        <Text
+          numberOfLines={2}
+          style={{ fontSize: 12, fontWeight: '600', color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', flexShrink: 1 }}
+        >
+          וגם {DIVIDEND_PERCENT}% מהמטבעות שהחברים מרוויחים בלמידה — כל יום.
+        </Text>
 
-        {canCollect && (
-          <Pressable
-            onPress={() => {
-              successHaptic();
-              collectDividend();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="קבל דיבידנד על חברים שהזמנת"
-            style={({ pressed }) => ({
-              backgroundColor: pressed ? '#15803d' : '#16a34a',
-              borderRadius: 12,
-              paddingVertical: 12,
-              alignItems: 'center',
-              borderBottomWidth: 4,
-              borderBottomColor: '#14532d',
-              transform: [{ translateY: pressed ? 2 : 0 }],
-              shadowColor: '#16a34a',
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 3 },
-              elevation: 3,
-            })}
-          >
-            <Text style={{ fontSize: 14, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>
-              קבל דיבידנד 💎
-            </Text>
-          </Pressable>
-        )}
+        <PremiumCta
+          label="הזמינו חברים וקבלו פרסים"
+          colors={['#22c55e', '#16a34a']}
+          glow="#16a34a"
+          icon={<Gift size={17} color="#ffffff" strokeWidth={2.6} />}
+          accessibilityLabel="הזמינו חברים וקבלו פרסים — פתחו את מסך ההזמנות"
+          onPress={openReferral}
+        />
 
         {/* ── Finn coach line ── */}
         <FinnCue
           variant={referredCount > 0 ? 'happy' : 'hello'}
           text={
             referredCount > 0
-              ? `${referredCount} חברים מצטרפים — אתה בונה אימפריה`
-              : 'כל חבר חדש = דיבידנד נצחי. כדאי, אה?'
+              ? `${referredCount} חברים כבר איתכם — ממשיכים לבנות`
+              : 'כל חבר חדש = פרסים לשניכם. שווה, אה?'
           }
           tone="green"
         />

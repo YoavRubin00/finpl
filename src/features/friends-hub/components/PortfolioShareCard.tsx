@@ -448,9 +448,14 @@ export function PortfolioShareCard(): React.ReactElement {
   const [rewardToast, setRewardToast] = useState<number | null>(null);
   const [moderationNote, setModerationNote] = useState<string | null>(null);
 
-  const feed = [...portfolios].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  // Honest-data policy (2026-07-02): only REAL user-generated portfolios are
+  // shown — the seeded demo portfolios (fabricated authors, invented returns,
+  // fake likes) are filtered out. Real content the user created stays.
+  const feed = portfolios
+    .filter((pf) => pf.isSelf)
+    .sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
   const handleShare = async (picks: SharedPick[], caption: string): Promise<void> => {
     // Shark moderator bot reviews the caption before it hits the feed.
@@ -505,18 +510,38 @@ export function PortfolioShareCard(): React.ReactElement {
           accessibilityRole="button"
           accessibilityLabel="הוסיפו תיק השקעות"
           style={({ pressed }) => ({
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            gap: 4,
-            backgroundColor: '#1877f2',
             borderRadius: 999,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            opacity: pressed ? 0.85 : 1,
+            opacity: pressed ? 0.9 : 1,
+            shadowColor: '#3b82f6',
+            shadowOpacity: 0.35,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 3 },
+            elevation: 5,
           })}
         >
-          <Plus size={14} color="#ffffff" strokeWidth={3} />
-          <Text style={{ fontSize: 12, fontWeight: '900', color: '#ffffff' }}>הוסיפו תיק</Text>
+          <LinearGradient
+            colors={['#93c5fd', '#3b82f6', '#1d4ed8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              gap: 4,
+              borderRadius: 999,
+              borderWidth: 1.5,
+              borderColor: '#bfdbfe',
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
+          >
+            <Plus size={14} color="#ffffff" strokeWidth={3} />
+            <Text
+              style={{ fontSize: 12, fontWeight: '900', color: '#ffffff', flexShrink: 1 }}
+              maxFontSizeMultiplier={1.15}
+            >
+              הוסיפו תיק
+            </Text>
+          </LinearGradient>
         </Pressable>
       </View>
 
@@ -564,13 +589,68 @@ export function PortfolioShareCard(): React.ReactElement {
         </Animated.View>
       )}
 
-      {/* Posts */}
-      {feed.map((pf, i) => (
-        <React.Fragment key={pf.id}>
-          {i > 0 && <View style={{ height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 14 }} />}
-          <PortfolioPost pf={pf} />
-        </React.Fragment>
-      ))}
+      {/* Posts — real user content only */}
+      {feed.length === 0 ? (
+        <View style={{ paddingHorizontal: 14, paddingVertical: 20, alignItems: 'center', gap: 12 }}>
+          <View style={{ alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 14, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }} maxFontSizeMultiplier={1.15}>
+              עוד אין תיקים משותפים
+            </Text>
+            <Text style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: '600', textAlign: 'center', writingDirection: 'rtl' }} maxFontSizeMultiplier={1.15}>
+              הרכיבו תיק ראשון — והקהילה תגיב
+            </Text>
+          </View>
+          {/* Prominent entry — the header chip is easy to miss, so the empty
+              state gets its own full CTA that opens the portfolio builder. */}
+          <Pressable
+            onPress={() => { tapHaptic(); setComposerOpen(true); }}
+            accessibilityRole="button"
+            accessibilityLabel="הרכיבו תיק השקעות ושתפו"
+            style={({ pressed }) => ({
+              alignSelf: 'stretch',
+              borderRadius: 14,
+              opacity: pressed ? 0.92 : 1,
+              shadowColor: '#3b82f6',
+              shadowOpacity: 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
+            })}
+          >
+            <LinearGradient
+              colors={['#93c5fd', '#3b82f6', '#1d4ed8']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                borderRadius: 14,
+                borderWidth: 1.5,
+                borderColor: '#bfdbfe',
+                paddingVertical: 13,
+                paddingHorizontal: 16,
+              }}
+            >
+              <Plus size={16} color="#ffffff" strokeWidth={3} />
+              <Text
+                style={{ fontSize: 14, fontWeight: '900', color: '#ffffff', flexShrink: 1 }}
+                maxFontSizeMultiplier={1.15}
+              >
+                הרכיבו תיק ושתפו
+              </Text>
+            </LinearGradient>
+          </Pressable>
+        </View>
+      ) : (
+        feed.map((pf, i) => (
+          <React.Fragment key={pf.id}>
+            {i > 0 && <View style={{ height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 14 }} />}
+            <PortfolioPost pf={pf} />
+          </React.Fragment>
+        ))
+      )}
 
       {/* Legal disclaimer */}
       <View style={{

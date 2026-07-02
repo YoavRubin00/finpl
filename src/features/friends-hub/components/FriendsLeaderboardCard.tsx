@@ -1,9 +1,27 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+  useReducedMotion,
+  interpolate,
+} from 'react-native-reanimated';
+import { useShallow } from 'zustand/react/shallow';
+import { UserPlus } from 'lucide-react-native';
+
 import { STITCH, DUO } from '../../../constants/theme';
 import { useEconomy } from '../../economy/useEconomy';
 import { AvatarImage } from '../../avatars/AvatarImage';
 import { useAuthStore } from '../../auth/useAuthStore';
+import { useFriendsStore } from '../../friends/useFriendsStore';
+import { FRIEND_PROFILES } from '../../friends/friendsData';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
+import { tapHaptic } from '../../../utils/haptics';
 import { FinnCue, type FinnCueVariant } from './FinnCue';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
@@ -18,20 +36,113 @@ interface LeaderEntry {
   isSelf?: boolean;
 }
 
-// All-game coin leaders — seeded until a real global leaderboard API exists.
-const GAME_LEADERS: LeaderEntry[] = [
-  { id: 'gl-1', name: 'נועה, המשקיעה', avatarId: 'avatar-investor', coins: 14_520 },
-  { id: 'gl-2', name: 'איתי, המגן', avatarId: 'avatar-defender', coins: 12_140 },
-  { id: 'gl-3', name: 'שירה, הסוחרת', avatarId: 'avatar-trader', coins: 9_860 },
-  { id: 'gl-4', name: 'דניאל, האסטרטג', avatarId: 'avatar-strategist', coins: 7_430 },
-  { id: 'gl-5', name: 'יעל, המנתחת', avatarId: 'avatar-analyst', coins: 6_210 },
-];
+/**
+ * Premium CTA button — fantasy-league button language: gradient + border +
+ * glow shadow + bold label + shimmer that respects reduced-motion.
+ */
+function PremiumCta({
+  label,
+  colors,
+  glow,
+  onPress,
+  icon,
+  accessibilityLabel,
+}: {
+  label: string;
+  colors: readonly [string, string, ...string[]];
+  glow: string;
+  onPress: () => void;
+  icon?: React.ReactNode;
+  accessibilityLabel?: string;
+}): React.ReactElement {
+  const reduced = useReducedMotion();
+  const shimmer = useSharedValue(0);
+  useEffect(() => {
+    if (reduced) {
+      shimmer.value = 0;
+      return;
+    }
+    shimmer.value = withRepeat(
+      withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [reduced, shimmer]);
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(shimmer.value, [0, 0.5, 1], [0, 0.5, 0]),
+    transform: [{ translateX: interpolate(shimmer.value, [0, 1], [-70, 70]) }],
+  }));
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      hitSlop={8}
+      style={({ pressed }) => ({
+        borderRadius: 14,
+        shadowColor: glow,
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
+        opacity: pressed ? 0.92 : 1,
+      })}
+    >
+      <LinearGradient
+        colors={colors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          borderRadius: 14,
+          paddingVertical: 13,
+          paddingHorizontal: 16,
+          overflow: 'hidden',
+          borderWidth: 1.5,
+          borderColor: 'rgba(255,255,255,0.55)',
+        }}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[{ position: 'absolute', top: 0, bottom: 0, width: 70 }, shimmerStyle]}
+        >
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.8)', 'transparent']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        {icon}
+        <Text
+          maxFontSizeMultiplier={1.15}
+          style={{ fontSize: 15, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}
+        >
+          {label}
+        </Text>
+      </LinearGradient>
+    </Pressable>
+  );
+}
 
 export function FriendsLeaderboardCard(): React.ReactElement {
+  const router = useRouter();
   const { data: economyData } = useEconomy();
   const myCoins = economyData?.coins ?? 0;
   const myAvatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
   const displayName = useAuthStore((s) => s.displayName);
+
+  // The board is the user's REAL friends — resolved reactively from the
+  // friends store (no fabricated leaders).
+  const friendIds = useFriendsStore(useShallow((s) => s.friendIds));
+  const isEmpty = friendIds.length === 0;
+
+  const friendEntries: LeaderEntry[] = FRIEND_PROFILES.filter((p) =>
+    friendIds.includes(p.id),
+  ).map((p) => ({ id: p.id, name: p.name, avatarId: p.avatarId, coins: p.coinsWon }));
 
   const selfEntry: LeaderEntry = {
     id: 'self',
@@ -41,24 +152,16 @@ export function FriendsLeaderboardCard(): React.ReactElement {
     isSelf: true,
   };
 
-  // Always the game-wide top 5 by coin profit; you join the board when you earn it.
-  const ranked = [...GAME_LEADERS, selfEntry].sort((a, b) => b.coins - a.coins);
+  const ranked = [...friendEntries, selfEntry].sort((a, b) => b.coins - a.coins);
   const selfRank = ranked.findIndex((e) => e.isSelf) + 1;
   const top5 = ranked.slice(0, 5);
   const selfInTop5 = top5.some((e) => e.isSelf);
 
-  const nextTarget = selfInTop5
-    ? null
-    : GAME_LEADERS[GAME_LEADERS.length - 1].coins - myCoins + 1;
-
-  const finn: { variant: FinnCueVariant; text: string } = selfInTop5
-    ? selfRank === 1
-      ? { variant: 'dancing', text: 'מקום ראשון בכל המשחק! תפסתם בשיניים' }
-      : { variant: 'happy', text: `מקום ${selfRank} בכל המשחק — הצמרת בטווח נשיכה` }
-    : {
-        variant: 'tablet',
-        text: `עוד ${(nextTarget ?? 0).toLocaleString('he-IL')} מטבעות והשם שלכם על הלוח`,
-      };
+  const finn: { variant: FinnCueVariant; text: string } = isEmpty
+    ? { variant: 'tablet', text: 'הלוח מחכה לחברים הראשונים שלכם' }
+    : selfRank === 1
+      ? { variant: 'dancing', text: 'מקום ראשון מול החברים! תפסתם בשיניים' }
+      : { variant: 'happy', text: `מקום ${selfRank} מול החברים — הצמרת בטווח נשיכה` };
 
   return (
     <View
@@ -110,7 +213,7 @@ export function FriendsLeaderboardCard(): React.ReactElement {
             אלופי המטבעות
           </Text>
           <Text style={{ fontSize: 12, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 1 }}>
-            5 המרוויחים הגדולים בכל המשחק
+            אתם מול החברים שלכם
           </Text>
         </View>
       </View>
@@ -159,11 +262,12 @@ export function FriendsLeaderboardCard(): React.ReactElement {
           <View
             style={{
               flexDirection: 'row-reverse',
-              alignItems: 'baseline',
-              gap: 3,
+              alignItems: 'center',
+              gap: 4,
             }}
           >
             <Text
+              maxFontSizeMultiplier={1.15}
               style={{
                 fontSize: 14,
                 fontWeight: '900',
@@ -173,13 +277,13 @@ export function FriendsLeaderboardCard(): React.ReactElement {
             >
               {entry.coins.toLocaleString('he-IL')}
             </Text>
-            <Text style={{ fontSize: 12 }}>🪙</Text>
+            <GoldCoinIcon size={14} />
           </View>
         </View>
       ))}
 
       {/* ── Self rank when outside the board ── */}
-      {!selfInTop5 && (
+      {!isEmpty && !selfInTop5 && (
         <View
           style={{
             flexDirection: 'row-reverse',
@@ -199,19 +303,39 @@ export function FriendsLeaderboardCard(): React.ReactElement {
           <Text style={{ flex: 1, fontSize: 14, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }}>
             {selfEntry.name} (אני)
           </Text>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 3 }}>
-            <Text style={{ fontSize: 14, fontWeight: '900', color: DUO.blue, fontVariant: ['tabular-nums'] }}>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+            <Text
+              maxFontSizeMultiplier={1.15}
+              style={{ fontSize: 14, fontWeight: '900', color: DUO.blue, fontVariant: ['tabular-nums'] }}
+            >
               {myCoins.toLocaleString('he-IL')}
             </Text>
-            <Text style={{ fontSize: 12 }}>🪙</Text>
+            <GoldCoinIcon size={14} />
           </View>
         </View>
       )}
 
       {/* ── Finn coach line ── */}
-      <View style={{ paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest }}>
+      <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: isEmpty ? 8 : 12, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest }}>
         <FinnCue variant={finn.variant} text={finn.text} tone="gold" />
       </View>
+
+      {/* ── Empty-state CTA — add your first friends ── */}
+      {isEmpty && (
+        <View style={{ paddingHorizontal: 12, paddingBottom: 14 }}>
+          <PremiumCta
+            label="הוסיפו חברים"
+            colors={['#38bdf8', DUO.blue]}
+            glow={DUO.blue}
+            icon={<UserPlus size={17} color="#ffffff" strokeWidth={2.6} />}
+            accessibilityLabel="הוסיפו חברים ללוח"
+            onPress={() => {
+              tapHaptic();
+              router.push('/friends-list' as never);
+            }}
+          />
+        </View>
+      )}
     </View>
   );
 }

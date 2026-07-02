@@ -3,12 +3,9 @@ import { ScrollView, View, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { Users, Edit3, UserPlus } from 'lucide-react-native';
-import { useShallow } from 'zustand/react/shallow';
-import { useFriendsStore } from '../friends/useFriendsStore';
+import { Users, Edit3, ChevronLeft } from 'lucide-react-native';
 
 import { tapHaptic } from '../../utils/haptics';
-import { ActivityFeedStrip } from './components/ActivityFeedStrip';
 import { FriendsLeaderboardCard } from './components/FriendsLeaderboardCard';
 import { ReferralCard } from './components/ReferralCard';
 import { AnonAdviceHeroCard } from './components/AnonAdviceHeroCard';
@@ -18,14 +15,13 @@ import { Ta35ForecastCard } from './cards/Ta35ForecastCard';
 import { PremiumFantasyButton } from './components/PremiumFantasyButton';
 import { PortfolioShareCard } from './components/PortfolioShareCard';
 import { TradeRoomsCard } from './components/TradeRoomsCard';
+import { FriendsListButton } from './components/FriendsListButton';
 import { FriendsHubTutorialMount } from './components/FriendsHubTutorialMount';
-import { FANTASY_ACTIVE_FRIENDS } from '../fantasy-league/fantasyData';
 
 // ─── Facebook-feed palette (light, social-first) ─────────────────────
 const FEED_BG = '#f3f4f6';
 const TEXT_PRIMARY = '#1f2937';
 const TEXT_MUTED = '#6b7280';
-const COMPOSER_BG = '#ffffff';
 const FB_BLUE = '#1877f2';
 
 function FeedDivider(): React.ReactElement {
@@ -52,68 +48,67 @@ function StaggeredEntry({
 
 function Composer({ onPress }: { onPress: () => void }): React.ReactElement {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="פתח שאלה לקהילה"
-      style={({ pressed }) => ({
-        backgroundColor: COMPOSER_BG,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        gap: 12,
-        opacity: pressed ? 0.95 : 1,
-      })}
-    >
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: '#e0f2fe',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Edit3 size={18} color={FB_BLUE} strokeWidth={2.4} />
-      </View>
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: FEED_BG,
-          borderRadius: 999,
-          paddingHorizontal: 16,
+    <View style={{ backgroundColor: '#ffffff', paddingHorizontal: 16, paddingVertical: 10 }}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel="פתחו שאלה לקהילה בחדרי המסחר"
+        style={({ pressed }) => ({
+          backgroundColor: pressed ? '#f8fafc' : '#ffffff',
+          borderRadius: 16,
+          borderWidth: 1.5,
+          borderColor: '#dbeafe',
+          paddingHorizontal: 12,
           paddingVertical: 10,
-        }}
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 10,
+          shadowColor: '#1877f2',
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 2,
+        })}
       >
-        <Text
+        <View
           style={{
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            backgroundColor: '#e0f2fe',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Edit3 size={17} color={FB_BLUE} strokeWidth={2.4} />
+        </View>
+        <Text
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.15}
+          style={{
+            flex: 1,
+            flexShrink: 1,
             fontSize: 14,
+            fontWeight: '600',
             color: TEXT_MUTED,
             writingDirection: 'rtl',
             textAlign: 'right',
           }}
         >
-          מה אתה חושב על השוק היום?
+          מה דעתכם על השוק היום?
         </Text>
-      </View>
-    </Pressable>
+        <ChevronLeft size={18} color="#9ca3af" strokeWidth={2.4} />
+      </Pressable>
+    </View>
   );
 }
 
 export function FriendsHubScreen(): React.ReactElement {
   const router = useRouter();
-  const friendIds = useFriendsStore(useShallow((s) => s.friendIds));
 
   const handleComposerPress = React.useCallback(() => {
     tapHaptic();
     router.push('/trade-rooms' as never);
-  }, [router]);
-
-  const openFriendsList = React.useCallback(() => {
-    tapHaptic();
-    router.push('/friends-list' as never);
   }, [router]);
 
   return (
@@ -122,7 +117,7 @@ export function FriendsHubScreen(): React.ReactElement {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* ─── Header: title + premium Fantasy chip ─── */}
+        {/* ─── Header: title + premium buttons ─── */}
         <View
           style={{
             backgroundColor: '#ffffff',
@@ -131,7 +126,7 @@ export function FriendsHubScreen(): React.ReactElement {
             paddingBottom: 14,
             flexDirection: 'row-reverse',
             alignItems: 'center',
-            gap: 12,
+            gap: 10,
           }}
         >
           <View
@@ -148,8 +143,11 @@ export function FriendsHubScreen(): React.ReactElement {
           </View>
           <Text
             accessibilityRole="header"
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.15}
             style={{
               flex: 1,
+              flexShrink: 1,
               fontSize: 22,
               fontWeight: '900',
               color: TEXT_PRIMARY,
@@ -160,32 +158,8 @@ export function FriendsHubScreen(): React.ReactElement {
           >
             חברים
           </Text>
-          <Pressable
-            onPress={openFriendsList}
-            accessibilityRole="button"
-            accessibilityLabel="החברים שלך"
-            style={({ pressed }) => ({
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              gap: 5,
-              backgroundColor: '#e0f2fe',
-              borderRadius: 999,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <UserPlus size={15} color={FB_BLUE} strokeWidth={2.6} />
-            <Text style={{ fontSize: 12, fontWeight: '900', color: FB_BLUE }}>
-              החברים שלך{friendIds.length > 0 ? ` · ${friendIds.length}` : ''}
-            </Text>
-          </Pressable>
-          <PremiumFantasyButton variant="compact" activeFriends={FANTASY_ACTIVE_FRIENDS} />
-        </View>
-
-        {/* ─── Story strip: live activity ─── */}
-        <View style={{ backgroundColor: '#ffffff', paddingTop: 4, paddingBottom: 10 }}>
-          <ActivityFeedStrip />
+          <FriendsListButton />
+          <PremiumFantasyButton variant="compact" />
         </View>
 
         <FeedDivider />
@@ -207,7 +181,7 @@ export function FriendsHubScreen(): React.ReactElement {
         {/* ─── Pinned premium hero: Fantasy League ─── */}
         <StaggeredEntry index={0}>
           <View style={{ backgroundColor: '#ffffff', paddingVertical: 4 }}>
-            <PremiumFantasyButton variant="hero" activeFriends={FANTASY_ACTIVE_FRIENDS} />
+            <PremiumFantasyButton variant="hero" />
           </View>
         </StaggeredEntry>
 

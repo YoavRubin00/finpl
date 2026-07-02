@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { Flame, TrendingUp, TrendingDown } from "lucide-react-native";
+import { Flame, ChevronLeft } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { STITCH } from "../../../constants/theme";
@@ -10,20 +10,19 @@ import { tapHaptic } from "../../../utils/haptics";
 interface HotAsset {
   ticker: string;
   hebrewName: string;
-  /** Last week percent change. Negative = red, positive = green. */
-  pctChange: number;
-  /** How many community members voted/discussed this asset this week. */
-  weeklyVoters: number;
   /** Optional question id to deep-link into in /crowd-wisdom. */
   crowdQuestionId?: string;
 }
 
+// Honest-data policy: no invented % moves, no fake "voters" counts, no fake
+// popularity ranks. These chips are pure navigation shortcuts to the
+// community questions about each asset.
 const HOT_ASSETS: readonly HotAsset[] = [
-  { ticker: "NVDA", hebrewName: "NVIDIA", pctChange: 5.1, weeklyVoters: 4318, crowdQuestionId: "yn_nvda_buy_now" },
-  { ticker: "BTC",  hebrewName: "ביטקוין",  pctChange: 2.3, weeklyVoters: 4389, crowdQuestionId: "yn_bitcoin_100k" },
-  { ticker: "TA-35",hebrewName: "ת״א 35",  pctChange: 1.4, weeklyVoters: 3740, crowdQuestionId: "forecast_ta35_friday" },
-  { ticker: "TSLA", hebrewName: "טסלה",    pctChange: 12.0, weeklyVoters: 3970, crowdQuestionId: "yn_tesla_correction" },
-  { ticker: "S&P",  hebrewName: "S&P 500", pctChange: 0.8, weeklyVoters: 5110, crowdQuestionId: "forecast_sp500_year_end" },
+  { ticker: "NVDA", hebrewName: "NVIDIA", crowdQuestionId: "yn_nvda_buy_now" },
+  { ticker: "BTC",  hebrewName: "ביטקוין",  crowdQuestionId: "yn_bitcoin_100k" },
+  { ticker: "TA-35",hebrewName: "ת״א 35",  crowdQuestionId: "forecast_ta35_friday" },
+  { ticker: "TSLA", hebrewName: "טסלה",    crowdQuestionId: "yn_tesla_correction" },
+  { ticker: "S&P",  hebrewName: "S&P 500", crowdQuestionId: "forecast_sp500_year_end" },
 ];
 
 export function HotThisWeekCard(): React.ReactElement {
@@ -45,61 +44,45 @@ export function HotThisWeekCard(): React.ReactElement {
           <Flame size={18} color="#dc2626" strokeWidth={2.6} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>שוק חם השבוע</Text>
-          <Text style={styles.headerSubtitle}>
-            הנכסים שמדברים עליהם הכי הרבה בקהילה
+          <Text style={styles.headerTitle} maxFontSizeMultiplier={1.15}>
+            שוק חם השבוע
+          </Text>
+          <Text style={styles.headerSubtitle} maxFontSizeMultiplier={1.15}>
+            קפיצה מהירה לשאלות הקהילה
           </Text>
         </View>
       </View>
 
-      {/* Horizontal scroll of hot asset chips */}
+      {/* Horizontal scroll of asset link-chips */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.chipsRow}>
-          {HOT_ASSETS.map((asset, i) => {
-            const up = asset.pctChange >= 0;
-            return (
-              <Pressable
-                key={asset.ticker}
-                onPress={() => handlePress(asset)}
-                style={styles.chip}
-                accessibilityRole="button"
-                accessibilityLabel={`${asset.hebrewName}, שינוי ${asset.pctChange.toFixed(1)}%`}
-              >
-                <View style={styles.chipRank}>
-                  <Text style={styles.chipRankText}>{i + 1}</Text>
-                </View>
-                <Text style={styles.chipTicker}>{asset.ticker}</Text>
-                <Text style={styles.chipHebrew} numberOfLines={1}>{asset.hebrewName}</Text>
-                <View
-                  style={[
-                    styles.chipPctRow,
-                    up ? styles.chipPctRowUp : styles.chipPctRowDown,
-                  ]}
-                >
-                  {up ? (
-                    <TrendingUp size={11} color="#16a34a" strokeWidth={2.6} />
-                  ) : (
-                    <TrendingDown size={11} color="#dc2626" strokeWidth={2.6} />
-                  )}
-                  <Text
-                    style={[
-                      styles.chipPctText,
-                      { color: up ? "#16a34a" : "#dc2626" },
-                    ]}
-                  >
-                    {up ? "+" : ""}{asset.pctChange.toFixed(1)}%
-                  </Text>
-                </View>
-                <Text style={styles.chipVoters}>
-                  {asset.weeklyVoters.toLocaleString("he-IL")} בשיחה
+          {HOT_ASSETS.map((asset) => (
+            <Pressable
+              key={asset.ticker}
+              onPress={() => handlePress(asset)}
+              style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`${asset.hebrewName} — לשאלות הקהילה`}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.chipTicker} maxFontSizeMultiplier={1.15}>
+                  {asset.ticker}
                 </Text>
-              </Pressable>
-            );
-          })}
+                <Text
+                  style={styles.chipHebrew}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.15}
+                >
+                  {asset.hebrewName}
+                </Text>
+              </View>
+              <ChevronLeft size={14} color={STITCH.onSurfaceVariant} strokeWidth={2.6} />
+            </Pressable>
+          ))}
         </View>
       </ScrollView>
     </Animated.View>
@@ -157,27 +140,20 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chip: {
-    width: 130,
+    width: 120,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
     backgroundColor: "#f8fafc",
     borderRadius: 14,
-    padding: 12,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
-  chipRank: {
-    alignSelf: "flex-end",
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#dc2626",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chipRankText: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: "#ffffff",
+  chipPressed: {
+    backgroundColor: "#eef2f7",
+    borderColor: "#cbd5e1",
   },
   chipTicker: {
     fontSize: 16,
@@ -192,32 +168,7 @@ const styles = StyleSheet.create({
     color: STITCH.onSurfaceVariant,
     writingDirection: "rtl",
     textAlign: "right",
-  },
-  chipPctRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 4,
-    alignSelf: "flex-end",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  chipPctRowUp: {
-    backgroundColor: "#dcfce7",
-  },
-  chipPctRowDown: {
-    backgroundColor: "#fee2e2",
-  },
-  chipPctText: {
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  chipVoters: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: STITCH.onSurfaceVariant,
-    writingDirection: "rtl",
-    textAlign: "right",
-    marginTop: 2,
+    marginTop: 1,
+    flexShrink: 1,
   },
 });

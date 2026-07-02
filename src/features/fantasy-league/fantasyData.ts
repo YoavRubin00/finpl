@@ -86,9 +86,6 @@ export function getDraftClose(now: Date = new Date()): Date {
   return d;
 }
 
-/** Social-proof count on the Fantasy CTA — placeholder until real friend presence exists. */
-export const FANTASY_ACTIVE_FRIENDS = 4;
-
 // ---------------------------------------------------------------------------
 // Tier configs
 // ---------------------------------------------------------------------------
