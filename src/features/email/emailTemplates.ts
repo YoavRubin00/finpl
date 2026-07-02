@@ -503,3 +503,66 @@ export function buildRetentionEmailHtml(params: {
 
   return { subject, html };
 }
+
+// ─── D1 curiosity-gap email (RETENTION-PLAN 2026-07-02 §2.3 / QW6) ──────────
+// Sent by the same 06:00-UTC cron, but ONLY to users who signed up YESTERDAY
+// and didn't come back — the D1 moment itself. Click-tracking proved the
+// generic variants' CTR is real and dismal (~3-6 clicks/week on ~900 sends),
+// so this template gives away nothing: the subject IS the dilemma question,
+// the answer lives behind the tap (deep-link: finpl://quest/daily-dilemma).
+// Outside the bandit pool on purpose — a different audience (day-1 new users
+// vs lapsed regulars) would corrupt the daily_email_variant posterior.
+
+export const D1_EMAIL_VARIANT_ID = 'd1_curiosity_v1';
+
+/** Dilemma-question teasers, rotated deterministically by day-of-month so the
+ *  cron stays idempotent. Questions only — the answer is never in the email. */
+const D1_DILEMMA_TEASERS = [
+  'מצאת 200 ש"ח ברחוב. מה הצעד הכי חכם?',
+  'המשכורת הראשונה נכנסה — מה עושים איתה קודם?',
+  'חבר מבקש הלוואה של 500 ש"ח. כן או לא?',
+  '300 ש"ח על בגדים או 300 ש"ח שעובדים בשבילך?',
+  'הטלפון נשבר ואין כסף בצד. מאיפה מתחילים?',
+  'קיבלת 1,000 ש"ח מתנה. לבזבז, לשמור או להשקיע?',
+  'מבצע 1+1 בקניון — חיסכון אמיתי או מלכודת?',
+] as const;
+
+/** Builds the day-1 curiosity-gap email. Reuses retentionEmail.html. */
+export function buildD1EmailHtml(params: {
+  name: string;
+  streak: number;
+  /** Send date — selects the teaser deterministically (idempotent cron). */
+  date: Date;
+  ctaUrl: string;
+  unsubscribeUrl: string;
+  openPixelUrl?: string;
+}): { subject: string; html: string } {
+  const question = D1_DILEMMA_TEASERS[params.date.getDate() % D1_DILEMMA_TEASERS.length];
+  const subject = `פרסומת | ${question}`;
+  const safeName = escapeHtml(params.name);
+  const safeStreak = String(params.streak);
+
+  const bodyHtml = `<p style="margin:0 0 14px;">יש תשובה חכמה אחת — והיא מחכה בדילמה של היום.</p>
+      <p style="margin:0 0 14px;">ודרך אגב: הרצף שלך בן יום. פתיחה אחת היום = יומיים ברצף, והתיבה של יום 2 נפתחת.</p>
+      <p style="margin:0;font-weight:700;">2 דקות. קפטן שארק שומר על השלל.</p>`;
+
+  const openPixel = params.openPixelUrl
+    ? `<img src="${escapeHtml(params.openPixelUrl)}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;">`
+    : '';
+
+  const html = loadRetentionTemplate()
+    .split('{{subject}}').join(escapeHtml(subject))
+    .split('{{name}}').join(safeName)
+    .split('{{streak}}').join(safeStreak)
+    .split('{{headline}}').join(escapeHtml(question))
+    .split('{{bodyHtml}}').join(bodyHtml)
+    .split('{{sharkImg}}').join(SHARK_FIRE)
+    .split('{{sharkAlt}}').join(escapeHtml('קפטן שארק נחוש'))
+    .split('{{ctaText}}').join(escapeHtml('לפתור את הדילמה ←'))
+    .split('{{cardImg}}').join('https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-welcome.png')
+    .split('{{ctaUrl}}').join(escapeHtml(params.ctaUrl))
+    .split('{{openPixel}}').join(openPixel)
+    .split('{{unsubscribeUrl}}').join(escapeHtml(params.unsubscribeUrl));
+
+  return { subject, html };
+}

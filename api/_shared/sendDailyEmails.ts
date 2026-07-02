@@ -6,6 +6,8 @@ import { userProfiles, moduleProgress } from '../../src/db/schema';
 import {
   buildDailyEmailHtml,
   buildRetentionEmailHtml,
+  buildD1EmailHtml,
+  D1_EMAIL_VARIANT_ID,
   RETENTION_VARIANT_IDS,
   type RetentionVariantId,
 } from '../../src/features/email/emailTemplates';
@@ -101,6 +103,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       email: userProfiles.email,
       displayName: userProfiles.displayName,
       currentStreak: userProfiles.currentStreak,
+      createdAt: userProfiles.createdAt,
     })
     .from(userProfiles)
     .where(
@@ -161,8 +164,17 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
 
       const unsubscribeUrl = `${baseUrl}/api/email/unsubscribe?id=${user.id}`;
 
-      const picked = selectBestVariant(banditStats);
-      const variantId = (picked?.variantId ?? RETENTION_VARIANT_IDS[0]) as RetentionVariantId;
+      // D1 cohort (RETENTION-PLAN 2026-07-02 §2.3 / QW6): signed up YESTERDAY
+      // and didn't return today — the day-1 moment itself. These users get the
+      // curiosity-gap template and stay OUT of the daily_email_variant bandit
+      // (a day-1 new user and a lapsed regular are different audiences; mixing
+      // them corrupts the posterior).
+      const isD1NewUser = (user.createdAt ?? '').slice(0, 10) === yesterdayDate;
+
+      const picked = isD1NewUser ? null : selectBestVariant(banditStats);
+      const variantId = isD1NewUser
+        ? D1_EMAIL_VARIANT_ID
+        : ((picked?.variantId ?? RETENTION_VARIANT_IDS[0]) as RetentionVariantId);
 
       const sig = trackingSecret ? signEmailClick(user.id, variantId, trackingSecret) : '';
       const clickUrl = trackingSecret
@@ -181,14 +193,23 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       let subject: string;
       let html: string;
       try {
-        const built = buildRetentionEmailHtml({
-          variantId,
-          name: user.displayName ?? 'חבר',
-          streak: user.currentStreak ?? 0,
-          ctaUrl: clickUrl,
-          unsubscribeUrl,
-          openPixelUrl,
-        });
+        const built = isD1NewUser
+          ? buildD1EmailHtml({
+              name: user.displayName ?? 'חבר',
+              streak: user.currentStreak ?? 0,
+              date: now,
+              ctaUrl: clickUrl,
+              unsubscribeUrl,
+              openPixelUrl,
+            })
+          : buildRetentionEmailHtml({
+              variantId: variantId as RetentionVariantId,
+              name: user.displayName ?? 'חבר',
+              streak: user.currentStreak ?? 0,
+              ctaUrl: clickUrl,
+              unsubscribeUrl,
+              openPixelUrl,
+            });
         subject = built.subject;
         html = built.html;
       } catch (err) {
@@ -223,24 +244,28 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         .set({ dailyEmailSentAt: now.toISOString() })
         .where(eq(userProfiles.id, user.id));
 
-      try {
-        await db.execute(sql`
-          INSERT INTO bandit_variants
-            (experiment_id, variant_id, alpha, beta, impressions, conversions)
-          VALUES (${EXPERIMENT_ID}, ${variantId}, 1, 1, 1, 0)
-          ON CONFLICT (experiment_id, variant_id) DO UPDATE SET
-            impressions = bandit_variants.impressions + 1,
-            updated_at  = NOW();
-        `);
-      } catch (err) {
-        console.error('[send-daily] bandit impression record failed', err);
+      // D1 sends stay out of the bandit posterior — different audience.
+      if (!isD1NewUser) {
+        try {
+          await db.execute(sql`
+            INSERT INTO bandit_variants
+              (experiment_id, variant_id, alpha, beta, impressions, conversions)
+            VALUES (${EXPERIMENT_ID}, ${variantId}, 1, 1, 1, 0)
+            ON CONFLICT (experiment_id, variant_id) DO UPDATE SET
+              impressions = bandit_variants.impressions + 1,
+              updated_at  = NOW();
+          `);
+        } catch (err) {
+          console.error('[send-daily] bandit impression record failed', err);
+        }
       }
 
       // PostHog SENT event — the top of the funnel. variant_id lets every
-      // downstream metric (opened/clicked/returned) be sliced per A/B arm.
+      // downstream metric (opened/clicked/returned) be sliced per A/B arm;
+      // cohort splits day-1 new users from lapsed regulars.
       await capturePostHog('retention_email_sent', user.id, {
         variant_id: variantId,
-        cohort: 'daily_cron',
+        cohort: isD1NewUser ? 'd1_new_user' : 'daily_cron',
         streak: user.currentStreak ?? 0,
       });
 
