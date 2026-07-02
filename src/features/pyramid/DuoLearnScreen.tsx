@@ -960,9 +960,13 @@ const ChapterSection = React.memo(function ChapterSection({
   onSkipIntro?: () => void;
   /** Duolingo-style "JUMP HERE?" — shown only on chapters the user hasn't
    *  started. Jumps straight into the chapter (ch-1 free for all; ch-2+ PRO). */
-  onJumpHere?: () => void;
+  // Take the section's own index/chapter as args so the parent can pass a single
+  // STABLE callback (handleMindMap / handleJumpHere) instead of a fresh arrow per
+  // render — the last two memo-breakers that were defeating this component's
+  // React.memo for every chapter (incl. the expensive active one).
+  onJumpHere?: (chapter: typeof chapter1Data, sectionIndex: number) => void;
   onChapterPress?: () => void;
-  onMindMap?: () => void;
+  onMindMap?: (sectionIndex: number) => void;
   easterEggNodeId?: string | null;
   onClaimEasterEgg?: () => void;
   // True only for the single chapter that hosts the user's next-to-do module.
@@ -1045,7 +1049,7 @@ const ChapterSection = React.memo(function ChapterSection({
 
   return (
     <Animated.View entering={FadeInDown.delay(sectionIndex * 80).duration(350)}>
-      <ArenaHeaderBanner arena={arena} sectionIndex={sectionIndex} isLocked={!isUnlocked} onPress={onChapterPress} onMindMap={onMindMap} />
+      <ArenaHeaderBanner arena={arena} sectionIndex={sectionIndex} isLocked={!isUnlocked} onPress={onChapterPress} onMindMap={onMindMap ? () => onMindMap(sectionIndex) : undefined} />
 
       {sectionIndex === 0 && completedModules.length < chapter.modules.length && !completedModules.some((id) => id.startsWith('mod-1-')) && onSkipIntro && (
         <AnimatedPressable
@@ -1086,7 +1090,7 @@ const ChapterSection = React.memo(function ChapterSection({
           parent). Tapping jumps into the chapter (ch-1 free; ch-2+ PRO). */}
       {onJumpHere && (
         <AnimatedPressable
-          onPress={onJumpHere}
+          onPress={() => onJumpHere(chapter, sectionIndex)}
           style={{
             alignSelf: 'center',
             marginTop: 16,
@@ -1616,6 +1620,9 @@ export function DuoLearnScreen() {
   // מ-2; אורחים מקבלים streak=0 מה-query המדולג → מוסתר). פסיקת ים 30.6.
   const [clubSheetVisible, setClubSheetVisible] = useState(false);
   const clubHasUnseen = useStreakClubStore((s) => s.hasUnseenToday());
+  // ⚠️⚠️ DEV-ONLY זמני (יואב 2.7, בדיקת הטרקלין בווב): רצף-5 מדומה לשער-
+  // המועדון בלבד. __DEV__=false בפרודקשן — ובכל זאת להסיר לפני OTA! ⚠️⚠️
+  const clubStreak = __DEV__ ? Math.max(streak, 5) : streak;
   // Per-session memory of which modules already triggered the
   // PROFILE_QUESTION_BACKSTOPS modal. Skipping the modal doesn't flip the
   // store flag — without this guard a user could be re-prompted on every
@@ -2714,11 +2721,11 @@ export function DuoLearnScreen() {
       {mondialBadgeVisible ? (
         <MondialMailBadge isNew={!mondialOpenedAt} onPress={handleMondialBadgePress} />
       ) : null}
-      {streak >= 1 ? (
-        <StreakClubEntryCard streak={streak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
+      {clubStreak >= 1 ? (
+        <StreakClubEntryCard streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
       ) : null}
     </View>
-  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, streak, clubHasUnseen, handleStreakClubPress]);
+  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, clubStreak, clubHasUnseen, handleStreakClubPress]);
 
   const activeQuestPathNodeProps = useMemo(() => ({
     completedCount: questCompletedCount,
@@ -2754,9 +2761,16 @@ export function DuoLearnScreen() {
       />
       <StreakLoungeSheet
         visible={clubSheetVisible}
-        streak={streak}
+        streak={clubStreak}
         onClose={() => setClubSheetVisible(false)}
       />
+      {/* ⚠️⚠️ DEV-ONLY זמני (יואב 2.7): כפתור-מועדון צף לבדיקה מקומית —
+          עוקף את מיקום שורת-הבאדג'ים. להסיר לפני OTA! ⚠️⚠️ */}
+      {__DEV__ && (
+        <View style={{ position: "absolute", top: 96, left: 12, zIndex: 60 }}>
+          <StreakClubEntryCard streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
+        </View>
+      )}
       {/* Swipe quest modal. Hosts whichever of the 3 rotating swipe-games is
           assigned to today (see dailySwipeKind above). finishSwipeQuest is
           the single closer — every card path funnels through it so the
@@ -3011,11 +3025,11 @@ export function DuoLearnScreen() {
                 onSkipIntro={idx === 0 ? handleSkipIntro : undefined}
                 onJumpHere={
                   idx >= 1 && completedModules.length === 0 && !hasActiveModule
-                    ? () => handleJumpHere(chapter, idx)
+                    ? handleJumpHere
                     : undefined
                 }
                 onChapterPress={handleRoadmapPress}
-                onMindMap={() => handleMindMap(idx)}
+                onMindMap={handleMindMap}
                 isGlobalActiveChapter={hasActiveModule}
                 activeIndexOverride={hasActiveModule ? playedModuleIdx : undefined}
                 questPathNodeProps={hasActiveModule ? activeQuestPathNodeProps : undefined}
