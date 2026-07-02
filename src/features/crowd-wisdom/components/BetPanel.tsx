@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { Dices, TrendingUp } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 
@@ -8,9 +8,13 @@ import { useEconomy, useSpendCoins } from '../../economy/useEconomy';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { tokenStore } from '../../../lib/auth/secureStore';
 import { fetchBetOdds, placeBet, type ChoiceOdds } from '../../../db/sync/syncCrowdBets';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import type { CrowdWisdomQuestion } from '../types';
 
-const STAKES = [50, 100, 250] as const;
+// Quick-fill shortcuts — the stake itself is a free-typed amount (Yoav: not
+// limited to 250).
+const PRESETS = [50, 100, 250] as const;
+const MIN_STAKE = 10;
 
 interface BetPanelProps {
   question: CrowdWisdomQuestion;
@@ -20,7 +24,8 @@ interface BetPanelProps {
 /**
  * Parimutuel coin betting on a crowd question. The payout price is set by the
  * pool in REAL TIME — when the crowd piles onto a choice its odds drop, and a
- * contrarian pick pays more. Odds are locked at placement.
+ * contrarian pick pays more. Odds are locked at placement. The stake is any
+ * whole amount the user types (≥10, ≤ their balance).
  */
 export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.ReactElement | null {
   const { data: economyData } = useEconomy();
@@ -28,11 +33,11 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
   const spendCoins = useSpendCoins();
 
   const [open, setOpen] = useState(false);
-  const [stake, setStake] = useState<number>(100);
+  const [stakeText, setStakeText] = useState<string>('100');
   const [odds, setOdds] = useState<ChoiceOdds[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [placing, setPlacing] = useState(false);
-  const [placed, setPlaced] = useState<{ lockedOdds: number; potentialPayout: number } | null>(null);
+  const [placed, setPlaced] = useState<{ stake: number; lockedOdds: number; potentialPayout: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const choiceIds = question.choices.map((c) => c.id);
@@ -59,15 +64,29 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
 
   if (!selectedChoiceId && !placed) return null;
 
+  const stake = parseInt(stakeText, 10);
+  const stakeValid = Number.isFinite(stake) && stake >= MIN_STAKE && stake <= coins;
   const selectedOdds = odds?.find((o) => o.choiceId === selectedChoiceId)?.odds ?? null;
-  const potential = selectedOdds !== null ? Math.round(stake * selectedOdds) : null;
+  const potential = selectedOdds !== null && stakeValid ? Math.round(stake * selectedOdds) : null;
+
+  const handleStakeChange = (text: string): void => {
+    // Keep digits only, cap length so the payout row can't overflow.
+    const digits = text.replace(/[^0-9]/g, '').slice(0, 8);
+    setStakeText(digits);
+    if (error) setError(null);
+  };
 
   const handlePlace = async (): Promise<void> => {
     if (!selectedChoiceId || placing || placed) return;
     setError(null);
-    if (coins < stake) {
+    if (!Number.isFinite(stake) || stake < MIN_STAKE) {
       errorHaptic();
-      setError('אין מספיק מטבעות להימור הזה.');
+      setError(`המינימום להימור הוא ${MIN_STAKE} מטבעות.`);
+      return;
+    }
+    if (stake > coins) {
+      errorHaptic();
+      setError('אין לכם מספיק מטבעות להימור הזה.');
       return;
     }
     setPlacing(true);
@@ -84,7 +103,7 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
       });
       spendCoins(stake);
       successHaptic();
-      setPlaced({ lockedOdds: result.lockedOdds, potentialPayout: result.potentialPayout });
+      setPlaced({ stake, lockedOdds: result.lockedOdds, potentialPayout: result.potentialPayout });
       setOdds(result.odds);
     } catch (e) {
       errorHaptic();
@@ -97,9 +116,14 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
   if (placed) {
     return (
       <Animated.View entering={FadeIn.duration(240)} style={[styles.panel, styles.placedPanel]}>
-        <Text style={styles.placedTitle}>ההימור נעול: {stake} 🪙 × פי {placed.lockedOdds}</Text>
+        <View style={styles.placedTitleRow}>
+          <Text style={styles.placedTitle} maxFontSizeMultiplier={1.15}>ההימור נעול:</Text>
+          <Text style={styles.placedTitle} maxFontSizeMultiplier={1.15}>{placed.stake.toLocaleString('he-IL')}</Text>
+          <GoldCoinIcon size={14} />
+          <Text style={styles.placedTitle} maxFontSizeMultiplier={1.15}>× פי {placed.lockedOdds}</Text>
+        </View>
         <Text style={styles.placedSub}>
-          רווח פוטנציאלי: {placed.potentialPayout} מטבעות אם צדקתם. השער ננעל לפי הקופה בזמן ההימור.
+          רווח פוטנציאלי: {placed.potentialPayout.toLocaleString('he-IL')} מטבעות אם צדקתם. השער ננעל לפי הקופה בזמן ההימור.
         </Text>
       </Animated.View>
     );
@@ -130,36 +154,69 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
         {loading && <ActivityIndicator size="small" color="#7c3aed" />}
       </View>
 
-      {/* Stake chips */}
+      {/* Balance */}
+      <View style={styles.balanceRow}>
+        <GoldCoinIcon size={14} />
+        <Text style={styles.balanceText} maxFontSizeMultiplier={1.15}>
+          היתרה שלכם: {coins.toLocaleString('he-IL')} מטבעות
+        </Text>
+      </View>
+
+      {/* Free-amount input with quick-fill presets */}
       <View style={styles.stakesRow}>
-        {STAKES.map((s) => {
+        {PRESETS.map((s) => {
           const active = stake === s;
           return (
             <Pressable
               key={s}
               onPress={() => {
                 tapHaptic();
-                setStake(s);
+                setStakeText(String(s));
+                if (error) setError(null);
               }}
               accessibilityRole="button"
-              accessibilityLabel={`הימור ${s} מטבעות`}
+              accessibilityLabel={`מילוי מהיר ${s} מטבעות`}
               style={[styles.stakeChip, active && styles.stakeChipActive]}
             >
-              <Text style={[styles.stakeChipText, active && styles.stakeChipTextActive]}>
-                {s} 🪙
+              <Text
+                style={[styles.stakeChipText, active && styles.stakeChipTextActive]}
+                maxFontSizeMultiplier={1.15}
+              >
+                {s.toLocaleString('he-IL')}
               </Text>
+              <GoldCoinIcon size={11} />
             </Pressable>
           );
         })}
+      </View>
+
+      <View style={styles.inputRow}>
+        <Text style={styles.inputLabel} maxFontSizeMultiplier={1.15}>סכום ההימור</Text>
+        <View style={styles.inputBox}>
+          <TextInput
+            value={stakeText}
+            onChangeText={handleStakeChange}
+            keyboardType="number-pad"
+            inputMode="numeric"
+            placeholder="0"
+            placeholderTextColor="#c4b5fd"
+            style={styles.input}
+            maxLength={8}
+            accessibilityLabel="סכום ההימור במטבעות"
+            maxFontSizeMultiplier={1.15}
+          />
+          <GoldCoinIcon size={14} />
+        </View>
       </View>
 
       {/* Live odds line */}
       {selectedOdds !== null && potential !== null ? (
         <View style={styles.oddsRow}>
           <TrendingUp size={14} color="#15803d" strokeWidth={2.4} />
-          <Text style={styles.oddsText}>
-            שער חי: פי {selectedOdds} · רווח פוטנציאלי {potential} 🪙
+          <Text style={styles.oddsText} numberOfLines={2} maxFontSizeMultiplier={1.15}>
+            שער חי: פי {selectedOdds} · רווח פוטנציאלי {potential.toLocaleString('he-IL')}
           </Text>
+          <GoldCoinIcon size={13} />
         </View>
       ) : (
         !loading && (
@@ -173,14 +230,22 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
 
       <Pressable
         onPress={handlePlace}
-        disabled={placing || selectedOdds === null}
+        disabled={placing || selectedOdds === null || !stakeValid}
         accessibilityRole="button"
         accessibilityLabel="ביצוע ההימור"
-        style={[styles.placeBtn, (placing || selectedOdds === null) && styles.placeBtnDisabled]}
+        style={[styles.placeBtn, (placing || selectedOdds === null || !stakeValid) && styles.placeBtnDisabled]}
       >
-        <Text style={styles.placeBtnText}>
-          {placing ? 'נועל שער…' : `המרו ${stake} 🪙 על הבחירה`}
-        </Text>
+        {placing ? (
+          <Text style={styles.placeBtnText} maxFontSizeMultiplier={1.15}>נועל שער…</Text>
+        ) : (
+          <View style={styles.placeBtnInner}>
+            <Text style={styles.placeBtnText} maxFontSizeMultiplier={1.15}>
+              המרו {Number.isFinite(stake) ? stake.toLocaleString('he-IL') : '0'}
+            </Text>
+            <GoldCoinIcon size={13} />
+            <Text style={styles.placeBtnText} maxFontSizeMultiplier={1.15}>על הבחירה</Text>
+          </View>
+        )}
       </Pressable>
 
       <Text style={styles.disclaimer}>
@@ -222,6 +287,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fdf4',
     borderColor: '#86efac',
   },
+  placedTitleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 5,
+  },
   placedTitle: {
     fontSize: 13,
     fontWeight: '900',
@@ -249,18 +320,34 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     textAlign: 'right',
   },
+  balanceRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+  },
+  balanceText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#6d28d9',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    flexShrink: 1,
+  },
   stakesRow: {
     flexDirection: 'row-reverse',
     gap: 8,
   },
   stakeChip: {
     flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: '#ddd6fe',
     backgroundColor: '#ffffff',
     paddingVertical: 8,
-    alignItems: 'center',
   },
   stakeChipActive: {
     borderColor: '#7c3aed',
@@ -274,17 +361,53 @@ const styles = StyleSheet.create({
   stakeChipTextActive: {
     color: '#5b21b6',
   },
+  inputRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#5b21b6',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  inputBox: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#ddd6fe',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#5b21b6',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    padding: 0,
+  },
   oddsRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
   },
   oddsText: {
+    flex: 1,
     fontSize: 12,
     fontWeight: '900',
     color: '#15803d',
     writingDirection: 'rtl',
     textAlign: 'right',
+    flexShrink: 1,
   },
   oddsHint: {
     fontSize: 11,
@@ -304,7 +427,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#7c3aed',
     borderRadius: 12,
     paddingVertical: 11,
+    paddingHorizontal: 10,
     alignItems: 'center',
+  },
+  placeBtnInner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 5,
   },
   placeBtnDisabled: {
     backgroundColor: '#c4b5fd',

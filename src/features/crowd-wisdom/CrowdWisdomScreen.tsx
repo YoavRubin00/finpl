@@ -1,12 +1,14 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft, History as HistoryIcon } from "lucide-react-native";
 
-import { useCrowdWisdomStore } from "./useCrowdWisdomStore";
+import { useCrowdWisdomStore, VOTE_COIN_REWARD } from "./useCrowdWisdomStore";
 import { SEED_QUESTIONS, getQuestionsByCategory } from "./data/seedQuestions";
-import { computePostVoteSnapshot, computeSentimentSnapshot } from "./lib/computeVerdict";
+import { computePostVoteSnapshot } from "./lib/computeVerdict";
+import { getQuestionCloseTime, getTimeLeftLabel, isClosed } from "./lib/questionSchedule";
+import { buildLiveBrackets, LIVE_LABELS } from "./lib/liveBrackets";
 import { StreakHeroCard } from "./components/StreakHeroCard";
 import { BullBearGauge } from "./components/BullBearGauge";
 import { CategoryPills } from "./components/CategoryPills";
@@ -14,17 +16,26 @@ import { LivePollCard } from "./components/LivePollCard";
 import { SliderForecastCard } from "./components/SliderForecastCard";
 import { ResultCard } from "./components/ResultCard";
 import { EducationalTooltipCard } from "./components/EducationalTooltipCard";
-import type { CrowdWisdomCategory } from "./types";
+import type { CrowdWisdomCategory, CrowdWisdomQuestion } from "./types";
+import type { LiveMarketData, RateItem } from "../live-news/liveMarketTypes";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { submitCrowdVote } from "../../db/sync/syncCrowdQuestion";
 import { getIsraelDateISO } from "../../utils/israelTime";
+import { getApiBase } from "../../db/apiBase";
 import { useAuthStore } from "../auth/useAuthStore";
 import { tokenStore } from "../../lib/auth/secureStore";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 
-const VOTE_COIN_REWARD = 100;
-
+// The market-sentiment question powers the pinned live gauge — it's rendered by
+// BullBearGauge (which reads live market data), so it's excluded from the list.
 const SENTIMENT_GAUGE_QUESTION_ID = "sentiment_market_monthly";
+
+/** Bracket horizon per live-anchored forecast question. */
+function forecastHorizon(id: string): "weekly" | "monthly" | "yearly" {
+  if (id === "forecast_dollar_shekel") return "monthly";
+  if (id === "forecast_sp500_year_end") return "yearly";
+  return "weekly";
+}
 
 export function CrowdWisdomScreen(): React.ReactElement {
   const router = useRouter();
@@ -34,19 +45,70 @@ export function CrowdWisdomScreen(): React.ReactElement {
 
   const [activeCategory, setActiveCategory] = useState<CrowdWisdomCategory | "all">("all");
 
-  // Pre-compute the sentiment snapshot for the gauge (always shows the market
-  // sentiment question — it's pinned at the top regardless of category filter).
-  const sentimentSnapshot = useMemo(() => {
-    const q = SEED_QUESTIONS.find((s) => s.id === SENTIMENT_GAUGE_QUESTION_ID);
-    return q ? computeSentimentSnapshot(q) : null;
+  // Ticking clock — drives the live countdown labels + close-based rotation.
+  // One tick per minute is plenty for "Xש׳ / Xי׳" resolution.
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
   }, []);
 
+  // Live market levels — fetched once, used to anchor forecast brackets to
+  // today's REAL price (Yoav: no invented/stale ranges).
+  const [rates, setRates] = useState<Record<string, RateItem>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${getApiBase()}/api/market/live`);
+        if (!res.ok) return;
+        const data = (await res.json()) as LiveMarketData;
+        if (!cancelled && Array.isArray(data.rates)) {
+          const map: Record<string, RateItem> = {};
+          for (const r of data.rates) map[r.label] = r;
+          setRates(map);
+        }
+      } catch {
+        /* offline — seed fallback brackets stay */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Overlay live-anchored bracket labels onto a forecast question, keeping the
+  // stable b1..b5 ids + seed vote weights. Non-forecast questions pass through.
+  const applyLiveBrackets = useCallback(
+    (q: CrowdWisdomQuestion): CrowdWisdomQuestion => {
+      if (q.category !== "forecast") return q;
+      const liveLabel = LIVE_LABELS[q.id];
+      if (!liveLabel) return q; // no live source (e.g. S&P year-end) — keep seed labels
+      const rate = rates[liveLabel];
+      if (!rate || !Number.isFinite(rate.numericValue)) return q;
+      const brackets = buildLiveBrackets(liveLabel, rate.numericValue, forecastHorizon(q.id));
+      const choices = q.choices.map((c, i) =>
+        brackets[i] ? { ...c, label: brackets[i].label } : c,
+      );
+      return { ...q, choices };
+    },
+    [rates],
+  );
+
+  // Visible list: drop the pinned gauge question + any closed question, then
+  // rotate the remaining pool deterministically by Israel date so the list
+  // stays full and rotates day-to-day (spirit of getDailyEventTopic).
   const visibleQuestions = useMemo(() => {
     const cat = activeCategory === "all" ? null : activeCategory;
-    const list = getQuestionsByCategory(cat);
-    // Hide the sentiment-gauge question from the list since it's pinned above.
-    return list.filter((q) => q.id !== SENTIMENT_GAUGE_QUESTION_ID);
-  }, [activeCategory]);
+    const list = getQuestionsByCategory(cat).filter((q) => q.id !== SENTIMENT_GAUGE_QUESTION_ID);
+    const open = list.filter((q) => !isClosed(q, now));
+    if (open.length <= 1) return open;
+    const daySeed = getIsraelDateISO(now)
+      .split("")
+      .reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const offset = daySeed % open.length;
+    return [...open.slice(offset), ...open.slice(0, offset)];
+  }, [activeCategory, now]);
 
   const handleSubmitVote = useCallback(
     async (questionId: string, choiceId: string) => {
@@ -63,21 +125,22 @@ export function CrowdWisdomScreen(): React.ReactElement {
         snapshot.userIsWithCrowd,
       );
 
-      // Reward immediately on a successful local vote — the user expects the
-      // payout the moment they answer, regardless of remote-sync outcome.
+      // Instant reward — fires once per question (recordVote is single-vote, and
+      // the alreadyVoted guard above blocks re-fires). addCoins animates the
+      // header coin counter via the economy-UI store.
       useEconomyUIStore.getState().addCoins(VOTE_COIN_REWARD);
       successHaptic();
 
       // Best-effort Neon sync. The current /api/crowd-question/vote endpoint
       // only accepts {choice: 'a' | 'b'} — crowd-wisdom choices use richer IDs
-      // ('bull', 'bear', etc.). When the choice is binary-compatible we sync;
-      // otherwise the vote stays local until the API is extended.
-      if (choiceId === 'a' || choiceId === 'b') {
+      // ('bull', 'bear', 'b3', etc.). When the choice is binary-compatible we
+      // sync; otherwise the vote stays local until the API is extended.
+      if (choiceId === "a" || choiceId === "b") {
         try {
           const auth = useAuthStore.getState();
           const syncToken = await tokenStore.get();
           await submitCrowdVote({
-            authId: auth.email ?? 'guest',
+            authId: auth.email ?? "guest",
             syncToken,
             questionId,
             choice: choiceId,
@@ -98,7 +161,7 @@ export function CrowdWisdomScreen(): React.ReactElement {
         <Pressable
           onPress={() => {
             tapHaptic();
-            router.replace('/(tabs)/friends' as never);
+            router.replace("/(tabs)/friends" as never);
           }}
           style={styles.iconBtn}
           accessibilityRole="button"
@@ -133,39 +196,26 @@ export function CrowdWisdomScreen(): React.ReactElement {
         {/* 1. Streak hero (only show when streak > 0 or as engaging zero-state) */}
         <StreakHeroCard streak={streak} />
 
-        {/* 2. Bull/Bear gauge — pinned at top per user request */}
-        {sentimentSnapshot ? (
-          <BullBearGauge
-            bullishPercent={sentimentSnapshot.bullishPercent}
-            neutralPercent={sentimentSnapshot.neutralPercent}
-            bearishPercent={sentimentSnapshot.bearishPercent}
-            needlePosition={sentimentSnapshot.needlePosition}
-            question={sentimentSnapshot.question.prompt}
-            footer={`על בסיס ${sentimentSnapshot.totalVoters.toLocaleString("he-IL")} הצבעות · מתעדכן כל שעה`}
-          />
-        ) : null}
+        {/* 2. Bull/Bear gauge — LIVE market sentiment, pinned at top */}
+        <BullBearGauge />
 
         {/* 2b. Weekly slider forecast — drag along a live, plausible range */}
         <SliderForecastCard />
 
         {/* 3. Category filter pills */}
-        <CategoryPills
-          activeCategory={activeCategory}
-          onChange={setActiveCategory}
-        />
+        <CategoryPills activeCategory={activeCategory} onChange={setActiveCategory} />
 
-        {/* 4. Live questions list — render LivePollCard pre-vote, ResultCard post-vote */}
+        {/* 4. Live questions list — LivePollCard pre-vote, ResultCard post-vote */}
         <View style={styles.questionsList}>
-          {visibleQuestions.map((question) => {
+          {visibleQuestions.map((rawQuestion) => {
+            const question = applyLiveBrackets(rawQuestion);
+            const timeLeftLabel = getTimeLeftLabel(getQuestionCloseTime(question, now), now);
             const userVote = votes[question.id];
             if (userVote) {
               const snapshot = computePostVoteSnapshot(question, userVote.choiceId);
               return (
                 <React.Fragment key={question.id}>
-                  <ResultCard
-                    snapshot={snapshot}
-                    closesInHours={question.closesInHours}
-                  />
+                  <ResultCard snapshot={snapshot} timeLeftLabel={timeLeftLabel} />
                   {question.educational ? (
                     <EducationalTooltipCard
                       title={question.educational.title}
@@ -180,6 +230,7 @@ export function CrowdWisdomScreen(): React.ReactElement {
               <React.Fragment key={question.id}>
                 <LivePollCard
                   question={question}
+                  timeLeftLabel={timeLeftLabel}
                   onSubmit={(choiceId) => handleSubmitVote(question.id, choiceId)}
                 />
                 {question.educational ? (

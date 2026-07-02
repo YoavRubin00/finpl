@@ -1,15 +1,16 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Brain, Clock, Zap, Handshake, Sparkles } from "lucide-react-native";
+import { Brain, Clock, Handshake, Sparkles } from "lucide-react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 
 import { MarketOddsHeader } from "./MarketOddsHeader";
+import { GoldCoinIcon } from "../../../components/ui/GoldCoinIcon";
 import type { PostVoteSnapshot } from "../types";
 
 interface ResultCardProps {
   snapshot: PostVoteSnapshot;
-  /** Hours remaining until the question closes. */
-  closesInHours: number;
+  /** Live countdown label to close (e.g. "5ש׳" / "3י׳"). */
+  timeLeftLabel: string;
 }
 
 /**
@@ -20,7 +21,7 @@ interface ResultCardProps {
  *      ─ Green "אתה עם ההמון" when user matches the majority
  *      ─ Blue "אתה נגד הזרם" when user picked a minority choice
  */
-export function ResultCard({ snapshot, closesInHours }: ResultCardProps) {
+export function ResultCard({ snapshot, timeLeftLabel }: ResultCardProps) {
   const { question, distribution, totalVoters, userIsWithCrowd, userChoiceId, majorityChoiceId } = snapshot;
 
   const majorityRow = distribution.find((d) => d.choiceId === majorityChoiceId);
@@ -36,12 +37,12 @@ export function ResultCard({ snapshot, closesInHours }: ResultCardProps) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.brandName}>תוצאות חכמת ההמונים</Text>
-            <Text style={styles.brandMeta}>נסגר עוד {closesInHours}ש׳</Text>
+            <Text style={styles.brandMeta}>נסגר עוד {timeLeftLabel}</Text>
           </View>
         </View>
         <View style={styles.clockChip}>
           <Clock size={12} color="#475569" strokeWidth={2.4} />
-          <Text style={styles.clockText}>{closesInHours}ש׳</Text>
+          <Text style={styles.clockText}>{timeLeftLabel}</Text>
         </View>
       </View>
 
@@ -106,8 +107,8 @@ export function ResultCard({ snapshot, closesInHours }: ResultCardProps) {
       >
         <View style={styles.verdictLeft}>
           <View style={styles.xpReward}>
-            <Text style={styles.xpRewardValue}>+100 🪙</Text>
-            <Zap size={14} color="#ffffff" strokeWidth={2.6} />
+            <Text style={styles.xpRewardValue} maxFontSizeMultiplier={1.15}>+100</Text>
+            <GoldCoinIcon size={15} />
           </View>
         </View>
         <View style={{ flex: 1 }}>

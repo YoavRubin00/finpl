@@ -4,6 +4,13 @@ import { zustandStorage } from "../../lib/zustandStorage";
 import type { UserVote, ResolvedOutcome } from "./types";
 
 /**
+ * Instant coin payout for answering a crowd-wisdom question. Single source of
+ * truth — imported by CrowdWisdomScreen and SliderForecastCard so the reward
+ * can't drift between the two vote paths.
+ */
+export const VOTE_COIN_REWARD = 100;
+
+/**
  * Persisted state for Crowd Wisdom — the user's lifetime voting history,
  * accuracy stats, and current "with-crowd streak". Backed by MMKV (mobile)
  * or AsyncStorage (web) via the shared zustandStorage adapter.

@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Brain, Clock, Zap } from "lucide-react-native";
+import { Brain, Clock } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { tapHaptic, mediumHaptic } from "../../../utils/haptics";
 import { BetPanel } from "./BetPanel";
 import { MarketOddsHeader } from "./MarketOddsHeader";
+import { GoldCoinIcon } from "../../../components/ui/GoldCoinIcon";
 import type { CrowdWisdomQuestion } from "../types";
 
 interface LivePollCardProps {
   question: CrowdWisdomQuestion;
+  /** Live countdown label to close (e.g. "5ש׳" / "3י׳"). */
+  timeLeftLabel: string;
   /** Triggered when the user picks a choice AND confirms via the bottom CTA. */
   onSubmit: (choiceId: string) => void;
 }
@@ -21,7 +24,7 @@ interface LivePollCardProps {
  *  • Radio-style choices (single-select)
  *  • Sticky CTA bar that submits the vote and gates the reveal of crowd-wisdom
  */
-export function LivePollCard({ question, onSubmit }: LivePollCardProps) {
+export function LivePollCard({ question, timeLeftLabel, onSubmit }: LivePollCardProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const handleChoicePress = (id: string) => {
@@ -52,7 +55,7 @@ export function LivePollCard({ question, onSubmit }: LivePollCardProps) {
         </View>
         <View style={styles.clockChip}>
           <Clock size={12} color="#475569" strokeWidth={2.4} />
-          <Text style={styles.clockText}>{question.closesInHours}ש׳</Text>
+          <Text style={styles.clockText}>{timeLeftLabel}</Text>
         </View>
       </View>
 
@@ -116,8 +119,8 @@ export function LivePollCard({ question, onSubmit }: LivePollCardProps) {
         accessibilityState={{ disabled: !canSubmit }}
       >
         <View style={styles.xpChip}>
-          <Zap size={12} color="#7c3aed" strokeWidth={2.6} />
-          <Text style={styles.xpChipText}>+100 🪙</Text>
+          <GoldCoinIcon size={13} />
+          <Text style={styles.xpChipText} maxFontSizeMultiplier={1.15}>+100</Text>
         </View>
         <Text style={[styles.ctaText, !canSubmit && styles.ctaTextDisabled]}>
           {canSubmit ? "הצביעו כדי לראות את חכמת ההמונים" : "בחרו תשובה כדי להמשיך"}

@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, PanResponder, type LayoutChangeEvent } from 'react-native';
-import { Brain, Zap, Lock } from 'lucide-react-native';
+import { Brain, Lock } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 
 import { tapHaptic, successHaptic } from '../../../utils/haptics';
-import { useCrowdWisdomStore } from '../useCrowdWisdomStore';
+import { useCrowdWisdomStore, VOTE_COIN_REWARD } from '../useCrowdWisdomStore';
 import { getCurrentWeekId } from '../../fantasy-league/fantasyData';
 import { buildForecastRange } from '../lib/validateQuestion';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import type { LiveMarketData, RateItem } from '../../live-news/liveMarketTypes';
-
-const VOTE_COIN_REWARD = 100;
 
 const fmtUsd = (n: number): string => `$${Math.round(n).toLocaleString('en-US')}`;
 
@@ -164,8 +163,8 @@ export function SliderForecastCard(): React.ReactElement | null {
             style={[styles.ctaBar, value === null && styles.ctaBarDisabled]}
           >
             <View style={styles.coinChip}>
-              <Zap size={12} color="#7c3aed" strokeWidth={2.6} />
-              <Text style={styles.coinChipText}>+{VOTE_COIN_REWARD} 🪙</Text>
+              <GoldCoinIcon size={13} />
+              <Text style={styles.coinChipText} maxFontSizeMultiplier={1.15}>+{VOTE_COIN_REWARD}</Text>
             </View>
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, flex: 1 }}>
               <Lock size={14} color={value === null ? '#94a3b8' : '#5b21b6'} strokeWidth={2.4} />
