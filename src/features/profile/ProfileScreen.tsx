@@ -330,7 +330,7 @@ export function ProfileScreen() {
               elevation: 3,
             }]}>
               {/* Left, fire icon */}
-              <LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")} size={30} autoPlay loop active={isFocused} />
+              <LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")} size={30} autoPlay loop={false} replayOnActive active={isFocused} />
               {/* Right, text */}
               <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
                 <Text style={{ fontSize: 13, fontWeight: "700", color: "#ea580c", writingDirection: "rtl" }}>רצף יומי</Text>
@@ -361,7 +361,7 @@ export function ProfileScreen() {
                   <Text style={[styles.actionCardTitle, { color: theme.text }]}>המירו מטבעות להטבות אמיתיות</Text>
                 </View>
                 <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(124,58,237,0.15)" : "#f5f3ff", borderColor: isDark ? "rgba(167,139,250,0.3)" : "#ddd6fe" }]} accessible={false}>
-                  <LottieIcon source={require("../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json")} size={28} autoPlay loop active={isFocused} />
+                  <LottieIcon source={require("../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json")} size={28} autoPlay loop={false} replayOnActive active={isFocused} />
                 </View>
               </Animated.View>
             </AnimatedPressable>
@@ -465,7 +465,7 @@ export function ProfileScreen() {
                   <Text style={[styles.actionCardTitle, { color: theme.text }]}>הנכסים שלי</Text>
                 </View>
                 <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(8,145,178,0.15)" : "rgba(8,145,178,0.08)", borderColor: isDark ? "rgba(8,145,178,0.3)" : "#a5f3fc" }]} accessible={false}>
-                  <LottieIcon source={require("../../../assets/lottie/wired-flat-1023-portfolio-hover-pinch.json")} size={28} autoPlay loop active={isFocused} />
+                  <LottieIcon source={require("../../../assets/lottie/wired-flat-1023-portfolio-hover-pinch.json")} size={28} autoPlay loop={false} replayOnActive active={isFocused} />
                 </View>
               </View>
             </AnimatedPressable>
@@ -484,7 +484,7 @@ export function ProfileScreen() {
                   <Text style={[styles.actionCardTitle, { color: theme.text }]}>הזמן חברים וקבל פרסים</Text>
                 </View>
                 <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(124,58,237,0.15)" : "#f5f3ff", borderColor: isDark ? "rgba(167,139,250,0.3)" : "#ddd6fe" }]} accessible={false}>
-                  <LottieIcon source={require("../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json")} size={28} autoPlay loop active={isFocused} />
+                  <LottieIcon source={require("../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json")} size={28} autoPlay loop={false} replayOnActive active={isFocused} />
                 </View>
               </View>
             </AnimatedPressable>
@@ -538,7 +538,7 @@ export function ProfileScreen() {
                   <Text style={[styles.actionCardTitle, { color: theme.text }]}>קפטן שארק מנתח אותך</Text>
                 </View>
                 <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(168,85,247,0.15)" : "#faf5ff", borderColor: isDark ? "rgba(192,132,252,0.3)" : "#e9d5ff" }]} accessible={false}>
-                  <LottieIcon source={require("../../../assets/lottie/wired-flat-426-brain-hover-pinch.json")} size={28} autoPlay loop active={isFocused} />
+                  <LottieIcon source={require("../../../assets/lottie/wired-flat-426-brain-hover-pinch.json")} size={28} autoPlay loop={false} replayOnActive active={isFocused} />
                 </View>
               </View>
             </AnimatedPressable>

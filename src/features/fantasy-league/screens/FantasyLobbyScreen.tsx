@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useAppActive } from '../../../hooks/useAppActive';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -216,12 +217,18 @@ export function FantasyLobbyScreen(): React.ReactElement {
   const isLocked = !!currentEntry?.lockedAt;
   const picks = currentEntry?.picks ?? [];
 
-  // Live tick — refreshes simulated returns every minute (cache-stable for 5 ticks)
+  // Live tick — refreshes simulated returns every minute (cache-stable for 5
+  // ticks). Gated on app-active: the tick re-sorts the ~100-row leaderboard,
+  // so it must not keep firing while backgrounded. The immediate tick on
+  // (re)activation keeps every label fresh the moment the app returns.
   const [tick, setTick] = useState(0);
+  const appActive = useAppActive();
   useEffect(() => {
+    if (!appActive) return;
+    setTick((t) => t + 1);
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [appActive]);
 
   // Real weekly returns from Yahoo when available; the deterministic
   // simulation keeps the league alive offline. Refresh rides the minute tick.

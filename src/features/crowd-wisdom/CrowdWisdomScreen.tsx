@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useAppActive } from "../../hooks/useAppActive";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -48,10 +49,15 @@ export function CrowdWisdomScreen(): React.ReactElement {
   // Ticking clock — drives the live countdown labels + close-based rotation.
   // One tick per minute is plenty for "Xש׳ / Xי׳" resolution.
   const [now, setNow] = useState<Date>(() => new Date());
+  // Gated on app-active: the minute tick re-renders the whole question list,
+  // so it stops in the background and refreshes immediately on return.
+  const appActive = useAppActive();
   useEffect(() => {
+    if (!appActive) return;
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [appActive]);
 
   // Live market levels — fetched once, used to anchor forecast brackets to
   // today's REAL price (Yoav: no invented/stale ranges).

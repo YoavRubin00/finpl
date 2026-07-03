@@ -7,6 +7,7 @@ import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, TrendingUp, Building2, Briefcase } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -27,6 +28,7 @@ import { NotificationPermissionBanner } from "../../components/ui/NotificationPe
 const ASSETS_INTRO_DISMISSED_KEY = "assets_market_intro_dismissed";
 
 export function InvestmentsHubScreen() {
+  const isFocused = useIsFocused();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data: economyData } = useEconomy();
@@ -103,11 +105,14 @@ export function InvestmentsHubScreen() {
       <View style={s.root}>
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 32, opacity: 0.55 }}>
           <View style={{ width: 100, height: 100, overflow: "hidden", marginBottom: 20 }}>
-            <LottieView
-              source={require("../../../assets/lottie/wired-flat-161-growth-hover-pinch.json")}
-              style={{ width: 100, height: 100 }}
-              autoPlay loop speed={0.5}
-            />
+            {/* Focus-gated: an ungated loop here kept burning frames off-tab. */}
+            {isFocused && (
+              <LottieView
+                source={require("../../../assets/lottie/wired-flat-161-growth-hover-pinch.json")}
+                style={{ width: 100, height: 100 }}
+                autoPlay loop speed={0.5}
+              />
+            )}
           </View>
           <Lock size={40} color="#64748b" style={{ marginBottom: 12 }} />
           <Text style={{ fontSize: 22, fontWeight: "900", color: "#64748b", textAlign: "center", writingDirection: "rtl", marginBottom: 8 }}>
@@ -182,12 +187,15 @@ export function InvestmentsHubScreen() {
               </Pressable>
             </View>
             <View style={s.portfolioImageWrap}>
-              <LottieView
-                source={require("../../../assets/lottie/wired-flat-161-growth-hover-pinch.json")}
-                style={{ width: 90, height: 90 }}
-                autoPlay
-                loop
-              />
+              {/* Focus-gated: an ungated loop here kept burning frames off-tab. */}
+              {isFocused && (
+                <LottieView
+                  source={require("../../../assets/lottie/wired-flat-161-growth-hover-pinch.json")}
+                  style={{ width: 90, height: 90 }}
+                  autoPlay
+                  loop
+                />
+              )}
             </View>
           </View>
         </Animated.View>

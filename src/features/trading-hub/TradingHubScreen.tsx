@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { lessonRouteById } from '../subscription/moduleAccess';
 import { Briefcase, RefreshCw, Star } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
@@ -69,6 +70,7 @@ const VOLATILITY_CONFIG: Record<VolatilityRating, { dot: string; label: string }
 };
 
 export function TradingHubScreen() {
+    const isFocused = useIsFocused();
     const router = useRouter();
     const { asset: assetParam } = useLocalSearchParams<{ asset?: string }>();
 
@@ -549,7 +551,11 @@ export function TradingHubScreen() {
                             >
                                 <View style={styles.learnCard}>
                                     <View style={{ width: 36, height: 36, overflow: 'hidden' }}>
-                                        <LottieView source={link.lottieSource} style={{ width: 36, height: 36 }} autoPlay loop />
+                                        {/* Render only while focused — ungated raw LottieViews
+                                            kept looping after navigating away. */}
+                                        {isFocused && (
+                                            <LottieView source={link.lottieSource} style={{ width: 36, height: 36 }} autoPlay loop />
+                                        )}
                                     </View>
                                     <View style={{ flex: 1, alignItems: 'flex-end' }}>
                                         <Text style={styles.learnCardTitle}>{link.title}</Text>

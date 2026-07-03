@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Animated, { FadeIn, useSharedValue, withRepeat, withTiming, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { FadeIn, useSharedValue, withRepeat, withTiming, useAnimatedStyle, cancelAnimation } from 'react-native-reanimated';
+import { useAppActive } from '../../hooks/useAppActive';
 import { useLiveMarketStore } from '../../stores/useLiveMarketStore';
 import type { RateItem } from '../live-news/liveMarketTypes';
 
@@ -85,12 +86,19 @@ export function LiveMarketCard() {
     return () => clearInterval(t);
   }, []);
 
-  // Pulsing LIVE dot
+  // Pulsing LIVE dot — pulses while visible; parks when the app is backgrounded
+  // (an ungated infinite loop here kept the UI thread busy 24/7).
   const opacity = useSharedValue(1);
+  const appActive = useAppActive();
   useEffect(() => {
+    if (!appActive) {
+      cancelAnimation(opacity);
+      opacity.value = 1;
+      return;
+    }
     opacity.value = withRepeat(withTiming(0.2, { duration: 900 }), -1, true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => cancelAnimation(opacity);
+  }, [appActive, opacity]);
   const dotStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   return (

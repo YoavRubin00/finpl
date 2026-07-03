@@ -101,7 +101,9 @@ export function AssetsScreen() {
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {BG_DECO.map((d, i) => (
           <View key={i} style={[{ position: "absolute", opacity: 0.07 }, d.pos]} accessible={false}>
-            <LottieIcon source={d.src} size={d.size} autoPlay loop speed={0.5} />
+            {/* loop={false}: 7%-opacity wallpaper — perpetual SOFTWARE-rendered
+                loops here were invisible to the eye but not to the CPU. */}
+            <LottieIcon source={d.src} size={d.size} autoPlay loop={false} speed={0.5} />
           </View>
         ))}
       </View>
