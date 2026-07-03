@@ -99,6 +99,10 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
     if (firedRef.current || !eligible) return;
     firedRef.current = true;
     markNotifPromptShown();
+    // Suppress the thin fallback banner for this session so it can't stack
+    // behind or after this primer (both share the first-chest gate; the banner
+    // is a LATER rung of the ask-ladder, not a same-session double-ask).
+    useNotificationStore.getState().dismissBanner();
     // Small breath after the chest/CTA chain clears so the map settles first.
     const t = setTimeout(() => {
       setVisible(true);
@@ -119,8 +123,9 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
   const handleLater = () => {
     tapHaptic();
     try { track({ name: 'notification_banner_dismissed', props: { source: 'permission_modal' } }); } catch { /* non-fatal */ }
-    // No bannerDismissed here — the thin banner stays live as the soft
-    // fallback rung of the ask-ladder (primer → day-2 → banner).
+    // Banner already suppressed for this session on fire (see effect above), so
+    // it won't stack here. The day-2 ritual + the 14-day banner re-ask are the
+    // later fallback rungs of the ladder (primer -> day-2 -> banner).
     setVisible(false);
   };
 

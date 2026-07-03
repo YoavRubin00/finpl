@@ -40,12 +40,13 @@ export function NotificationPermissionBanner() {
   const dismissBanner = useNotificationStore((s) => s.dismissBanner);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
-  // This thin top banner is now the SINGLE notification ask — the prominent
-  // centered modal was retired (Yoav 2026-06-22: "באנר עליון דק"). It serves as
-  // both the first ask (right after the mod-0-1 chest, on the map between 0-1
-  // and 0-1b) and the recurring 14-day re-ask after a dismissal. notifPromptShown
-  // is no longer an entry gate; it's stamped when the banner shows so the rest
-  // of the app still knows the ask happened.
+  // Two-tier notification ask (RETENTION-PLAN 2026-07-02): the appointment
+  // PRIMER (NotificationPermissionPrompt) is the FIRST ask at the first-chest
+  // value moment; this thin top banner is the recurring FALLBACK rung
+  // (ask-ladder: primer -> day-2 -> banner). It must NOT pre-empt the primer,
+  // so eligibility now REQUIRES notifPromptShown: the banner fires only after
+  // the primer has taken its turn (or for legacy users whose flag was already
+  // set by the pre-primer build). Re-asks every 14 days after a dismissal.
   // Unlock the prompt at the user's FIRST guaranteed win — the welcome "first
   // chest" (PostWalkthroughFirstChest), which every new user opens right after
   // the walkthrough. This used to be gated SOLELY on completing mod-0-1, but
@@ -58,6 +59,7 @@ export function NotificationPermissionBanner() {
   const hasCompletedFirstModule = useCompletedModulesStore((s) =>
     s.completedIds.includes('mod-0-1'),
   );
+  const notifPromptShown = useTutorialStore((s) => s.notifPromptShown);
 
   // Reconcile the cached permission flag with the real OS state on mount. A
   // stale permissionGranted=true (granted in a past test/session, or never
@@ -71,6 +73,7 @@ export function NotificationPermissionBanner() {
 
   const eligible =
     !permissionGranted &&
+    notifPromptShown &&
     !recentlyDismissed &&
     hasCompletedOnboarding &&
     hasSeenWalkthrough &&
