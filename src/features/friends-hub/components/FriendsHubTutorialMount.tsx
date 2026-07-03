@@ -16,7 +16,13 @@ export function FriendsHubTutorialMount(): React.ReactElement | null {
   const hydrated = useTutorialStore((s) => s._hydrated);
   const hasSeen = useTutorialStore((s) => s.hasSeenFriendsHubIntro);
   const markSeen = useTutorialStore((s) => s.markFriendsHubIntroSeen);
-  const show = hydrated && !hasSeen;
+  // Suppress this in-tab tour while the main app walkthrough is running — its
+  // new friends step navigates here, and two overlays must never stack. The
+  // friends-hub tour then fires on the user's first ORGANIC visit afterward.
+  const appWalkthroughInProgress = useTutorialStore(
+    (s) => s.walkthroughTriggered && !s.hasSeenAppWalkthrough,
+  );
+  const show = hydrated && !hasSeen && !appWalkthroughInProgress;
 
   useEffect(() => {
     if (!show) return;

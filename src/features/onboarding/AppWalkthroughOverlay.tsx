@@ -28,7 +28,7 @@ import { captureEvent } from "../../lib/posthog";
 // Steps
 // ---------------------------------------------------------------------------
 
-type ScreenSignal = 'learn' | 'lesson-preview' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
+type ScreenSignal = 'learn' | 'lesson-preview' | 'friends' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
 
 interface WalkthroughStep {
   title: string;
@@ -65,9 +65,18 @@ const STEPS: WalkthroughStep[] = [
     emoji: "🎓",
     message: "6 פרקים, מאפס ועד מומחה. כל מה שצריך כדי להבין את עולם הכסף. גללו למטה ותראו!",
     navigateTo: "/(tabs)/index",
-    ctaLabel: "עכשיו לכלים",
+    ctaLabel: "עכשיו לחברים",
     screenSignal: "lesson-preview",
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-2-pdqXZwiv2qVntQy0hzWaQnkaj6cPbV.mp3",
+  },
+  {
+    title: "החברים שלכם",
+    emoji: "🤝",
+    message: "כאן העולם החברתי שלכם. ליגת פנטזי, חכמת המונים, חדרי מסחר וייעוץ אנונימי. כי ללמוד על כסף כיף יותר ביחד!",
+    navigateTo: "/(tabs)/friends",
+    ctaLabel: "עכשיו לכלים",
+    screenSignal: "friends",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-8-Ife58cmIVoQ16t28LPooTXEwlU9dVJ.mp3",
   },
   {
     title: "הכלים הפיננסיים",

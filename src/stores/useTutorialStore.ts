@@ -5,7 +5,7 @@ import type { ToolKey } from '../features/financial-tools/toolsRegistry';
 import { registerLocalStore } from '../lib/stores/registry';
 
 // 'tools' replaced 'feed' once the Feed tab was retired (see app/(tabs)/_layout.tsx).
-type WalkthroughScreen = 'learn' | 'lesson-preview' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
+type WalkthroughScreen = 'learn' | 'lesson-preview' | 'friends' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
 
 interface TutorialState {
   hasSeenTradingHubIntro: boolean;
