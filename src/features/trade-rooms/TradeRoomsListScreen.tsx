@@ -43,8 +43,10 @@ function DailyEventCard({
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
         <Text style={{ fontSize: 22 }}>{room.emoji}</Text>
         <Text
+          numberOfLines={1}
           style={{
             flex: 1,
+            minWidth: 0,
             fontSize: 13,
             fontWeight: '900',
             color: '#c2410c',
@@ -75,6 +77,7 @@ function DailyEventCard({
       </View>
 
       <Text
+        numberOfLines={2}
         style={{
           fontSize: 18,
           fontWeight: '900',
@@ -87,6 +90,7 @@ function DailyEventCard({
         {topic.title}
       </Text>
       <Text
+        numberOfLines={2}
         style={{
           fontSize: 14,
           color: TEXT_MUTED,

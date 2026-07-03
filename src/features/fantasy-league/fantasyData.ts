@@ -1,6 +1,8 @@
 import type {
   TierConfig,
   StockCategory,
+  StockCategoryId,
+  DraftStock,
   FantasyLeaderboardEntry,
   WeeklyMission,
   CompetitionPhase,
@@ -532,6 +534,131 @@ export const STOCK_CATEGORIES: StockCategory[] = [
       },
     ],
   },
+];
+
+// ---------------------------------------------------------------------------
+// Portfolio-builder-only universe (בונה התיקים) — INDICES category (מדדים)
+// ---------------------------------------------------------------------------
+//
+// The community portfolio COMPOSER lets users build & share a free portfolio,
+// and Yoav asked to add an "indices" (מדדים) category. It is deliberately kept
+// OUT of the shared STOCK_CATEGORIES (and out of the StockCategoryId union):
+// the fantasy-league DRAFT reuses STOCK_CATEGORIES with exhaustive
+// Record<StockCategoryId, …> maps + a DraftCategoryTabs palette that have NO
+// 'indices' entry and NO fallback (TAB_PALETTE[cat.id].color would crash on a
+// 6th tab). The composer + the share card, by contrast, resolve colors via
+// `F2_SECTORS[…] ?? F2_SECTORS.tech`, so an unknown 'indices' sector safely
+// falls back to the tech-blue. So indices ride ONLY in the export below.
+//
+// mockWeeklyChange is 0 for every index on purpose — we do NOT fabricate a
+// weekly move for a real index; 0 is the honest "unknown until measured" value.
+
+type PortfolioCategoryId = StockCategoryId | 'indices';
+
+const INDICES_CATEGORY: Omit<StockCategory, 'id' | 'stocks'> & {
+  id: PortfolioCategoryId;
+  stocks: Array<Omit<DraftStock, 'categoryId'> & { categoryId: PortfolioCategoryId }>;
+} = {
+  id: 'indices',
+  label: 'מדדים',
+  emoji: '📊',
+  description:
+    'המדדים הגדולים בישראל ובעולם — במקום מניה בודדת, סל שלם במכה אחת. ' +
+    'מת"א 125 ועד S&P 500 — פיזור רחב ופחות תלות בחברה אחת.',
+  stocks: [
+    {
+      ticker: 'TA125',
+      name: 'ת"א 125',
+      tagline: 'הדופק של הבורסה בתל אביב',
+      categoryId: 'indices',
+      mockPrice: 2_950,
+      mockWeeklyChange: 0,
+      sharkAnalysis:
+        'מדד ת"א 125 עוקב אחרי 125 החברות הגדולות בבורסת תל אביב — חתיכה מכל השוק הישראלי במדד אחד.',
+    },
+    {
+      ticker: 'TA35',
+      name: 'ת"א 35',
+      tagline: '35 הגדולות בתל אביב',
+      categoryId: 'indices',
+      mockPrice: 2_750,
+      mockWeeklyChange: 0,
+      sharkAnalysis:
+        'מדד ת"א 35 מרכז את 35 החברות הכי גדולות בתל אביב — היציבות של השוק המקומי.',
+    },
+    {
+      ticker: 'TABANK',
+      name: 'ת"א בנקים',
+      tagline: 'כל הבנקים במדד אחד',
+      categoryId: 'indices',
+      mockPrice: 4_600,
+      mockWeeklyChange: 0,
+      sharkAnalysis:
+        'מדד ת"א בנקים עוקב אחרי מניות הבנקים הגדולים בישראל — נע עם הריבית ועם בריאות המשק.',
+    },
+    {
+      ticker: 'TA90',
+      name: 'ת"א 90',
+      tagline: 'החברות הבינוניות של תל אביב',
+      categoryId: 'indices',
+      mockPrice: 3_600,
+      mockWeeklyChange: 0,
+      sharkAnalysis:
+        'מדד ת"א 90 מכסה את 90 החברות הבינוניות שמתחת לת"א 35 — קצת יותר תנועה, קצת יותר סיכון.',
+    },
+    {
+      ticker: 'SPX',
+      name: 'S&P 500',
+      tagline: '500 הגדולות באמריקה',
+      categoryId: 'indices',
+      mockPrice: 6_100,
+      mockWeeklyChange: 0,
+      sharkAnalysis:
+        'מדד S&P 500 עוקב אחרי 500 החברות הגדולות בארה"ב — המראה הכי מוכרת בעולם לשוק האמריקאי.',
+    },
+    {
+      ticker: 'NDX',
+      name: 'נאסד"ק 100',
+      tagline: 'לב הטכנולוגיה האמריקאית',
+      categoryId: 'indices',
+      mockPrice: 22_000,
+      mockWeeklyChange: 0,
+      sharkAnalysis:
+        'מדד נאסד"ק 100 מרכז את 100 חברות הטכנולוגיה והצמיחה הגדולות בנאסד"ק — כבד בטק, תנודתי יותר.',
+    },
+    {
+      ticker: 'DJI',
+      name: 'דאו ג׳ונס',
+      tagline: '30 הוותיקות של וול סטריט',
+      categoryId: 'indices',
+      mockPrice: 44_500,
+      mockWeeklyChange: 0,
+      sharkAnalysis:
+        'מדד דאו ג׳ונס עוקב אחרי 30 חברות ענק ותיקות בארה"ב — המדד הוותיק והמסורתי של וול סטריט.',
+    },
+    {
+      ticker: 'RUT',
+      name: 'ראסל 2000',
+      tagline: '2000 החברות הקטנות של ארה"ב',
+      categoryId: 'indices',
+      mockPrice: 2_350,
+      mockWeeklyChange: 0,
+      sharkAnalysis:
+        'מדד ראסל 2000 עוקב אחרי 2,000 חברות קטנות בארה"ב — מודד את התיאבון של השוק לחברות הצומחות.',
+    },
+  ],
+};
+
+/**
+ * Category list for the community portfolio COMPOSER only = the shared draft
+ * universe + the indices (מדדים) category. Cast to StockCategory[] because
+ * 'indices' is intentionally NOT a StockCategoryId (see note above); every color
+ * lookup in the composer + share card is fallback-guarded, so the cast is safe
+ * at runtime. Do NOT feed this list into the fantasy-league draft screens.
+ */
+export const PORTFOLIO_BUILDER_CATEGORIES: StockCategory[] = [
+  ...STOCK_CATEGORIES,
+  INDICES_CATEGORY as StockCategory,
 ];
 
 // ---------------------------------------------------------------------------

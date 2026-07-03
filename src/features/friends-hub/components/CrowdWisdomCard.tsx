@@ -314,7 +314,10 @@ export function CrowdWisdomCard(): React.ReactElement {
         style={({ pressed }) => ({
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          paddingHorizontal: 16,
+          // Extra right inset so the title/subtitle clear the 4px accent strip
+          // pinned at right:0 and don't crowd the border (Yoav 2026-07-03).
+          paddingRight: 22,
+          paddingLeft: 16,
           paddingTop: 14,
           paddingBottom: 12,
           gap: 10,

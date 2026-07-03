@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, ChevronLeft, Search, X, Gift } from 'lucide-react-native';
 import { useShallow } from 'zustand/react/shallow';
 import { AvatarImage } from '../avatars/AvatarImage';
 import { tapHaptic } from '../../utils/haptics';
@@ -58,6 +58,7 @@ function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
       <AvatarImage avatarId={profile.avatarId} size={48} />
       <View style={{ flex: 1 }}>
         <Text
+          maxFontSizeMultiplier={1.2}
           style={{
             fontSize: 15,
             fontWeight: '800',
@@ -69,6 +70,7 @@ function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
           {profile.name} · {profile.title}
         </Text>
         <Text
+          maxFontSizeMultiplier={1.2}
           style={{
             fontSize: 12,
             color: COLORS.muted,
@@ -94,14 +96,16 @@ function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
           backgroundColor: COLORS.bg,
         }}
       >
-        <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>הסרה</Text>
+        <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>
+          הסרה
+        </Text>
       </Pressable>
     </Pressable>
   );
 }
 
-/** Suggestion row: avatar + name + level + coins, "הצע חברות" / "ממתין…" button. */
-function SuggestionRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React.ReactElement {
+/** Search-result row: avatar + name + level + coins, blue "הוספה" / "נשלחה בקשה". */
+function ResultRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React.ReactElement {
   return (
     <Pressable
       onPress={() => onOpen(profile.id)}
@@ -120,6 +124,7 @@ function SuggestionRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): R
       <AvatarImage avatarId={profile.avatarId} size={48} />
       <View style={{ flex: 1 }}>
         <Text
+          maxFontSizeMultiplier={1.2}
           style={{
             fontSize: 15,
             fontWeight: '800',
@@ -131,6 +136,7 @@ function SuggestionRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): R
           {profile.name} · {profile.title}
         </Text>
         <Text
+          maxFontSizeMultiplier={1.2}
           style={{
             fontSize: 12,
             color: COLORS.muted,
@@ -150,27 +156,93 @@ function SuggestionRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): R
             borderRadius: 12,
             backgroundColor: COLORS.pendingBg,
           }}
-          accessibilityLabel={`הצעת החברות ל${profile.name} ממתינה לאישור`}
+          accessible
+          accessibilityLabel={`בקשת חברות ל${profile.name} נשלחה`}
         >
-          <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>ממתין…</Text>
+          <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>
+            נשלחה בקשה
+          </Text>
         </View>
       ) : (
         <Pressable
           onPress={() => onPrimaryAction(profile.id)}
           accessibilityRole="button"
-          accessibilityLabel={`הצעת חברות ל${profile.name}`}
+          accessibilityLabel={`הוספת ${profile.name} לחברים`}
           hitSlop={8}
           style={{
-            paddingHorizontal: 14,
+            paddingHorizontal: 18,
             paddingVertical: 8,
             borderRadius: 12,
             backgroundColor: COLORS.blue,
           }}
         >
-          <Text style={{ fontSize: 12, fontWeight: '800', color: '#ffffff' }}>הצע חברות</Text>
+          <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 12, fontWeight: '800', color: '#ffffff' }}>
+            הוספה
+          </Text>
         </Pressable>
       )}
     </Pressable>
+  );
+}
+
+/** Section heading — bold, RTL, optional real count. */
+function SectionTitle({ title, count }: { title: string; count?: number }): React.ReactElement {
+  return (
+    <Text
+      maxFontSizeMultiplier={1.2}
+      style={{
+        fontSize: 15,
+        fontWeight: '900',
+        color: COLORS.text,
+        writingDirection: 'rtl',
+        textAlign: 'right',
+        marginBottom: 10,
+      }}
+    >
+      {typeof count === 'number' && count > 0 ? `${title} (${count})` : title}
+    </Text>
+  );
+}
+
+/** Honest empty-state card — warm line + optional muted sub-line. No fabricated names/counts. */
+function EmptyCard({ title, subtitle }: { title: string; subtitle?: string }): React.ReactElement {
+  return (
+    <View
+      style={{
+        backgroundColor: COLORS.card,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 8,
+      }}
+    >
+      <Text
+        maxFontSizeMultiplier={1.3}
+        style={{
+          fontSize: 14,
+          fontWeight: '700',
+          color: COLORS.text,
+          writingDirection: 'rtl',
+          textAlign: 'right',
+        }}
+      >
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text
+          maxFontSizeMultiplier={1.3}
+          style={{
+            fontSize: 12.5,
+            color: COLORS.muted,
+            writingDirection: 'rtl',
+            textAlign: 'right',
+            marginTop: 6,
+            lineHeight: 18,
+          }}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -195,18 +267,32 @@ export function FriendsScreen(): React.ReactElement {
   );
 
   const query = search.trim();
-  const visibleProfiles = useMemo(
+  const isSearching = query.length > 0;
+
+  // Real accepted friends (from the store) — never fabricated.
+  const friends = useMemo(() => profiles.filter((p) => p.isFriend), [profiles]);
+  const hasAnyFriends = friends.length > 0;
+
+  // Friends filtered by the live query (so search narrows the list too).
+  const matchingFriends = useMemo(
     () =>
-      query.length === 0
-        ? profiles
-        : profiles.filter(
-            (p) => p.name.includes(query) || p.title.includes(query)
-          ),
-    [profiles, query]
+      !isSearching
+        ? friends
+        : friends.filter((p) => p.name.includes(query) || p.title.includes(query)),
+    [friends, query, isSearching]
   );
 
-  const friends = visibleProfiles.filter((p) => p.isFriend);
-  const suggestions = visibleProfiles.filter((p) => !p.isFriend);
+  // Directory results = real, non-friend profiles matching the query. Empty
+  // today (FRIEND_PROFILES = []) — the honest empty state below reflects that.
+  const results = useMemo(
+    () =>
+      !isSearching
+        ? []
+        : profiles.filter(
+            (p) => !p.isFriend && (p.name.includes(query) || p.title.includes(query))
+          ),
+    [profiles, query, isSearching]
+  );
 
   const selectedProfile = selectedId
     ? profiles.find((p) => p.id === selectedId) ?? null
@@ -225,6 +311,16 @@ export function FriendsScreen(): React.ReactElement {
   const handleOpenProfile = (id: string): void => {
     tapHaptic();
     setSelectedId(id);
+  };
+
+  const handleClearSearch = (): void => {
+    tapHaptic();
+    setSearch('');
+  };
+
+  const handleOpenReferral = (): void => {
+    tapHaptic();
+    router.push('/referral' as never);
   };
 
   const closeModal = (): void => setSelectedId(null);
@@ -264,6 +360,7 @@ export function FriendsScreen(): React.ReactElement {
           <ChevronRight size={20} color={COLORS.text} />
         </Pressable>
         <Text
+          maxFontSizeMultiplier={1.2}
           style={{
             flex: 1,
             fontSize: 18,
@@ -281,112 +378,156 @@ export function FriendsScreen(): React.ReactElement {
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Search */}
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="חיפוש לפי שם…"
-          placeholderTextColor={COLORS.muted}
-          accessibilityLabel="חיפוש לפי שם"
+        {/* Prominent search bar */}
+        <View
           style={{
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 10,
             backgroundColor: COLORS.card,
             borderRadius: 24,
             borderWidth: 1,
             borderColor: COLORS.border,
-            paddingHorizontal: 18,
-            paddingVertical: 10,
-            fontSize: 14,
-            color: COLORS.text,
-            writingDirection: 'rtl',
-            textAlign: 'right',
-            marginBottom: 20,
-          }}
-        />
-
-        {/* Friends section */}
-        <Text
-          style={{
-            fontSize: 15,
-            fontWeight: '900',
-            color: COLORS.text,
-            writingDirection: 'rtl',
-            textAlign: 'right',
-            marginBottom: 10,
+            paddingHorizontal: 16,
+            paddingVertical: 4,
+            marginBottom: 14,
           }}
         >
-          החברים שלך ({friends.length})
-        </Text>
-        {friends.length === 0 ? (
+          <Search size={18} color={COLORS.muted} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="חפשו חבר לפי שם…"
+            placeholderTextColor={COLORS.muted}
+            accessibilityLabel="חיפוש חבר לפי שם"
+            returnKeyType="search"
+            autoCorrect={false}
+            maxFontSizeMultiplier={1.3}
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              fontSize: 15,
+              color: COLORS.text,
+              writingDirection: 'rtl',
+              textAlign: 'right',
+            }}
+          />
+          {isSearching ? (
+            <Pressable
+              onPress={handleClearSearch}
+              accessibilityRole="button"
+              accessibilityLabel="ניקוי החיפוש"
+              hitSlop={10}
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 11,
+                backgroundColor: COLORS.bg,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <X size={14} color={COLORS.muted} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {/* Referral CTA — a SEPARATE option: invite brand-new users to the app */}
+        <Pressable
+          onPress={handleOpenReferral}
+          accessibilityRole="button"
+          accessibilityLabel="הזמינו חברים חדשים לאפליקציה"
+          style={{
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 12,
+            backgroundColor: COLORS.card,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: COLORS.border,
+            padding: 12,
+            marginBottom: 22,
+          }}
+        >
           <View
             style={{
-              backgroundColor: COLORS.card,
-              borderRadius: 16,
-              padding: 16,
-              marginBottom: 8,
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              backgroundColor: '#e7f0ff',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
+            <Gift size={20} color={COLORS.blue} />
+          </View>
+          <View style={{ flex: 1 }}>
             <Text
+              maxFontSizeMultiplier={1.2}
               style={{
-                fontSize: 13,
-                color: COLORS.muted,
+                fontSize: 14.5,
+                fontWeight: '800',
+                color: COLORS.text,
                 writingDirection: 'rtl',
                 textAlign: 'right',
               }}
             >
-              עדיין אין חברים ברשימה. שולחים הצעת חברות ומתחילים.
+              הזמינו חברים חדשים לאפליקציה
+            </Text>
+            <Text
+              maxFontSizeMultiplier={1.2}
+              style={{
+                fontSize: 12,
+                color: COLORS.muted,
+                writingDirection: 'rtl',
+                textAlign: 'right',
+                marginTop: 2,
+              }}
+            >
+              מכירים מישהו שעוד לא כאן? הביאו אותו למים.
             </Text>
           </View>
+          <ChevronLeft size={20} color={COLORS.muted} />
+        </Pressable>
+
+        {/* Search results — only while searching */}
+        {isSearching ? (
+          <View style={{ marginBottom: 22 }}>
+            <SectionTitle title="תוצאות חיפוש" />
+            {results.length === 0 ? (
+              <EmptyCard
+                title="לא נמצאו משתמשים בשם הזה"
+                subtitle="מאגר המשתמשים נפתח ככל שהקהילה גדלה. בינתיים אפשר להזמין חברים חדשים למעלה."
+              />
+            ) : (
+              results.map((profile) => (
+                <ResultRow
+                  key={profile.id}
+                  profile={profile}
+                  onOpen={handleOpenProfile}
+                  onPrimaryAction={handleSendRequest}
+                />
+              ))
+            )}
+          </View>
+        ) : null}
+
+        {/* Your friends — real accepted friends only */}
+        <SectionTitle title="החברים שלך" count={friends.length} />
+        {!hasAnyFriends ? (
+          <EmptyCard
+            title="עוד אין לכם חברים — חפשו ותוסיפו את הראשונים"
+            subtitle="חפשו חבר למעלה לפי שם, או הזמינו חברים חדשים לאפליקציה."
+          />
+        ) : matchingFriends.length === 0 ? (
+          <EmptyCard title="אין חבר בשם הזה ברשימה שלכם" />
         ) : (
-          friends.map((profile) => (
+          matchingFriends.map((profile) => (
             <FriendRow
               key={profile.id}
               profile={profile}
               onOpen={handleOpenProfile}
               onPrimaryAction={handleRemove}
-            />
-          ))
-        )}
-
-        {/* Suggestions section */}
-        <Text
-          style={{
-            fontSize: 15,
-            fontWeight: '900',
-            color: COLORS.text,
-            writingDirection: 'rtl',
-            textAlign: 'right',
-            marginTop: 20,
-            marginBottom: 10,
-          }}
-        >
-          הצעות חברות
-        </Text>
-        {suggestions.length === 0 ? (
-          <View
-            style={{
-              backgroundColor: COLORS.card,
-              borderRadius: 16,
-              padding: 16,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 13,
-                color: COLORS.muted,
-                writingDirection: 'rtl',
-                textAlign: 'right',
-              }}
-            >
-              אין הצעות חדשות כרגע.
-            </Text>
-          </View>
-        ) : (
-          suggestions.map((profile) => (
-            <SuggestionRow
-              key={profile.id}
-              profile={profile}
-              onOpen={handleOpenProfile}
-              onPrimaryAction={handleSendRequest}
             />
           ))
         )}
@@ -430,13 +571,14 @@ export function FriendsScreen(): React.ReactElement {
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ fontSize: 16, color: COLORS.text }}>✕</Text>
+                <X size={18} color={COLORS.text} />
               </Pressable>
             </View>
 
             <ScrollView contentContainerStyle={{ padding: 24, alignItems: 'center' }}>
               <AvatarImage avatarId={selectedProfile.avatarId} size={120} />
               <Text
+                maxFontSizeMultiplier={1.2}
                 style={{
                   fontSize: 22,
                   fontWeight: '900',
@@ -449,6 +591,7 @@ export function FriendsScreen(): React.ReactElement {
                 {selectedProfile.name}
               </Text>
               <Text
+                maxFontSizeMultiplier={1.2}
                 style={{
                   fontSize: 15,
                   color: COLORS.muted,
@@ -472,10 +615,11 @@ export function FriendsScreen(): React.ReactElement {
                 }}
               >
                 <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.text }}>
+                  <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 18, fontWeight: '900', color: COLORS.text }}>
                     {selectedProfile.level}
                   </Text>
                   <Text
+                    maxFontSizeMultiplier={1.2}
                     style={{
                       fontSize: 12,
                       color: COLORS.muted,
@@ -488,10 +632,11 @@ export function FriendsScreen(): React.ReactElement {
                   </Text>
                 </View>
                 <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.text }}>
+                  <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 18, fontWeight: '900', color: COLORS.text }}>
                     {formatCoins(selectedProfile.coinsWon)}
                   </Text>
                   <Text
+                    maxFontSizeMultiplier={1.2}
                     style={{
                       fontSize: 12,
                       color: COLORS.muted,
@@ -505,6 +650,7 @@ export function FriendsScreen(): React.ReactElement {
                 </View>
                 <View style={{ flex: 1, alignItems: 'center' }}>
                   <Text
+                    maxFontSizeMultiplier={1.2}
                     style={{
                       fontSize: 14,
                       fontWeight: '900',
@@ -516,6 +662,7 @@ export function FriendsScreen(): React.ReactElement {
                     {selectedProfile.favoriteRoom}
                   </Text>
                   <Text
+                    maxFontSizeMultiplier={1.2}
                     style={{
                       fontSize: 12,
                       color: COLORS.muted,
@@ -546,7 +693,7 @@ export function FriendsScreen(): React.ReactElement {
                     borderColor: COLORS.danger,
                   }}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.danger }}>
+                  <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 15, fontWeight: '800', color: COLORS.danger }}>
                     הסרת חברות
                   </Text>
                 </Pressable>
@@ -560,17 +707,18 @@ export function FriendsScreen(): React.ReactElement {
                     alignItems: 'center',
                     backgroundColor: COLORS.pendingBg,
                   }}
-                  accessibilityLabel="הצעת החברות ממתינה לאישור"
+                  accessible
+                  accessibilityLabel="בקשת החברות נשלחה"
                 >
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.muted }}>
-                    ממתין…
+                  <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 15, fontWeight: '800', color: COLORS.muted }}>
+                    נשלחה בקשה
                   </Text>
                 </View>
               ) : (
                 <Pressable
                   onPress={() => handleSendRequest(selectedProfile.id)}
                   accessibilityRole="button"
-                  accessibilityLabel={`הצעת חברות ל${selectedProfile.name}`}
+                  accessibilityLabel={`הוספת ${selectedProfile.name} לחברים`}
                   style={{
                     marginTop: 24,
                     alignSelf: 'stretch',
@@ -580,14 +728,15 @@ export function FriendsScreen(): React.ReactElement {
                     backgroundColor: COLORS.blue,
                   }}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#ffffff' }}>
-                    הצע חברות
+                  <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 15, fontWeight: '800', color: '#ffffff' }}>
+                    הוספה לחברים
                   </Text>
                 </Pressable>
               )}
 
               {selectedProfile.requestPending ? (
                 <Text
+                  maxFontSizeMultiplier={1.3}
                   style={{
                     fontSize: 12,
                     color: COLORS.muted,
@@ -596,7 +745,7 @@ export function FriendsScreen(): React.ReactElement {
                     marginTop: 10,
                   }}
                 >
-                  הצעת החברות נשלחה. נעדכן כשתאושר.
+                  הבקשה נשלחה. נעדכן אתכם כשהיא תאושר.
                 </Text>
               ) : null}
             </ScrollView>

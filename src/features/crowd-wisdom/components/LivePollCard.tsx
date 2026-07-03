@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Brain, Clock } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
-import { tapHaptic, mediumHaptic } from "../../../utils/haptics";
+import { mediumHaptic } from "../../../utils/haptics";
 import { BetPanel } from "./BetPanel";
 import { MarketOddsHeader } from "./MarketOddsHeader";
 import { GoldCoinIcon } from "../../../components/ui/GoldCoinIcon";
@@ -13,7 +13,7 @@ interface LivePollCardProps {
   question: CrowdWisdomQuestion;
   /** Live countdown label to close (e.g. "5ש׳" / "3י׳"). */
   timeLeftLabel: string;
-  /** Triggered when the user picks a choice AND confirms via the bottom CTA. */
+  /** Triggered immediately when the user taps a choice (auto-vote). */
   onSubmit: (choiceId: string) => void;
 }
 
@@ -27,18 +27,12 @@ interface LivePollCardProps {
 export function LivePollCard({ question, timeLeftLabel, onSubmit }: LivePollCardProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Auto-vote: tapping a choice casts the vote immediately (no separate CTA).
   const handleChoicePress = (id: string) => {
-    tapHaptic();
     setSelectedId(id);
-  };
-
-  const handleSubmit = () => {
-    if (!selectedId) return;
     mediumHaptic();
-    onSubmit(selectedId);
+    onSubmit(id);
   };
-
-  const canSubmit = selectedId !== null;
 
   return (
     <Animated.View entering={FadeInDown.duration(380)} style={styles.card}>
@@ -50,7 +44,13 @@ export function LivePollCard({ question, timeLeftLabel, onSubmit }: LivePollCard
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.brandName}>חכמת ההמונים</Text>
-            <Text style={styles.brandMeta}>ענו ותראו מה הקהילה חושבת</Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.brandMeta}>ענו ותראו מה הקהילה חושבת</Text>
+              <View style={styles.rewardChip}>
+                <GoldCoinIcon size={11} />
+                <Text style={styles.rewardChipText} maxFontSizeMultiplier={1.15}>+100</Text>
+              </View>
+            </View>
           </View>
         </View>
         <View style={styles.clockChip}>
@@ -108,24 +108,6 @@ export function LivePollCard({ question, timeLeftLabel, onSubmit }: LivePollCard
 
       {/* Coin betting — parimutuel odds set by everyone's bets in real time */}
       <BetPanel question={question} selectedChoiceId={selectedId} />
-
-      {/* CTA */}
-      <Pressable
-        onPress={handleSubmit}
-        disabled={!canSubmit}
-        style={[styles.ctaBar, !canSubmit && styles.ctaBarDisabled]}
-        accessibilityRole="button"
-        accessibilityLabel="ענה כדי לראות את חכמת ההמונים"
-        accessibilityState={{ disabled: !canSubmit }}
-      >
-        <View style={styles.xpChip}>
-          <GoldCoinIcon size={13} />
-          <Text style={styles.xpChipText} maxFontSizeMultiplier={1.15}>+100</Text>
-        </View>
-        <Text style={[styles.ctaText, !canSubmit && styles.ctaTextDisabled]}>
-          {canSubmit ? "הצביעו כדי לראות את חכמת ההמונים" : "בחרו תשובה כדי להמשיך"}
-        </Text>
-      </Pressable>
     </Animated.View>
   );
 }
@@ -175,6 +157,28 @@ const styles = StyleSheet.create({
     color: "#64748b",
     writingDirection: "rtl",
     textAlign: "right",
+  },
+  metaRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  rewardChip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+  },
+  rewardChipText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#b45309",
   },
   clockChip: {
     flexDirection: "row-reverse",

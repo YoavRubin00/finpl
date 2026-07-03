@@ -1,10 +1,11 @@
 import React from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { Flame, ChevronLeft } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
-import { STITCH } from "../../../constants/theme";
+import { STITCH, DUO } from "../../../constants/theme";
 import { tapHaptic } from "../../../utils/haptics";
 
 interface HotAsset {
@@ -53,7 +54,7 @@ export function HotThisWeekCard(): React.ReactElement {
         </View>
       </View>
 
-      {/* Horizontal scroll of asset link-chips */}
+      {/* Horizontal scroll of asset BLUE buttons */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -64,23 +65,30 @@ export function HotThisWeekCard(): React.ReactElement {
             <Pressable
               key={asset.ticker}
               onPress={() => handlePress(asset)}
-              style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+              style={({ pressed }) => [styles.chipOuter, { opacity: pressed ? 0.9 : 1 }]}
               accessibilityRole="button"
               accessibilityLabel={`${asset.hebrewName} — לשאלות הקהילה`}
             >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.chipTicker} maxFontSizeMultiplier={1.15}>
-                  {asset.ticker}
-                </Text>
-                <Text
-                  style={styles.chipHebrew}
-                  numberOfLines={1}
-                  maxFontSizeMultiplier={1.15}
-                >
-                  {asset.hebrewName}
-                </Text>
-              </View>
-              <ChevronLeft size={14} color={STITCH.onSurfaceVariant} strokeWidth={2.6} />
+              <LinearGradient
+                colors={["#3b8bf7", DUO.blue, "#0f5ed4"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.chipGradient}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.chipTicker} maxFontSizeMultiplier={1.15}>
+                    {asset.ticker}
+                  </Text>
+                  <Text
+                    style={styles.chipHebrew}
+                    numberOfLines={1}
+                    maxFontSizeMultiplier={1.15}
+                  >
+                    {asset.hebrewName}
+                  </Text>
+                </View>
+                <ChevronLeft size={14} color="#ffffff" strokeWidth={2.8} />
+              </LinearGradient>
             </Pressable>
           ))}
         </View>
@@ -139,33 +147,37 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     gap: 10,
   },
-  chip: {
+  chipOuter: {
     width: 120,
+    borderRadius: 14,
+    shadowColor: DUO.blue,
+    shadowOpacity: 0.4,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  chipGradient: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#f8fafc",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  chipPressed: {
-    backgroundColor: "#eef2f7",
-    borderColor: "#cbd5e1",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.45)",
+    overflow: "hidden",
   },
   chipTicker: {
     fontSize: 16,
     fontWeight: "900",
-    color: "#0f172a",
+    color: "#ffffff",
     writingDirection: "rtl",
     textAlign: "right",
   },
   chipHebrew: {
     fontSize: 11,
     fontWeight: "600",
-    color: STITCH.onSurfaceVariant,
+    color: "rgba(255,255,255,0.85)",
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: 1,

@@ -14,6 +14,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  cancelAnimation,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
@@ -67,6 +68,7 @@ export const FlashOfferBanner = React.memo(function FlashOfferBanner({
       -1,
       false,
     );
+    return () => cancelAnimation(rotation);
   }, [rotation]);
   const burstStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],

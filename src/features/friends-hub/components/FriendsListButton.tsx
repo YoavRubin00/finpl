@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  cancelAnimation,
   withTiming,
   Easing,
   useReducedMotion,
@@ -39,6 +40,7 @@ export function FriendsListButton(): React.ReactElement {
       -1,
       true,
     );
+    return () => cancelAnimation(shimmer);
   }, [reduced, shimmer]);
 
   const shimmerStyle = useAnimatedStyle(() => ({
@@ -78,7 +80,7 @@ export function FriendsListButton(): React.ReactElement {
           />
         </Animated.View>
         <UserPlus size={15} color="#ffffff" strokeWidth={2.8} />
-        <Text style={styles.label} maxFontSizeMultiplier={1.15}>
+        <Text style={styles.label} numberOfLines={1} maxFontSizeMultiplier={1.15}>
           החברים שלך
         </Text>
         {friendIds.length > 0 && (

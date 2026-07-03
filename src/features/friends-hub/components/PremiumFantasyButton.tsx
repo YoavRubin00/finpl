@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  cancelAnimation,
   withTiming,
   Easing,
   useReducedMotion,
@@ -119,6 +120,7 @@ export function PremiumFantasyButton({
       -1,
       true,
     );
+    return () => cancelAnimation(shimmer);
   }, [reduced, shimmer]);
 
   const shimmerStyle = useAnimatedStyle(() => ({
@@ -207,7 +209,7 @@ export function PremiumFantasyButton({
           />
         </Animated.View>
         <Trophy size={15} color="#7c2d12" strokeWidth={2.8} />
-        <Text style={styles.compactText} maxFontSizeMultiplier={1.15}>
+        <Text style={styles.compactText} numberOfLines={1} maxFontSizeMultiplier={1.15}>
           פנטזי ליג
         </Text>
         {live.picksBadge && (

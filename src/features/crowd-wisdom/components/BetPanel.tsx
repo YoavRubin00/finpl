@@ -8,6 +8,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  cancelAnimation,
   withTiming,
   Easing,
   useReducedMotion,
@@ -86,6 +87,7 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
       -1,
       true,
     );
+    return () => cancelAnimation(shimmer);
   }, [reduced, shimmer]);
   const shimmerStyle = useAnimatedStyle(() => ({
     opacity: interpolate(shimmer.value, [0, 0.5, 1], [0, 0.5, 0]),

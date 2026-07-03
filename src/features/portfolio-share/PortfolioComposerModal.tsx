@@ -8,13 +8,13 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Plus, Minus, Check, Wand2, Trash2 } from 'lucide-react-native';
+import { ChevronRight, Plus, Minus, Check, Wand2, Trash2 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 
 import { F2_SECTORS, type FantasySectorId } from '../../constants/theme';
-import { STOCK_CATEGORIES } from '../fantasy-league/fantasyData';
+import { PORTFOLIO_BUILDER_CATEGORIES } from '../fantasy-league/fantasyData';
 import { tapHaptic, successHaptic, mediumHaptic } from '../../utils/haptics';
 import type { SharedPick } from './portfolioShareTypes';
 import {
@@ -110,8 +110,10 @@ export function PortfolioComposerModal({
   onClose,
   onShare,
 }: PortfolioComposerModalProps): React.ReactElement {
+  const insets = useSafeAreaInsets();
   const [picks, setPicks] = useState<DraftPick[]>([]);
   const [caption, setCaption] = useState('');
+  const [customTicker, setCustomTicker] = useState('');
 
   const total = useMemo(() => picks.reduce((sum, p) => sum + p.allocationPct, 0), [picks]);
   const canShare = total === 100 && picks.length >= MIN_PICKS;
@@ -137,6 +139,32 @@ export function PortfolioComposerModal({
       const suggested = Math.max(ALLOCATION_STEP, Math.min(25, 100 - used));
       return [...prev, { ticker, name, sector, weeklyChange, allocationPct: suggested }];
     });
+  };
+
+  // ── Free-form "build your own" pick: user types a ticker we don't curate ──
+  const normalizedCustom = customTicker.trim().toUpperCase();
+  const canAddCustom =
+    normalizedCustom.length > 0 &&
+    normalizedCustom.length <= 6 &&
+    picks.length < MAX_PICKS &&
+    !picks.some((p) => p.ticker === normalizedCustom);
+
+  const addCustomTicker = (): void => {
+    if (!canAddCustom) return;
+    tapHaptic();
+    setPicks((prev) => {
+      if (prev.length >= MAX_PICKS) return prev;
+      if (prev.some((p) => p.ticker === normalizedCustom)) return prev;
+      // name = the ticker (no fabricated company name); weeklyChange = 0 (honestly
+      // unknown); neutral 'tech' sector; same default-allocation logic as togglePick.
+      const used = prev.reduce((sum, p) => sum + p.allocationPct, 0);
+      const suggested = Math.max(ALLOCATION_STEP, Math.min(25, 100 - used));
+      return [
+        ...prev,
+        { ticker: normalizedCustom, name: normalizedCustom, sector: 'tech', weeklyChange: 0, allocationPct: suggested },
+      ];
+    });
+    setCustomTicker('');
   };
 
   const bump = (ticker: string, delta: number): void => {
@@ -197,11 +225,9 @@ export function PortfolioComposerModal({
             borderBottomColor: '#e5e7eb',
           }}
         >
-          <Image
-            source={require('../../../assets/webp/fin-standard.webp')}
-            style={{ width: 34, height: 34 }}
-            resizeMode="contain"
-          />
+          <Pressable onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="חזרה">
+            <ChevronRight size={26} color={TEXT_PRIMARY} strokeWidth={2.4} />
+          </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 17, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }}>
               בונה התיקים
@@ -210,9 +236,11 @@ export function PortfolioComposerModal({
               בחרו מניות, חלקו אחוזים — עד 100% בדיוק
             </Text>
           </View>
-          <Pressable onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="סגירה">
-            <X size={22} color={TEXT_MUTED} strokeWidth={2.4} />
-          </Pressable>
+          <Image
+            source={require('../../../assets/webp/fin-standard.webp')}
+            style={{ width: 34, height: 34 }}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Sticky allocation gauge */}
@@ -310,7 +338,7 @@ export function PortfolioComposerModal({
 
           {/* Stock universe — grouped by category */}
           <View style={{ paddingTop: 16, gap: 14 }}>
-            {STOCK_CATEGORIES.map((cat) => (
+            {PORTFOLIO_BUILDER_CATEGORIES.map((cat) => (
               <View key={cat.id} style={{ gap: 8 }}>
                 <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_PRIMARY, ...RTL, paddingHorizontal: 16 }}>
                   {cat.emoji} {cat.label}
@@ -357,6 +385,67 @@ export function PortfolioComposerModal({
             ))}
           </View>
 
+          {/* Free-form: build your own — type any ticker (בניית תיק עצמאית) */}
+          <View style={{ paddingHorizontal: 16, paddingTop: 18, gap: 8 }}>
+            <View style={{ gap: 2 }}>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }}>
+                בניית תיק עצמאית
+              </Text>
+              <Text style={{ fontSize: 11, color: TEXT_MUTED, ...RTL }}>
+                כל מניה בעולם — הקלידו את הטיקר ונוסיף אותו לתיק
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+              <TextInput
+                value={customTicker}
+                onChangeText={(t) => setCustomTicker(t.toUpperCase())}
+                onSubmitEditing={addCustomTicker}
+                placeholder="הוסיפו טיקר משלכם, למשל AAPL"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={6}
+                returnKeyType="done"
+                accessibilityLabel="שדה הזנת טיקר"
+                style={{
+                  flex: 1,
+                  backgroundColor: FEED_BG,
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 11,
+                  fontSize: 14,
+                  fontWeight: '800',
+                  letterSpacing: 1,
+                  color: TEXT_PRIMARY,
+                  textAlign: 'right',
+                }}
+              />
+              <Pressable
+                onPress={addCustomTicker}
+                disabled={!canAddCustom}
+                accessibilityRole="button"
+                accessibilityLabel="הוספת הטיקר לתיק"
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: 4,
+                  backgroundColor: canAddCustom ? '#1877f2' : '#d1d5db',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 11,
+                }}
+              >
+                <Plus size={16} color="#ffffff" strokeWidth={2.8} />
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#ffffff' }}>הוספה</Text>
+              </Pressable>
+            </View>
+            {picks.length >= MAX_PICKS && (
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#dc2626', ...RTL }}>
+                הגעתם למקסימום {MAX_PICKS} מניות
+              </Text>
+            )}
+          </View>
+
           {/* Caption */}
           <View style={{ paddingHorizontal: 16, paddingTop: 18, gap: 6 }}>
             <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }}>
@@ -394,7 +483,7 @@ export function PortfolioComposerModal({
             borderTopWidth: 1,
             borderTopColor: '#e5e7eb',
             padding: 14,
-            paddingBottom: 22,
+            paddingBottom: Math.max(insets.bottom, 16),
           }}
         >
           <Pressable

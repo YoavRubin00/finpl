@@ -7,8 +7,6 @@ import {
   Pressable,
   ScrollView,
   Image,
-  Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,47 +59,6 @@ const POST_TEMPLATES: PostTemplate[] = [
   },
 ];
 
-function pickImageWeb(): Promise<string | null> {
-  return new Promise((resolve) => {
-    const g = globalThis as unknown as {
-      document?: {
-        createElement: (tag: string) => {
-          type: string;
-          accept: string;
-          onchange: () => void;
-          click: () => void;
-          files?: { [index: number]: unknown; length: number } | null;
-        };
-      };
-      FileReader?: new () => {
-        result: string | ArrayBuffer | null;
-        onload: () => void;
-        onerror: () => void;
-        readAsDataURL: (f: unknown) => void;
-      };
-    };
-    if (Platform.OS !== 'web' || !g.document || !g.FileReader) {
-      resolve(null);
-      return;
-    }
-    const input = g.document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (!file) {
-        resolve(null);
-        return;
-      }
-      const reader = new g.FileReader!();
-      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(file);
-    };
-    input.click();
-  });
-}
-
 export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdviceComposeModalProps): React.ReactElement {
   const submitPost = useAnonAdviceStore((s) => s.submitPost);
   const canPostToday = useAnonAdviceStore((s) => s.canPostToday);
@@ -110,7 +67,6 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
   const [question, setQuestion] = useState('');
   const [option1, setOption1] = useState('');
   const [option2, setOption2] = useState('');
-  const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [moderating, setModerating] = useState(false);
   const [rephrasing, setRephrasing] = useState(false);
@@ -137,7 +93,6 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
     setQuestion('');
     setOption1('');
     setOption2('');
-    setImageUri(undefined);
     setError(null);
     setOriginalDraft(null);
     setRejection(null);
@@ -148,15 +103,6 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
     if (moderating || rephrasing) return;
     reset();
     onClose();
-  }
-
-  async function handlePickImage(): Promise<void> {
-    if (Platform.OS === 'web') {
-      const dataUrl = await pickImageWeb();
-      if (dataUrl) setImageUri(dataUrl);
-    } else {
-      Alert.alert('בקרוב', 'העלאת תמונה ממכשיר תהיה זמינה בעדכון הבא. כרגע ניתן להעלות מהדפדפן.');
-    }
   }
 
   async function handleRephrase(): Promise<void> {
@@ -272,7 +218,6 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
       situation: s,
       question: q,
       options: opts,
-      imageUri,
       tags: mod.tags ?? [],
       status: 'approved',
     });
@@ -410,37 +355,6 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             editable={!moderating && !rephrasing}
           />
 
-          {/* Image upload */}
-          <SectionLabel num={4} title={A.composeImageLabel} />
-          <Text style={{ fontSize: 12, color: DUO.textMuted, writingDirection: 'rtl', textAlign: 'right', marginBottom: 8 }}>
-            {A.composeImageHelp}
-          </Text>
-          {imageUri ? (
-            <View style={{ alignItems: 'flex-end', gap: 8 }}>
-              <Image source={{ uri: imageUri }} style={{ width: '100%', height: 180, borderRadius: 12 }} resizeMode="cover" />
-              <Pressable onPress={() => setImageUri(undefined)}>
-                <Text style={{ color: DUO.red, fontSize: 13, fontWeight: '700' }}>{A.composeRemoveImage}</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <Pressable
-              onPress={handlePickImage}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? DUO.bg : '#ffffff',
-                borderWidth: 1.5,
-                borderColor: DUO.border,
-                borderStyle: 'dashed',
-                borderRadius: 12,
-                paddingVertical: 16,
-                alignItems: 'center',
-              })}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: DUO.blue, writingDirection: 'rtl' }}>
-                {A.composeAddImage}
-              </Text>
-            </Pressable>
-          )}
-
           {/* Error / rejection */}
           {error && (
             <View style={{ marginTop: 14, padding: 10, backgroundColor: '#fee2e2', borderRadius: 10 }}>
@@ -483,11 +397,11 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             <Pressable
               onPress={originalDraft ? handleRevert : handleRephrase}
               disabled={rephrasing || moderating}
+              accessibilityRole="button"
+              accessibilityLabel={`AI — ${originalDraft ? A.composeRephraseRevert : A.composeRephraseWithShark}`}
               style={({ pressed }) => ({
                 flex: 1,
-                backgroundColor: pressed ? DUO.blueSurface : '#ffffff',
-                borderWidth: 1.5,
-                borderColor: DUO.blue,
+                backgroundColor: pressed ? DUO.blueDark : DUO.blue,
                 borderRadius: 14,
                 paddingVertical: 12,
                 alignItems: 'center',
@@ -497,12 +411,23 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
                 opacity: rephrasing || moderating ? 0.6 : 1,
               })}
             >
+              {/* AI badge/pill — signals this is an AI action */}
+              <View
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: 999,
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '900', color: DUO.blue, letterSpacing: 0.5 }}>AI</Text>
+              </View>
               {rephrasing ? (
-                <ActivityIndicator color={DUO.blue} size="small" />
+                <ActivityIndicator color="#ffffff" size="small" />
               ) : (
                 <Image source={require('../../../assets/webp/fin-standard.webp')} style={{ width: 22, height: 22 }} resizeMode="contain" />
               )}
-              <Text style={{ fontSize: 14, fontWeight: '800', color: DUO.blue, writingDirection: 'rtl' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#ffffff', writingDirection: 'rtl' }}>
                 {rephrasing ? A.composeRephrasing : originalDraft ? A.composeRephraseRevert : A.composeRephraseWithShark}
               </Text>
             </Pressable>

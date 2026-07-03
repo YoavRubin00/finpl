@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Trophy, Clock, Zap } from "lucide-react-native";
+import { Trophy, Clock } from "lucide-react-native";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { STITCH } from "../../../constants/theme";
-import { tapHaptic, mediumHaptic } from "../../../utils/haptics";
+import { mediumHaptic } from "../../../utils/haptics";
 import { useCrowdWisdomStore } from "../../crowd-wisdom/useCrowdWisdomStore";
 import { getCurrentWeekId } from "../../fantasy-league/fantasyData";
+import { getApiBase } from "../../../db/apiBase";
 import type { LiveMarketData, RateItem } from "../../live-news/liveMarketTypes";
 
 interface ForecastBracket {
@@ -49,7 +50,7 @@ function buildBrackets(level: number): ForecastBracket[] {
 }
 
 // Fallback when the live API is unreachable — roughly current index territory.
-const FALLBACK_LEVEL = 2100;
+const FALLBACK_LEVEL = 4100;
 // "No big move" center bracket — the statistical prior for a weekly index
 // move, used only for the internal herd-bias streak (never displayed).
 const MAJORITY_ID = "b3";
@@ -80,7 +81,7 @@ export function Ta35ForecastCard(): React.ReactElement {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/market/live");
+        const res = await fetch(`${getApiBase()}/api/market/live`);
         if (!res.ok) return;
         const data = (await res.json()) as LiveMarketData;
         const ta35 = data.rates.find((r) => r.label === 'ת"א 35');
@@ -102,18 +103,14 @@ export function Ta35ForecastCard(): React.ReactElement {
   const effectiveSelectedId = previousVote?.choiceId ?? selectedId;
   const effectiveSubmitted = !!previousVote || submitted;
 
+  // Auto-vote: tapping a bracket casts the vote immediately (no separate CTA).
   const handleSelect = (id: string) => {
     if (effectiveSubmitted) return;
-    tapHaptic();
-    setSelectedId(id);
-  };
-
-  const handleSubmit = () => {
-    if (!selectedId || effectiveSubmitted) return;
     mediumHaptic();
-    const withCrowd = selectedId === MAJORITY_ID;
+    setSelectedId(id);
+    const withCrowd = id === MAJORITY_ID;
     recordVote(
-      { questionId, choiceId: selectedId, votedAt: Date.now() },
+      { questionId, choiceId: id, votedAt: Date.now() },
       withCrowd,
     );
     setSubmitted(true);
@@ -208,46 +205,15 @@ export function Ta35ForecastCard(): React.ReactElement {
           })}
         </View>
 
-        {/* CTA / Result */}
-        {!effectiveSubmitted ? (
-          <Pressable
-            onPress={handleSubmit}
-            disabled={!selectedId}
-            style={[styles.ctaBar, !selectedId && styles.ctaBarDisabled]}
-            accessibilityRole="button"
-            accessibilityLabel="הצביעו על התחזית"
-            accessibilityState={{ disabled: !selectedId }}
-          >
-            <View style={styles.xpChips}>
-              <View
-                style={styles.xpChip}
-                accessible
-                accessibilityLabel="עשרים וחמש נקודות ניסיון"
-              >
-                <Zap size={11} color="#7c3aed" strokeWidth={2.6} />
-                <Text style={styles.xpChipValue} maxFontSizeMultiplier={1.2}>+25</Text>
-              </View>
-              <View
-                style={[styles.xpChip, styles.xpChipGold]}
-                accessible
-                accessibilityLabel="גולדן, מאה מטבעות"
-              >
-                <Trophy size={11} color="#78350f" strokeWidth={2.6} />
-                <Text style={[styles.xpChipValue, { color: "#78350f" }]} maxFontSizeMultiplier={1.2}>גולדן +100</Text>
-              </View>
-            </View>
-            <Text style={styles.ctaText} maxFontSizeMultiplier={1.2}>
-              {selectedId ? "הצביעו על התחזית" : "בחרו טווח כדי להמשיך"}
-            </Text>
-          </Pressable>
-        ) : (
+        {/* Result — the vote is cast on bracket tap; show the confirmation */}
+        {effectiveSubmitted ? (
           <Animated.View entering={FadeIn.duration(280)} style={styles.successBanner}>
             <Text style={styles.successTitle} maxFontSizeMultiplier={1.2}>נשמרה התחזית שלכם</Text>
             <Text style={styles.successBody} maxFontSizeMultiplier={1.2}>
               התוצאה נסגרת ביום ה׳ עם שער הסגירה של הבורסה בת״א.
             </Text>
           </Animated.View>
-        )}
+        ) : null}
       </LinearGradient>
     </Animated.View>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, Modal } from 'react-native';
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withTiming, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, cancelAnimation, withTiming, useReducedMotion } from 'react-native-reanimated';
 import { DUO } from '../../../constants/theme';
 import { A } from '../strings';
 
@@ -18,6 +18,7 @@ export function PendingModerationOverlay({ visible }: PendingModerationOverlayPr
     } else {
       scale.value = 1;
     }
+    return () => cancelAnimation(scale);
   }, [visible, reduced, scale]);
 
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));

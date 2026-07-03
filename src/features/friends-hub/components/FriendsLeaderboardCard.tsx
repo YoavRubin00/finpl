@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  cancelAnimation,
   withTiming,
   Easing,
   useReducedMotion,
@@ -52,6 +53,7 @@ function PremiumCta({
       -1,
       true,
     );
+    return () => cancelAnimation(shimmer);
   }, [reduced, shimmer]);
   const shimmerStyle = useAnimatedStyle(() => ({
     opacity: interpolate(shimmer.value, [0, 0.5, 1], [0, 0.5, 0]),
@@ -226,26 +228,26 @@ export function FriendsLeaderboardCard(): React.ReactElement {
       {/* ── Honest empty state — no fabricated opponents ── */}
       <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
         <Text style={{ fontSize: 12.5, fontWeight: '600', color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', lineHeight: 18 }}>
-          הלוח מול חברים ייפתח כשהחברים הראשונים שלכם יצטרפו. הזמינו חבר — ותהיו הראשונים בצמרת.
+          הלוח מול חברים ייפתח כשתוסיפו את החברים הראשונים שלכם. חפשו חבר והוסיפו אותו — ותהיו הראשונים בצמרת.
         </Text>
       </View>
 
       {/* ── Finn coach line ── */}
       <View style={{ paddingHorizontal: 12, paddingTop: 12 }}>
-        <FinnCue variant="tablet" text="הזמינו חבר ותפתחו את לוח האלופים" tone="gold" />
+        <FinnCue variant="tablet" text="חפשו חבר והוסיפו אותו כדי לפתוח את לוח האלופים" tone="gold" />
       </View>
 
-      {/* ── Invite CTA — the real social graph (referrals) ── */}
+      {/* ── Find-friends CTA — search the real user base and add them ── */}
       <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 14 }}>
         <PremiumCta
-          label="הזמינו חברים"
+          label="מצאו חברים"
           colors={['#38bdf8', DUO.blue]}
           glow={DUO.blue}
           icon={<UserPlus size={17} color="#ffffff" strokeWidth={2.6} />}
-          accessibilityLabel="הזמינו חברים — פתחו את מסך ההזמנות"
+          accessibilityLabel="מצאו חברים — חפשו והוסיפו חברים לרשימה"
           onPress={() => {
             tapHaptic();
-            router.push('/referral' as never);
+            router.push('/friends-list' as never);
           }}
         />
       </View>

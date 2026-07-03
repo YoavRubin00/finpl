@@ -117,7 +117,7 @@ export const MessageBubble = React.memo(function MessageBubble({
               {isShark ? (
                 <Image
                   source={require('../../../../assets/webp/fin-standard.webp')}
-                  style={{ width: 24, height: 24 }}
+                  style={{ width: 27, height: 27 }}
                   resizeMode="contain"
                 />
               ) : (

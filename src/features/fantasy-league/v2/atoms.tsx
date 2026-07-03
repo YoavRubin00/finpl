@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  cancelAnimation,
   withTiming,
   withSequence,
   Easing,
@@ -143,6 +144,7 @@ export function F2LiveDot({ color = FANTASY.positive, label = 'LIVE' }: LiveDotP
       ),
       -1,
     );
+    return () => cancelAnimation(op);
   }, [op]);
   const dotStyle = useAnimatedStyle(() => ({ opacity: op.value }));
   return (

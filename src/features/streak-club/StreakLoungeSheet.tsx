@@ -25,6 +25,7 @@ import { SheetCloseButton } from "../../components/ui/SheetCloseButton";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
+import { GoldShimmerButton } from "../../components/ui/GoldShimmerButton";
 import { toProxiedImageUri } from "../../lib/imageProxy";
 import { captureEvent } from "../../lib/posthog";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
@@ -563,22 +564,24 @@ export function StreakLoungeSheet({
                 contentFit="contain"
                 accessible={false}
               />
-              <Text style={styles.finaleTitle} allowFontScaling={false}>סגרת את הטרקלין להיום 🔥</Text>
+              <View style={styles.finaleTitleRow}>
+                <Text style={styles.finaleTitle} allowFontScaling={false}>סגרת את הטרקלין להיום</Text>
+                <LottieIcon source={FIRE_LOTTIE} size={24} autoPlay loop active={showFinale && !reducedMotion} />
+              </View>
               <Text style={styles.finaleBody}>מחר על השולחן: {tomorrowTease}</Text>
               <Text style={styles.finaleCountdown} allowFontScaling={false}>
                 נפתח בעוד {nextDropsIn || timeToNextDrops()} ⏳
               </Text>
-              <Pressable
+              {/* כפתור-הזהב-הנוצץ בסגנון פנטזי-ליג. "נתראה מחר" סוגר את
+                  הטרקלין לגמרי (onClose) ומחזיר למסך-הלמידה (יואב 3.7). */}
+              <GoldShimmerButton
+                label="נתראה מחר"
                 onPress={() => {
-                  tapHaptic();
                   setShowFinale(false);
+                  onClose();
                 }}
-                style={styles.finaleCta}
-                accessibilityRole="button"
-                accessibilityLabel="סגירת הפינאלה"
-              >
-                <Text style={styles.finaleCtaText} allowFontScaling={false}>נתראה מחר</Text>
-              </Pressable>
+                style={{ marginTop: 16 }}
+              />
             </Animated.View>
           </View>
         )}
@@ -745,7 +748,8 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   stampsRow: {
-    flexDirection: "row-reverse",
+    // RTL: היום (הפריט האחרון במערך) בצד ימין (יואב 3.7)
+    flexDirection: "row",
     alignSelf: "center",
     gap: 6,
     marginTop: 7,
@@ -826,7 +830,8 @@ const styles = StyleSheet.create({
     paddingVertical: 22,
     alignItems: "center",
   },
-  finaleTitle: { fontSize: 20, fontWeight: "900", color: "#fbbf24", writingDirection: "rtl", marginBottom: 8, textAlign: "center" },
+  finaleTitleRow: { flexDirection: "row-reverse", alignItems: "center", gap: 6, marginBottom: 8 },
+  finaleTitle: { fontSize: 20, fontWeight: "900", color: "#fbbf24", writingDirection: "rtl", textAlign: "center" },
   finaleBody: {
     fontSize: 15,
     lineHeight: 23,

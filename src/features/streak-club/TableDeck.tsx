@@ -4,14 +4,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeInUp,
-  FadeIn,
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   runOnJS,
 } from "react-native-reanimated";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
-import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { tapHaptic } from "../../utils/haptics";
 import { toProxiedImageUri } from "../../lib/imageProxy";
 import type { LoungeTable } from "./loungeConfig";
 import type { ClubDrop } from "./clubContent";
@@ -37,7 +36,6 @@ export function TableDeck({
 }): React.ReactElement {
   const { width } = useWindowDimensions();
   const [page, setPage] = useState(0);
-  const [actionRevealed, setActionRevealed] = useState(false);
   const total = drop.cards.length + 1; // קלפי-תובנה + קלף-המהלך
   const isActionPage = page === total - 1;
 
@@ -100,24 +98,7 @@ export function TableDeck({
           {isActionPage ? (
             <View style={styles.actionArea}>
               <Text style={styles.actionLabel} allowFontScaling={false}>המהלך של היום</Text>
-              {actionRevealed ? (
-                <Animated.View entering={FadeIn.duration(220)}>
-                  <Text style={styles.actionText}>{drop.actionHe}</Text>
-                </Animated.View>
-              ) : (
-                <Pressable
-                  onPress={() => {
-                    successHaptic();
-                    setActionRevealed(true);
-                  }}
-                  style={[styles.revealBtn, { borderColor: table.accent }]}
-                  accessibilityRole="button"
-                  accessibilityLabel="חשוף את המהלך של היום"
-                >
-                  <Text style={styles.revealEmoji} allowFontScaling={false}>🎁</Text>
-                  <Text style={styles.revealText} allowFontScaling={false}>גע כדי לחשוף</Text>
-                </Pressable>
-              )}
+              <Text style={styles.actionText}>{drop.actionHe}</Text>
             </View>
           ) : (
             <View style={styles.insightArea}>
@@ -163,23 +144,15 @@ export function TableDeck({
         </Pressable>
         <Pressable
           onPress={() => {
-            if (isActionPage) {
-              if (!actionRevealed) {
-                successHaptic();
-                setActionRevealed(true);
-                return;
-              }
-              onComplete();
-            } else {
-              go(1);
-            }
+            if (isActionPage) onComplete();
+            else go(1);
           }}
           style={[styles.ctaBtn, { backgroundColor: table.accent }]}
           accessibilityRole="button"
-          accessibilityLabel={isActionPage ? (actionRevealed ? "סגור שולחן" : "חשוף את המהלך") : "לקלף הבא"}
+          accessibilityLabel={isActionPage ? "סגור שולחן" : "לקלף הבא"}
         >
           <Text style={styles.ctaText} allowFontScaling={false}>
-            {isActionPage ? (actionRevealed ? "סגרתי ✓" : "חשוף 🎁") : "המשך"}
+            {isActionPage ? "סגרתי ✓" : "המשך"}
           </Text>
         </Pressable>
       </View>

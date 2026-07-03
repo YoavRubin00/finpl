@@ -53,11 +53,11 @@ export function RoomRow({
         alignItems: 'center',
         gap: 12,
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 10,
         backgroundColor: pressed ? '#f9fafb' : '#ffffff',
       })}
     >
-      {/* Room avatar tile */}
+      {/* Round avatar (emoji in accent circle) — fixed width, never shrinks */}
       <View
         style={{
           width: 52,
@@ -71,23 +71,42 @@ export function RoomRow({
         <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 26 }}>{room.emoji}</Text>
       </View>
 
-      {/* Name + preview */}
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-          <Text
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.3}
-            style={{
-              flex: 1,
-              fontSize: 16,
-              fontWeight: '800',
-              color: TEXT_PRIMARY,
-              writingDirection: 'rtl',
-              textAlign: 'right',
-            }}
-          >
-            {room.name}
-          </Text>
+      {/* Name over last-message preview — flexes, minWidth:0 lets text ellipsize */}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.3}
+          style={{
+            flexShrink: 1,
+            fontSize: 16,
+            fontWeight: '800',
+            color: TEXT_PRIMARY,
+            writingDirection: 'rtl',
+            textAlign: 'right',
+          }}
+        >
+          {room.name}
+        </Text>
+        <Text
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.3}
+          style={{
+            flexShrink: 1,
+            fontSize: 13,
+            color: hasUnread ? '#374151' : TEXT_MUTED,
+            fontWeight: hasUnread ? '600' : '400',
+            marginTop: 2,
+            writingDirection: 'rtl',
+            textAlign: 'right',
+          }}
+        >
+          {lastMessage ? `${previewAuthor}: ${lastMessage.body}` : room.tagline}
+        </Text>
+      </View>
+
+      {/* Trailing column — time over unread badge (fixed, sizes to content) */}
+      {(lastMessage || hasUnread) && (
+        <View style={{ alignItems: 'center', justifyContent: 'center', gap: 5 }}>
           {lastMessage && (
             <Text
               maxFontSizeMultiplier={1.2}
@@ -96,24 +115,7 @@ export function RoomRow({
               {formatListTime(lastMessage.sentAt)}
             </Text>
           )}
-        </View>
-
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 2 }}>
-          <Text
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.3}
-            style={{
-              flex: 1,
-              fontSize: 13,
-              color: hasUnread ? '#374151' : TEXT_MUTED,
-              fontWeight: hasUnread ? '600' : '400',
-              writingDirection: 'rtl',
-              textAlign: 'right',
-            }}
-          >
-            {lastMessage ? `${previewAuthor}: ${lastMessage.body}` : room.tagline}
-          </Text>
-          {unreadCount > 0 && (
+          {hasUnread && (
             <View
               style={{
                 minWidth: 20,
@@ -134,8 +136,7 @@ export function RoomRow({
             </View>
           )}
         </View>
-
-      </View>
+      )}
     </Pressable>
   );
 }

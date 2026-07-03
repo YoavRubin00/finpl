@@ -8,6 +8,7 @@ import { useCrowdWisdomStore, VOTE_COIN_REWARD } from '../useCrowdWisdomStore';
 import { getCurrentWeekId } from '../../fantasy-league/fantasyData';
 import { buildForecastRange } from '../lib/validateQuestion';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
+import { getApiBase } from '../../../db/apiBase';
 import type { LiveMarketData, RateItem } from '../../live-news/liveMarketTypes';
 
 const fmtUsd = (n: number): string => `$${Math.round(n).toLocaleString('en-US')}`;
@@ -30,7 +31,7 @@ export function SliderForecastCard(): React.ReactElement | null {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/market/live');
+        const res = await fetch(`${getApiBase()}/api/market/live`);
         if (!res.ok) return;
         const data = (await res.json()) as LiveMarketData;
         const btc = data.rates.find((r) => r.label === 'ביטקוין');

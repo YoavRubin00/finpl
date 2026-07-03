@@ -1,11 +1,9 @@
 import React from 'react';
-import { ScrollView, View, Text, Pressable } from 'react-native';
+import { ScrollView, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
-import { Users, Edit3, ChevronLeft } from 'lucide-react-native';
+import { Users } from 'lucide-react-native';
 
-import { tapHaptic } from '../../utils/haptics';
 import { FriendsLeaderboardCard } from './components/FriendsLeaderboardCard';
 import { ReferralCard } from './components/ReferralCard';
 import { AnonAdviceHeroCard } from './components/AnonAdviceHeroCard';
@@ -22,7 +20,6 @@ import { WeeklyCommunityStrip } from './components/WeeklyCommunityStrip';
 // ─── Facebook-feed palette (light, social-first) ─────────────────────
 const FEED_BG = '#f3f4f6';
 const TEXT_PRIMARY = '#1f2937';
-const TEXT_MUTED = '#6b7280';
 const FB_BLUE = '#1877f2';
 
 function FeedDivider(): React.ReactElement {
@@ -47,71 +44,7 @@ function StaggeredEntry({
   );
 }
 
-function Composer({ onPress }: { onPress: () => void }): React.ReactElement {
-  return (
-    <View style={{ backgroundColor: '#ffffff', paddingHorizontal: 16, paddingVertical: 10 }}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel="פתחו שאלה לקהילה בחדרי המסחר"
-        style={({ pressed }) => ({
-          backgroundColor: pressed ? '#f8fafc' : '#ffffff',
-          borderRadius: 16,
-          borderWidth: 1.5,
-          borderColor: '#dbeafe',
-          paddingHorizontal: 12,
-          paddingVertical: 10,
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          gap: 10,
-          shadowColor: '#1877f2',
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 2,
-        })}
-      >
-        <View
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            backgroundColor: '#e0f2fe',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Edit3 size={17} color={FB_BLUE} strokeWidth={2.4} />
-        </View>
-        <Text
-          numberOfLines={1}
-          maxFontSizeMultiplier={1.15}
-          style={{
-            flex: 1,
-            flexShrink: 1,
-            fontSize: 14,
-            fontWeight: '600',
-            color: TEXT_MUTED,
-            writingDirection: 'rtl',
-            textAlign: 'right',
-          }}
-        >
-          מה דעתכם על השוק היום?
-        </Text>
-        <ChevronLeft size={18} color="#9ca3af" strokeWidth={2.4} />
-      </Pressable>
-    </View>
-  );
-}
-
 export function FriendsHubScreen(): React.ReactElement {
-  const router = useRouter();
-
-  const handleComposerPress = React.useCallback(() => {
-    tapHaptic();
-    router.push('/trade-rooms' as never);
-  }, [router]);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: FEED_BG }} edges={[]}>
       <ScrollView
@@ -127,7 +60,7 @@ export function FriendsHubScreen(): React.ReactElement {
             paddingBottom: 14,
             flexDirection: 'row-reverse',
             alignItems: 'center',
-            gap: 10,
+            gap: 8,
           }}
         >
           <View
@@ -170,30 +103,7 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
-        {/* ─── Composer: tap → talk markets in the trade rooms ─── */}
-        <Composer onPress={handleComposerPress} />
-
-        <FeedDivider />
-
-        {/* ─── Trade rooms strip — the social heart of the hub ─── */}
-        <StaggeredEntry index={0}>
-          <View style={{ backgroundColor: '#ffffff' }}>
-            <TradeRoomsCard />
-          </View>
-        </StaggeredEntry>
-
-        <FeedDivider />
-
-        {/* ─── Pinned premium hero: Fantasy League ─── */}
-        <StaggeredEntry index={0}>
-          <View style={{ backgroundColor: '#ffffff', paddingVertical: 4 }}>
-            <PremiumFantasyButton variant="hero" />
-          </View>
-        </StaggeredEntry>
-
-        <FeedDivider />
-
-        {/* ─── Feed posts ─── */}
+        {/* ─── שוק חם השבוע ─── */}
         <StaggeredEntry index={1}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <HotThisWeekCard />
@@ -202,6 +112,7 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
+        {/* ─── תחזית ת״א 35 ─── */}
         <StaggeredEntry index={2}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <Ta35ForecastCard />
@@ -210,6 +121,7 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
+        {/* ─── חכמת המונים ─── */}
         <StaggeredEntry index={3}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <CrowdWisdomCard />
@@ -218,6 +130,16 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
+        {/* ─── Pinned premium hero: Fantasy League ─── */}
+        <StaggeredEntry index={4}>
+          <View style={{ backgroundColor: '#ffffff', paddingVertical: 4 }}>
+            <PremiumFantasyButton variant="hero" />
+          </View>
+        </StaggeredEntry>
+
+        <FeedDivider />
+
+        {/* ─── ייעוץ אנונימי ─── */}
         <StaggeredEntry index={5}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <AnonAdviceHeroCard />
@@ -226,6 +148,7 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
+        {/* ─── אלופי המטבעות ─── */}
         <StaggeredEntry index={6}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <FriendsLeaderboardCard />
@@ -234,6 +157,14 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
+        {/* ─── תיקי השקעות ─── */}
+        <StaggeredEntry index={7}>
+          <PortfolioShareCard />
+        </StaggeredEntry>
+
+        <FeedDivider />
+
+        {/* ─── הזמינו חברים ─── */}
         <StaggeredEntry index={8}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <ReferralCard />
@@ -242,9 +173,11 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
-        {/* ─── Portfolio sharing feed — bottom of hub ─── */}
+        {/* ─── Trade rooms strip — placed at bottom for now ─── */}
         <StaggeredEntry index={9}>
-          <PortfolioShareCard />
+          <View style={{ backgroundColor: '#ffffff' }}>
+            <TradeRoomsCard />
+          </View>
         </StaggeredEntry>
       </ScrollView>
 

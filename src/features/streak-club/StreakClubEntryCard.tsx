@@ -15,8 +15,13 @@ import Animated, {
 
 import { tapHaptic } from "../../utils/haptics";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
+import { LottieIcon } from "../../components/ui/LottieIcon";
 import { toProxiedImageUri } from "../../lib/imageProxy";
 import { SCENE_URI } from "./loungeConfig";
+
+// אש-הרצף — הלוטי הקנוני של האפליקציה (במקום אמוג'י 🔥)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const FIRE_LOTTIE = require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number;
 
 /**
  * מועדון הרצף — באדג'-הכניסה על מפת-הלמידה. יושב בשורת-הבאדג'ים מתחת
@@ -94,9 +99,9 @@ export function StreakClubEntryCard({
             <Armchair size={22} color="#fbbf24" strokeWidth={2.4} />
           )}
         </LinearGradient>
-        {/* תג-פינה: להבת-הרצף שממתגת את הבאדג' כפיצ'ר-המועדון */}
+        {/* תג-פינה: לוטי-האש של הרצף (במקום אמוג'י) שממתג את הבאדג' */}
         <View style={styles.cornerTag} accessible={false}>
-          <Text style={styles.cornerTagText} allowFontScaling={false}>🔥</Text>
+          <LottieIcon source={FIRE_LOTTIE} size={14} autoPlay loop active={!reduceMotion} />
         </View>
         {isNew && <View style={styles.newDot} accessible={false} />}
       </Pressable>
