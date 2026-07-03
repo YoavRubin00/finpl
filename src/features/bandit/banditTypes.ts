@@ -10,7 +10,8 @@ export type ExperimentId =
   | 'upgrade_paywall_headline'
   | 'upgrade_trigger_timing'
   | 'daily_email_variant'
-  | 'onboarding_welcome_hook';
+  | 'onboarding_welcome_hook'
+  | 'day0_lounge';
 
 export interface BanditVariant {
   id: string;
@@ -86,6 +87,10 @@ export type ExperimentPayloads = {
      * existing arms stay valid without a layout field.
      */
     layout?: 'passive' | 'active_question';
+  };
+  day0_lounge: {
+    /** true = show the day-0 lounge badge (treatment); false = holdout (control). */
+    show: boolean;
   };
 };
 
