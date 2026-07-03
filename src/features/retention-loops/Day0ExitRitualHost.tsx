@@ -121,7 +121,8 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
       const wagerArm = useBanditStore.getState().selectVariant('day0_wager');
       const showWager = getVariantPayload('day0_wager', wagerArm).show;
       setPersonProperties({ bandit_variant__day0_wager: wagerArm });
-      try { track({ name: 'bandit_variant_assigned', props: { experiment_id: 'day0_wager', variant_id: wagerArm, variant_label: showWager ? 'show' : 'hide' } }); } catch { /* non-fatal */ }
+      // day0_wager records no conversions → a fixed ~50/50 holdout (never Thompson-converged), so uniform_sampling is always true.
+      try { track({ name: 'bandit_variant_assigned', props: { experiment_id: 'day0_wager', variant_id: wagerArm, variant_label: showWager ? 'show' : 'hide', uniform_sampling: true } }); } catch { /* non-fatal */ }
       useSharkWagerStore.getState().markOfferConsumed();
       if (!showWager) return; // control holdout — assigned + measured, but not shown
       setOfferVisible(true);
