@@ -40,7 +40,12 @@ import { useEntranceAnimation, fadeInUp, fadeInScale, SPRING_BOUNCY } from "../.
 // ── Weekly deal countdown ──
 function useWeeklyCountdown(): string {
     const [text, setText] = useState("");
+    // Tick only while the screen is focused — the minute tick re-renders the
+    // whole market screen (asset-catalog re-map), so it must not run off-tab.
+    // calc() runs immediately on focus so the label is never stale.
+    const isFocused = useIsFocused();
     useEffect(() => {
+        if (!isFocused) return;
         function calc() {
             const now = new Date();
             const dayOfWeek = now.getDay(); // 0=Sun
@@ -56,7 +61,7 @@ function useWeeklyCountdown(): string {
         calc();
         const interval = setInterval(calc, 60_000);
         return () => clearInterval(interval);
-    }, []);
+    }, [isFocused]);
     return text;
 }
 
@@ -96,9 +101,15 @@ export function MarketScreen() {
     const activeCombos = getActiveCombos();
     const comboBonus = getComboBonus();
 
-    // Gold pulsing glow for deal card
+    // Gold pulsing glow for deal card — runs only while the screen is focused
+    // (the screen's Lotties were already isFocused-gated; the glow was missed).
     const dealGlow = useSharedValue(0.3);
     useEffect(() => {
+        if (!isFocused) {
+            cancelAnimation(dealGlow);
+            dealGlow.value = 0.3;
+            return;
+        }
         dealGlow.value = withRepeat(
             withSequence(
                 withTiming(0.9, { duration: 1000 }),
@@ -108,7 +119,7 @@ export function MarketScreen() {
             true,
         );
         return () => { cancelAnimation(dealGlow); };
-    }, [dealGlow]);
+    }, [dealGlow, isFocused]);
     const dealGlowStyle = useAnimatedStyle(() => ({
         shadowOpacity: dealGlow.value,
         borderColor: `rgba(34,211,238,${0.4 + dealGlow.value * 0.6})`,
@@ -139,16 +150,18 @@ export function MarketScreen() {
 
     return (
         <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-            {/* Decorative Lotties */}
+            {/* Decorative Lotties — loop={false}: at 5-6% opacity these are
+                imperceptible wallpaper; three perpetual SOFTWARE-rendered
+                loops here were pure CPU burn (2026-07-03 animation thinning). */}
             <View style={StyleSheet.absoluteFill} pointerEvents="none">
                 <View style={{ position: "absolute", top: "5%", left: 6, opacity: 0.06 }}>
-                    <LottieIcon source={require("../../../assets/lottie/wired-flat-291-coin-dollar-hover-pinch.json")} size={30} autoPlay loop speed={0.4} active={isFocused} />
+                    <LottieIcon source={require("../../../assets/lottie/wired-flat-291-coin-dollar-hover-pinch.json")} size={30} autoPlay loop={false} speed={0.4} active={isFocused} />
                 </View>
                 <View style={{ position: "absolute", top: "40%", right: 6, opacity: 0.05 }}>
-                    <LottieIcon source={require("../../../assets/lottie/wired-flat-947-investment-hover-pinch.json")} size={28} autoPlay loop speed={0.5} active={isFocused} />
+                    <LottieIcon source={require("../../../assets/lottie/wired-flat-947-investment-hover-pinch.json")} size={28} autoPlay loop={false} speed={0.5} active={isFocused} />
                 </View>
                 <View style={{ position: "absolute", top: "75%", left: 8, opacity: 0.06 }}>
-                    <LottieIcon source={require("../../../assets/lottie/wired-flat-298-coins-hover-jump.json")} size={26} autoPlay loop speed={0.4} active={isFocused} />
+                    <LottieIcon source={require("../../../assets/lottie/wired-flat-298-coins-hover-jump.json")} size={26} autoPlay loop={false} speed={0.4} active={isFocused} />
                 </View>
             </View>
 

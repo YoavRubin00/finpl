@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
+import { useAppActive } from '../../../hooks/useAppActive';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -60,12 +61,17 @@ export function LiveDashboardScreen(): React.ReactElement {
   const coins = economyData?.coins ?? 0;
   const xp = economyData?.xp ?? 0;
 
-  // Tick every minute to refresh "live" returns
+  // Tick every minute to refresh "live" returns. Gated on app-active — the
+  // tick re-sorts the full leaderboard, so it stops while backgrounded and
+  // fires once immediately on return so nothing shows stale.
   const [tick, setTick] = useState(0);
+  const appActive = useAppActive();
   useEffect(() => {
+    if (!appActive) return;
+    setTick((t) => t + 1);
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [appActive]);
 
   const leaderboard = useMemo(
     () => getLeaderboardWithLocal(),

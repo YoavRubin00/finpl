@@ -117,6 +117,7 @@ import { PostWalkthroughProTeaserGate } from "../src/features/subscription/PostW
 import { PostWalkthroughFirstChestGate } from "../src/features/onboarding/PostWalkthroughFirstChest";
 import { NotificationPermissionPrompt } from "../src/features/notifications/NotificationPermissionPrompt";
 import { Day0ExitRitualHost } from "../src/features/retention-loops/Day0ExitRitualHost";
+import { PredictionResultsHost } from "../src/features/crowd-wisdom/PredictionResultsHost";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
@@ -787,6 +788,9 @@ function RootLayoutInner() {
                   first IL-day, all CTA chains cleared); also hosts the
                   next-day win/loss resolution modal. */}
               <Day0ExitRitualHost />
+              {/* Credits + announces predictions that settled while away
+                  ("צדקתם בזמן שהייתם בחוץ"). Claims once on open; server dedupes. */}
+              <PredictionResultsHost />
               {/* Force-update gate. Internal fetch decides whether to block
                   based on remote config; rendered AFTER other modals so its
                   full-screen Modal sits on top of every other overlay when

@@ -59,3 +59,44 @@ export async function placeBet(args: {
   }
   return (await res.json()) as PlaceBetResult;
 }
+
+export interface SettledPredictionResult {
+  questionId: string;
+  choiceId: string;
+  won: boolean;
+  payout: number;
+  winningChoiceId: string | null;
+}
+
+export interface ClaimResult {
+  ok: true;
+  /** Total coins credited by this call (0 if nothing was newly settled). */
+  credited: number;
+  /** Server-authoritative coin balance AFTER crediting. */
+  newBalance: number;
+  results: SettledPredictionResult[];
+}
+
+/**
+ * Credit — exactly once — every settled prediction the user hasn't collected yet.
+ * The server dedupes via `claimed_at`, so calling this on every app-open is safe
+ * (a second call returns credited:0). Powers the "צדקת בזמן שהיית בחוץ" surface.
+ */
+export async function claimSettledBets(args: {
+  authId: string;
+  syncToken?: string | null;
+}): Promise<ClaimResult> {
+  const base = getApiBase();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (args.syncToken) headers['X-Sync-Token'] = args.syncToken;
+
+  const res = await fetch(`${base}/api/crowd-bets/claim`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ authId: args.authId }),
+  });
+  if (!res.ok) {
+    throw new Error(`crowd-bets/claim POST failed: ${res.status}`);
+  }
+  return (await res.json()) as ClaimResult;
+}

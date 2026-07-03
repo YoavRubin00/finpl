@@ -12,6 +12,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { FANTASY, F2_SECTORS, type FantasySectorId } from '../../../constants/theme';
+import { useAppActive } from '../../../hooks/useAppActive';
 import { F2Chevron, F2Clock, F2Check } from './icons';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 
@@ -136,7 +137,16 @@ export function F2Tag({ children, color = FANTASY.primary, tone = 'soft', size =
 interface LiveDotProps { color?: string; label?: string }
 export function F2LiveDot({ color = FANTASY.positive, label = 'LIVE' }: LiveDotProps): React.ReactElement {
   const op = useSharedValue(1);
+  // Pulse only while the app is foregrounded — the dot is a live indicator,
+  // so it keeps pulsing whenever visible; it just stops burning frames in
+  // the background.
+  const appActive = useAppActive();
   useEffect(() => {
+    if (!appActive) {
+      cancelAnimation(op);
+      op.value = 1;
+      return;
+    }
     op.value = withRepeat(
       withSequence(
         withTiming(0.4, { duration: 800, easing: Easing.inOut(Easing.ease) }),
@@ -145,7 +155,7 @@ export function F2LiveDot({ color = FANTASY.positive, label = 'LIVE' }: LiveDotP
       -1,
     );
     return () => cancelAnimation(op);
-  }, [op]);
+  }, [appActive, op]);
   const dotStyle = useAnimatedStyle(() => ({ opacity: op.value }));
   return (
     <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5 }}>

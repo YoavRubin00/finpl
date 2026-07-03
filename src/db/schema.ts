@@ -200,10 +200,17 @@ export const crowdBets = pgTable("crowd_bets", {
 	questionId: text("question_id").notNull(),
 	choiceId: text("choice_id").notNull(),
 	stake: integer().notNull(),
-	/** Parimutuel odds locked at placement time (payout = stake × odds). */
+	/** Odds at placement — a live estimate shown to the user; the real payout is
+	 *  parimutuel (winners split the losers' pool), computed at settle time. */
 	lockedOdds: doublePrecision("locked_odds").notNull(),
 	status: text().notNull().default('pending'),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+	/** Settlement fields (0007_crowd_bets_settle.sql) — nullable until the
+	 *  settle-cron resolves the question against real market data. */
+	winningChoiceId: text("winning_choice_id"),
+	payout: integer(),
+	resolvedAt: timestamp("resolved_at", { withTimezone: true, mode: 'string' }),
+	claimedAt: timestamp("claimed_at", { withTimezone: true, mode: 'string' }),
 }, (table) => [
 	index("idx_crowd_bets_question").using("btree", table.questionId.asc()),
 	foreignKey({

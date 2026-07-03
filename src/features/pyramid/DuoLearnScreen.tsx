@@ -28,7 +28,23 @@ import Svg, { Circle } from "react-native-svg";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
+
+// PRO-lock badge Lottie, isolated so it can pause off-tab: the raw always-on
+// <LottieView loop> ran one loop per locked module (3-8 mounted at once on the
+// map) even while the user was on another tab (2026-07-03 animation thinning).
+function ProLockBadgeLottie() {
+  const isFocused = useIsFocused();
+  if (!isFocused) return null;
+  return (
+    <LottieView
+      source={require("../../../assets/lottie/Pro Animation 3rd.json")}
+      style={styles.proLottie}
+      autoPlay
+      loop
+    />
+  );
+}
 import { Lock, Home, Shield, Scale, TrendingUp, Crown, FastForward, X, Star, ChevronUp } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
@@ -750,12 +766,7 @@ function ModuleNode({
         {/* PRO lock badge, GO PRO Lottie */}
         {isProLocked && !isComingSoon && state !== "completed" && (
           <View style={styles.proBadge} accessible={false}>
-            <LottieView
-              source={require("../../../assets/lottie/Pro Animation 3rd.json")}
-              style={styles.proLottie}
-              autoPlay
-              loop
-            />
+            <ProLockBadgeLottie />
           </View>
         )}
 
