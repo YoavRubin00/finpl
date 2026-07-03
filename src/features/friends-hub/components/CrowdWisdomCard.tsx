@@ -338,13 +338,17 @@ export function CrowdWisdomCard(): React.ReactElement {
           <Text style={{ fontSize: 22 }}>🗳️</Text>
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
+          {/* Explicit lineHeight on BOTH texts — without it RN clips Hebrew
+              ascenders/descenders (the "subtitle cut at the top" Yoav saw,
+              2026-07-03), and the title reads cramped against the subtitle. */}
           <Text
             style={{
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: '900',
               color: STITCH.onSurface,
               writingDirection: 'rtl',
               textAlign: 'right',
+              lineHeight: 26,
             }}
             numberOfLines={1}
             maxFontSizeMultiplier={1.15}
@@ -353,11 +357,13 @@ export function CrowdWisdomCard(): React.ReactElement {
           </Text>
           <Text
             style={{
-              fontSize: 12,
+              fontSize: 12.5,
+              fontWeight: '600',
               color: STITCH.onSurfaceVariant,
               writingDirection: 'rtl',
               textAlign: 'right',
-              marginTop: 1,
+              marginTop: 2,
+              lineHeight: 18,
             }}
             numberOfLines={2}
             maxFontSizeMultiplier={1.15}
