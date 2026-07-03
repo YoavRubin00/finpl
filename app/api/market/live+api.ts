@@ -133,18 +133,42 @@ async function fetchBtc(): Promise<RateItem> {
 }
 
 // ── TA-125 (Yahoo Finance) ─────────────────────────────────────────────────
-async function fetchTA125(): Promise<RateItem> {
+/**
+ * Fetch a TASE index level from Yahoo. Prefers `meta.regularMarketPrice` (the
+ * live level, always present) over the daily-close array — the last close is
+ * often `null` mid-session, which used to fail isFinite and drop the whole
+ * index onto its stale fallback. `prev` (for % change) comes from
+ * `meta.chartPreviousClose`, else the last complete close.
+ */
+async function fetchYahooIndex(
+  yahooTicker: string,
+  label: string,
+  symbol: string,
+  fallback: number,
+): Promise<RateItem> {
   try {
     const res = await fetch(
-      'https://query1.finance.yahoo.com/v8/finance/chart/%5ETA125.TA?interval=1d&range=2d',
+      `https://query1.finance.yahoo.com/v8/finance/chart/${yahooTicker}?interval=1d&range=5d`,
       { signal: sig() },
     );
     if (res.ok) {
-      const json = await res.json() as { chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: number[] }> } }> } };
-      const closes = json.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
-      const latest = closes[closes.length - 1];
-      const prev = closes.length >= 2 ? closes[closes.length - 2] : latest;
-      if (isFinite(latest)) {
+      const json = await res.json() as {
+        chart?: { result?: Array<{
+          meta?: { regularMarketPrice?: number; chartPreviousClose?: number };
+          indicators?: { quote?: Array<{ close?: Array<number | null> }> };
+        }> };
+      };
+      const result = json.chart?.result?.[0];
+      const meta = result?.meta;
+      const closes = (result?.indicators?.quote?.[0]?.close ?? [])
+        .filter((c): c is number => typeof c === 'number' && isFinite(c));
+      const latest = typeof meta?.regularMarketPrice === 'number' && isFinite(meta.regularMarketPrice)
+        ? meta.regularMarketPrice
+        : closes[closes.length - 1];
+      const prev = typeof meta?.chartPreviousClose === 'number' && isFinite(meta.chartPreviousClose)
+        ? meta.chartPreviousClose
+        : (closes.length >= 2 ? closes[closes.length - 2] : latest);
+      if (typeof latest === 'number' && isFinite(latest)) {
         const changePct = prev > 0 ? ((latest - prev) / prev) * 100 : 0;
         const direction: RateItem['direction'] = changePct > 0.1 ? 'up' : changePct < -0.1 ? 'down' : 'stable';
         return {
@@ -152,42 +176,24 @@ async function fetchTA125(): Promise<RateItem> {
           numericValue: latest,
           changePct: parseFloat(changePct.toFixed(2)),
           direction,
-          label: 'ת"א 125',
-          symbol: '📈',
+          label,
+          symbol,
         };
       }
     }
   } catch { /* fall through */ }
-  return { value: '2,100', numericValue: 2100, changePct: 0, direction: 'stable', label: 'ת"א 125', symbol: '📈' };
+  return { value: fallback.toLocaleString('en-US'), numericValue: fallback, changePct: 0, direction: 'stable', label, symbol };
 }
 
-// ── TA-35 (Yahoo Finance) ──────────────────────────────────────────────────
+// ^TA125.TA (with caret) is the live Yahoo symbol for TA-125.
+async function fetchTA125(): Promise<RateItem> {
+  return fetchYahooIndex('%5ETA125.TA', 'ת"א 125', '📈', 4100);
+}
+
+// TA-35 uses TA35.TA WITHOUT a caret — the caret form (^TA35.TA) is delisted on
+// Yahoo and always 404s, which is exactly why the card was stuck on 2,100.
 async function fetchTA35(): Promise<RateItem> {
-  try {
-    const res = await fetch(
-      'https://query1.finance.yahoo.com/v8/finance/chart/%5ETA35.TA?interval=1d&range=2d',
-      { signal: sig() },
-    );
-    if (res.ok) {
-      const json = await res.json() as { chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: number[] }> } }> } };
-      const closes = json.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
-      const latest = closes[closes.length - 1];
-      const prev = closes.length >= 2 ? closes[closes.length - 2] : latest;
-      if (isFinite(latest)) {
-        const changePct = prev > 0 ? ((latest - prev) / prev) * 100 : 0;
-        const direction: RateItem['direction'] = changePct > 0.1 ? 'up' : changePct < -0.1 ? 'down' : 'stable';
-        return {
-          value: Math.round(latest).toLocaleString('en-US'),
-          numericValue: latest,
-          changePct: parseFloat(changePct.toFixed(2)),
-          direction,
-          label: 'ת"א 35',
-          symbol: '🇮🇱',
-        };
-      }
-    }
-  } catch { /* fall through */ }
-  return { value: '2,100', numericValue: 2100, changePct: 0, direction: 'stable', label: 'ת"א 35', symbol: '🇮🇱' };
+  return fetchYahooIndex('TA35.TA', 'ת"א 35', '🇮🇱', 4100);
 }
 
 // ── Bank of Israel interest rate ────────────────────────────────────────────

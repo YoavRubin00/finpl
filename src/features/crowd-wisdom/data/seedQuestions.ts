@@ -49,6 +49,7 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
   {
     id: "yn_bitcoin_100k",
     category: "yes_no",
+    bettable: true,
     prompt: "האם ביטקוין יעבור 100K$ החודש?",
     contextChip: "מטבע דיגיטלי",
     choices: [
@@ -61,6 +62,7 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
   {
     id: "yn_interest_cut",
     category: "yes_no",
+    bettable: true,
     prompt: "האם בנק ישראל יוריד ריבית בישיבה הקרובה?",
     contextChip: "ריבית בנק ישראל",
     choices: [
@@ -78,6 +80,7 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
   {
     id: "yn_tesla_correction",
     category: "yes_no",
+    bettable: true,
     prompt: "האם טסלה תתקן 10% או יותר השבוע?",
     contextChip: "מניית יצרנית הרכב החשמלי",
     choices: [
@@ -128,6 +131,7 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
   {
     id: "forecast_ta35_friday",
     category: "forecast",
+    bettable: true,
     // TASE trades Sun–Thu, so the WEEKLY close is Thursday (not Friday like Wall St).
     // Labels are the live-anchored fallback — overridden at render by buildLiveBrackets.
     prompt: "איפה ת״א 35 ייסגר ביום חמישי?",
@@ -149,6 +153,7 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
   {
     id: "forecast_sp500_year_end",
     category: "forecast",
+    bettable: true,
     prompt: "איפה S&P 500 ייסגר בסוף השנה?",
     contextChip: "מדד 500 החברות הגדולות בארה״ב",
     choices: [
@@ -164,6 +169,7 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
   {
     id: "forecast_dollar_shekel",
     category: "forecast",
+    bettable: true,
     prompt: "איפה הדולר/שקל יהיה בסוף החודש?",
     contextChip: "שער הדולר מול השקל",
     // 5 brackets (b1..b5) so the live-anchored buildLiveBrackets maps 1:1.

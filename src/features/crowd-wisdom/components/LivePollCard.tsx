@@ -106,8 +106,12 @@ export function LivePollCard({ question, timeLeftLabel, onSubmit }: LivePollCard
         })}
       </View>
 
-      {/* Coin betting — parimutuel odds set by everyone's bets in real time */}
-      <BetPanel question={question} selectedChoiceId={selectedId} />
+      {/* Coin betting — ONLY on objectively-measurable questions (a real market
+          close / price / rate). Sentiment & personal-choice questions are
+          vote-only: a coin wager must be settleable against reality. */}
+      {question.bettable ? (
+        <BetPanel question={question} selectedChoiceId={selectedId} />
+      ) : null}
     </Animated.View>
   );
 }

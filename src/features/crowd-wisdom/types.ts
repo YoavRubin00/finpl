@@ -34,6 +34,14 @@ export interface CrowdWisdomQuestion {
   seedTotalVoters: number;
   /** Hours from "now" the question closes. */
   closesInHours: number;
+  /**
+   * True only for questions with an OBJECTIVELY MEASURABLE outcome (a real
+   * market close / price / rate) — the ONLY questions you can stake coins on.
+   * Sentiment / personal-choice / subjective questions are vote-only (Yoav
+   * 2026-07-03: "אי אפשר להמר על סנטימנט ודברים לא מדידים"). Drives both the
+   * BetPanel gate (client) and the settlement resolver (server).
+   */
+  bettable?: boolean;
   /** Optional educational concept shown as a yellow tooltip. */
   educational?: {
     title: string;
