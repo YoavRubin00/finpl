@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -16,6 +17,14 @@ import { tapHaptic } from '../../utils/haptics';
 import { useFriendsStore } from './useFriendsStore';
 import { FRIEND_PROFILES } from './friendsData';
 import type { CommunityProfile } from './friendsTypes';
+import { useAuthStore } from '../auth/useAuthStore';
+import { tokenStore } from '../../lib/auth/secureStore';
+import { searchUsers, type UserSearchResult } from '../../db/sync/searchUsers';
+
+/** Minimum characters before we hit the directory search endpoint. */
+const MIN_QUERY_LEN = 2;
+/** Debounce window for the search input, in ms. */
+const SEARCH_DEBOUNCE_MS = 350;
 
 const COLORS = {
   bg: '#f3f4f6',
@@ -104,13 +113,21 @@ function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
   );
 }
 
-/** Search-result row: avatar + name + level + coins, blue "הוספה" / "נשלחה בקשה". */
-function ResultRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React.ReactElement {
+interface UserResultRowProps {
+  user: UserSearchResult;
+  pending: boolean;
+  onAdd: (id: string) => void;
+}
+
+/**
+ * Directory search-result row for a REAL registered user. Renders only real,
+ * privacy-safe fields returned by /api/users/search — display name + level +
+ * (optional) avatar. NO coins/title/room (those would be fabricated). Blue
+ * "הוספה" flips to "נשלחה בקשה" once a request is sent.
+ */
+function UserResultRow({ user, pending, onAdd }: UserResultRowProps): React.ReactElement {
   return (
-    <Pressable
-      onPress={() => onOpen(profile.id)}
-      accessibilityRole="button"
-      accessibilityLabel={`פרופיל של ${profile.name}`}
+    <View
       style={{
         flexDirection: 'row-reverse',
         alignItems: 'center',
@@ -121,7 +138,7 @@ function ResultRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
         marginBottom: 8,
       }}
     >
-      <AvatarImage avatarId={profile.avatarId} size={48} />
+      <AvatarImage avatarId={user.avatarUrl} size={48} />
       <View style={{ flex: 1 }}>
         <Text
           maxFontSizeMultiplier={1.2}
@@ -133,7 +150,7 @@ function ResultRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
             textAlign: 'right',
           }}
         >
-          {profile.name} · {profile.title}
+          {user.displayName}
         </Text>
         <Text
           maxFontSizeMultiplier={1.2}
@@ -145,10 +162,10 @@ function ResultRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
             marginTop: 2,
           }}
         >
-          רמה {profile.level} · {formatCoins(profile.coinsWon)} מטבעות
+          רמה {user.level}
         </Text>
       </View>
-      {profile.requestPending ? (
+      {pending ? (
         <View
           style={{
             paddingHorizontal: 14,
@@ -157,7 +174,7 @@ function ResultRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
             backgroundColor: COLORS.pendingBg,
           }}
           accessible
-          accessibilityLabel={`בקשת חברות ל${profile.name} נשלחה`}
+          accessibilityLabel={`בקשת חברות ל${user.displayName} נשלחה`}
         >
           <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>
             נשלחה בקשה
@@ -165,9 +182,9 @@ function ResultRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
         </View>
       ) : (
         <Pressable
-          onPress={() => onPrimaryAction(profile.id)}
+          onPress={() => onAdd(user.id)}
           accessibilityRole="button"
-          accessibilityLabel={`הוספת ${profile.name} לחברים`}
+          accessibilityLabel={`הוספת ${user.displayName} לחברים`}
           hitSlop={8}
           style={{
             paddingHorizontal: 18,
@@ -181,7 +198,38 @@ function ResultRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
           </Text>
         </Pressable>
       )}
-    </Pressable>
+    </View>
+  );
+}
+
+/** Loading card shown while the directory search is in flight. */
+function LoadingCard(): React.ReactElement {
+  return (
+    <View
+      style={{
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: COLORS.card,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 8,
+      }}
+    >
+      <ActivityIndicator size="small" color={COLORS.blue} />
+      <Text
+        maxFontSizeMultiplier={1.3}
+        style={{
+          fontSize: 14,
+          fontWeight: '700',
+          color: COLORS.muted,
+          writingDirection: 'rtl',
+          textAlign: 'right',
+        }}
+      >
+        מחפשים…
+      </Text>
+    </View>
   );
 }
 
@@ -253,8 +301,22 @@ export function FriendsScreen(): React.ReactElement {
   const sendFriendRequest = useFriendsStore((s) => s.sendFriendRequest);
   const removeFriend = useFriendsStore((s) => s.removeFriend);
 
+  // The caller's identity for the authed directory search. Email is the real
+  // cross-user key (auth_id) — same shape placeBet uses.
+  const authId = useAuthStore((s) => s.email ?? 'guest');
+
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Real directory-search state (results come from /api/users/search — never
+  // fabricated). `requestedIds` tracks add-buttons pressed this session so the
+  // row optimistically flips to "נשלחה בקשה".
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [userResults, setUserResults] = useState<UserSearchResult[]>([]);
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(() => new Set());
+  const searchSeqRef = useRef(0);
 
   const profiles: CommunityProfile[] = useMemo(
     () =>
@@ -282,17 +344,51 @@ export function FriendsScreen(): React.ReactElement {
     [friends, query, isSearching]
   );
 
-  // Directory results = real, non-friend profiles matching the query. Empty
-  // today (FRIEND_PROFILES = []) — the honest empty state below reflects that.
-  const results = useMemo(
-    () =>
-      !isSearching
-        ? []
-        : profiles.filter(
-            (p) => !p.isFriend && (p.name.includes(query) || p.title.includes(query))
-          ),
-    [profiles, query, isSearching]
-  );
+  const tooShort = isSearching && query.length < MIN_QUERY_LEN;
+
+  // Debounce the raw input into the query we actually search on. Below the
+  // min length we short-circuit to an empty debounced query (no request).
+  useEffect(() => {
+    if (query.length < MIN_QUERY_LEN) {
+      setDebouncedQuery('');
+      return;
+    }
+    setIsSearchLoading(true);
+    const timer = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Fetch real users for the debounced query. A monotonically increasing seq
+  // guards against out-of-order responses (last query typed always wins).
+  useEffect(() => {
+    if (debouncedQuery.length < MIN_QUERY_LEN) {
+      setUserResults([]);
+      setIsSearchLoading(false);
+      setSearchFailed(false);
+      return;
+    }
+    let active = true;
+    const seq = ++searchSeqRef.current;
+    setIsSearchLoading(true);
+    setSearchFailed(false);
+    void (async () => {
+      try {
+        const syncToken = await tokenStore.get();
+        const found = await searchUsers({ query: debouncedQuery, authId, syncToken });
+        if (!active || seq !== searchSeqRef.current) return;
+        setUserResults(found);
+      } catch {
+        if (!active || seq !== searchSeqRef.current) return;
+        setUserResults([]);
+        setSearchFailed(true);
+      } finally {
+        if (active && seq === searchSeqRef.current) setIsSearchLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [debouncedQuery, authId]);
 
   const selectedProfile = selectedId
     ? profiles.find((p) => p.id === selectedId) ?? null
@@ -302,6 +398,26 @@ export function FriendsScreen(): React.ReactElement {
     tapHaptic();
     sendFriendRequest(id);
   };
+
+  // Befriend a real user from the directory. We call the existing add-friend
+  // flow (sendFriendRequest) for forward-compat, and optimistically mark the
+  // request locally so the button flips immediately. There is no real
+  // friend-graph endpoint yet (a separate, product-approved deploy — see
+  // docs/REAL-SOCIAL-INFRA-PLAN.md §2), so the request stays honestly pending;
+  // no fabricated "accepted" bot ever flips it.
+  const handleAddUser = useCallback(
+    (id: string): void => {
+      tapHaptic();
+      sendFriendRequest(id);
+      setRequestedIds((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+    },
+    [sendFriendRequest]
+  );
 
   const handleRemove = (id: string): void => {
     tapHaptic();
@@ -490,22 +606,31 @@ export function FriendsScreen(): React.ReactElement {
           <ChevronLeft size={20} color={COLORS.muted} />
         </Pressable>
 
-        {/* Search results — only while searching */}
+        {/* Search results — real registered users from the directory. */}
         {isSearching ? (
           <View style={{ marginBottom: 22 }}>
             <SectionTitle title="תוצאות חיפוש" />
-            {results.length === 0 ? (
+            {tooShort ? (
+              <EmptyCard title="הקלידו לפחות 2 תווים כדי לחפש" />
+            ) : isSearchLoading ? (
+              <LoadingCard />
+            ) : searchFailed ? (
+              <EmptyCard
+                title="החיפוש נתקל בבעיה"
+                subtitle="בדקו את החיבור ונסו שוב."
+              />
+            ) : userResults.length === 0 ? (
               <EmptyCard
                 title="לא נמצאו משתמשים בשם הזה"
-                subtitle="מאגר המשתמשים נפתח ככל שהקהילה גדלה. בינתיים אפשר להזמין חברים חדשים למעלה."
+                subtitle="נסו שם אחר, או הזמינו חברים חדשים לאפליקציה למעלה."
               />
             ) : (
-              results.map((profile) => (
-                <ResultRow
-                  key={profile.id}
-                  profile={profile}
-                  onOpen={handleOpenProfile}
-                  onPrimaryAction={handleSendRequest}
+              userResults.map((user) => (
+                <UserResultRow
+                  key={user.id}
+                  user={user}
+                  pending={requestedIds.has(user.id)}
+                  onAdd={handleAddUser}
                 />
               ))
             )}

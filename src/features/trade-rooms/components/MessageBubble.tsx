@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { Heart } from 'lucide-react-native';
 import { formatAlias } from '../../anon-advice/anonAdviceData';
@@ -115,10 +116,12 @@ export const MessageBubble = React.memo(function MessageBubble({
               }}
             >
               {isShark ? (
-                <Image
+                <ExpoImage
                   source={require('../../../../assets/webp/fin-standard.webp')}
                   style={{ width: 27, height: 27 }}
-                  resizeMode="contain"
+                  contentFit="contain"
+                  accessible={false}
+                  autoplay
                 />
               ) : (
                 <AvatarImage

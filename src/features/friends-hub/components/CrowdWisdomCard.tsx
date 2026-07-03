@@ -314,10 +314,11 @@ export function CrowdWisdomCard(): React.ReactElement {
         style={({ pressed }) => ({
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          // Extra right inset so the title/subtitle clear the 4px accent strip
-          // pinned at right:0 and don't crowd the border (Yoav 2026-07-03).
-          paddingRight: 22,
-          paddingLeft: 16,
+          // Right inset clears the 4px accent strip pinned at right:0 (matches the
+          // 16px inset used by the rest of the card, so the title/subtitle get the
+          // full remaining width and don't clip at the RTL border — Yoav 2026-07-03).
+          paddingRight: 16,
+          paddingLeft: 12,
           paddingTop: 14,
           paddingBottom: 12,
           gap: 10,
@@ -336,7 +337,7 @@ export function CrowdWisdomCard(): React.ReactElement {
         >
           <Text style={{ fontSize: 22 }}>🗳️</Text>
         </View>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text
             style={{
               fontSize: 17,
@@ -345,6 +346,7 @@ export function CrowdWisdomCard(): React.ReactElement {
               writingDirection: 'rtl',
               textAlign: 'right',
             }}
+            numberOfLines={1}
             maxFontSizeMultiplier={1.15}
           >
             חכמת ההמונים
@@ -357,6 +359,7 @@ export function CrowdWisdomCard(): React.ReactElement {
               textAlign: 'right',
               marginTop: 1,
             }}
+            numberOfLines={2}
             maxFontSizeMultiplier={1.15}
           >
             סנטימנט הקהילה בשאלות הגדולות

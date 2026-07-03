@@ -43,18 +43,21 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
     educational: {
       title: "מהו P/E (מכפיל רווח)?",
       body: "יחס בין מחיר המניה לרווח שלה. מכפיל גבוה = השוק מצפה לצמיחה, אבל גם סיכון גבוה יותר.",
-      example: "NVIDIA: P/E ≈ 72",
+      example: "NVIDIA: P/E ≈ 30",
     },
   },
   {
+    // Id kept as-is (vote/bet ledger key) though the threshold moved: BTC is near
+    // a 21-month low (~$60K), so the old 100K target needed +66% — near-impossible
+    // and no skill value. Near-money target + balanced seed (Waren 2026-07-03).
     id: "yn_bitcoin_100k",
     category: "yes_no",
     bettable: true,
-    prompt: "האם ביטקוין יעבור 100K$ החודש?",
+    prompt: "האם ביטקוין יעבור 65K$ החודש?",
     contextChip: "מטבע דיגיטלי",
     choices: [
-      { id: "yes", label: "כן, יעבור", seedVotes: 2987, accentColor: "#10b981" },
-      { id: "no", label: "לא, ייתקע", seedVotes: 1402, accentColor: "#dc2626" },
+      { id: "yes", label: "כן, יעבור", seedVotes: 2280, accentColor: "#10b981" },
+      { id: "no", label: "לא, ייתקע", seedVotes: 2109, accentColor: "#dc2626" },
     ],
     seedTotalVoters: 4389,
     closesInHours: 96,
@@ -71,7 +74,10 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
       { id: "unknown", label: "לא יודע", seedVotes: 230, accentColor: "#94a3b8" },
     ],
     seedTotalVoters: 2874,
-    closesInHours: 240,
+    closesInHours: 120,
+    // Hard deadline the evening BEFORE the Bank of Israel decision (9.7.2026), so
+    // nobody can vote once the outcome is public (Waren 2026-07-03).
+    closesAt: "2026-07-08T22:00:00+03:00",
     educational: {
       title: "למה חשובה ההחלטה?",
       body: "ריבית בנק ישראל משפיעה על משכנתאות, פיקדונות והשקעות. ירידה = משכנתא זולה יותר, אבל גם פיקדונות פחות אטרקטיביים.",
@@ -132,16 +138,17 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
     id: "forecast_ta35_friday",
     category: "forecast",
     bettable: true,
-    // TASE trades Sun–Thu, so the WEEKLY close is Thursday (not Friday like Wall St).
-    // Labels are the live-anchored fallback — overridden at render by buildLiveBrackets.
-    prompt: "איפה ת״א 35 ייסגר ביום חמישי?",
+    // Post-reform, TASE trades Mon–Fri, so the WEEKLY close is FRIDAY (aligned to
+    // the global week). Labels are the live-anchored fallback — overridden at
+    // render by buildLiveBrackets around today's real ~4,140 level.
+    prompt: "איפה ת״א 35 ייסגר ביום שישי?",
     contextChip: "מדד המניות הגדולות בבורסה בת״א",
     choices: [
-      { id: "b1", label: "מתחת ל-2,050", seedVotes: 320, accentColor: "#dc2626" },
-      { id: "b2", label: "2,050 – 2,080", seedVotes: 740, accentColor: "#ea580c" },
-      { id: "b3", label: "2,080 – 2,110", seedVotes: 1480, accentColor: "#facc15" },
-      { id: "b4", label: "2,110 – 2,140", seedVotes: 920, accentColor: "#10b981" },
-      { id: "b5", label: "מעל 2,140", seedVotes: 280, accentColor: "#0891b2" },
+      { id: "b1", label: "מתחת ל-4,080", seedVotes: 320, accentColor: "#dc2626" },
+      { id: "b2", label: "4,080 – 4,120", seedVotes: 740, accentColor: "#ea580c" },
+      { id: "b3", label: "4,120 – 4,160", seedVotes: 1480, accentColor: "#facc15" },
+      { id: "b4", label: "4,160 – 4,200", seedVotes: 920, accentColor: "#10b981" },
+      { id: "b5", label: "מעל 4,200", seedVotes: 280, accentColor: "#0891b2" },
     ],
     seedTotalVoters: 3740,
     closesInHours: 84,
@@ -156,12 +163,14 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
     bettable: true,
     prompt: "איפה S&P 500 ייסגר בסוף השנה?",
     contextChip: "מדד 500 החברות הגדולות בארה״ב",
+    // No live source (LIVE_LABELS = null) → these seed brackets are always shown,
+    // so they must straddle today's real ~7,500 level with a year-end-width band.
     choices: [
-      { id: "b1", label: "מתחת 5,500", seedVotes: 580, accentColor: "#dc2626" },
-      { id: "b2", label: "5,500 – 5,800", seedVotes: 920, accentColor: "#ea580c" },
-      { id: "b3", label: "5,800 – 6,100", seedVotes: 1820, accentColor: "#facc15" },
-      { id: "b4", label: "6,100 – 6,400", seedVotes: 1380, accentColor: "#10b981" },
-      { id: "b5", label: "מעל 6,400", seedVotes: 410, accentColor: "#0891b2" },
+      { id: "b1", label: "מתחת 7,000", seedVotes: 580, accentColor: "#dc2626" },
+      { id: "b2", label: "7,000 – 7,300", seedVotes: 920, accentColor: "#ea580c" },
+      { id: "b3", label: "7,300 – 7,700", seedVotes: 1820, accentColor: "#facc15" },
+      { id: "b4", label: "7,700 – 8,000", seedVotes: 1380, accentColor: "#10b981" },
+      { id: "b5", label: "מעל 8,000", seedVotes: 410, accentColor: "#0891b2" },
     ],
     seedTotalVoters: 5110,
     closesInHours: 360,
@@ -173,12 +182,15 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
     prompt: "איפה הדולר/שקל יהיה בסוף החודש?",
     contextChip: "שער הדולר מול השקל",
     // 5 brackets (b1..b5) so the live-anchored buildLiveBrackets maps 1:1.
+    // Seed fallback straddles today's real ~3.00 USD/ILS level (Waren 2026-07-03:
+    // the shekel is ~2.98, so the old 3.5–3.7 range was ~20% stale). When the live
+    // rate is reachable buildLiveBrackets re-anchors these around the real price.
     choices: [
-      { id: "b1", label: "מתחת ל-3.55", seedVotes: 300, accentColor: "#dc2626" },
-      { id: "b2", label: "3.55 – 3.60", seedVotes: 500, accentColor: "#ea580c" },
-      { id: "b3", label: "3.60 – 3.65", seedVotes: 720, accentColor: "#facc15" },
-      { id: "b4", label: "3.65 – 3.70", seedVotes: 460, accentColor: "#10b981" },
-      { id: "b5", label: "מעל 3.70", seedVotes: 170, accentColor: "#0891b2" },
+      { id: "b1", label: "מתחת ל-2.90", seedVotes: 300, accentColor: "#dc2626" },
+      { id: "b2", label: "2.90 – 2.95", seedVotes: 500, accentColor: "#ea580c" },
+      { id: "b3", label: "2.95 – 3.05", seedVotes: 720, accentColor: "#facc15" },
+      { id: "b4", label: "3.05 – 3.10", seedVotes: 460, accentColor: "#10b981" },
+      { id: "b5", label: "מעל 3.10", seedVotes: 170, accentColor: "#0891b2" },
     ],
     seedTotalVoters: 2150,
     closesInHours: 240,

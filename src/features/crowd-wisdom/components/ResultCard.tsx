@@ -4,6 +4,7 @@ import { Brain, Clock, Handshake, Sparkles } from "lucide-react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 
 import { MarketOddsHeader } from "./MarketOddsHeader";
+import { BetPanel } from "./BetPanel";
 import { GoldCoinIcon } from "../../../components/ui/GoldCoinIcon";
 import type { PostVoteSnapshot } from "../types";
 
@@ -49,8 +50,9 @@ export function ResultCard({ snapshot, timeLeftLabel }: ResultCardProps) {
       {/* Prompt */}
       <Text style={styles.prompt}>{question.prompt}</Text>
 
-      {/* Live market — probability as the price, straight from the bet ledger */}
-      <MarketOddsHeader question={question} />
+      {/* Crowd-prediction market view — ONLY for objectively-measurable questions
+          (sentiment / personal-choice questions have no settleable market). */}
+      {question.bettable ? <MarketOddsHeader question={question} /> : null}
 
       {/* Distribution bar (multi-color stacked) */}
       <View style={styles.distBar}>
@@ -138,6 +140,13 @@ export function ResultCard({ snapshot, timeLeftLabel }: ResultCardProps) {
             : "קפטן שארק: לשחות נגד הזרם דורש אומץ — החזאים הכי טובים יודעים מתי ההמון מתלהב מדי."}
         </Text>
       </Animated.View>
+
+      {/* Optional coin PREDICTION — only on objectively-measurable questions.
+          Seeded with the user's own pick so the stake CTA is reachable here,
+          after the free vote has been cast. */}
+      {question.bettable ? (
+        <BetPanel question={question} selectedChoiceId={userChoiceId} />
+      ) : null}
     </Animated.View>
   );
 }

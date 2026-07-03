@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { FANTASY } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
-import { useEconomy } from '../../economy/useEconomy';
 import {
   getCompetitionPhase,
   getNextDraftOpen,
@@ -30,7 +28,6 @@ import {
   F2Panel,
   F2GameweekMeter,
   F2Button,
-  F2WalletCluster,
   F2Tag,
   F2LiveDot,
 } from '../v2/atoms';
@@ -44,7 +41,7 @@ import {
   F2Bolt,
   type TierKey,
 } from '../v2/icons';
-import type { StockCategoryId, FantasyTier } from '../fantasyTypes';
+import type { StockCategoryId, FantasyTier, CompetitionPhase } from '../fantasyTypes';
 import type { SparkPath } from '../v2/atoms';
 import type { FantasySectorId } from '../../../constants/theme';
 
@@ -99,10 +96,23 @@ function getGameweekDay(now: Date = new Date()): number {
   return d + 1;
 }
 
-// ─── Pre-draft empty state ──────────────────────────────────────────────────
-function PreDraftCard(): React.ReactElement {
+// ─── Not-entered state — honest next-draft countdown ────────────────────────
+// Shown to a user who has NOT joined the current cycle. Copy adapts to the
+// phase so a mid-competition visitor sees why the draft is closed and exactly
+// when the next window opens — never a blank screen.
+function PreDraftCard({ phase }: { phase: CompetitionPhase }): React.ReactElement {
   const nextOpen = getNextDraftOpen();
   const cd = formatCountdown(nextOpen);
+  const title =
+    phase === 'competition'
+      ? 'התחרות של השבוע כבר רצה'
+      : phase === 'results'
+        ? 'השבוע נסגר — התוצאות בפנים'
+        : 'הדראפט הבא נפתח בקרוב';
+  const body =
+    phase === 'competition' || phase === 'results'
+      ? 'ההצטרפות נפתחת בדראפט הבא: בחירת 5 מניות, מינוי קפטן, ותחרות שבועית. בינתיים — צוברים מטבעות.'
+      : 'בחירת 5 מניות, מינוי קפטן, וצבירת נקודות שבועיות. בינתיים — צוברים מטבעות.';
   return (
     <Animated.View
       entering={FadeInDown.delay(80).duration(320)}
@@ -122,11 +132,11 @@ function PreDraftCard(): React.ReactElement {
       }}
     >
       <F2SharkMark size={56} />
-      <Text style={{ fontSize: 18, fontWeight: '900', color: FANTASY.ink, ...RTL }}>
-        הדראפט הבא נפתח בקרוב
+      <Text style={{ fontSize: 18, fontWeight: '900', color: FANTASY.ink, ...RTL, textAlign: 'center' }}>
+        {title}
       </Text>
       <Text style={{ fontSize: 13, color: FANTASY.inkMuted, ...RTL, textAlign: 'center', lineHeight: 19 }}>
-        בחר 5 מניות, מנה קפטן, וצבור נקודות שבועיות. בינתיים — צבור מטבעות.
+        {body}
       </Text>
       <View style={{
         backgroundColor: FANTASY.warningSoft,
@@ -143,7 +153,7 @@ function PreDraftCard(): React.ReactElement {
           color: FANTASY.warningDark,
           fontVariant: ['tabular-nums'],
         }}>
-          ⏱  {cd.label}
+          ⏱  הדראפט הבא · {cd.label}
         </Text>
       </View>
     </Animated.View>
@@ -200,9 +210,6 @@ function DraftOpenCard({ hasEntered, isLocked }: DraftOpenProps): React.ReactEle
 export function FantasyLobbyScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const getLeaderboardWithLocal = useFantasyStore((s) => s.getLeaderboardWithLocal);
-  const { data: economyData } = useEconomy();
-  const coins = economyData?.coins ?? 0;
-  const xp = economyData?.xp ?? 0;
 
   const phase = getCompetitionPhase();
   const hasEntered = currentEntry !== null;
@@ -287,12 +294,15 @@ export function FantasyLobbyScreen(): React.ReactElement {
     <View style={{ flex: 1, backgroundColor: FANTASY.bg }}>
       <F2Ambient tone="sky" />
 
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      {/* No top SafeAreaView here — a header (the tabs GlobalWealthHeader on
+          /(tabs)/fantasy, or the one re-mounted in app/fantasy/index) always
+          sits above and already owns the top inset. */}
+      <View style={{ flex: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 110, paddingHorizontal: 16, gap: 12 }}
         >
-          {/* Header */}
+          {/* Screen title + back (wallet lives in the wealth header above) */}
           <F2Header
             eyebrow="Fantasy · ליגת מניות"
             title="פנטזי ליג"
@@ -300,13 +310,13 @@ export function FantasyLobbyScreen(): React.ReactElement {
             onBack={() => {
               router.replace('/(tabs)/friends');
             }}
-            right={<F2WalletCluster xp={xp} coins={coins} />}
           />
 
-          {phase === 'pre_draft' && <PreDraftCard />}
           {phase === 'draft' && !isLocked && (
             <DraftOpenCard hasEntered={hasEntered} isLocked={isLocked} />
           )}
+          {/* Not joined this cycle → always a clear next-action, never blank. */}
+          {!hasEntered && phase !== 'draft' && <PreDraftCard phase={phase} />}
 
           {/* League arena card — tier shield + rank (no promote/relegate zones) */}
           {hasEntered && currentEntry && (
@@ -335,8 +345,8 @@ export function FantasyLobbyScreen(): React.ReactElement {
             </Animated.View>
           )}
 
-          {/* Gameweek meter — visible in competition + draft phases */}
-          {(phase === 'competition' || phase === 'draft') && (
+          {/* Gameweek meter — only for a joined player in an active week */}
+          {hasEntered && (phase === 'competition' || phase === 'draft') && (
             <Animated.View entering={FadeInDown.delay(60).duration(320)}>
               <F2GameweekMeter day={gameweekDay} total={7} deadline={cd.label} />
             </Animated.View>
@@ -487,7 +497,7 @@ export function FantasyLobbyScreen(): React.ReactElement {
             </Animated.View>
           )}
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

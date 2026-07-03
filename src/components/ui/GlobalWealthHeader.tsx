@@ -325,19 +325,12 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   const profileGlow = useSharedValue(0.15);
 
   useEffect(() => {
-    if (!appActive) {
-      cancelAnimation(profileGlow);
-      return;
-    }
-    profileGlow.value = withRepeat(
-      withSequence(
-        withTiming(0.7, { duration: 1000 }),
-        withTiming(0.15, { duration: 1000 }),
-      ),
-      -1,
-      false,
-    );
-    return () => cancelAnimation(profileGlow);
+    // Static subtle glow instead of a perpetual 2s pulse. This header mounts
+    // under EVERY tab, so the pulse ran forever on every screen — a top idle-heat
+    // source (Yoav 2026-07-03: "תרדד אנימציות בלי לפגוע ב-UX"). Value-change
+    // animations, the XP ring and tap feedback stay; only ambient always-on
+    // loops are retired.
+    profileGlow.value = appActive ? 0.32 : 0.15;
   }, [appActive, profileGlow]);
 
   const profileGlowStyle = useAnimatedStyle(() => ({
@@ -439,8 +432,10 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         <ConfettiExplosion onComplete={() => setShowLevelUpConfetti(false)} />
       )}
 
-      {/* Subtle ambient sparkle to draw attention */}
-      <SparkleOverlay color="#67e8f9" density="low" active={appActive} />
+      {/* Ambient sparkle retired — it was 6 perpetual particle loops running on
+          EVERY screen (idle heat). The wallet still draws the eye via value
+          count-ups + the XP ring. */}
+      <SparkleOverlay color="#67e8f9" density="low" active={false} />
 
       {/* Token row, Single compact header */}
       <View style={[s.tokenRow, { gap: d.rowGap }, compact && { justifyContent: "center" }]}>
@@ -477,7 +472,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         {/* Gems pill */}
         <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
         <ResourcePill
-          icon={<LottieIcon source={require("../../../assets/lottie/Diamond.json") as number} size={d.lottieSize} autoPlay loop active={appActive} />}
+          icon={<LottieIcon source={require("../../../assets/lottie/Diamond.json") as number} size={d.lottieSize} autoPlay loop={false} active={appActive} />}
           glowColor="#67e8f9"
           onPress={walkthroughActive ? undefined : navigateToShop}
           trackedValue={gems}

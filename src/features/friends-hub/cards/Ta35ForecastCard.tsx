@@ -55,14 +55,14 @@ const FALLBACK_LEVEL = 4100;
 // move, used only for the internal herd-bias streak (never displayed).
 const MAJORITY_ID = "b3";
 
-/** Hours left until Thursday's TASE close (~17:25 IL). The Tel-Aviv stock
- *  exchange trades Sunday-Thursday, so the WEEKLY close is Thursday — not
- *  Friday like the US market (Yoav 2026-07-02). */
-function hoursToThursdayClose(now: Date = new Date()): number {
+/** Hours left until Friday's TASE close (14:00 IL). Post-reform the Tel-Aviv
+ *  stock exchange trades Monday-Friday, and the Friday session closes at 14:00
+ *  (Yoav 2026-07-03). */
+function hoursToFridayClose(now: Date = new Date()): number {
   const d = new Date(now);
-  const daysUntilThu = (4 - d.getDay() + 7) % 7;
-  d.setDate(d.getDate() + daysUntilThu);
-  d.setHours(17, 25, 0, 0);
+  const daysUntilFri = (5 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + daysUntilFri);
+  d.setHours(14, 0, 0, 0);
   if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 7);
   return Math.max(1, Math.round((d.getTime() - now.getTime()) / 3_600_000));
 }
@@ -97,7 +97,7 @@ export function Ta35ForecastCard(): React.ReactElement {
 
   const level = liveTa35?.numericValue ?? FALLBACK_LEVEL;
   const BRACKETS = useMemo(() => buildBrackets(level), [level]);
-  const hoursToClose = useMemo(() => hoursToThursdayClose(), []);
+  const hoursToClose = useMemo(() => hoursToFridayClose(), []);
 
   // If the user already voted from the crowd-wisdom screen, surface the choice here.
   const effectiveSelectedId = previousVote?.choiceId ?? selectedId;
@@ -131,7 +131,7 @@ export function Ta35ForecastCard(): React.ReactElement {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle} maxFontSizeMultiplier={1.2}>תחזית ת״א 35 השבועית</Text>
-            <Text style={styles.headerSubtitle} maxFontSizeMultiplier={1.2}>איפה המדד ייסגר ביום ה׳?</Text>
+            <Text style={styles.headerSubtitle} maxFontSizeMultiplier={1.2}>איפה המדד ייסגר ביום ו׳?</Text>
           </View>
           <View
             style={styles.clockChip}
@@ -210,7 +210,7 @@ export function Ta35ForecastCard(): React.ReactElement {
           <Animated.View entering={FadeIn.duration(280)} style={styles.successBanner}>
             <Text style={styles.successTitle} maxFontSizeMultiplier={1.2}>נשמרה התחזית שלכם</Text>
             <Text style={styles.successBody} maxFontSizeMultiplier={1.2}>
-              התוצאה נסגרת ביום ה׳ עם שער הסגירה של הבורסה בת״א.
+              התוצאה נסגרת ביום ו׳ עם שער הסגירה של הבורסה בת״א.
             </Text>
           </Animated.View>
         ) : null}

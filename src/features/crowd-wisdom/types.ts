@@ -32,8 +32,16 @@ export interface CrowdWisdomQuestion {
   choices: CrowdWisdomChoice[];
   /** Total seed voters — UI shows "X משקיעים כבר הצביעו". */
   seedTotalVoters: number;
-  /** Hours from "now" the question closes. */
+  /** Hours from "now" the question closes (legacy hint; the real close is derived
+   *  by questionSchedule from the horizon, or by `closesAt` when set). */
   closesInHours: number;
+  /**
+   * Optional ABSOLUTE close moment (ISO 8601). When set it overrides the
+   * horizon-derived close in questionSchedule — for one-off events tied to a
+   * known real-world date (e.g. a scheduled Bank-of-Israel rate decision), so
+   * the question closes BEFORE the outcome is public and then stays closed.
+   */
+  closesAt?: string;
   /**
    * True only for questions with an OBJECTIVELY MEASURABLE outcome (a real
    * market close / price / rate) — the ONLY questions you can stake coins on.

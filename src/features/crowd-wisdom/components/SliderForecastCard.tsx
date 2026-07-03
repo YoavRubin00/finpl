@@ -127,7 +127,7 @@ export function SliderForecastCard(): React.ReactElement | null {
       {voted && votedValue !== null ? (
         <Animated.View entering={FadeIn.duration(240)} style={styles.votedBox}>
           <Text style={styles.votedValue}>{fmtUsd(votedValue)}</Text>
-          <Text style={styles.votedLabel}>ההימור שלכם נעול לסוף השבוע</Text>
+          <Text style={styles.votedLabel}>התחזית שלכם נעולה לסוף השבוע</Text>
           <Text style={styles.votedHint}>
             ממוצע הקהילה ייחשף כשמצטברות הצבעות אמיתיות — בלי מספרים מומצאים.
           </Text>
@@ -160,7 +160,7 @@ export function SliderForecastCard(): React.ReactElement | null {
             onPress={handleLock}
             disabled={value === null}
             accessibilityRole="button"
-            accessibilityLabel="נעילת ההימור"
+            accessibilityLabel="נעילת התחזית"
             style={[styles.ctaBar, value === null && styles.ctaBarDisabled]}
           >
             <View style={styles.coinChip}>
@@ -170,7 +170,7 @@ export function SliderForecastCard(): React.ReactElement | null {
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, flex: 1 }}>
               <Lock size={14} color={value === null ? '#94a3b8' : '#5b21b6'} strokeWidth={2.4} />
               <Text style={[styles.ctaText, value === null && styles.ctaTextDisabled]}>
-                {value === null ? 'גררו את הסליידר כדי לבחור יעד' : 'נעלו את ההימור'}
+                {value === null ? 'גררו את הסליידר כדי לבחור יעד' : 'נעלו את התחזית'}
               </Text>
             </View>
           </Pressable>

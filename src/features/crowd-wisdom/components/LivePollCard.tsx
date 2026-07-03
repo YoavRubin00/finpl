@@ -4,7 +4,6 @@ import { Brain, Clock } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { mediumHaptic } from "../../../utils/haptics";
-import { BetPanel } from "./BetPanel";
 import { MarketOddsHeader } from "./MarketOddsHeader";
 import { GoldCoinIcon } from "../../../components/ui/GoldCoinIcon";
 import type { CrowdWisdomQuestion } from "../types";
@@ -68,8 +67,11 @@ export function LivePollCard({ question, timeLeftLabel, onSubmit }: LivePollCard
         </View>
       ) : null}
 
-      {/* Market view — implied probability as the price, Polymarket-style */}
-      <MarketOddsHeader question={question} />
+      {/* Crowd-prediction market view — implied probability per choice. ONLY on
+          objectively-measurable questions; a sentiment / personal-choice question
+          has no settleable market, so we never show the "first to predict" state
+          there (Yoav 2026-07-03: the pension question must NOT show a stake view). */}
+      {question.bettable ? <MarketOddsHeader question={question} /> : null}
 
       {/* Choices */}
       <View style={styles.choices}>
@@ -106,12 +108,10 @@ export function LivePollCard({ question, timeLeftLabel, onSubmit }: LivePollCard
         })}
       </View>
 
-      {/* Coin betting — ONLY on objectively-measurable questions (a real market
-          close / price / rate). Sentiment & personal-choice questions are
-          vote-only: a coin wager must be settleable against reality. */}
-      {question.bettable ? (
-        <BetPanel question={question} selectedChoiceId={selectedId} />
-      ) : null}
+      {/* Coin PREDICTION panel lives in the POST-vote card (ResultCard): tapping a
+          choice here auto-casts the free vote and flips to the result, so the
+          stake panel is offered there — after voting — where it's actually
+          reachable and seeded with the user's own pick. */}
     </Animated.View>
   );
 }

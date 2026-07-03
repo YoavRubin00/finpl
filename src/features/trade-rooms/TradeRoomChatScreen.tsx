@@ -7,8 +7,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -248,10 +248,12 @@ export function TradeRoomChatScreen(): React.ReactElement {
         }}
       >
         <Pin size={13} color="#0284c7" strokeWidth={2.4} />
-        <Image
+        <ExpoImage
           source={require('../../../assets/webp/fin-standard.webp')}
           style={{ width: 20, height: 20 }}
-          resizeMode="contain"
+          contentFit="contain"
+          accessible={false}
+          autoplay
         />
         <Text
           numberOfLines={2}

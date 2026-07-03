@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Polyline, Polygon, Line } from 'react-native-svg';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Dices } from 'lucide-react-native';
+import { Target } from 'lucide-react-native';
 
 import type { CrowdWisdomChoice } from '../types';
 
@@ -64,14 +64,14 @@ export function OddsProbabilityChart({
     return (
       <Animated.View entering={FadeIn.duration(280)} style={styles.emptyWrap}>
         <View style={styles.emptyIcon}>
-          <Dices size={18} color="#7c3aed" strokeWidth={2.4} />
+          <Target size={18} color="#7c3aed" strokeWidth={2.4} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.emptyTitle} maxFontSizeMultiplier={1.2}>
-            עדיין אין הימורים בשוק הזה
+            עדיין אין תחזיות בשוק הזה
           </Text>
           <Text style={styles.emptySub} maxFontSizeMultiplier={1.2}>
-            היו הראשונים להמר — השער ייקבע לפי הקהל
+            היו הראשונים לחזות — המכפיל ייקבע לפי הקהל
           </Text>
         </View>
       </Animated.View>
@@ -96,7 +96,7 @@ export function OddsProbabilityChart({
             {leader.choice.label}
           </Text>
           <Text style={styles.marketMeta} maxFontSizeMultiplier={1.2}>
-            שוק חי · {betCount.toLocaleString('he-IL')} הימורים
+            שוק חי · {betCount.toLocaleString('he-IL')} תחזיות
           </Text>
         </View>
         <View style={styles.priceBlock}>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
-import { Dices, TrendingUp } from 'lucide-react-native';
+import { Target, TrendingUp } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown,
@@ -34,10 +34,11 @@ interface BetPanelProps {
 }
 
 /**
- * Parimutuel coin betting on a crowd question. The payout price is set by the
- * pool in REAL TIME — when the crowd piles onto a choice its odds drop, and a
- * contrarian pick pays more. Odds are locked at placement. The stake is any
- * whole amount the user types (≥10, ≤ their balance).
+ * Coin PREDICTION panel for a crowd question (skill prediction, NOT gambling —
+ * game-coins only, non-redeemable). The multiplier is peer/crowd-driven and set
+ * in REAL TIME — when the crowd concentrates on one choice its multiplier drops,
+ * and a contrarian, correct prediction pays more. The multiplier is locked at
+ * placement. The stake is any whole coin amount the user types (≥10, ≤ balance).
  */
 export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.ReactElement | null {
   const { data: economyData } = useEconomy();
@@ -64,7 +65,7 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
         if (!cancelled) setOdds(table);
       })
       .catch(() => {
-        if (!cancelled) setError('ההימורים לא זמינים כרגע. נסו שוב עוד רגע.');
+        if (!cancelled) setError('התחזיות לא זמינות כרגע. נסו שוב עוד רגע.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -113,12 +114,12 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
     setError(null);
     if (!Number.isFinite(stake) || stake < MIN_STAKE) {
       errorHaptic();
-      setError(`המינימום להימור הוא ${MIN_STAKE} מטבעות.`);
+      setError(`המינימום לתחזית הוא ${MIN_STAKE} מטבעות.`);
       return;
     }
     if (stake > coins) {
       errorHaptic();
-      setError('אין לכם מספיק מטבעות להימור הזה.');
+      setError('אין לכם מספיק מטבעות לתחזית הזו.');
       return;
     }
     setPlacing(true);
@@ -139,7 +140,7 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
       setOdds(result.odds);
     } catch (e) {
       errorHaptic();
-      setError(e instanceof Error ? e.message : 'ההימור לא נקלט. נסו שוב.');
+      setError(e instanceof Error ? e.message : 'התחזית לא נקלטה. נסו שוב.');
     } finally {
       setPlacing(false);
     }
@@ -149,13 +150,13 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
     return (
       <Animated.View entering={FadeIn.duration(240)} style={[styles.panel, styles.placedPanel]}>
         <View style={styles.placedTitleRow}>
-          <Text style={styles.placedTitle} maxFontSizeMultiplier={1.15}>ההימור נעול:</Text>
+          <Text style={styles.placedTitle} maxFontSizeMultiplier={1.15}>התחזית נעולה:</Text>
           <Text style={styles.placedTitle} maxFontSizeMultiplier={1.15}>{placed.stake.toLocaleString('he-IL')}</Text>
           <GoldCoinIcon size={14} />
-          <Text style={styles.placedTitle} maxFontSizeMultiplier={1.15}>× פי {placed.lockedOdds}</Text>
+          <Text style={styles.placedTitle} maxFontSizeMultiplier={1.15}>· מכפיל פי {placed.lockedOdds}</Text>
         </View>
         <Text style={styles.placedSub}>
-          רווח פוטנציאלי: {placed.potentialPayout.toLocaleString('he-IL')} מטבעות אם צדקתם. השער ננעל לפי הקופה בזמן ההימור.
+          זכייה צפויה אם צדקתם: {placed.potentialPayout.toLocaleString('he-IL')} מטבעות. המכפיל ננעל לפי הקהל ברגע התחזית.
         </Text>
       </Animated.View>
     );
@@ -169,7 +170,7 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
           setOpen(true);
         }}
         accessibilityRole="button"
-        accessibilityLabel="שימו מטבעות על התוצאה — השער נקבע בזמן אמת"
+        accessibilityLabel="כמה מטבעות על התחזית — המכפיל נקבע לפי הקהל"
         hitSlop={6}
         style={({ pressed }) => [styles.ctaOuter, { opacity: pressed ? 0.92 : 1 }]}
       >
@@ -190,14 +191,14 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
 
           <View style={styles.ctaRow}>
             <View style={styles.ctaIconWrap}>
-              <Dices size={22} color="#ffffff" strokeWidth={2.6} />
+              <Target size={22} color="#ffffff" strokeWidth={2.6} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.ctaTitle} maxFontSizeMultiplier={1.15} numberOfLines={1}>
-                שימו מטבעות על התוצאה
+                כמה מטבעות על התחזית
               </Text>
               <Text style={styles.ctaSub} maxFontSizeMultiplier={1.15} numberOfLines={1}>
-                השער נקבע בזמן אמת לפי הקהל
+                המכפיל נקבע לפי הקהל בזמן אמת
               </Text>
             </View>
             <GoldCoinIcon size={22} />
@@ -210,8 +211,8 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
   return (
     <Animated.View entering={FadeInDown.duration(240)} style={styles.panel}>
       <View style={styles.headerRow}>
-        <Dices size={16} color="#7c3aed" strokeWidth={2.4} />
-        <Text style={styles.title}>הימור מטבעות</Text>
+        <Target size={16} color="#7c3aed" strokeWidth={2.4} />
+        <Text style={styles.title}>תחזית מטבעות</Text>
         {loading && <ActivityIndicator size="small" color="#7c3aed" />}
       </View>
 
@@ -252,7 +253,7 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
       </View>
 
       <View style={styles.inputRow}>
-        <Text style={styles.inputLabel} maxFontSizeMultiplier={1.15}>סכום ההימור</Text>
+        <Text style={styles.inputLabel} maxFontSizeMultiplier={1.15}>סכום התחזית</Text>
         <View style={styles.inputBox}>
           <TextInput
             value={stakeText}
@@ -263,7 +264,7 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
             placeholderTextColor="#c4b5fd"
             style={styles.input}
             maxLength={8}
-            accessibilityLabel="סכום ההימור במטבעות"
+            accessibilityLabel="סכום התחזית במטבעות"
             maxFontSizeMultiplier={1.15}
           />
           <GoldCoinIcon size={14} />
@@ -274,10 +275,10 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
       {selectedOdds !== null ? (
         <View style={styles.payoutCard}>
           <View style={styles.payoutTopRow}>
-            <Text style={styles.payoutLabel} maxFontSizeMultiplier={1.15}>רווח פוטנציאלי</Text>
+            <Text style={styles.payoutLabel} maxFontSizeMultiplier={1.15}>זכייה צפויה אם צדקתם</Text>
             <View style={styles.payoutOddsPill}>
               <TrendingUp size={13} color="#15803d" strokeWidth={2.6} />
-              <Text style={styles.payoutOddsText} maxFontSizeMultiplier={1.15}>שער חי · פי {selectedOdds}</Text>
+              <Text style={styles.payoutOddsText} maxFontSizeMultiplier={1.15}>מכפיל צפוי · פי {selectedOdds}</Text>
             </View>
           </View>
           <View style={styles.payoutValueRow}>
@@ -286,14 +287,14 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
             </Text>
             <GoldCoinIcon size={18} />
             <Text style={styles.payoutUnit} maxFontSizeMultiplier={1.15} numberOfLines={1}>
-              מטבעות אם צדקתם
+              מטבעות
             </Text>
           </View>
         </View>
       ) : (
         !loading && (
           <Text style={styles.oddsHint}>
-            השער נקבע לפי ההימורים של כולם — כשכולם על אותה תשובה, הרווח עליה קטן.
+            המכפיל נקבע לפי התחזיות של כולם — כשכולם על אותה תשובה, המכפיל עליה קטן.
           </Text>
         )
       )}
@@ -304,21 +305,25 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
         onPress={handlePlace}
         disabled={placing || selectedOdds === null || !stakeValid}
         accessibilityRole="button"
-        accessibilityLabel="ביצוע ההימור"
+        accessibilityLabel="נעילת התחזית"
         style={[styles.placeBtn, (placing || selectedOdds === null || !stakeValid) && styles.placeBtnDisabled]}
       >
         {placing ? (
-          <Text style={styles.placeBtnText} maxFontSizeMultiplier={1.15}>נועל שער…</Text>
+          <Text style={styles.placeBtnText} maxFontSizeMultiplier={1.15}>נועל תחזית…</Text>
         ) : (
           <View style={styles.placeBtnInner}>
             <Text style={styles.placeBtnText} maxFontSizeMultiplier={1.15}>
-              המרו {Number.isFinite(stake) ? stake.toLocaleString('he-IL') : '0'}
+              נעלו {Number.isFinite(stake) ? stake.toLocaleString('he-IL') : '0'}
             </Text>
             <GoldCoinIcon size={13} />
-            <Text style={styles.placeBtnText} maxFontSizeMultiplier={1.15}>על הבחירה</Text>
+            <Text style={styles.placeBtnText} maxFontSizeMultiplier={1.15}>על התחזית</Text>
           </View>
         )}
       </Pressable>
+
+      <Text style={styles.sharkLine}>
+        קפטן שארק: המכפיל נקבע על ידי הקהל — כשכולם חוזים אותו דבר, הוא קטן.
+      </Text>
 
       <Text style={styles.disclaimer}>
         מטבעות משחק בלבד — לא כסף אמיתי ולא ניתן לפדיון.
@@ -595,6 +600,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
     color: '#ffffff',
+  },
+  sharkLine: {
+    fontSize: 11,
+    color: '#6d28d9',
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    lineHeight: 16,
   },
   disclaimer: {
     fontSize: 10,

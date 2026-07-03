@@ -61,31 +61,41 @@ export function getCurrentWeekId(now: Date = new Date()): string {
   return `${year}-W${String(week).padStart(2, '0')}`;
 }
 
+/**
+ * Next occurrence of `weekday` (0=Sun … 6=Sat) at `hour:minute`.
+ *
+ * If today already IS that weekday we look at the time of day: when the target
+ * hour hasn't passed yet the deadline is still TODAY; only once it has passed do
+ * we roll to the same weekday next week.
+ *
+ * The old helpers used `(weekday - day + 7) % 7 || 7`, where the `|| 7` forced a
+ * FULL-WEEK jump on the boundary day itself — e.g. on a Friday the competition
+ * end pointed to *next* Friday, so the live countdown read "7ימ׳ 18ש׳" instead
+ * of the few hours left until tonight's 23:05 close.
+ */
+function nextWeekdayAt(now: Date, weekday: number, hour: number, minute: number): Date {
+  const target = new Date(now);
+  target.setHours(hour, minute, 0, 0);
+  let delta = (weekday - now.getDay() + 7) % 7;
+  // Same weekday, but today's target time already passed → next week.
+  if (delta === 0 && now.getTime() >= target.getTime()) delta = 7;
+  target.setDate(target.getDate() + delta);
+  return target;
+}
+
 /** Next draft open time: upcoming Saturday 20:00 (edit window opens). */
 export function getNextDraftOpen(now: Date = new Date()): Date {
-  const d = new Date(now);
-  const daysUntilSat = (6 - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + daysUntilSat);
-  d.setHours(20, 0, 0, 0);
-  return d;
+  return nextWeekdayAt(now, 6, 20, 0);
 }
 
 /** Competition end: upcoming Friday 23:05 (Israel time — when markets close in NY) */
 export function getCompetitionEnd(now: Date = new Date()): Date {
-  const d = new Date(now);
-  const daysUntilFri = (5 - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + daysUntilFri);
-  d.setHours(23, 5, 0, 0);
-  return d;
+  return nextWeekdayAt(now, 5, 23, 5);
 }
 
 /** Draft close: upcoming Monday 09:00 (edit window closes, competition starts). */
 export function getDraftClose(now: Date = new Date()): Date {
-  const d = new Date(now);
-  const daysUntilMon = (1 - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + daysUntilMon);
-  d.setHours(9, 0, 0, 0);
-  return d;
+  return nextWeekdayAt(now, 1, 9, 0);
 }
 
 // ---------------------------------------------------------------------------

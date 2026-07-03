@@ -4239,14 +4239,15 @@ export function LessonFlowScreen() {
       }
     } else {
       mediumHaptic();
-      if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
-        setPhase("interactive-recall");
-      } else {
-        setPhase("quizzes");
-        safeTimeout(() => setShowQuizIntro(true), 50);
-      }
+      // Unified driver — mirror handleFlashcardNext's last-card branch (advanceFromChip).
+      // The old hardcoded cards→interactive-recall jump was written when the order
+      // was cards→recall→quiz; after ים 2.7 pinned the quiz BETWEEN cards and recall
+      // (types.ts MODULE_CHIPS_TO_CHEST), that hardcode leapfrogged the quiz and
+      // orphaned it (advanceFromChip('recall') then resumed past it). Following the
+      // resolveTopics chip order fixes the skipped-quiz bug for finn-tip cards.
+      advanceFromChip('cards');
     }
-  }, [mod, flashcardIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter]);
+  }, [mod, flashcardIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, advanceFromChip]);
 
   const handleFlashcardPrev = useCallback(() => {
     if (flashcardIndex > 0) {
