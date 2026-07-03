@@ -158,14 +158,15 @@ export function chestThresholdFor(moduleId: string): number {
 }
 
 /** Explicit per-module CHIP-COUNT override for the chest gate — wins over the
- *  percentage math. mod-0-1 = 3 (ים 2026-07-02): post-26.6 the first lesson is
- *  the activation lever (63.5% enter→chest); one row of chips to the first
- *  chest = intro → cards → quiz → 🎁. The quiz-pin in topicResolver derives
- *  from the same number, so "בואו נתרגל" (recall, the leakiest chip) slides to
- *  AFTER the chest with no extra ordering code. Rollback = delete the entry
- *  (criterion: daily lesson→chest < 60% for 3 days). */
+ *  percentage math. mod-0-1 = 4 (Yoav 2026-07-03, supersedes ים's 3 of
+ *  2026-07-02): the first-lesson path is intro → cards → **בואו נתרגל
+ *  (recall) → quiz** → 🎁 — practice comes BEFORE the quiz and the chest
+ *  fires only after the quiz. The quiz-pin in topicResolver derives from
+ *  this same number (maxQuizIdx=3), and CANONICAL_ORDER already places
+ *  recall before quiz, so no extra ordering code is needed. Rollback =
+ *  restore 3 (criterion: daily lesson→chest < 60% for 3 days). */
 export const MODULE_CHIPS_TO_CHEST: Record<string, number> = {
-  'mod-0-1': 3,
+  'mod-0-1': 4,
 };
 
 /** Number of completed chips that opens the chest. Clamped to `total - 1` so the
