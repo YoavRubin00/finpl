@@ -220,7 +220,10 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         const bothAnswered = next[0] !== null && next[1] !== null;
         let { lastCompletedDate, perfectDays } = state;
         if (bothAnswered) {
-          const today = state.cachedFor ?? todayKey();
+          // Anchor completion to the REAL local day, not the (possibly stale)
+          // challenge dateKey — so a same-day finish of a lagging challenge still
+          // counts and increments the perfect-day tally (Yoav 2026-07-03).
+          const today = todayKey();
           if (lastCompletedDate !== today) {
             lastCompletedDate = today;
             const bothCorrect = next[0]?.wasCorrect === true && next[1]?.wasCorrect === true;
@@ -244,13 +247,20 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
       },
 
       hasCompletedToday: () => {
-        const { answered, cachedFor } = get();
-        // Day-aware: yesterday's persisted answers must NOT count as "done
-        // today". On a cold start across midnight the daily-quests news star
-        // read `true` here (stale `answered`) BEFORE setTodayChallenge reset
-        // it, so the news quest looked completed on the new day. 2026-06-30.
-        if (cachedFor !== todayKey()) return false;
-        return answered[0] !== null && answered[1] !== null;
+        const { answered } = get();
+        const a0 = answered[0];
+        const a1 = answered[1];
+        if (!a0 || !a1) return false;
+        // "Done today" is decided by WHEN the user answered (real Asia/Jerusalem
+        // day via the answeredAt timestamp), NOT by the challenge's own dateKey.
+        // The served challenge can lag a day when today's row hasn't been
+        // generated yet (today+api returns the latest ROW's dateKey), so the old
+        // `cachedFor !== todayKey()` check returned false for a genuine same-day
+        // completion — and the news daily-quest star never filled (Yoav
+        // 2026-07-03). The timestamp check still rejects yesterday's persisted
+        // answers on a cold start across midnight (the 2026-06-30 guard).
+        const answeredAt = a1.answeredAt ?? a0.answeredAt;
+        return !!answeredAt && IL_DATE_FMT.format(new Date(answeredAt)) === todayKey();
       },
 
       claimRegularChest: () => {
