@@ -436,3 +436,68 @@ export const friendships = pgTable("friendships", {
   check("friendships_no_self", sql`requester_id <> addressee_id`),
   check("friendships_status_check", sql`status IN ('pending', 'accepted')`),
 ]);
+
+// Server-backed community portfolio feed (Yoav 2026-07-03: the device-local
+// feed couldn't be rated/liked/commented cross-user without fabricating data).
+// One row = one shared portfolio; ratings/likes/comments below carry the REAL
+// community reactions. `picks` stores composition only (no stale return figure).
+export const sharedPortfolios = pgTable("shared_portfolios", {
+  id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+  userId: uuid("user_id").notNull(),
+  authorAuthId: text("author_auth_id").notNull(),
+  authorName: text("author_name"),
+  authorAvatarId: text("author_avatar_id"),
+  picks: jsonb().notNull(),
+  caption: text(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  index("shared_portfolios_recent_idx").using("btree", table.createdAt.desc()),
+  index("shared_portfolios_user_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+  foreignKey({ columns: [table.userId], foreignColumns: [userProfiles.id], name: "shared_portfolios_user_fk" }).onDelete("cascade"),
+  check("shared_portfolios_picks_nonempty", sql`jsonb_array_length(picks) >= 2`),
+]);
+
+// One 1-5 star rating per rater per portfolio (unique = the average is honest).
+export const portfolioRatings = pgTable("portfolio_ratings", {
+  id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+  portfolioId: uuid("portfolio_id").notNull(),
+  raterUserId: uuid("rater_user_id").notNull(),
+  raterAuthId: text("rater_auth_id").notNull(),
+  stars: integer().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  index("portfolio_ratings_portfolio_idx").using("btree", table.portfolioId.asc().nullsLast().op("uuid_ops")),
+  foreignKey({ columns: [table.portfolioId], foreignColumns: [sharedPortfolios.id], name: "portfolio_ratings_portfolio_fk" }).onDelete("cascade"),
+  foreignKey({ columns: [table.raterUserId], foreignColumns: [userProfiles.id], name: "portfolio_ratings_rater_fk" }).onDelete("cascade"),
+  unique("portfolio_ratings_one_per_rater").on(table.portfolioId, table.raterUserId),
+  check("portfolio_ratings_stars_range", sql`stars BETWEEN 1 AND 5`),
+]);
+
+// One like per user per portfolio (composite PK).
+export const portfolioLikes = pgTable("portfolio_likes", {
+  portfolioId: uuid("portfolio_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.portfolioId, table.userId], name: "portfolio_likes_pkey" }),
+  index("portfolio_likes_portfolio_idx").using("btree", table.portfolioId.asc().nullsLast().op("uuid_ops")),
+  foreignKey({ columns: [table.portfolioId], foreignColumns: [sharedPortfolios.id], name: "portfolio_likes_portfolio_fk" }).onDelete("cascade"),
+  foreignKey({ columns: [table.userId], foreignColumns: [userProfiles.id], name: "portfolio_likes_user_fk" }).onDelete("cascade"),
+]);
+
+export const portfolioComments = pgTable("portfolio_comments", {
+  id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+  portfolioId: uuid("portfolio_id").notNull(),
+  authorUserId: uuid("author_user_id").notNull(),
+  authorAuthId: text("author_auth_id").notNull(),
+  authorName: text("author_name"),
+  authorAvatarId: text("author_avatar_id"),
+  body: text().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  index("portfolio_comments_portfolio_idx").using("btree", table.portfolioId.asc().nullsLast().op("uuid_ops"), table.createdAt.asc()),
+  foreignKey({ columns: [table.portfolioId], foreignColumns: [sharedPortfolios.id], name: "portfolio_comments_portfolio_fk" }).onDelete("cascade"),
+  foreignKey({ columns: [table.authorUserId], foreignColumns: [userProfiles.id], name: "portfolio_comments_author_fk" }).onDelete("cascade"),
+  check("portfolio_comments_body_len", sql`char_length(body) BETWEEN 1 AND 300`),
+]);

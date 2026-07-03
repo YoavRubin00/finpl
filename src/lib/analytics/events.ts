@@ -179,6 +179,11 @@ export type AppEvent =
   | { name: 'whatsapp_cta_tapped'; props: { source: 'pearl_feed' | 'more_screen' | 'welcome_email' | 'friends_hub' } }
   | { name: 'instagram_cta_tapped'; props: { source: 'more_screen' | string } }
 
+  // ── Community portfolio feed (server-backed 2026-07-03) ────────────────────
+  | { name: 'portfolio_shared_server'; props: { picks: number } }
+  | { name: 'portfolio_rated'; props: { stars: number } }
+  | { name: 'pf_feed_viewed'; props: { count: number } }
+
   // ── Referral / Friends ─────────────────────────────────────────────────
   | { name: 'referral_screen_viewed'; props: { has_code: boolean; friends_count: number; dividend_available: number; already_collected_today: boolean } }
   | { name: 'referral_link_copied'; props: { code: string } }

@@ -7,6 +7,11 @@ import type { SharedPick } from './portfolioShareTypes';
 
 /** Coins for sharing a portfolio you built — once per day. */
 export const SHARE_REWARD_COINS = 500;
+/** Coins for rating someone's portfolio (Yoav 2026-07-03). Granted only the
+ *  FIRST time you rate a given portfolio, and capped per day so it can't be
+ *  farmed by re-rating or rating-then-changing. */
+export const RATE_REWARD_COINS = 20;
+export const RATE_REWARD_DAILY_CAP = 10;
 export const MIN_PICKS = 2;
 export const MAX_PICKS = 6;
 export const ALLOCATION_STEP = 5;
