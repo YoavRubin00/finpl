@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { Users } from 'lucide-react-native';
+
+import { useTutorialStore } from '../../stores/useTutorialStore';
 
 import { FriendsLeaderboardCard } from './components/FriendsLeaderboardCard';
 import { ReferralCard } from './components/ReferralCard';
@@ -45,9 +47,29 @@ function StaggeredEntry({
 }
 
 export function FriendsHubScreen(): React.ReactElement {
+  const scrollRef = useRef<ScrollView>(null);
+
+  // During the app walkthrough's "החברים שלכם" step, slowly scroll the feed
+  // down so the narrated tour actually SHOWS the social surface (fantasy,
+  // crowd wisdom, rooms…) instead of a static above-the-fold frame (Yoav
+  // 2026-07-03). Organic visits never auto-scroll — gated on the walkthrough
+  // being live AND this being its active screen.
+  const walkthroughOnFriends = useTutorialStore(
+    (s) => s.walkthroughTriggered && !s.hasSeenAppWalkthrough && s.walkthroughActiveScreen === 'friends',
+  );
+  useEffect(() => {
+    if (!walkthroughOnFriends) return;
+    // Let the tab land + the overlay/voice start before the glide down.
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 1400);
+    return () => clearTimeout(t);
+  }, [walkthroughOnFriends]);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: FEED_BG }} edges={[]}>
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
