@@ -9,7 +9,7 @@ import Animated, {
   FadeInUp,
   useReducedMotion,
 } from 'react-native-reanimated';
-import { ChevronLeft, X } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { FINN_HELLO } from '../../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic } from '../../../utils/haptics';
 import { useTutorialStore } from '../../../stores/useTutorialStore';
@@ -152,14 +152,17 @@ export function ToolTutorialOverlay({ toolKey, steps, onSeen }: Props): React.Re
             <Text style={s.stepCounterText}>{`${step + 1}/${steps.length}`}</Text>
           </View>
         </Animated.View>
+        {/* Explicit "דלג" pill instead of a bare X — matches the main app
+            walkthrough's skip affordance so every tour dismisses the same way
+            (Yoav 2026-07-03: "כפתור דלג כמו ההדרכות האחרות ולא איקס"). */}
         <Pressable
           onPress={handleSkip}
           style={[s.dismissBtn, { top: insets.top + 72 }]}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="סגירת ההדרכה"
+          accessibilityLabel="דלג על ההדרכה"
         >
-          <X size={20} color="#0c4a6e" strokeWidth={2.6} />
+          <Text style={s.dismissText}>דלג</Text>
         </Pressable>
       </SafeAreaView>
 
@@ -287,11 +290,12 @@ const s = StyleSheet.create({
     // right corner is where users expect close affordances (mirrors LTR's
     // top-left). The `top` is set inline at the render site so it includes
     // the safe-area inset and stays aligned with the centered pill across
-    // all iPhones.
+    // all iPhones. A labeled "דלג" pill (not an X) — consistent with the app
+    // walkthrough's skip button (Yoav 2026-07-03).
     position: 'absolute',
     right: 16,
-    width: 36,
-    height: 36,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.95)',
     alignItems: 'center',
@@ -301,6 +305,12 @@ const s = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
+  },
+  dismissText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0c4a6e',
+    writingDirection: 'rtl',
   },
   card: {
     backgroundColor: '#e0f2fe',
