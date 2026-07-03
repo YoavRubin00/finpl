@@ -15,6 +15,9 @@ import { economyQueryKey } from '../economy/useEconomy';
 import type { Economy } from '../../lib/api/economy';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
 import { track } from '../../lib/analytics/events';
+import { useBanditStore } from '../bandit/useBanditStore';
+import { getVariantPayload } from '../bandit/banditConfig';
+import { setPersonProperties } from '../../lib/posthog';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 
 /** Amount + the app's gold-coin glyph (the one in the top wallet) inline. */
@@ -61,9 +64,6 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
   const pendingFirstChest = useTutorialStore((s) => s.pendingPostWalkthroughFirstChest);
   const pendingProTeaser = useTutorialStore((s) => s.pendingPostWalkthroughProTeaser);
   const pendingRegisterCTA = useTutorialStore((s) => s.pendingPostWalkthroughCTA);
-  // First IL-day = the day-0 audience. activeDates is IL-zoned; a returning
-  // user has 2+ entries, so legacy users completing mod-0-1 later are out.
-  const isFirstDay = useEconomyUIStore((s) => s.activeDates.length <= 1);
   const lastDailyTaskDate = useEconomyUIStore((s) => s.lastDailyTaskDate);
 
   const permissionGranted = useNotificationStore((s) => s.permissionGranted);
@@ -95,8 +95,10 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
     (mod01GateShown || !isGuest) &&
     !pendingFirstChest &&
     !pendingProTeaser &&
-    !pendingRegisterCTA &&
-    isFirstDay;
+    // isFirstDay gate removed 2026-07-03 (Yoav): the wager now reaches ALL
+    // mod-0-1-chest completers, split ~50/50 by the day0_wager bandit at fire
+    // time below — not just the day-0 first-session slice (which was ~1/day).
+    !pendingRegisterCTA;
 
   const [offerVisible, setOfferVisible] = useState(false);
   const [accepted, setAccepted] = useState(false);
@@ -111,7 +113,17 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
       const coins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
       if (coins < WAGER_STAKE) return;
       firedRef.current = true;
+      // day0_wager A/B (Yoav 2026-07-03): among eligible mod-0-1-chest completers,
+      // ~50% are SHOWN the wager (treatment) and ~50% held out (control), so its
+      // return lift is measured by arm in the bandit dashboard. Assigned HERE (at
+      // the eligibility moment) so the experiment population is exactly the
+      // wager-eligible cohort; the person-property tags BOTH arms for the breakdown.
+      const wagerArm = useBanditStore.getState().selectVariant('day0_wager');
+      const showWager = getVariantPayload('day0_wager', wagerArm).show;
+      setPersonProperties({ bandit_variant__day0_wager: wagerArm });
+      try { track({ name: 'bandit_variant_assigned', props: { experiment_id: 'day0_wager', variant_id: wagerArm, variant_label: showWager ? 'show' : 'hide' } }); } catch { /* non-fatal */ }
       useSharkWagerStore.getState().markOfferConsumed();
+      if (!showWager) return; // control holdout — assigned + measured, but not shown
       setOfferVisible(true);
       const streak = useEconomyUIStore.getState().activeDates.length;
       try { track({ name: 'day0_exit_ritual_shown', props: { streak } }); } catch { /* non-fatal */ }

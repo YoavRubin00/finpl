@@ -378,6 +378,18 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
       },
     ],
   },
+  // Day-0 wager holdout (Yoav 2026-07-03): among mod-0-1-chest completers, ~50%
+  // are SHOWN the "מתערבים?" wager (treatment) and ~50% held out (control), to
+  // measure whether the wager lifts return. 2 arms, no conversion recorded →
+  // stays ~50/50; return read BY ARM via the person-property breakdown in the
+  // bandit dashboard. Reversible: pin the winning arm here once we have the read.
+  day0_wager: {
+    goal: 'retention',
+    variants: [
+      { id: 'day0_wager_show', label: 'show', payload: { show: true } },
+      { id: 'day0_wager_hide', label: 'hide', payload: { show: false } },
+    ],
+  },
 };
 
 export function getVariantPayload<E extends ExperimentId>(
