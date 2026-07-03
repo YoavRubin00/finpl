@@ -2733,9 +2733,8 @@ export function DuoLearnScreen() {
       {mondialBadgeVisible ? (
         <MondialMailBadge isNew={!mondialOpenedAt} onPress={handleMondialBadgePress} />
       ) : null}
-      {clubStreak >= 1 ? (
-        <StreakClubEntryCard streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
-      ) : null}
+      {/* יום-0 hook (ים 3.7): מופיע גם ל-streak=0 במצב טיזר-נעול. locked=streak<1 מטופל בכרטיס. */}
+      <StreakClubEntryCard streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
     </View>
   ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, clubStreak, clubHasUnseen, handleStreakClubPress]);
 

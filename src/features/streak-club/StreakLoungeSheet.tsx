@@ -361,7 +361,7 @@ export function StreakLoungeSheet({
 
   // המארח חי: הבועה משתנה לפי מצב-היום — הכוונה, לא קישוט
   const greeting = locked
-    ? "עוד יום אחד ונכנסים"
+    ? "כל יום פה דרופ חדש. מתחילים רצף?"
     : isFirstEverVisit
       ? "ברוך הבא למועדון! כל יום — 3 דרופים חדשים"
       : allDoneToday
@@ -477,7 +477,7 @@ export function StreakLoungeSheet({
             </View>
           </View>
           <View style={styles.memberRow}>
-            <Text style={styles.memberLine} allowFontScaling={false}>{`רצף ${streak}`}</Text>
+            <Text style={styles.memberLine} allowFontScaling={false}>{locked ? "עוד לא התחלת רצף" : `רצף ${streak}`}</Text>
             <LottieIcon source={FIRE_LOTTIE} size={18} autoPlay loop active={visible && !reducedMotion} />
             {!locked && (
               <Text style={styles.memberLine} allowFontScaling={false}>{`· ביקור מס' ${Math.max(totalVisits, 1)}`}</Text>
@@ -533,9 +533,9 @@ export function StreakLoungeSheet({
           <View style={styles.lockWrap} pointerEvents="box-none">
             <Animated.View entering={FadeInUp.delay(200).duration(320)} style={styles.lockCard}>
               <Text style={styles.lockEmoji} allowFontScaling={false}>🗝️</Text>
-              <Text style={styles.lockTitle} allowFontScaling={false}>עוד יום אחד ונכנסים</Text>
+              <Text style={styles.lockTitle} allowFontScaling={false}>המועדון מחכה לך</Text>
               <Text style={styles.lockBody}>
-                שמור על הרצף גם מחר — והטרקלין נפתח: 3 שולחנות, דרופ בלעדי חדש כל יום.
+                כל יום, 3 שולחנות ודרופ בלעדי חדש. מתחילים רצף ונכנסים.
               </Text>
               <Pressable
                 onPress={() => {
@@ -546,7 +546,7 @@ export function StreakLoungeSheet({
                 accessibilityRole="button"
                 accessibilityLabel="סגירה"
               >
-                <Text style={styles.lockCtaText} allowFontScaling={false}>נתראה מחר 🔥</Text>
+                <Text style={styles.lockCtaText} allowFontScaling={false}>מתחילים</Text>
               </Pressable>
             </Animated.View>
           </View>

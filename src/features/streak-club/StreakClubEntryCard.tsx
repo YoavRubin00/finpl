@@ -79,7 +79,7 @@ export function StreakClubEntryCard({
         accessibilityRole="button"
         accessibilityLabel={
           locked
-            ? "מועדון הרצף, נעול — עוד יום אחד ברצף ונכנסים"
+            ? "מועדון הרצף, נעול. מתחילים רצף ונכנסים"
             : isNew
               ? "מועדון הרצף, דרופ חדש מחכה"
               : "מועדון הרצף"
