@@ -175,8 +175,8 @@ export type AppEvent =
   // whether in-game or email is the stronger acquisition channel for the
   // community. The welcome-email tap is captured server-side (api/email/
   // wa-click.ts) with the same event name + source:'welcome_email'.
-  | { name: 'whatsapp_cta_shown'; props: { source: 'pearl_feed' | 'more_screen' } }
-  | { name: 'whatsapp_cta_tapped'; props: { source: 'pearl_feed' | 'more_screen' | 'welcome_email' } }
+  | { name: 'whatsapp_cta_shown'; props: { source: 'pearl_feed' | 'more_screen' | 'friends_hub' } }
+  | { name: 'whatsapp_cta_tapped'; props: { source: 'pearl_feed' | 'more_screen' | 'welcome_email' | 'friends_hub' } }
   | { name: 'instagram_cta_tapped'; props: { source: 'more_screen' | string } }
 
   // ── Referral / Friends ─────────────────────────────────────────────────

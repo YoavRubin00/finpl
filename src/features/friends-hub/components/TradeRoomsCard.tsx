@@ -1,13 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  useReducedMotion,
-} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MessagesSquare, ChevronLeft } from 'lucide-react-native';
 
 import { tapHaptic } from '../../../utils/haptics';
@@ -17,153 +10,11 @@ import {
   getDailyEventTopic,
   DAILY_FIRST_MESSAGE_COINS,
 } from '../../trade-rooms/tradeRoomsData';
-import type { TradeRoom } from '../../trade-rooms/tradeRoomsTypes';
+import { PremiumRoomButton } from '../../trade-rooms/components/PremiumRoomButton';
 
 const TEXT_PRIMARY = '#1f2937';
 const TEXT_MUTED = '#6b7280';
 const FB_BLUE = '#1877f2';
-
-/**
- * One full-width premium room button. Extracted so each tile can own its own
- * press-scale animation (respecting reduced-motion) without breaking the hooks
- * rule inside the map.
- */
-function RoomButton({
-  room,
-  unread,
-  onPress,
-}: {
-  room: TradeRoom;
-  unread: number;
-  onPress: () => void;
-}): React.ReactElement {
-  const reduced = useReducedMotion();
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
-  const onIn = (): void => {
-    if (!reduced) scale.value = withTiming(0.97, { duration: 90 });
-  };
-  const onOut = (): void => {
-    if (!reduced) scale.value = withTiming(1, { duration: 130 });
-  };
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={onIn}
-      onPressOut={onOut}
-      accessibilityRole="button"
-      // C4: the unread counter is announced as part of the room's label.
-      accessibilityLabel={
-        unread > 0 ? `${room.name}, ${unread} הודעות חדשות` : `חדר ${room.name}`
-      }
-      style={{ marginHorizontal: 16, marginBottom: 10 }}
-    >
-      <Animated.View
-        style={[
-          {
-            borderRadius: 16,
-            shadowColor: room.accentColor,
-            shadowOpacity: 0.25,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 4,
-          },
-          animStyle,
-        ]}
-      >
-        <LinearGradient
-          colors={[room.accentBg, '#ffffff']}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 0 }}
-          style={{
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            gap: 12,
-            minHeight: 64,
-            paddingHorizontal: 12,
-            paddingVertical: 12,
-            borderRadius: 16,
-            borderWidth: 1.5,
-            borderColor: room.accentColor + '55',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Emoji in a white circle with accent border */}
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#ffffff',
-              borderWidth: 1.5,
-              borderColor: room.accentColor,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 20 }}>{room.emoji}</Text>
-          </View>
-
-          {/* Name + tagline */}
-          <View style={{ flex: 1 }}>
-            <Text
-              numberOfLines={1}
-              maxFontSizeMultiplier={1.15}
-              style={{
-                fontSize: 15,
-                fontWeight: '900',
-                color: TEXT_PRIMARY,
-                writingDirection: 'rtl',
-                textAlign: 'right',
-              }}
-            >
-              {room.name}
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={{
-                fontSize: 11,
-                color: TEXT_MUTED,
-                writingDirection: 'rtl',
-                textAlign: 'right',
-                flexShrink: 1,
-                marginTop: 1,
-              }}
-            >
-              {room.tagline}
-            </Text>
-          </View>
-
-          {/* Unread badge — only ever shows on genuine peer activity */}
-          {unread > 0 && (
-            <View
-              style={{
-                minWidth: 20,
-                height: 20,
-                borderRadius: 10,
-                backgroundColor: room.accentColor,
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingHorizontal: 5,
-              }}
-            >
-              <Text
-                maxFontSizeMultiplier={1.15}
-                style={{ fontSize: 11, fontWeight: '900', color: '#ffffff' }}
-              >
-                {unread > 9 ? '9+' : unread}
-              </Text>
-            </View>
-          )}
-
-          <ChevronLeft size={20} color={room.accentColor} strokeWidth={2.4} />
-        </LinearGradient>
-      </Animated.View>
-    </Pressable>
-  );
-}
 
 /**
  * Friends-feed card: a vertical stack of full-width premium room buttons.
@@ -357,9 +208,10 @@ export function TradeRoomsCard(): React.ReactElement {
         </Text>
       )}
 
-      {/* Vertical stack of full-width premium room buttons */}
+      {/* Vertical stack of full-width premium room buttons (shared with the
+          rooms-list screen so both surfaces look identical) */}
       {allRooms.map((room) => (
-        <RoomButton
+        <PremiumRoomButton
           key={room.id}
           room={room}
           unread={unreadFor(room.id)}

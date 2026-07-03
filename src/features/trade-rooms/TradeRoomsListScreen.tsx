@@ -7,7 +7,8 @@ import { ChevronRight, MessagesSquare, Plus, X } from 'lucide-react-native';
 import { tapHaptic } from '../../utils/haptics';
 import { useTradeRoomsStore } from './useTradeRoomsStore';
 import { TRADE_ROOMS, getDailyEventTopic } from './tradeRoomsData';
-import { RoomRow } from './components/RoomRow';
+import { PremiumRoomButton } from './components/PremiumRoomButton';
+import { formatAlias } from '../anon-advice/anonAdviceData';
 import type { TradeRoom } from './tradeRoomsTypes';
 
 const FEED_BG = '#f3f4f6';
@@ -436,23 +437,36 @@ export function TradeRoomsListScreen(): React.ReactElement {
           />
         )}
 
-        {/* Regular rooms — WhatsApp-style list */}
-        <View style={{ backgroundColor: '#ffffff' }}>
-          {regularRooms.map((room, idx) => {
+        {/* Regular rooms — SAME premium buttons as the friends hub, so the
+            general rooms page looks exactly like it does from the friends
+            screen (Yoav 2026-07-03). Last-message preview rides in as the
+            button subtitle when there's real activity. */}
+        <View style={{ paddingTop: 6 }}>
+          {regularRooms.map((room) => {
             const messages = messagesByRoom[room.id] ?? [];
             const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+            const previewAuthor = lastMessage
+              ? lastMessage.isShark
+                ? 'קפטן שארק'
+                : lastMessage.isSelf
+                  ? 'אני'
+                  : lastMessage.alias
+                    ? formatAlias(lastMessage.alias)
+                    : ''
+              : '';
+            const preview = lastMessage
+              ? previewAuthor
+                ? `${previewAuthor}: ${lastMessage.body}`
+                : lastMessage.body
+              : undefined;
             return (
-              <View key={room.id}>
-                {idx > 0 && (
-                  <View style={{ height: 1, backgroundColor: '#f3f4f6', marginRight: 80 }} />
-                )}
-                <RoomRow
-                  room={room}
-                  lastMessage={lastMessage}
-                  unreadCount={unreadFor(room.id)}
-                  onPress={() => openRoom(room.id)}
-                />
-              </View>
+              <PremiumRoomButton
+                key={room.id}
+                room={room}
+                unread={unreadFor(room.id)}
+                onPress={() => openRoom(room.id)}
+                subtitle={preview}
+              />
             );
           })}
         </View>

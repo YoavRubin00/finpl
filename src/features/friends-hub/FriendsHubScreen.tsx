@@ -15,6 +15,7 @@ import { Ta35ForecastCard } from './cards/Ta35ForecastCard';
 import { PremiumFantasyButton } from './components/PremiumFantasyButton';
 import { PortfolioShareCard } from './components/PortfolioShareCard';
 import { TradeRoomsCard } from './components/TradeRoomsCard';
+import { WhatsAppCommunityCard } from './components/WhatsAppCommunityCard';
 import { FriendsListButton } from './components/FriendsListButton';
 import { FriendsHubTutorialMount } from './components/FriendsHubTutorialMount';
 import { WeeklyCommunityStrip } from './components/WeeklyCommunityStrip';
@@ -199,6 +200,15 @@ export function FriendsHubScreen(): React.ReactElement {
         <StaggeredEntry index={9}>
           <View style={{ backgroundColor: '#ffffff' }}>
             <TradeRoomsCard />
+          </View>
+        </StaggeredEntry>
+
+        <FeedDivider />
+
+        {/* ─── Join the WhatsApp community ─── */}
+        <StaggeredEntry index={10}>
+          <View style={{ backgroundColor: '#ffffff' }}>
+            <WhatsAppCommunityCard />
           </View>
         </StaggeredEntry>
       </ScrollView>
