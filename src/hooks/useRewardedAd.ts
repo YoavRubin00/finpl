@@ -92,6 +92,33 @@ let graceTimer: ReturnType<typeof setTimeout> | null = null;
 // follow it for compliance. Kept in sync by useRewardedAd's effect + each load.
 let latestIsMinor = false;
 
+// ───────────────────────────── AdMob init gate
+// play-services-ads 25+ THROWS IllegalStateException from setAppMuted /
+// setAppVolume / setRequestConfiguration / createForAdRequest if they run before
+// MobileAds.initialize() has RESOLVED — and it throws asynchronously on a native
+// thread, so the JS try/catch around setAdsMuted CANNOT catch it → FATAL crash
+// (the 2026-07-03 boot crash for logged-in users: a rewarded-ad consumer mounted
+// and muted ads before app/_layout's init effect finished; a race the heavy OTA
+// startup made deterministic). Gate every native ad call behind this flag; the
+// flag is flipped by markAdsInitialized() once _layout's initialize() resolves.
+let adsInitialized = false;
+// A load requested while init was still pending — flushed on markAdsInitialized.
+let pendingLoadMinor: boolean | null = null;
+
+/**
+ * Called by app/_layout AFTER MobileAds.initialize() resolves. Opens the gate so
+ * ad calls are safe, and flushes any load that was deferred while init was still
+ * in flight. Idempotent — extra calls are harmless.
+ */
+export function markAdsInitialized(): void {
+  adsInitialized = true;
+  if (pendingLoadMinor !== null) {
+    const minor = pendingLoadMinor;
+    pendingLoadMinor = null;
+    loadAdSingleton(minor);
+  }
+}
+
 // Subscribers (hooks) notified when isAdLoaded flips, so each useRewardedAd()
 // re-renders with the current readiness.
 const loadedListeners = new Set<(v: boolean) => void>();
@@ -110,7 +137,10 @@ function setLoaded(v: boolean): void {
 // Net effect: ad audio is heard if, and only if, the user opened the ad via
 // the "watch ad" button — never spontaneously in the background.
 function setAdsMuted(muted: boolean): void {
-  if (!AdsModule) return;
+  // Never touch the native ad instance before initialize() resolved — the throw
+  // is async/native and would crash the app, not hit this catch. See the init
+  // gate above.
+  if (!AdsModule || !adsInitialized) return;
   try {
     const inst = AdsModule.default();
     inst.setAppMuted(muted);
@@ -142,10 +172,18 @@ function loadAdSingleton(isMinor: boolean): void {
   // Record the value this load tagged with so later self-reschedules read
   // the freshest age-group signal rather than a stale captured param.
   latestIsMinor = isMinor;
-  if (isLoading || currentAd || !AdsModule) {
-    if (!AdsModule) console.warn("[AdMob] loadAd skipped — AdsModule unavailable");
+  if (!AdsModule) {
+    console.warn("[AdMob] loadAd skipped — AdsModule unavailable");
     return;
   }
+  if (!adsInitialized) {
+    // Defer the WHOLE load until MobileAds.initialize() resolves — setAdsMuted,
+    // setRequestConfiguration and createForAdRequest below all throw a native
+    // FATAL if called first. markAdsInitialized() flushes this.
+    pendingLoadMinor = isMinor;
+    return;
+  }
+  if (isLoading || currentAd) return;
   isLoading = true;
   const mod = AdsModule;
 

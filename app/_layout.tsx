@@ -367,6 +367,14 @@ function RootLayoutInner() {
         const ads = mobileAds();
         ads.initialize()
           .then(() => {
+            // Open the useRewardedAd init gate FIRST — any ad consumer that
+            // mounted during startup deferred its load (setAppMuted before init
+            // throws a native FATAL on play-services-ads 25+); this flushes it.
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              const { markAdsInitialized } = require("../src/hooks/useRewardedAd");
+              markAdsInitialized();
+            } catch { /* hook module unavailable in dev without native build */ }
             // Start fully muted. Ad audio is unmuted only for the brief window
             // of an explicitly user-initiated rewarded show() (useRewardedAd).
             // Prevents iOS from leaking a preloaded video ad's audio in the
