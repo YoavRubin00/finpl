@@ -378,18 +378,6 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
       },
     ],
   },
-  // Day-0 lounge holdout (Yoav 2026-07-03): among mod-0-1-chest completers, show
-  // the lounge to ~50% (treatment) and hold it from ~50% (control) to measure the
-  // day-0 lounge's D1/D7 return lift. 2 arms, no conversion recorded → stays
-  // ~50/50; return is read BY ARM via the person-property breakdown in the bandit
-  // dashboard. Reversible: pin the winning arm here once we have the read.
-  day0_lounge: {
-    goal: 'retention',
-    variants: [
-      { id: 'day0_lounge_show', label: 'show', payload: { show: true } },
-      { id: 'day0_lounge_hide', label: 'hide', payload: { show: false } },
-    ],
-  },
 };
 
 export function getVariantPayload<E extends ExperimentId>(

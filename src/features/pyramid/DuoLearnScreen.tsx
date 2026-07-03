@@ -136,7 +136,6 @@ import { MondialMailBadge } from "../mondial/MondialMailBadge";
 import { MondialCarouselSheet } from "../mondial/MondialCarouselSheet";
 import { useMondialStore } from "../mondial/useMondialStore";
 import { StreakClubEntryCard } from "../streak-club/StreakClubEntryCard";
-import { Day0LoungeBanditGate } from "../streak-club/Day0LoungeBanditGate";
 import { StreakLoungeSheet } from "../streak-club/StreakLoungeSheet";
 import { useStreakClubStore } from "../streak-club/useStreakClubStore";
 import { MONDIAL_LAUNCH_DATE, localDateISO } from "../mondial/mondialCarouselData";
@@ -2734,16 +2733,10 @@ export function DuoLearnScreen() {
       {mondialBadgeVisible ? (
         <MondialMailBadge isNew={!mondialOpenedAt} onPress={handleMondialBadgePress} />
       ) : null}
-      {/* Day-0 lounge A/B (Yoav 3.7): mod-0-1-chest completers split 50/50 —
-          treatment sees the lounge, control (holdout) doesn't; return measured by
-          arm in the bandit dashboard. Pre-0-1 users see it normally (not in test). */}
-      {localCompletedModuleIds.includes('mod-0-1') ? (
-        <Day0LoungeBanditGate streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
-      ) : (
-        <StreakClubEntryCard streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
-      )}
+      {/* יום-0 hook (ים 3.7): מופיע גם ל-streak=0 במצב טיזר-נעול. locked=streak<1 מטופל בכרטיס. */}
+      <StreakClubEntryCard streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
     </View>
-  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, clubStreak, clubHasUnseen, handleStreakClubPress, localCompletedModuleIds]);
+  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, clubStreak, clubHasUnseen, handleStreakClubPress]);
 
   const activeQuestPathNodeProps = useMemo(() => ({
     completedCount: questCompletedCount,
