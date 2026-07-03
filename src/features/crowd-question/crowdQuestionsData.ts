@@ -196,4 +196,76 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
       topic: 'sp500',
     },
   },
+
+  // ── Community-reflection questions (Yoav 2026-07-03) — the same "what would
+  //    you do / who wins long-term" prompts he runs in the WhatsApp community,
+  //    adapted to the 2-option crowd format. These are OPINION questions: their
+  //    topics carry no live-market label, so they never auto-resolve — the card
+  //    just gathers the community's take and shows it honestly ("עדיין אוספים
+  //    הצבעות"), never a fabricated majority. baselinePct is a neutral 50/50
+  //    (nothing invented) and is not displayed as crowd sentiment.
+  {
+    id: 'cq-index-vs-stocks-longterm',
+    text: 'מי ינצח לטווח ארוך: מדד רחב או בחירת מניות ספציפיות?',
+    termExplanation: {
+      title: 'מדד מול בחירת מניות',
+      body: 'מדד רחב (כמו S&P 500) קונה נתח קטן מהרבה חברות בבת אחת — פיזור מקסימלי, בלי לבחור מנצחות. בחירת מניות ספציפיות יכולה לתת יותר אם צדקתם, אבל גם סיכון גדול יותר אם טעיתם. רוב המשקיעים המקצועיים לא מנצחים את המדד הרחב לאורך זמן — בדיוק השאלה למחשבה.',
+    },
+    options: [
+      { id: 'a', label: 'מדד רחב', emoji: '📊', sentiment: 'yes' },
+      { id: 'b', label: 'מניות ספציפיות', emoji: '🎯', sentiment: 'no' },
+    ],
+    baselinePct: [50, 50],
+    baselineN: 1990,
+    tags: {
+      timing: 'evergreen',
+      topic: 'sp500',
+    },
+  },
+  {
+    id: 'cq-stocks-vs-deposit-year',
+    text: 'מי יעשה לכם יותר תשואה השנה: שוק המניות או פיקדון בבנק?',
+    options: [
+      { id: 'a', label: 'שוק המניות', emoji: '📈', sentiment: 'yes' },
+      { id: 'b', label: 'פיקדון בבנק', emoji: '🏦', sentiment: 'no' },
+    ],
+    baselinePct: [50, 50],
+    baselineN: 1760,
+    tags: {
+      timing: 'evergreen',
+      topic: 'macro',
+    },
+  },
+  {
+    id: 'cq-diversify-currency',
+    text: 'עדיף לפזר בין דולר לשקל, מאשר להחזיק רק מטבע אחד?',
+    termExplanation: {
+      title: 'למה לפזר מטבעות?',
+      body: 'כשכל הכסף בשקל, ירידה של השקל מול הדולר מוחקת כוח קנייה על מוצרים מיובאים. כשהכל בדולר — ההפך. פיזור בין השניים מקטין את התלות בתנועה של מטבע בודד. בחצי השנה האחרונה הדולר ירד כ-6% מול השקל — מי שפיזר הרגיש את זה פחות.',
+    },
+    options: [
+      { id: 'a', label: 'כן, לפזר', emoji: '✅', sentiment: 'yes' },
+      { id: 'b', label: 'לא, מטבע אחד', emoji: '❌', sentiment: 'no' },
+    ],
+    baselinePct: [50, 50],
+    baselineN: 1680,
+    tags: {
+      timing: 'evergreen',
+      topic: 'usd_ils',
+    },
+  },
+  {
+    id: 'cq-sell-or-hold-10pct',
+    text: 'מנייה שקניתם קפצה 10% ביום. מוכרים עכשיו או מחזיקים?',
+    options: [
+      { id: 'a', label: 'מוכר, לוקח רווח', emoji: '💰', sentiment: 'yes' },
+      { id: 'b', label: 'מחזיק לטווח ארוך', emoji: '💎', sentiment: 'no' },
+    ],
+    baselinePct: [50, 50],
+    baselineN: 1850,
+    tags: {
+      timing: 'evergreen',
+      topic: 'earnings',
+    },
+  },
 ];
