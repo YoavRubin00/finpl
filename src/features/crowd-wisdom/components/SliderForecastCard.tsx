@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, PanResponder, type LayoutChangeEvent } from 'react-native';
+import { useNavigation } from 'expo-router';
 import { Brain, Lock } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 
@@ -61,11 +62,37 @@ export function SliderForecastCard(): React.ReactElement | null {
   const widthRef = useRef(trackWidth);
   widthRef.current = trackWidth;
 
+  // Toggle the stack's swipe-back gesture off for the duration of a drag so a
+  // fast horizontal slide can never pop the screen, then restore it on release
+  // (keeps swipe-back working everywhere else on the screen). Cast is localized
+  // — expo-router's useNavigation is generically typed but the native-stack
+  // does accept gestureEnabled via setOptions.
+  const navigation = useNavigation();
+  const setSwipeBackRef = useRef<(enabled: boolean) => void>(() => {});
+  setSwipeBackRef.current = (enabled: boolean): void => {
+    try {
+      (navigation as unknown as { setOptions: (o: { gestureEnabled: boolean }) => void })
+        .setOptions({ gestureEnabled: enabled });
+    } catch {
+      /* non-fatal */
+    }
+  };
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      // Claim the gesture in the CAPTURE phase and refuse to hand it back —
+      // otherwise a fast horizontal drag on the track is stolen by the stack
+      // navigator's swipe-back and pops the whole screen mid-drag (Yoav
+      // 2026-07-03: "מזיזים את הבר מהר → חוזר לעמוד הקודם"). Capturing here also
+      // blocks the native pop recognizer from ever starting.
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: (evt) => {
+        setSwipeBackRef.current(false);
         const r = rangeRef.current;
         const w = widthRef.current;
         if (!r || w <= 0) return;
@@ -82,6 +109,8 @@ export function SliderForecastCard(): React.ReactElement | null {
         const raw = r.min + (clampedX / w) * (r.max - r.min);
         setValue(Math.max(r.min, Math.min(r.max, Math.round(raw / r.step) * r.step)));
       },
+      onPanResponderRelease: () => setSwipeBackRef.current(true),
+      onPanResponderTerminate: () => setSwipeBackRef.current(true),
     }),
   ).current;
 
