@@ -31,6 +31,7 @@ import { SPRING_SMOOTH } from "../../utils/animations";
 import { heavyHaptic, tapHaptic } from "../../utils/haptics";
 import { CLASH, STITCH } from "../../constants/theme";
 import { ConfettiExplosion } from "./ConfettiExplosion";
+import { captureEvent } from "../../lib/posthog";
 import { SparkleOverlay } from "./SparkleOverlay";
 import { LottieIcon } from "./LottieIcon";
 import { GoldCoinIcon } from "./GoldCoinIcon";
@@ -544,7 +545,13 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
 
         {!compact && (
           <Pressable
-            onPress={() => { tapHaptic(); router.push("/(tabs)/profile" as never); }}
+            onPress={() => {
+              tapHaptic();
+              // Yam's condition on the confetti burst change (2026-07-03):
+              // banner taps must be measurable to run the >20%-drop guardrail.
+              captureEvent("wealth_banner_tapped");
+              router.push("/(tabs)/profile" as never);
+            }}
             accessibilityRole="button"
             accessibilityLabel="פרופיל"
             accessibilityHint="עבור לעמוד הפרופיל"
@@ -567,15 +574,21 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                 profileIsGlowTarget ? walkthroughProfileStyle : profileGlowStyle,
                 isPro && { elevation: 3 },
               ]}>
-              {/* Prominent confetti — wraps the WHOLE banner (not just the
-                  avatar) and bigger / faster than before to draw the eye
-                  and invite a tap. */}
+              {/* Prominent confetti — wraps the WHOLE banner to draw the eye
+                  and invite a tap. Periodic burst, NOT a perpetual loop: this
+                  header mounts under EVERY tab, and the always-on 120px
+                  SOFTWARE-rendered loop was the app's single heaviest idle
+                  animation (2026-07-03 "תרדד אנימציות בלי לפגוע ב-UX"). One
+                  cycle on mount + one every 30s (Yoav's cadence) keeps the
+                  recurring eye-draw — motion onset beats a loop the eye has
+                  habituated to — at a fraction of the duty cycle. */}
               <View style={{ position: "absolute", top: -18, left: -18, right: -18, bottom: -18, pointerEvents: "none" }}>
                 <LottieIcon
                   source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json") as number}
                   size={Math.max(80, Math.round(120 * d.scale))}
                   autoPlay
-                  loop
+                  loop={false}
+                  burstEveryMs={30_000}
                   speed={0.5}
                   active={appActive}
                 />
