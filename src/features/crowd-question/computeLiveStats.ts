@@ -3,7 +3,12 @@ import { fetchCrowdStats, type CrowdQuestionStats } from '../../db/sync/syncCrow
 import { getIsraelDateISO, msUntilNextIsraelMidnight } from '../../utils/israelTime';
 import type { CrowdOption } from './types';
 
-const POLL_INTERVAL_MS = 8_000;
+// Live vote counts barely move minute-to-minute, but this hook mounts inside a
+// full-screen popup/pearl that can stay open indefinitely — an 8s poll there
+// meant a network round-trip + re-render + width animation every 8s forever,
+// feeding the "device runs hot" reports (2026-07-03). 30s keeps it "live"
+// enough while cutting the continuous churn ~4×.
+const POLL_INTERVAL_MS = 30_000;
 
 export interface LivePercents {
   pctA: number;
