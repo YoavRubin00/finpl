@@ -67,11 +67,22 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
             {A.subtitle}
           </Text>
         </View>
-        <Image
-          source={require('../../../assets/webp/fin-happy.webp')}
-          style={{ width: 44, height: 44 }}
-          resizeMode="contain"
-        />
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: DUO.blueSurface,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Image
+            source={require('../../../assets/webp/fin-happy.webp')}
+            style={{ width: 34, height: 34 }}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       {/* Filter chips */}

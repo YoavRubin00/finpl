@@ -412,7 +412,22 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
                 opacity: rephrasing || moderating ? 0.6 : 1,
               })}
             >
-              {/* AI badge/pill — signals this is an AI action */}
+              {/* Captain Shark webp beside the label — makes it unmistakably the
+                  "let Shark help me phrase it" AI action (Yoav 2026-07-03). The
+                  spinner replaces the mascot only while it's actively working. */}
+              {rephrasing ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Image
+                  source={require('../../../assets/webp/fin-tablet-1.webp')}
+                  style={{ width: 30, height: 30 }}
+                  resizeMode="contain"
+                />
+              )}
+              <Text style={{ fontSize: 15, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>
+                {rephrasing ? A.composeRephrasing : originalDraft ? A.composeRephraseRevert : A.composeRephraseWithShark}
+              </Text>
+              {/* AI affordance pill — signals this is an AI assist, not a manual edit */}
               <View
                 style={{
                   backgroundColor: '#ffffff',
@@ -423,14 +438,6 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
               >
                 <Text style={{ fontSize: 11, fontWeight: '900', color: DUO.blue, letterSpacing: 0.5 }}>AI</Text>
               </View>
-              {rephrasing ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <Image source={require('../../../assets/webp/fin-standard.webp')} style={{ width: 22, height: 22 }} resizeMode="contain" />
-              )}
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#ffffff', writingDirection: 'rtl' }}>
-                {rephrasing ? A.composeRephrasing : originalDraft ? A.composeRephraseRevert : A.composeRephraseWithShark}
-              </Text>
             </Pressable>
           </View>
 

@@ -22,7 +22,7 @@ export const A = {
   composeImageHelp: 'תלוש שכר, צילום מסך מהבנק וכו׳. דאגו להסתיר פרטים מזהים (שם, ת״ז).',
   composeAddImage: 'בחרו תמונה 📷',
   composeRemoveImage: 'הסר תמונה',
-  composeRephraseWithShark: 'ניסוח מחדש עם שארק',
+  composeRephraseWithShark: 'עזור לי לנסח',
   composeRephrasing: 'שארק עובד על זה...',
   composeRephraseRevert: 'החזרת נוסח מקורי',
   composeSubmit: 'פרסום אנונימי',
