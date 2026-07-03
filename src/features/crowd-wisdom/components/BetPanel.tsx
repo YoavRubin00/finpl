@@ -18,6 +18,7 @@ import Animated, {
 import { tapHaptic, successHaptic, errorHaptic } from '../../../utils/haptics';
 import { useEconomy, useSpendCoins } from '../../economy/useEconomy';
 import { useAuthStore } from '../../auth/useAuthStore';
+import { requestGuestGate } from '../../auth/guestValueGate';
 import { tokenStore } from '../../../lib/auth/secureStore';
 import { fetchBetOdds, placeBet, type ChoiceOdds } from '../../../db/sync/syncCrowdBets';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
@@ -112,6 +113,13 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
   const handlePlace = async (): Promise<void> => {
     if (!selectedChoiceId || placing || placed) return;
     setError(null);
+    // Guests can't hold a prediction in the server ledger (it's keyed to a
+    // real account) — a stake attempt IS the conversion moment: show the
+    // register gate instead of sending a 'guest' bet (Yoav 2026-07-03 policy).
+    if (useAuthStore.getState().isGuest) {
+      requestGuestGate('prediction_attempt');
+      return;
+    }
     if (!Number.isFinite(stake) || stake < MIN_STAKE) {
       errorHaptic();
       setError(`המינימום לתחזית הוא ${MIN_STAKE} מטבעות.`);

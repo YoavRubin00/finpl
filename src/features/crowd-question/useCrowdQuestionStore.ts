@@ -6,6 +6,7 @@ import { getIsraelDateISO } from '../../utils/israelTime';
 import { CROWD_QUESTIONS } from './crowdQuestionsData';
 import { getCloudPolls } from './crowdQuestionsApi';
 import { buildSelectionContext, selectTodayQuestion } from './selectQuestion';
+import { requestGuestGate } from '../auth/guestValueGate';
 import { computeVerdict, type MarketDirection } from '../crowd-wisdom/lib/computeVerdict';
 import type { CrowdOption, CrowdQuestion, MarketSnapshot } from './types';
 
@@ -158,6 +159,9 @@ export const useCrowdQuestionStore = create<CrowdQuestionState>()(
           userVotes: { ...state.userVotes, [questionId]: optionId },
           voteTimestamps: { ...state.voteTimestamps, [questionId]: Date.now() },
         });
+        // Guest value-gate policy (Yoav 2026-07-03): the daily VS vote is a
+        // completed value action. Delayed past the reveal; self-guarded.
+        setTimeout(() => { requestGuestGate('daily_question_vote'); }, 2_500);
       },
 
       getVotingStreak: () => computeVotingStreak(get().votedDates),

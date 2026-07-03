@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { markDailyActivityCompleted } from '../../economy/useStreak';
+import { requestGuestGate } from '../../auth/guestValueGate';
 import { captureEvent } from '../../../lib/posthog';
 
 /**
@@ -32,6 +33,12 @@ export function useRecordToolUsage(enabled: boolean, toolKey?: string): void {
       markDailyActivityCompleted();
       try { captureEvent('tool_used', { tool_key: toolKey ?? 'unknown', threshold_seconds: 10 }); } catch { /* non-fatal */ }
     }, 10_000);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Guest value-gate policy (Yoav 2026-07-03): meaningful tool use is a
+      // completed value action — gate when the user LEAVES the tool (unmount),
+      // never mid-use. Self-guarded (guest-only + 2-min cooldown).
+      if (firedRef.current) requestGuestGate('tool_used');
+    };
   }, [enabled, toolKey]);
 }

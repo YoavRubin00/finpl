@@ -20,26 +20,33 @@ interface Props {
   visible: boolean;
   moduleId: string;
   onClose: () => void;
+  /** Analytics source; defaults to the original 'module_end'. The guest
+   *  value-gate host passes 'value_action' so funnels slice separately. */
+  source?: string;
+  /** Copy overrides — the defaults are lesson-flavored; the value-gate host
+   *  passes generic "save your progress" copy (Yoav 2026-07-03 policy). */
+  title?: string;
+  subtitle?: string;
 }
 
-export function ModuleEndSignupGate({ visible, moduleId, onClose }: Props): React.JSX.Element | null {
+export function ModuleEndSignupGate({ visible, moduleId, onClose, source = "module_end", title, subtitle }: Props): React.JSX.Element | null {
   const router = useRouter();
 
   useEffect(() => {
     if (!visible) return;
-    try { captureEvent("register_cta_shown", { source: "module_end", module_id: moduleId }); } catch { /* non-fatal */ }
-  }, [visible, moduleId]);
+    try { captureEvent("register_cta_shown", { source, module_id: moduleId }); } catch { /* non-fatal */ }
+  }, [visible, moduleId, source]);
 
   if (!visible) return null;
 
   const dismissAsGuest = (trigger: "backdrop" | "skip_button" | "system_back") => {
-    try { captureEvent("register_cta_continue_guest", { source: "module_end", module_id: moduleId, trigger }); } catch { /* non-fatal */ }
+    try { captureEvent("register_cta_continue_guest", { source, module_id: moduleId, trigger }); } catch { /* non-fatal */ }
     onClose();
   };
 
   const acceptRegister = () => {
     tapHaptic();
-    try { captureEvent("register_cta_accepted", { source: "module_end", module_id: moduleId }); } catch { /* non-fatal */ }
+    try { captureEvent("register_cta_accepted", { source, module_id: moduleId }); } catch { /* non-fatal */ }
     onClose();
     router.replace(`/(auth)/register?returnTo=${encodeURIComponent("/(tabs)")}` as never);
   };
@@ -59,10 +66,10 @@ export function ModuleEndSignupGate({ visible, moduleId, onClose }: Props): Reac
         >
           <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 88, height: 88, marginBottom: 12 }} contentFit="contain" />
           <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
-            עוד שיעור בכיס 🎉
+            {title ?? "עוד שיעור בכיס 🎉"}
           </Text>
           <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
-            הירשמו כדי לשמור את ההתקדמות ולחזור אליה בכל מכשיר
+            {subtitle ?? "הירשמו כדי לשמור את ההתקדמות ולחזור אליה בכל מכשיר"}
           </Text>
           <Pressable
             onPress={acceptRegister}

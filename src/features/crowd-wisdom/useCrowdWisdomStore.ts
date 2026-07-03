@@ -1,6 +1,7 @@
 import { create, type StateCreator } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from "../../lib/zustandStorage";
+import { requestGuestGate } from "../auth/guestValueGate";
 import type { UserVote, ResolvedOutcome } from "./types";
 
 /**
@@ -63,6 +64,10 @@ const createCrowdWisdom: StateCreator<CrowdWisdomState> = (set, get) => ({
       longestStreak: newLongest,
       totalVotes: state.totalVotes + 1,
     });
+    // Guest value-gate policy (Yoav 2026-07-03): a cast vote is a completed
+    // value action. Delay past the distribution reveal so the reward moment
+    // lands first; requestGuestGate self-guards (guest-only + 2-min cooldown).
+    setTimeout(() => { requestGuestGate('crowd_vote'); }, 2_500);
   },
 
   recordOutcome: (outcome) => {

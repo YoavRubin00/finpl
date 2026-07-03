@@ -17,6 +17,7 @@ import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { queryClient } from '../../lib/queryClient';
 import { streakQueryKey, markDailyActivityCompleted } from '../economy/useStreak';
 import { useDailyQuestsStore } from '../daily-quests/useDailyQuestsStore';
+import { requestGuestGate } from '../auth/guestValueGate';
 import type { StreakState } from '../../lib/api/streak';
 import type { DailyChallenge, ItemAnswer } from './types';
 
@@ -282,6 +283,10 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         if (typeof addGems === 'function' && reward.gems > 0) addGems(reward.gems);
 
         set({ regularChestOpened: true });
+        // Guest value-gate policy (Yoav 2026-07-03): finishing the daily news
+        // challenge (chest claimed) is a value action. Delay past the reward
+        // burst; self-guarded (guest-only + 2-min cooldown).
+        setTimeout(() => { requestGuestGate('daily_news_done'); }, 2_500);
         return reward;
       },
 
