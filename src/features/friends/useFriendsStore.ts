@@ -1,78 +1,123 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { zustandStorage } from '../../lib/zustandStorage';
-import type { CommunityProfile } from './friendsTypes';
-import { FRIEND_PROFILES } from './friendsData';
+import { useAuthStore } from '../auth/useAuthStore';
+import { tokenStore } from '../../lib/auth/secureStore';
+import { captureEvent } from '../../lib/posthog';
+import {
+  fetchFriendGraph,
+  sendFriendRequestApi,
+  respondFriendRequestApi,
+  removeFriendApi,
+  type FriendView,
+  type FriendRequestView,
+} from '../../db/sync/syncFriends';
 
+/**
+ * SERVER-BACKED friend graph (Yoav 2026-07-03: "הוסף חבר" must actually work).
+ * Replaces the old local store whose sendFriendRequest was a guaranteed no-op
+ * (it only accepted ids from the permanently-empty FRIEND_PROFILES list — the
+ * 2026-07-03 audit's #1 broken finding). The server (/api/friends/graph +
+ * friendships table) is the single source of truth; this store is a thin
+ * client cache with optimistic outgoing state. NOT persisted — refresh() runs
+ * on every friends-screen mount, and stale friendship state is worse than a
+ * short spinner. Guests have no graph (friendship requires an account) — the
+ * screen gates them via requestGuestGate.
+ */
 interface FriendsState {
-  friendIds: string[];
-  pendingIds: string[];
-
-  /**
-   * Adds the id to pending. P0-2: there is NO auto-approval simulation — a real
-   * friend graph will move pending→friend via a server callback. Until then a
-   * request stays honestly pending (no fabricated "accepted" bot).
-   */
-  sendFriendRequest: (id: string) => void;
-  removeFriend: (id: string) => void;
-  /** FRIEND_PROFILES merged with the current friendship state. */
-  getProfiles: () => CommunityProfile[];
+  friends: FriendView[];
+  incoming: FriendRequestView[];
+  outgoing: FriendRequestView[];
+  loading: boolean;
+  /** True once a refresh() has completed (success OR failure) — lets the UI
+   *  distinguish "loading" from a real, honest empty state. */
+  loaded: boolean;
+  refresh: () => Promise<void>;
+  /** Send a request to a directory-search result. Optimistic: the target id is
+   *  added to `outgoing` immediately; a failed call rolls it back. Returns the
+   *  server state ('pending' | 'friends') or null on failure/guest. */
+  request: (target: FriendView) => Promise<'pending' | 'friends' | null>;
+  respond: (requestId: string, accept: boolean) => Promise<void>;
+  removeFriend: (targetUserId: string) => Promise<void>;
 }
 
-export const useFriendsStore = create<FriendsState>()(
-  persist(
-    (set, get) => ({
-      friendIds: [],
-      pendingIds: [],
+async function authArgs(): Promise<{ authId: string; syncToken: string | null } | null> {
+  const auth = useAuthStore.getState();
+  if (auth.isGuest || !auth.email) return null;
+  const syncToken = await tokenStore.get();
+  return { authId: auth.email, syncToken };
+}
 
-      sendFriendRequest: (id) => {
-        const { friendIds, pendingIds } = get();
-        if (friendIds.includes(id) || pendingIds.includes(id)) return;
-        // Only real, known profiles can be befriended. FRIEND_PROFILES is empty
-        // until a real friend-graph endpoint exists, so this is a safe no-op
-        // today. NO auto-approve timer — no fabricated acceptance.
-        if (!FRIEND_PROFILES.some((p) => p.id === id)) return;
-        set((state) => ({ pendingIds: [...state.pendingIds, id] }));
-      },
+export const useFriendsStore = create<FriendsState>()((set, get) => ({
+  friends: [],
+  incoming: [],
+  outgoing: [],
+  loading: false,
+  loaded: false,
 
-      removeFriend: (id) => {
-        set((state) => ({
-          friendIds: state.friendIds.filter((f) => f !== id),
-          pendingIds: state.pendingIds.filter((p) => p !== id),
-        }));
-      },
-
-      getProfiles: () => {
-        const { friendIds, pendingIds } = get();
-        return FRIEND_PROFILES.map((profile) => ({
-          ...profile,
-          isFriend: friendIds.includes(profile.id),
-          requestPending: pendingIds.includes(profile.id),
-        }));
-      },
-    }),
-    {
-      name: 'friends-storage',
-      storage: createJSONStorage(() => zustandStorage),
-      partialize: (state) => ({
-        friendIds: state.friendIds,
-        pendingIds: state.pendingIds,
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        // Prune to ids that correspond to a real known profile. Because the old
-        // build auto-"approved" fabricated bots, any persisted friendIds/
-        // pendingIds are stale fakes; with FRIEND_PROFILES empty this clears
-        // them, so no fabricated friend count leaks into the UI. NO pending→
-        // friend auto-flip.
-        const valid = new Set(FRIEND_PROFILES.map((p) => p.id));
-        state.friendIds = Array.isArray(state.friendIds)
-          ? state.friendIds.filter((id) => valid.has(id))
-          : [];
-        state.pendingIds = Array.isArray(state.pendingIds)
-          ? state.pendingIds.filter((id) => valid.has(id))
-          : [];
-      },
+  refresh: async () => {
+    const args = await authArgs();
+    if (!args) {
+      set({ friends: [], incoming: [], outgoing: [], loading: false, loaded: true });
+      return;
     }
-  )
-);
+    if (get().loading) return;
+    set({ loading: true });
+    try {
+      const graph = await fetchFriendGraph(args);
+      set({ ...graph, loading: false, loaded: true });
+    } catch {
+      // Keep whatever we had; the screen shows its own retry affordance.
+      set({ loading: false, loaded: true });
+    }
+  },
+
+  request: async (target) => {
+    const args = await authArgs();
+    if (!args) return null;
+    // Optimistic: show the pending chip immediately.
+    const prev = get().outgoing;
+    if (!prev.some((r) => r.id === target.id) && !get().friends.some((f) => f.id === target.id)) {
+      set({ outgoing: [...prev, { ...target, requestId: `optimistic-${target.id}` }] });
+    }
+    try {
+      const state = await sendFriendRequestApi({ ...args, targetUserId: target.id });
+      try { captureEvent('friend_request_sent', { result: state }); } catch { /* non-fatal */ }
+      // Pull the truth (also picks up an instant mutual-accept). Fire-and-forget.
+      void get().refresh();
+      return state === 'friends' ? 'friends' : 'pending';
+    } catch {
+      set({ outgoing: get().outgoing.filter((r) => r.id !== target.id) });
+      return null;
+    }
+  },
+
+  respond: async (requestId, accept) => {
+    const args = await authArgs();
+    if (!args) return;
+    // Optimistic: move/remove the incoming row immediately.
+    const row = get().incoming.find((r) => r.requestId === requestId);
+    set({ incoming: get().incoming.filter((r) => r.requestId !== requestId) });
+    if (row && accept) set({ friends: [...get().friends, row] });
+    try {
+      await respondFriendRequestApi({ ...args, requestId, accept });
+      try { captureEvent('friend_request_responded', { accepted: accept }); } catch { /* non-fatal */ }
+    } catch {
+      /* refresh() below restores the truth on failure */
+    }
+    void get().refresh();
+  },
+
+  removeFriend: async (targetUserId) => {
+    const args = await authArgs();
+    if (!args) return;
+    set({
+      friends: get().friends.filter((f) => f.id !== targetUserId),
+      outgoing: get().outgoing.filter((r) => r.id !== targetUserId),
+    });
+    try {
+      await removeFriendApi({ ...args, targetUserId });
+    } catch {
+      /* refresh restores the truth */
+    }
+    void get().refresh();
+  },
+}));

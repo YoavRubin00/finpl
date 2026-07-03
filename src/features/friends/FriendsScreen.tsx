@@ -5,21 +5,19 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Modal,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ChevronRight, ChevronLeft, Search, X, Gift } from 'lucide-react-native';
-import { useShallow } from 'zustand/react/shallow';
 import { AvatarImage } from '../avatars/AvatarImage';
 import { tapHaptic } from '../../utils/haptics';
 import { useFriendsStore } from './useFriendsStore';
-import { FRIEND_PROFILES } from './friendsData';
-import type { CommunityProfile } from './friendsTypes';
 import { useAuthStore } from '../auth/useAuthStore';
+import { requestGuestGate } from '../auth/guestValueGate';
 import { tokenStore } from '../../lib/auth/secureStore';
 import { searchUsers, type UserSearchResult } from '../../db/sync/searchUsers';
+import type { FriendView, FriendRequestView } from '../../db/sync/syncFriends';
 
 /** Minimum characters before we hit the directory search endpoint. */
 const MIN_QUERY_LEN = 2;
@@ -37,23 +35,16 @@ const COLORS = {
   pendingBg: '#e5e7eb',
 } as const;
 
-function formatCoins(coins: number): string {
-  return coins.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+interface GraphFriendRowProps {
+  friend: FriendView;
+  onRemove: (id: string) => void;
 }
 
-interface ProfileRowProps {
-  profile: CommunityProfile;
-  onOpen: (id: string) => void;
-  onPrimaryAction: (id: string) => void;
-}
-
-/** Friend row: avatar + name + level + coins, small "הסרה" button. */
-function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React.ReactElement {
+/** Accepted-friend row (server graph): avatar + name + level, "הסרה" button.
+ *  Only privacy-safe fields — never coins/PII of другого user. */
+function GraphFriendRow({ friend, onRemove }: GraphFriendRowProps): React.ReactElement {
   return (
-    <Pressable
-      onPress={() => onOpen(profile.id)}
-      accessibilityRole="button"
-      accessibilityLabel={`פרופיל של ${profile.name}`}
+    <View
       style={{
         flexDirection: 'row-reverse',
         alignItems: 'center',
@@ -64,7 +55,7 @@ function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
         marginBottom: 8,
       }}
     >
-      <AvatarImage avatarId={profile.avatarId} size={48} />
+      <AvatarImage avatarId={friend.avatarUrl} size={48} />
       <View style={{ flex: 1 }}>
         <Text
           maxFontSizeMultiplier={1.2}
@@ -76,7 +67,7 @@ function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
             textAlign: 'right',
           }}
         >
-          {profile.name} · {profile.title}
+          {friend.displayName}
         </Text>
         <Text
           maxFontSizeMultiplier={1.2}
@@ -88,13 +79,13 @@ function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
             marginTop: 2,
           }}
         >
-          רמה {profile.level} · {formatCoins(profile.coinsWon)} מטבעות
+          רמה {friend.level}
         </Text>
       </View>
       <Pressable
-        onPress={() => onPrimaryAction(profile.id)}
+        onPress={() => onRemove(friend.id)}
         accessibilityRole="button"
-        accessibilityLabel={`הסרה של ${profile.name} מהחברים`}
+        accessibilityLabel={`הסרה של ${friend.displayName} מהחברים`}
         hitSlop={8}
         style={{
           paddingHorizontal: 12,
@@ -109,13 +100,78 @@ function FriendRow({ profile, onOpen, onPrimaryAction }: ProfileRowProps): React
           הסרה
         </Text>
       </Pressable>
-    </Pressable>
+    </View>
+  );
+}
+
+/** Incoming friend-request row: name + accept/decline. */
+function IncomingRequestRow({
+  request,
+  onRespond,
+}: {
+  request: FriendRequestView;
+  onRespond: (requestId: string, accept: boolean) => void;
+}): React.ReactElement {
+  return (
+    <View
+      style={{
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: COLORS.card,
+        borderRadius: 16,
+        padding: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#bfdbfe',
+      }}
+    >
+      <AvatarImage avatarId={request.avatarUrl} size={48} />
+      <View style={{ flex: 1 }}>
+        <Text
+          maxFontSizeMultiplier={1.2}
+          style={{ fontSize: 15, fontWeight: '800', color: COLORS.text, writingDirection: 'rtl', textAlign: 'right' }}
+        >
+          {request.displayName}
+        </Text>
+        <Text
+          maxFontSizeMultiplier={1.2}
+          style={{ fontSize: 12, color: COLORS.muted, writingDirection: 'rtl', textAlign: 'right', marginTop: 2 }}
+        >
+          רוצה להיות חבר · רמה {request.level}
+        </Text>
+      </View>
+      <Pressable
+        onPress={() => onRespond(request.requestId, true)}
+        accessibilityRole="button"
+        accessibilityLabel={`אישור בקשת החברות של ${request.displayName}`}
+        hitSlop={8}
+        style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, backgroundColor: COLORS.blue }}
+      >
+        <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 12, fontWeight: '800', color: '#ffffff' }}>
+          אישור
+        </Text>
+      </Pressable>
+      <Pressable
+        onPress={() => onRespond(request.requestId, false)}
+        accessibilityRole="button"
+        accessibilityLabel={`דחיית בקשת החברות של ${request.displayName}`}
+        hitSlop={8}
+        style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border }}
+      >
+        <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>
+          דחייה
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
 interface UserResultRowProps {
   user: UserSearchResult;
   pending: boolean;
+  /** Already an accepted friend — renders a quiet "חברים" chip, no button. */
+  isFriend?: boolean;
   onAdd: (id: string) => void;
 }
 
@@ -125,7 +181,7 @@ interface UserResultRowProps {
  * (optional) avatar. NO coins/title/room (those would be fabricated). Blue
  * "הוספה" flips to "נשלחה בקשה" once a request is sent.
  */
-function UserResultRow({ user, pending, onAdd }: UserResultRowProps): React.ReactElement {
+function UserResultRow({ user, pending, isFriend, onAdd }: UserResultRowProps): React.ReactElement {
   return (
     <View
       style={{
@@ -165,7 +221,22 @@ function UserResultRow({ user, pending, onAdd }: UserResultRowProps): React.Reac
           רמה {user.level}
         </Text>
       </View>
-      {pending ? (
+      {isFriend ? (
+        <View
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 12,
+            backgroundColor: '#dcfce7',
+          }}
+          accessible
+          accessibilityLabel={`${user.displayName} כבר ברשימת החברים`}
+        >
+          <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 12, fontWeight: '700', color: '#15803d' }}>
+            חברים ✓
+          </Text>
+        </View>
+      ) : pending ? (
         <View
           style={{
             paddingHorizontal: 14,
@@ -295,18 +366,29 @@ function EmptyCard({ title, subtitle }: { title: string; subtitle?: string }): R
 }
 
 export function FriendsScreen(): React.ReactElement {
-  const { friendIds, pendingIds } = useFriendsStore(
-    useShallow((s) => ({ friendIds: s.friendIds, pendingIds: s.pendingIds }))
-  );
-  const sendFriendRequest = useFriendsStore((s) => s.sendFriendRequest);
+  // SERVER-BACKED graph (2026-07-03): friends/incoming/outgoing come from
+  // /api/friends/graph — the audit's #1 broken finding was the old local
+  // no-op store ("הוספה" did nothing). Arrays are stable store refs.
+  const graphFriends = useFriendsStore((s) => s.friends);
+  const incoming = useFriendsStore((s) => s.incoming);
+  const outgoing = useFriendsStore((s) => s.outgoing);
+  const graphLoaded = useFriendsStore((s) => s.loaded);
+  const refreshGraph = useFriendsStore((s) => s.refresh);
+  const requestFriend = useFriendsStore((s) => s.request);
+  const respondRequest = useFriendsStore((s) => s.respond);
   const removeFriend = useFriendsStore((s) => s.removeFriend);
+  const isGuest = useAuthStore((s) => s.isGuest);
 
   // The caller's identity for the authed directory search. Email is the real
   // cross-user key (auth_id) — same shape placeBet uses.
   const authId = useAuthStore((s) => s.email ?? 'guest');
 
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Load the real graph on mount (guests resolve to an honest empty state).
+  useEffect(() => {
+    void refreshGraph();
+  }, [refreshGraph]);
 
   // Real directory-search state (results come from /api/users/search — never
   // fabricated). `requestedIds` tracks add-buttons pressed this session so the
@@ -318,31 +400,24 @@ export function FriendsScreen(): React.ReactElement {
   const [requestedIds, setRequestedIds] = useState<Set<string>>(() => new Set());
   const searchSeqRef = useRef(0);
 
-  const profiles: CommunityProfile[] = useMemo(
-    () =>
-      FRIEND_PROFILES.map((profile) => ({
-        ...profile,
-        isFriend: friendIds.includes(profile.id),
-        requestPending: pendingIds.includes(profile.id),
-      })),
-    [friendIds, pendingIds]
-  );
-
   const query = search.trim();
   const isSearching = query.length > 0;
 
-  // Real accepted friends (from the store) — never fabricated.
-  const friends = useMemo(() => profiles.filter((p) => p.isFriend), [profiles]);
-  const hasAnyFriends = friends.length > 0;
+  // Real accepted friends (server graph) — never fabricated.
+  const hasAnyFriends = graphFriends.length > 0;
 
   // Friends filtered by the live query (so search narrows the list too).
   const matchingFriends = useMemo(
     () =>
       !isSearching
-        ? friends
-        : friends.filter((p) => p.name.includes(query) || p.title.includes(query)),
-    [friends, query, isSearching]
+        ? graphFriends
+        : graphFriends.filter((p) => p.displayName.includes(query)),
+    [graphFriends, query, isSearching]
   );
+
+  /** Search-result relationship state: hides "הוספה" when already sent/friends. */
+  const outgoingIds = useMemo(() => new Set(outgoing.map((r) => r.id)), [outgoing]);
+  const friendIdsSet = useMemo(() => new Set(graphFriends.map((f) => f.id)), [graphFriends]);
 
   const tooShort = isSearching && query.length < MIN_QUERY_LEN;
 
@@ -390,44 +465,48 @@ export function FriendsScreen(): React.ReactElement {
     };
   }, [debouncedQuery, authId]);
 
-  const selectedProfile = selectedId
-    ? profiles.find((p) => p.id === selectedId) ?? null
-    : null;
-
-  const handleSendRequest = (id: string): void => {
-    tapHaptic();
-    sendFriendRequest(id);
-  };
-
-  // Befriend a real user from the directory. We call the existing add-friend
-  // flow (sendFriendRequest) for forward-compat, and optimistically mark the
-  // request locally so the button flips immediately. There is no real
-  // friend-graph endpoint yet (a separate, product-approved deploy — see
-  // docs/REAL-SOCIAL-INFRA-PLAN.md §2), so the request stays honestly pending;
-  // no fabricated "accepted" bot ever flips it.
+  // Befriend a real user from the directory — a REAL server request now
+  // (friendships table). Guests hit the register gate instead (friendship is
+  // keyed to an account). Optimistic session state keeps the button flipped
+  // while the server round-trip completes; the store's outgoing list is the
+  // durable truth across visits.
   const handleAddUser = useCallback(
     (id: string): void => {
       tapHaptic();
-      sendFriendRequest(id);
+      if (useAuthStore.getState().isGuest) {
+        requestGuestGate('friend_request');
+        return;
+      }
+      const user = userResults.find((u) => u.id === id);
+      if (!user) return;
       setRequestedIds((prev) => {
         if (prev.has(id)) return prev;
         const next = new Set(prev);
         next.add(id);
         return next;
       });
+      void requestFriend({
+        id: user.id,
+        displayName: user.displayName,
+        level: user.level,
+        avatarUrl: user.avatarUrl,
+      });
     },
-    [sendFriendRequest]
+    [requestFriend, userResults]
   );
 
   const handleRemove = (id: string): void => {
     tapHaptic();
-    removeFriend(id);
+    void removeFriend(id);
   };
 
-  const handleOpenProfile = (id: string): void => {
-    tapHaptic();
-    setSelectedId(id);
-  };
+  const handleRespond = useCallback(
+    (requestId: string, accept: boolean): void => {
+      tapHaptic();
+      void respondRequest(requestId, accept);
+    },
+    [respondRequest]
+  );
 
   const handleClearSearch = (): void => {
     tapHaptic();
@@ -438,8 +517,6 @@ export function FriendsScreen(): React.ReactElement {
     tapHaptic();
     router.push('/referral' as never);
   };
-
-  const closeModal = (): void => setSelectedId(null);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }} edges={['top']}>
@@ -629,7 +706,8 @@ export function FriendsScreen(): React.ReactElement {
                 <UserResultRow
                   key={user.id}
                   user={user}
-                  pending={requestedIds.has(user.id)}
+                  pending={requestedIds.has(user.id) || outgoingIds.has(user.id)}
+                  isFriend={friendIdsSet.has(user.id)}
                   onAdd={handleAddUser}
                 />
               ))
@@ -637,248 +715,38 @@ export function FriendsScreen(): React.ReactElement {
           </View>
         ) : null}
 
-        {/* Your friends — real accepted friends only */}
-        <SectionTitle title="החברים שלך" count={friends.length} />
-        {!hasAnyFriends ? (
+        {/* Incoming friend requests — real pending rows from the server graph. */}
+        {incoming.length > 0 ? (
+          <View style={{ marginBottom: 22 }}>
+            <SectionTitle title="בקשות חברות" count={incoming.length} />
+            {incoming.map((request) => (
+              <IncomingRequestRow key={request.requestId} request={request} onRespond={handleRespond} />
+            ))}
+          </View>
+        ) : null}
+
+        {/* Your friends — real accepted friends only (server graph) */}
+        <SectionTitle title="החברים שלך" count={graphFriends.length} />
+        {!graphLoaded ? (
+          <LoadingCard />
+        ) : !hasAnyFriends ? (
           <EmptyCard
-            title="עוד אין לכם חברים — חפשו ותוסיפו את הראשונים"
-            subtitle="חפשו חבר למעלה לפי שם, או הזמינו חברים חדשים לאפליקציה."
+            title={isGuest ? 'הירשמו כדי להוסיף חברים' : 'עוד אין לכם חברים — חפשו ותוסיפו את הראשונים'}
+            subtitle={
+              isGuest
+                ? 'רשימת החברים נשמרת בחשבון — הירשמו וכל מה שצברתם יישמר.'
+                : 'חפשו חבר למעלה לפי שם, או הזמינו חברים חדשים לאפליקציה.'
+            }
           />
         ) : matchingFriends.length === 0 ? (
           <EmptyCard title="אין חבר בשם הזה ברשימה שלכם" />
         ) : (
-          matchingFriends.map((profile) => (
-            <FriendRow
-              key={profile.id}
-              profile={profile}
-              onOpen={handleOpenProfile}
-              onPrimaryAction={handleRemove}
-            />
+          matchingFriends.map((friend) => (
+            <GraphFriendRow key={friend.id} friend={friend} onRemove={handleRemove} />
           ))
         )}
       </ScrollView>
 
-      {/* Profile modal */}
-      <Modal
-        visible={selectedProfile !== null}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={closeModal}
-      >
-        {selectedProfile ? (
-          <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
-            {/* Modal header */}
-            <View
-              style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                backgroundColor: COLORS.card,
-                borderBottomWidth: 1,
-                borderBottomColor: COLORS.border,
-              }}
-            >
-              <Pressable
-                onPress={() => {
-                  tapHaptic();
-                  closeModal();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="סגירת הפרופיל"
-                hitSlop={12}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: COLORS.bg,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <X size={18} color={COLORS.text} />
-              </Pressable>
-            </View>
-
-            <ScrollView contentContainerStyle={{ padding: 24, alignItems: 'center' }}>
-              <AvatarImage avatarId={selectedProfile.avatarId} size={120} />
-              <Text
-                maxFontSizeMultiplier={1.2}
-                style={{
-                  fontSize: 22,
-                  fontWeight: '900',
-                  color: COLORS.text,
-                  writingDirection: 'rtl',
-                  textAlign: 'center',
-                  marginTop: 16,
-                }}
-              >
-                {selectedProfile.name}
-              </Text>
-              <Text
-                maxFontSizeMultiplier={1.2}
-                style={{
-                  fontSize: 15,
-                  color: COLORS.muted,
-                  writingDirection: 'rtl',
-                  textAlign: 'center',
-                  marginTop: 4,
-                }}
-              >
-                {selectedProfile.title}
-              </Text>
-
-              {/* Stats row */}
-              <View
-                style={{
-                  flexDirection: 'row-reverse',
-                  backgroundColor: COLORS.card,
-                  borderRadius: 16,
-                  padding: 16,
-                  marginTop: 24,
-                  alignSelf: 'stretch',
-                }}
-              >
-                <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 18, fontWeight: '900', color: COLORS.text }}>
-                    {selectedProfile.level}
-                  </Text>
-                  <Text
-                    maxFontSizeMultiplier={1.2}
-                    style={{
-                      fontSize: 12,
-                      color: COLORS.muted,
-                      writingDirection: 'rtl',
-                      textAlign: 'center',
-                      marginTop: 2,
-                    }}
-                  >
-                    רמה
-                  </Text>
-                </View>
-                <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text maxFontSizeMultiplier={1.2} style={{ fontSize: 18, fontWeight: '900', color: COLORS.text }}>
-                    {formatCoins(selectedProfile.coinsWon)}
-                  </Text>
-                  <Text
-                    maxFontSizeMultiplier={1.2}
-                    style={{
-                      fontSize: 12,
-                      color: COLORS.muted,
-                      writingDirection: 'rtl',
-                      textAlign: 'center',
-                      marginTop: 2,
-                    }}
-                  >
-                    מטבעות שהרוויח
-                  </Text>
-                </View>
-                <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text
-                    maxFontSizeMultiplier={1.2}
-                    style={{
-                      fontSize: 14,
-                      fontWeight: '900',
-                      color: COLORS.text,
-                      writingDirection: 'rtl',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {selectedProfile.favoriteRoom}
-                  </Text>
-                  <Text
-                    maxFontSizeMultiplier={1.2}
-                    style={{
-                      fontSize: 12,
-                      color: COLORS.muted,
-                      writingDirection: 'rtl',
-                      textAlign: 'center',
-                      marginTop: 2,
-                    }}
-                  >
-                    חדר מועדף
-                  </Text>
-                </View>
-              </View>
-
-              {/* Primary action */}
-              {selectedProfile.isFriend ? (
-                <Pressable
-                  onPress={() => handleRemove(selectedProfile.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`הסרה של ${selectedProfile.name} מהחברים`}
-                  style={{
-                    marginTop: 24,
-                    alignSelf: 'stretch',
-                    borderRadius: 16,
-                    paddingVertical: 14,
-                    alignItems: 'center',
-                    backgroundColor: COLORS.card,
-                    borderWidth: 1,
-                    borderColor: COLORS.danger,
-                  }}
-                >
-                  <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 15, fontWeight: '800', color: COLORS.danger }}>
-                    הסרת חברות
-                  </Text>
-                </Pressable>
-              ) : selectedProfile.requestPending ? (
-                <View
-                  style={{
-                    marginTop: 24,
-                    alignSelf: 'stretch',
-                    borderRadius: 16,
-                    paddingVertical: 14,
-                    alignItems: 'center',
-                    backgroundColor: COLORS.pendingBg,
-                  }}
-                  accessible
-                  accessibilityLabel="בקשת החברות נשלחה"
-                >
-                  <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 15, fontWeight: '800', color: COLORS.muted }}>
-                    נשלחה בקשה
-                  </Text>
-                </View>
-              ) : (
-                <Pressable
-                  onPress={() => handleSendRequest(selectedProfile.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`הוספת ${selectedProfile.name} לחברים`}
-                  style={{
-                    marginTop: 24,
-                    alignSelf: 'stretch',
-                    borderRadius: 16,
-                    paddingVertical: 14,
-                    alignItems: 'center',
-                    backgroundColor: COLORS.blue,
-                  }}
-                >
-                  <Text maxFontSizeMultiplier={1.15} style={{ fontSize: 15, fontWeight: '800', color: '#ffffff' }}>
-                    הוספה לחברים
-                  </Text>
-                </Pressable>
-              )}
-
-              {selectedProfile.requestPending ? (
-                <Text
-                  maxFontSizeMultiplier={1.3}
-                  style={{
-                    fontSize: 12,
-                    color: COLORS.muted,
-                    writingDirection: 'rtl',
-                    textAlign: 'center',
-                    marginTop: 10,
-                  }}
-                >
-                  הבקשה נשלחה. נעדכן אתכם כשהיא תאושר.
-                </Text>
-              ) : null}
-            </ScrollView>
-          </View>
-        ) : (
-          <View style={{ flex: 1, backgroundColor: COLORS.bg }} />
-        )}
-      </Modal>
     </SafeAreaView>
   );
 }

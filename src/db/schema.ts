@@ -405,3 +405,34 @@ export const parentalConsents = pgTable("parental_consents", {
   uniqueIndex("parental_consents_token_uniq").on(table.token),
   index("parental_consents_user_active_idx").on(table.userId, table.status, table.expiresAt),
 ]);
+
+// Real friend graph (Yoav 2026-07-03: "add friend" was a silent no-op with an
+// empty local list — the zero-fabrication rule forbids fake friends, so this
+// table is the genuine edge store). One row per directed request; mutual
+// friendship = a single row with status='accepted'. A reverse request while a
+// pending row exists is treated as acceptance (mutual intent).
+export const friendships = pgTable("friendships", {
+  id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+  requesterId: uuid("requester_id").notNull(),
+  addresseeId: uuid("addressee_id").notNull(),
+  // Constrained server-side to: 'pending' | 'accepted'
+  status: text().default('pending').notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+  foreignKey({
+    columns: [table.requesterId],
+    foreignColumns: [userProfiles.id],
+    name: "friendships_requester_fk",
+  }).onDelete("cascade"),
+  foreignKey({
+    columns: [table.addresseeId],
+    foreignColumns: [userProfiles.id],
+    name: "friendships_addressee_fk",
+  }).onDelete("cascade"),
+  unique("friendships_pair_uniq").on(table.requesterId, table.addresseeId),
+  index("idx_friendships_addressee_pending").on(table.addresseeId, table.status),
+  index("idx_friendships_requester").on(table.requesterId, table.status),
+  check("friendships_no_self", sql`requester_id <> addressee_id`),
+  check("friendships_status_check", sql`status IN ('pending', 'accepted')`),
+]);

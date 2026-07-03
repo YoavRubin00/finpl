@@ -27,7 +27,8 @@ import { tapHaptic } from '../../../utils/haptics';
 export function FriendsListButton(): React.ReactElement {
   const router = useRouter();
   const reduced = useReducedMotion();
-  const friendIds = useFriendsStore(useShallow((s) => s.friendIds));
+  // Server-backed graph (2026-07-03): badge counts REAL accepted friends.
+  const friendsCount = useFriendsStore((s) => s.friends.length);
 
   const shimmer = useSharedValue(0);
   useEffect(() => {
@@ -58,8 +59,8 @@ export function FriendsListButton(): React.ReactElement {
       onPress={handlePress}
       accessibilityRole="button"
       accessibilityLabel={
-        friendIds.length > 0
-          ? `החברים שלך — ${friendIds.length} חברים`
+        friendsCount > 0
+          ? `החברים שלך — ${friendsCount} חברים`
           : 'החברים שלך — הוסיפו חברים'
       }
       hitSlop={8}
@@ -83,10 +84,10 @@ export function FriendsListButton(): React.ReactElement {
         <Text style={styles.label} numberOfLines={1} maxFontSizeMultiplier={1.15}>
           החברים שלך
         </Text>
-        {friendIds.length > 0 && (
+        {friendsCount > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText} maxFontSizeMultiplier={1.15}>
-              {friendIds.length}
+              {friendsCount}
             </Text>
           </View>
         )}
