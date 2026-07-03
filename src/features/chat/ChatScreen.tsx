@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { Send, Check, CheckCheck, X } from "lucide-react-native";
+import { Send, Check, CheckCheck, X, Phone } from "lucide-react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -53,6 +53,7 @@ import type { CompanionAnimationState, ChatMessage, MessageStatus, ChatSuggestio
 import type { CompanionId } from "../auth/types";
 import { ProBadge } from "../../components/ui/ProBadge";
 import { useTutorialStore } from "../../stores/useTutorialStore";
+import { useFreeSharkCall } from "../shark-voice-chat/useFreeSharkCall";
 import { streamChatRequest } from "../../utils/streamChat";
 import { useHeartsStore } from "../subscription/useHeartsStore";
 import { captureEvent } from "../../lib/posthog";
@@ -574,6 +575,8 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   // the chat step — otherwise both modals stack and the picker steals focus
   // before the user even sees the overlay's CTA.
   const walkthroughOnChatStep = useTutorialStore((s) => s.walkthroughActiveScreen === 'chat');
+  // Live one-minute voice call with Captain Shark (header call button; Pro).
+  const freeCall = useFreeSharkCall();
   const [showStylePicker, setShowStylePicker] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -1085,9 +1088,30 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
                 {loading ? "מקליד..." : "מחובר"}
               </Text>
             </View>
+            {/* Live voice call with Captain Shark — WhatsApp-style call button
+                (Yoav 2026-07-03): one free-form minute, Pro-only (non-Pro taps
+                route to pricing). Hidden entirely on binaries without the
+                native voice SDK. */}
+            {freeCall.available ? (
+              <Pressable
+                onPress={freeCall.openCall}
+                style={headerStyles.callBtn}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="שיחה חיה עם קפטן שארק, דקה אחת, למנויי פרו"
+              >
+                <Phone size={18} color="#ffffff" fill="#ffffff" />
+                {!freeCall.isPro && (
+                  <View style={headerStyles.callProBadge}>
+                    <Text style={headerStyles.callProBadgeText} allowFontScaling={false}>PRO</Text>
+                  </View>
+                )}
+              </Pressable>
+            ) : null}
             {/* Settings gear removed, chat tone now in app Settings screen */}
           </View>
         </View>
+        {freeCall.modals}
 
         {/* Chat messages — the current turn is pinned to the top of the viewport */}
         <ScrollView
@@ -1280,6 +1304,37 @@ const headerStyles = StyleSheet.create({
     backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
+  },
+  // WhatsApp-style voice-call button (live shark call, Pro).
+  callBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#22c55e",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#22c55e",
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  callProBadge: {
+    position: "absolute",
+    top: -6,
+    left: -8,
+    backgroundColor: "#f59e0b",
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
+  },
+  callProBadgeText: {
+    fontSize: 8,
+    fontWeight: "900",
+    color: "#ffffff",
+    letterSpacing: 0.4,
   },
 });
 
