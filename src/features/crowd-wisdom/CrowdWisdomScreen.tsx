@@ -88,6 +88,13 @@ export function CrowdWisdomScreen(): React.ReactElement {
   const applyLiveBrackets = useCallback(
     (q: CrowdWisdomQuestion): CrowdWisdomQuestion => {
       if (q.category !== "forecast") return q;
+      // STAKE-vs-DISPLAY integrity: bettable questions settle server-side against
+      // the STATIC edges in BET_RESOLUTIONS (betResolution.ts), so the labels the
+      // predictor stakes on MUST stay the seed labels those edges match. Live
+      // re-anchoring here could show ranges that settlement never uses — a user
+      // could be right per screen and settled lost. Live labels are therefore
+      // reserved for vote-only (non-stakeable) forecasts.
+      if (q.bettable) return q;
       const liveLabel = LIVE_LABELS[q.id];
       if (!liveLabel) return q; // no live source (e.g. S&P year-end) — keep seed labels
       const rate = rates[liveLabel];

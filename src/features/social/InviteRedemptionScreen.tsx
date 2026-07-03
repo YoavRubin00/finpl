@@ -68,27 +68,38 @@ export function InviteRedemptionScreen() {
 
       // 2. If user is already onboarded, attempt immediate redeem.
       if (isAuthenticated && hasCompletedOnboarding && email) {
-        const result = await redeemReferralCode(code, email);
-        if (result) {
-          // Server granted 500 to both. Reflect locally for instant UX.
-          try { addCoins(result.bonusGranted); } catch { /* non-fatal */ }
-          // Clear pending marker — already redeemed.
+        try {
+          const result = await redeemReferralCode(code, email);
+          if (result) {
+            // Server granted 500 to both. Reflect locally for instant UX.
+            try { addCoins(result.bonusGranted); } catch { /* non-fatal */ }
+            // Clear pending marker — already redeemed.
+            try { await AsyncStorage.removeItem(PENDING_REFERRAL_KEY); } catch { /* ignore */ }
+            successHaptic();
+            setBonus(result.bonusGranted);
+            setStatus('redeemed');
+            setTimeout(() => {
+              try { router.replace('/(tabs)' as never); } catch { /* ignore */ }
+            }, 2200);
+            return;
+          }
+          // Server rejected (already redeemed / unknown / self-referral).
+          setStatus('already');
           try { await AsyncStorage.removeItem(PENDING_REFERRAL_KEY); } catch { /* ignore */ }
-          successHaptic();
-          setBonus(result.bonusGranted);
-          setStatus('redeemed');
           setTimeout(() => {
             try { router.replace('/(tabs)' as never); } catch { /* ignore */ }
-          }, 2200);
+          }, 1800);
+          return;
+        } catch {
+          // Network/server threw — never strand the user on an infinite
+          // spinner. The code is already saved (step 1), so the next-launch
+          // hook will redeem it; show the honest "saved" state and move on.
+          setStatus('saved');
+          setTimeout(() => {
+            try { router.replace('/(tabs)' as never); } catch { /* ignore */ }
+          }, 1800);
           return;
         }
-        // Server rejected (already redeemed / unknown / self-referral).
-        setStatus('already');
-        try { await AsyncStorage.removeItem(PENDING_REFERRAL_KEY); } catch { /* ignore */ }
-        setTimeout(() => {
-          try { router.replace('/(tabs)' as never); } catch { /* ignore */ }
-        }, 1800);
-        return;
       }
 
       // 3. Not yet onboarded. The post-signup hook will redeem after signup.

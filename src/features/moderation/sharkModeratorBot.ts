@@ -4,6 +4,8 @@
 // not money-related). Network failures pass gracefully — the fast local
 // regex checks at the send site remain the first line of defense.
 
+import { getApiBase } from '../../db/apiBase';
+
 export interface SharkBotVerdict {
   ok: boolean;
   reason?: string;
@@ -15,7 +17,7 @@ export async function moderateWithSharkBot(text: string): Promise<SharkBotVerdic
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    const res = await fetch('/api/moderation/check', {
+    const res = await fetch(`${getApiBase()}/api/moderation/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),

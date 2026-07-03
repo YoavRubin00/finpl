@@ -96,16 +96,21 @@ function PickPill({ pick }: { pick: SharedPick }): React.ReactElement {
           )}
         </LinearGradient>
       </View>
-      <Text style={[
-        {
-          fontSize: 10,
-          fontWeight: '900',
-          color: positive ? FANTASY.positiveDark : FANTASY.negativeDark,
-        },
-        NUM_STYLE,
-      ]}>
-        {positive ? '+' : ''}{pick.weeklyChange.toFixed(1)}%
-      </Text>
+      {/* weeklyChange === 0 means "no live figure" (honest default since the
+          2026-07-03 audit killed the stale mock percents) — hide the pill
+          rather than claim a fabricated 0.0% live move. */}
+      {pick.weeklyChange !== 0 ? (
+        <Text style={[
+          {
+            fontSize: 10,
+            fontWeight: '900',
+            color: positive ? FANTASY.positiveDark : FANTASY.negativeDark,
+          },
+          NUM_STYLE,
+        ]}>
+          {positive ? '+' : ''}{pick.weeklyChange.toFixed(1)}%
+        </Text>
+      ) : null}
       <Text style={[
         { fontSize: 9, fontWeight: '700', color: TEXT_FAINT },
         NUM_STYLE,

@@ -44,18 +44,26 @@ const clamp = (n: number, lo: number, hi: number): number => Math.max(lo, Math.m
 const NEUTRAL: Sentiment = { bull: 50, neutral: 25, bear: 25, needle: 0.5 };
 
 /**
+ * Data-honesty status for the footer: the "נתונים חיים" claim is only made
+ * AFTER a successful derive from real market movers — never over the
+ * hardcoded neutral placeholder (loading / offline / empty feed).
+ */
+type GaugeStatus = "loading" | "live" | "failed";
+
+/**
  * Derive market sentiment from the REAL daily change of the big market movers
  * (ת"א 125 + ת"א 35 + ביטקוין) — NOT from seed votes. score = mean of the
  * clamped daily change-%s; a positive tape leans bullish, a red tape bearish.
+ * Returns null when no usable mover exists — the caller must NOT claim live data.
  */
-function deriveSentiment(data: LiveMarketData): Sentiment {
+function deriveSentiment(data: LiveMarketData): Sentiment | null {
   const wanted = ['ת"א 125', 'ת"א 35', "ביטקוין"];
   const changes = wanted
     .map((label) => data.rates.find((r) => r.label === label))
     .filter((r): r is NonNullable<typeof r> => !!r && Number.isFinite(r.changePct))
     .map((r) => clamp(r.changePct, -3, 3));
 
-  if (changes.length === 0) return NEUTRAL;
+  if (changes.length === 0) return null;
 
   const score = changes.reduce((a, c) => a + c, 0) / changes.length;
   const bull = clamp(Math.round(50 + score * 12), 5, 95);
@@ -79,17 +87,31 @@ export function BullBearGauge({
   const reduceMotion = useReducedMotion();
   const animatedNeedle = useSharedValue(0.5);
   const [sentiment, setSentiment] = useState<Sentiment>(NEUTRAL);
+  const [status, setStatus] = useState<GaugeStatus>("loading");
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch(`${getApiBase()}/api/market/live`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (!cancelled) setStatus("failed");
+          return;
+        }
         const data = (await res.json()) as LiveMarketData;
-        if (!cancelled && Array.isArray(data.rates)) setSentiment(deriveSentiment(data));
+        const derived = Array.isArray(data.rates) ? deriveSentiment(data) : null;
+        if (cancelled) return;
+        if (derived) {
+          setSentiment(derived);
+          setStatus("live");
+        } else {
+          // Feed answered but held no usable mover — the neutral placeholder
+          // stays and the footer must not claim live data.
+          setStatus("failed");
+        }
       } catch {
-        /* offline — neutral fallback stays */
+        /* offline — neutral fallback stays, footer says so honestly */
+        if (!cancelled) setStatus("failed");
       }
     })();
     return () => {
@@ -176,7 +198,15 @@ export function BullBearGauge({
         <LegendRow glyph="🐻" label="דובי" percent={sentiment.bear} barColor="#dc2626" />
       </View>
 
-      <Text style={styles.footer}>מבוסס על תנועת השוק היום · נתונים חיים</Text>
+      {/* "נתונים חיים" only once a real derive landed — never over the
+          neutral placeholder. */}
+      <Text style={styles.footer}>
+        {status === "live"
+          ? "מבוסס על תנועת השוק היום · נתונים חיים"
+          : status === "loading"
+            ? "טוען נתוני שוק…"
+            : "אין נתונים חיים כרגע"}
+      </Text>
     </View>
   );
 }

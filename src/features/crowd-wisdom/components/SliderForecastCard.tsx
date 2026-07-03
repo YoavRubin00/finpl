@@ -93,7 +93,9 @@ export function SliderForecastCard(): React.ReactElement | null {
   const handleLock = (): void => {
     if (voted || value === null) return;
     successHaptic();
-    recordVote({ questionId, choiceId: String(value), votedAt: Date.now() }, false);
+    // withCrowd = null → STREAK-NEUTRAL: a slider target has no crowd majority
+    // to be "with", so locking it must never reset the with-crowd streak.
+    recordVote({ questionId, choiceId: String(value), votedAt: Date.now() }, null);
     try {
       // EconomyUI store fires the animated coin counter.
       const economyMod = require('../../economy/useEconomyUIStore');
@@ -128,8 +130,11 @@ export function SliderForecastCard(): React.ReactElement | null {
         <Animated.View entering={FadeIn.duration(240)} style={styles.votedBox}>
           <Text style={styles.votedValue}>{fmtUsd(votedValue)}</Text>
           <Text style={styles.votedLabel}>התחזית שלכם נעולה לסוף השבוע</Text>
+          {/* Honest copy: slider votes are DEVICE-LOCAL (no server receives
+              them), so no community average can ever be revealed — don't
+              promise one. */}
           <Text style={styles.votedHint}>
-            ממוצע הקהילה ייחשף כשמצטברות הצבעות אמיתיות — בלי מספרים מומצאים.
+            התחזית נשמרה במכשיר — נראה בהמשך איך היא פגעה.
           </Text>
         </Animated.View>
       ) : (

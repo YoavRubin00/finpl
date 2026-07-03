@@ -182,7 +182,10 @@ export const useFantasyStore = create<FantasyStore>()(
 
       setCaptain: (ticker: string | null) => {
         const { currentEntry } = get();
-        if (!currentEntry) return;
+        // Locked draft = leverage frozen for the whole competition (same rule
+        // as pickStock/setAllocation) — switching captain mid-week would let
+        // users retro-fit ×2 onto whichever pick happens to be winning.
+        if (!currentEntry || currentEntry.lockedAt) return;
         if (ticker !== null && !currentEntry.picks.some((p) => p.ticker === ticker)) return;
         // Captain and vice must be distinct — only clear vice if it collides.
         const nextVice = currentEntry.viceTicker === ticker ? null : currentEntry.viceTicker;
@@ -194,7 +197,7 @@ export const useFantasyStore = create<FantasyStore>()(
 
       setVice: (ticker: string | null) => {
         const { currentEntry } = get();
-        if (!currentEntry) return;
+        if (!currentEntry || currentEntry.lockedAt) return;
         if (ticker !== null && !currentEntry.picks.some((p) => p.ticker === ticker)) return;
         const nextCaptain = currentEntry.captainTicker === ticker ? null : currentEntry.captainTicker;
         set({
@@ -367,6 +370,17 @@ export const useFantasyStore = create<FantasyStore>()(
     {
       name: 'fantasy-store-v5',
       storage: createJSONStorage(() => zustandStorage),
+      // v1: purge the FABRICATED leaderboard that pre-purge builds persisted
+      // (fake opponents from the old getMockLeaderboard). The user's own
+      // entry/missions are real self-data and are kept as-is.
+      version: 1,
+      migrate: (persistedState, version) => {
+        const state = persistedState as FantasyStoreState;
+        if (version < 1) {
+          return { ...state, leaderboard: [] };
+        }
+        return state;
+      },
       partialize: (state) => ({
         currentEntry: state.currentEntry,
         leaderboard: state.leaderboard,

@@ -139,8 +139,10 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
     category: "forecast",
     bettable: true,
     // Post-reform, TASE trades Mon–Fri, so the WEEKLY close is FRIDAY (aligned to
-    // the global week). Labels are the live-anchored fallback — overridden at
-    // render by buildLiveBrackets around today's real ~4,140 level.
+    // the global week). BETTABLE → these labels are ALWAYS shown as-is (never
+    // re-anchored by buildLiveBrackets): they must match the static settlement
+    // edges in BET_RESOLUTIONS exactly, or a stake could settle against ranges
+    // the predictor never saw.
     prompt: "איפה ת״א 35 ייסגר ביום שישי?",
     contextChip: "מדד המניות הגדולות בבורסה בת״א",
     choices: [
@@ -181,10 +183,10 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
     bettable: true,
     prompt: "איפה הדולר/שקל יהיה בסוף החודש?",
     contextChip: "שער הדולר מול השקל",
-    // 5 brackets (b1..b5) so the live-anchored buildLiveBrackets maps 1:1.
-    // Seed fallback straddles today's real ~3.00 USD/ILS level (Waren 2026-07-03:
-    // the shekel is ~2.98, so the old 3.5–3.7 range was ~20% stale). When the live
-    // rate is reachable buildLiveBrackets re-anchors these around the real price.
+    // 5 brackets (b1..b5), straddling today's real ~3.00 USD/ILS level (Waren
+    // 2026-07-03: the shekel is ~2.98, so the old 3.5–3.7 range was ~20% stale).
+    // BETTABLE → shown as-is, never re-anchored by buildLiveBrackets: the labels
+    // must match the static settlement edges in BET_RESOLUTIONS exactly.
     choices: [
       { id: "b1", label: "מתחת ל-2.90", seedVotes: 300, accentColor: "#dc2626" },
       { id: "b2", label: "2.90 – 2.95", seedVotes: 500, accentColor: "#ea580c" },

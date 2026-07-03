@@ -66,6 +66,22 @@ export interface UserVote {
   votedAt: number;
 }
 
+/**
+ * Persisted record of a coin prediction placed on a bettable question — mirrors
+ * the server crowd_bets row (one per user per question) so the placed state
+ * survives app restarts and the stake CTA never re-offers a taken position.
+ */
+export interface PlacedCoinBet {
+  /** Coins staked. */
+  stake: number;
+  /** Parimutuel multiplier locked at placement. */
+  lockedOdds: number;
+  /** stake × lockedOdds, rounded server-side. */
+  potentialPayout: number;
+  /** epoch ms when the prediction was locked. */
+  placedAt: number;
+}
+
 /** Filled in by a resolver once the real-world outcome is known. */
 export interface ResolvedOutcome {
   questionId: string;

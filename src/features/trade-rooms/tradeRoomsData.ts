@@ -24,7 +24,7 @@ export const TRADE_ROOMS: TradeRoom[] = [
     id: 'daily-event',
     name: 'החדר החם של היום',
     emoji: '🔥',
-    tagline: 'נושא אחד. יום אחד. כל הקהילה.',
+    tagline: 'נושא אחד. יום אחד. הדעה שלכם.',
     accentColor: '#f97316',
     accentBg: '#ffedd5',
     memberBase: 412,

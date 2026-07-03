@@ -20,6 +20,7 @@ import {
   clientFallbackModerate,
 } from './anonAdviceData';
 import { PendingModerationOverlay } from './components/PendingModerationOverlay';
+import { getApiBase } from '../../db/apiBase';
 import { DUO } from '../../constants/theme';
 import { A } from './strings';
 import type { ModerationResult, RephraseResult } from './anonAdviceTypes';
@@ -115,7 +116,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
     setOriginalDraft({ s: situation, q: question, o1: option1, o2: option2 });
     setRephrasing(true);
     try {
-      const res = await fetch('/api/anon-advice/rephrase', {
+      const res = await fetch(`${getApiBase()}/api/anon-advice/rephrase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -196,7 +197,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
     setModerating(true);
     let mod: ModerationResult = { ok: true, tags: [] };
     try {
-      const res = await fetch('/api/anon-advice/moderate', {
+      const res = await fetch(`${getApiBase()}/api/anon-advice/moderate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ situation: s, question: q, options: opts }),

@@ -17,10 +17,13 @@ const TEXT_MUTED = '#6b7280';
 function DailyEventCard({
   room,
   unreadCount,
+  hasLiveDiscussion,
   onPress,
 }: {
   room: TradeRoom;
   unreadCount: number;
+  /** True only when real peer messages (not self, not Captain Shark) exist. */
+  hasLiveDiscussion: boolean;
   onPress: () => void;
 }): React.ReactElement {
   const topic = getDailyEventTopic();
@@ -102,6 +105,8 @@ function DailyEventCard({
         {topic.subtitle}
       </Text>
 
+      {/* Honest status line — the green "live" dot appears only when real
+          peer messages exist; otherwise an inviting, truthful opener. */}
       <View
         style={{
           flexDirection: 'row-reverse',
@@ -110,19 +115,26 @@ function DailyEventCard({
           marginTop: 10,
         }}
       >
-        <View
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: '#22c55e',
-          }}
-        />
+        {hasLiveDiscussion && (
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: '#22c55e',
+            }}
+          />
+        )}
         <Text
-          style={{ fontSize: 12, fontWeight: '700', color: '#15803d', flexShrink: 1 }}
+          style={{
+            fontSize: 12,
+            fontWeight: '700',
+            color: hasLiveDiscussion ? '#15803d' : '#c2410c',
+            flexShrink: 1,
+          }}
           maxFontSizeMultiplier={1.15}
         >
-          הקהילה מדברת על זה עכשיו
+          {hasLiveDiscussion ? 'הקהילה מדברת על זה עכשיו' : 'הנושא של היום — פתחו את הדיון'}
         </Text>
       </View>
     </Pressable>
@@ -417,6 +429,9 @@ export function TradeRoomsListScreen(): React.ReactElement {
           <DailyEventCard
             room={dailyRoom}
             unreadCount={unreadFor(dailyRoom.id)}
+            hasLiveDiscussion={(messagesByRoom[dailyRoom.id] ?? []).some(
+              (m) => !m.isSelf && !m.isShark,
+            )}
             onPress={() => openRoom(dailyRoom.id)}
           />
         )}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 
 import { F2_SECTORS, type FantasySectorId } from '../../constants/theme';
 import { PORTFOLIO_BUILDER_CATEGORIES } from '../fantasy-league/fantasyData';
+import { useLiveReturnsStore } from '../fantasy-league/useLiveReturnsStore';
 import { tapHaptic, successHaptic, mediumHaptic } from '../../utils/haptics';
 import type { SharedPick } from './portfolioShareTypes';
 import {
@@ -31,11 +32,13 @@ const FEED_BG = '#f3f4f6';
 const NUM_STYLE = { fontVariant: ['tabular-nums' as const] };
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
+// Honest-data rule: DraftPick carries NO weeklyChange — weekly % comes only
+// from the live returns store (real Yahoo data) at render/share time, never
+// from the stale mockWeeklyChange constants in fantasyData.
 interface DraftPick {
   ticker: string;
   name: string;
   sector: FantasySectorId;
-  weeklyChange: number;
   allocationPct: number;
 }
 
@@ -115,6 +118,18 @@ export function PortfolioComposerModal({
   const [caption, setCaption] = useState('');
   const [customTicker, setCustomTicker] = useState('');
 
+  // Live weekly returns (real market data). Where a ticker has no live value
+  // yet, the % is simply hidden — never a fabricated constant.
+  const liveReturns = useLiveReturnsStore((s) => s.returns);
+  const refreshLiveReturns = useLiveReturnsStore((s) => s.refresh);
+  useEffect(() => {
+    if (!visible) return;
+    const universe = PORTFOLIO_BUILDER_CATEGORIES.flatMap((cat) =>
+      cat.stocks.map((stock) => stock.ticker),
+    );
+    void refreshLiveReturns(universe);
+  }, [visible, refreshLiveReturns]);
+
   const total = useMemo(() => picks.reduce((sum, p) => sum + p.allocationPct, 0), [picks]);
   const canShare = total === 100 && picks.length >= MIN_PICKS;
 
@@ -128,7 +143,7 @@ export function PortfolioComposerModal({
     onClose();
   };
 
-  const togglePick = (ticker: string, name: string, sector: FantasySectorId, weeklyChange: number): void => {
+  const togglePick = (ticker: string, name: string, sector: FantasySectorId): void => {
     tapHaptic();
     setPicks((prev) => {
       const exists = prev.find((p) => p.ticker === ticker);
@@ -137,7 +152,7 @@ export function PortfolioComposerModal({
       // Default allocation: whatever is left, capped at 25, floored at 5.
       const used = prev.reduce((sum, p) => sum + p.allocationPct, 0);
       const suggested = Math.max(ALLOCATION_STEP, Math.min(25, 100 - used));
-      return [...prev, { ticker, name, sector, weeklyChange, allocationPct: suggested }];
+      return [...prev, { ticker, name, sector, allocationPct: suggested }];
     });
   };
 
@@ -155,13 +170,14 @@ export function PortfolioComposerModal({
     setPicks((prev) => {
       if (prev.length >= MAX_PICKS) return prev;
       if (prev.some((p) => p.ticker === normalizedCustom)) return prev;
-      // name = the ticker (no fabricated company name); weeklyChange = 0 (honestly
-      // unknown); neutral 'tech' sector; same default-allocation logic as togglePick.
+      // name = the ticker (no fabricated company name); neutral 'tech' sector;
+      // same default-allocation logic as togglePick. Weekly % comes from the
+      // live store if/when it knows this ticker.
       const used = prev.reduce((sum, p) => sum + p.allocationPct, 0);
       const suggested = Math.max(ALLOCATION_STEP, Math.min(25, 100 - used));
       return [
         ...prev,
-        { ticker: normalizedCustom, name: normalizedCustom, sector: 'tech', weeklyChange: 0, allocationPct: suggested },
+        { ticker: normalizedCustom, name: normalizedCustom, sector: 'tech', allocationPct: suggested },
       ];
     });
     setCustomTicker('');
@@ -201,7 +217,10 @@ export function PortfolioComposerModal({
       picks.map((p) => ({
         ticker: p.ticker,
         sector: p.sector,
-        weeklyChange: p.weeklyChange,
+        // Honest "unknown until measured" — the composer no longer carries the
+        // stale hardcoded mockWeeklyChange (2026-07-03 audit); 0 renders as no
+        // % pill on the shared card, never as a fabricated live move.
+        weeklyChange: 0,
         allocationPct: p.allocationPct,
       })),
       caption,
@@ -269,7 +288,6 @@ export function PortfolioComposerModal({
 
               {picks.map((p) => {
                 const sector = F2_SECTORS[p.sector] ?? F2_SECTORS.tech;
-                const positive = p.weeklyChange >= 0;
                 return (
                   <Animated.View
                     key={p.ticker}
@@ -297,9 +315,8 @@ export function PortfolioComposerModal({
                       <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: TEXT_PRIMARY, ...RTL }}>
                         {p.name}
                       </Text>
-                      <Text style={[{ fontSize: 11, fontWeight: '800', color: positive ? '#16a34a' : '#dc2626' }, NUM_STYLE]}>
-                        {positive ? '+' : ''}{p.weeklyChange.toFixed(1)}% השבוע
-                      </Text>
+                      {/* No weekly-% here — the old hardcoded mockWeeklyChange was
+                          months-stale data presented as live (2026-07-03 audit). */}
                     </View>
 
                     {/* Stepper */}
@@ -354,7 +371,7 @@ export function PortfolioComposerModal({
                     return (
                       <Pressable
                         key={stock.ticker}
-                        onPress={() => togglePick(stock.ticker, stock.name, cat.id as FantasySectorId, stock.mockWeeklyChange)}
+                        onPress={() => togglePick(stock.ticker, stock.name, cat.id as FantasySectorId)}
                         disabled={atCap}
                         accessibilityRole="button"
                         accessibilityLabel={`${stock.name} ${selected ? 'הסרה' : 'הוספה'}`}

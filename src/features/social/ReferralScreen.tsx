@@ -27,6 +27,7 @@ import type { AnimationObject } from "lottie-react-native";
 import { Copy, Share2, RefreshCw } from "lucide-react-native";
 
 import { useAuthStore } from "../auth/useAuthStore";
+import { requestGuestGate } from "../auth/guestValueGate";
 import * as Clipboard from "expo-clipboard";
 import QRCode from "react-native-qrcode-svg";
 import { CALM } from "../../constants/theme";
@@ -234,52 +235,78 @@ export function ReferralScreen() {
           </Animated.View>
 
           {/* ── Referral Code Card ── */}
+          {/* Guests (no email) get a register-first CTA instead of the share
+              block: their local code is never registered server-side, so a
+              working-looking Share/Copy/QR would be a dead-end promise. */}
           <Animated.View entering={FadeInDown.delay(220)}>
             <View style={styles.card}>
-              <View style={styles.codeCard}>
-                <SectionIcon source={LOTTIE_HANDSHAKE} />
-                <Text style={styles.codeTitle}>הקישור שלך להזמנה</Text>
-                <View style={styles.codeRow}>
-                  <Pressable
-                    onPress={handleCopy}
-                    style={styles.copyBtn}
+              {userEmail ? (
+                <View style={styles.codeCard}>
+                  <SectionIcon source={LOTTIE_HANDSHAKE} />
+                  <Text style={styles.codeTitle}>הקישור שלך להזמנה</Text>
+                  <View style={styles.codeRow}>
+                    <Pressable
+                      onPress={handleCopy}
+                      style={styles.copyBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel="העתיקו קישור הזמנה"
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Copy size={18} color={CALM.accent} />
+                    </Pressable>
+                    <Text style={styles.codeText}>{referralCode}</Text>
+                  </View>
+                  <Text style={styles.urlPreview} numberOfLines={1}>{inviteUrl}</Text>
+                  <AnimatedPressable
+                    onPress={handleShare}
+                    style={styles.shareBtn}
                     accessibilityRole="button"
-                    accessibilityLabel="העתיקו קישור הזמנה"
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityLabel="שתפו את הקישור"
                   >
-                    <Copy size={18} color={CALM.accent} />
-                  </Pressable>
-                  <Text style={styles.codeText}>{referralCode}</Text>
-                </View>
-                <Text style={styles.urlPreview} numberOfLines={1}>{inviteUrl}</Text>
-                <AnimatedPressable
-                  onPress={handleShare}
-                  style={styles.shareBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel="שתפו את הקישור"
-                >
-                  <Share2 size={16} color="#ffffff" />
-                  <Text style={styles.shareBtnText}>שתפו עם חברים</Text>
-                </AnimatedPressable>
+                    <Share2 size={16} color="#ffffff" />
+                    <Text style={styles.shareBtnText}>שתפו עם חברים</Text>
+                  </AnimatedPressable>
 
-                {/* QR Code */}
-                <View style={styles.qrWrap}>
-                  <Text style={styles.qrLabel}>או סרקו את הקוד:</Text>
-                  <View
-                    style={styles.qrBox}
-                    accessible={true}
-                    accessibilityRole="image"
-                    accessibilityLabel={`קוד QR להזמנה: ${inviteUrl}`}
-                  >
-                    <QRCode
-                      value={inviteUrl}
-                      size={140}
-                      backgroundColor="#ffffff"
-                      color="#0c4a6e"
-                    />
+                  {/* QR Code */}
+                  <View style={styles.qrWrap}>
+                    <Text style={styles.qrLabel}>או סרקו את הקוד:</Text>
+                    <View
+                      style={styles.qrBox}
+                      accessible={true}
+                      accessibilityRole="image"
+                      accessibilityLabel={`קוד QR להזמנה: ${inviteUrl}`}
+                    >
+                      <QRCode
+                        value={inviteUrl}
+                        size={140}
+                        backgroundColor="#ffffff"
+                        color="#0c4a6e"
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
+              ) : (
+                <View style={styles.codeCard}>
+                  <SectionIcon source={LOTTIE_HANDSHAKE} />
+                  <Text style={styles.codeTitle}>קוד ההזמנה נפתח אחרי הרשמה</Text>
+                  <Text style={styles.guestExplain}>
+                    כדי שנדע לזכות אתכם ואת החברים במטבעות, ההזמנות עובדות רק
+                    מחשבון רשום. ההטבה נשמרת אחרי הרשמה.
+                  </Text>
+                  <AnimatedPressable
+                    onPress={() => {
+                      tapHaptic();
+                      requestGuestGate("referral_share");
+                    }}
+                    style={styles.shareBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="הרשמה לפתיחת ההזמנות"
+                  >
+                    <Share2 size={16} color="#ffffff" />
+                    <Text style={styles.shareBtnText}>נרשמים ומזמינים חברים</Text>
+                  </AnimatedPressable>
+                </View>
+              )}
             </View>
           </Animated.View>
 
@@ -581,6 +608,14 @@ const styles = StyleSheet.create({
     borderColor: CALM.border,
   },
   codeText: { fontSize: 24, fontWeight: "900", color: "#0ea5e9", letterSpacing: 3 },
+  guestExplain: {
+    fontSize: 13,
+    color: CALM.textSecondary,
+    textAlign: "center",
+    writingDirection: "rtl" as const,
+    lineHeight: 19,
+    paddingHorizontal: 8,
+  },
   copyBtn: { padding: 6, borderRadius: 8, backgroundColor: CALM.accentLight },
   urlPreview: {
     fontSize: 11,

@@ -22,12 +22,16 @@ import { requestGuestGate } from '../../auth/guestValueGate';
 import { tokenStore } from '../../../lib/auth/secureStore';
 import { fetchBetOdds, placeBet, type ChoiceOdds } from '../../../db/sync/syncCrowdBets';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
+import { useCrowdWisdomStore } from '../useCrowdWisdomStore';
 import type { CrowdWisdomQuestion } from '../types';
 
 // Quick-fill shortcuts — the stake itself is a free-typed amount (Yoav: not
 // limited to 250).
 const PRESETS = [50, 100, 250] as const;
 const MIN_STAKE = 10;
+// Mirrors the server cap in app/api/crowd-bets/place+api.ts (MAX_STAKE = 1000)
+// so the user hits a Hebrew inline error, never the server's raw English 400.
+const MAX_STAKE = 1000;
 
 interface BetPanelProps {
   question: CrowdWisdomQuestion;
@@ -52,8 +56,12 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
   const [odds, setOdds] = useState<ChoiceOdds[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [placing, setPlacing] = useState(false);
-  const [placed, setPlaced] = useState<{ stake: number; lockedOdds: number; potentialPayout: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Placed state lives in the PERSISTED crowd-wisdom store (not component
+  // state): the server holds one bet per user per question forever, so after an
+  // app restart the stake CTA must stay replaced by the locked-prediction view
+  // (re-placing would only 409). `?? null` keeps the selector reference-stable.
+  const placed = useCrowdWisdomStore((s) => s.placedBets[question.id] ?? null);
 
   const choiceIds = question.choices.map((c) => c.id);
 
@@ -99,7 +107,8 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
   if (!selectedChoiceId && !placed) return null;
 
   const stake = parseInt(stakeText, 10);
-  const stakeValid = Number.isFinite(stake) && stake >= MIN_STAKE && stake <= coins;
+  const stakeValid =
+    Number.isFinite(stake) && stake >= MIN_STAKE && stake <= MAX_STAKE && stake <= coins;
   const selectedOdds = odds?.find((o) => o.choiceId === selectedChoiceId)?.odds ?? null;
   const potential = selectedOdds !== null && stakeValid ? Math.round(stake * selectedOdds) : null;
 
@@ -107,7 +116,14 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
     // Keep digits only, cap length so the payout row can't overflow.
     const digits = text.replace(/[^0-9]/g, '').slice(0, 8);
     setStakeText(digits);
-    if (error) setError(null);
+    const typed = parseInt(digits, 10);
+    if (Number.isFinite(typed) && typed > MAX_STAKE) {
+      // Immediate feedback — the server rejects >MAX_STAKE with a raw English
+      // 400, so the cap is explained here in Hebrew while typing.
+      setError(`המקסימום לתחזית הוא ${MAX_STAKE.toLocaleString('he-IL')} מטבעות.`);
+    } else if (error) {
+      setError(null);
+    }
   };
 
   const handlePlace = async (): Promise<void> => {
@@ -123,6 +139,11 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
     if (!Number.isFinite(stake) || stake < MIN_STAKE) {
       errorHaptic();
       setError(`המינימום לתחזית הוא ${MIN_STAKE} מטבעות.`);
+      return;
+    }
+    if (stake > MAX_STAKE) {
+      errorHaptic();
+      setError(`המקסימום לתחזית הוא ${MAX_STAKE.toLocaleString('he-IL')} מטבעות.`);
       return;
     }
     if (stake > coins) {
@@ -144,7 +165,14 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
       });
       spendCoins(stake);
       successHaptic();
-      setPlaced({ stake, lockedOdds: result.lockedOdds, potentialPayout: result.potentialPayout });
+      // Persisted (not setState) — flips this panel to the locked view now AND
+      // on every future mount, incl. after app restarts.
+      useCrowdWisdomStore.getState().recordPlacedBet(question.id, {
+        stake,
+        lockedOdds: result.lockedOdds,
+        potentialPayout: result.potentialPayout,
+        placedAt: Date.now(),
+      });
       setOdds(result.odds);
     } catch (e) {
       errorHaptic();

@@ -99,7 +99,7 @@ export async function POST(request: Request): Promise<Response> {
       .returning({ id: crowdBets.id });
 
     if (inserted.length === 0) {
-      return Response.json({ error: 'כבר יש לכם הימור על השאלה הזו' }, { status: 409 });
+      return Response.json({ error: 'כבר יש לכם תחזית על השאלה הזו' }, { status: 409 });
     }
 
     // Fresh odds after this bet moved the pool.

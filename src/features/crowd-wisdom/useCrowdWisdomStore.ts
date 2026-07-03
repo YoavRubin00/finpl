@@ -2,7 +2,7 @@ import { create, type StateCreator } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from "../../lib/zustandStorage";
 import { requestGuestGate } from "../auth/guestValueGate";
-import type { UserVote, ResolvedOutcome } from "./types";
+import type { UserVote, ResolvedOutcome, PlacedCoinBet } from "./types";
 
 /**
  * Instant coin payout for answering a crowd-wisdom question. Single source of
@@ -23,6 +23,12 @@ interface CrowdWisdomState {
   outcomes: Record<string, ResolvedOutcome>;
   /** Map of questionId → was the user with the majority at vote time. */
   votedWithCrowd: Record<string, boolean>;
+  /**
+   * Map of questionId → coin prediction locked on the server. Persisted so an
+   * app restart never re-offers the stake CTA for a question the server already
+   * holds a bet on (re-placing would 409).
+   */
+  placedBets: Record<string, PlacedCoinBet>;
   /** Consecutive "with-crowd" votes — resets when the user breaks. */
   streak: number;
   longestStreak: number;
@@ -30,21 +36,30 @@ interface CrowdWisdomState {
   totalVotes: number;
 
   // Actions
-  recordVote: (vote: UserVote, withCrowd: boolean) => void;
+  /**
+   * Record a vote. `withCrowd`: true extends the with-crowd streak, false
+   * breaks it, null is STREAK-NEUTRAL — the vote still counts but there is no
+   * majority to be with/against (e.g. the slider forecast), so the current
+   * streak is left untouched.
+   */
+  recordVote: (vote: UserVote, withCrowd: boolean | null) => void;
   recordOutcome: (outcome: ResolvedOutcome) => void;
+  /** Mirror a successful server bet placement — one per question, idempotent. */
+  recordPlacedBet: (questionId: string, bet: PlacedCoinBet) => void;
   /** Reset everything — for QA and "clear history" UX. */
   clearAll: () => void;
 }
 
 type PersistedFields = Pick<
   CrowdWisdomState,
-  "votes" | "outcomes" | "votedWithCrowd" | "streak" | "longestStreak" | "totalVotes"
+  "votes" | "outcomes" | "votedWithCrowd" | "placedBets" | "streak" | "longestStreak" | "totalVotes"
 >;
 
 const createCrowdWisdom: StateCreator<CrowdWisdomState> = (set, get) => ({
   votes: {},
   outcomes: {},
   votedWithCrowd: {},
+  placedBets: {},
   streak: 0,
   longestStreak: 0,
   totalVotes: 0,
@@ -55,11 +70,16 @@ const createCrowdWisdom: StateCreator<CrowdWisdomState> = (set, get) => ({
       // Single-vote-per-question — ignore double-fires.
       return;
     }
-    const newStreak = withCrowd ? state.streak + 1 : 0;
+    // null = streak-neutral: no crowd majority exists for this vote (slider
+    // forecasts), so the streak neither extends nor resets.
+    const newStreak = withCrowd === null ? state.streak : withCrowd ? state.streak + 1 : 0;
     const newLongest = Math.max(state.longestStreak, newStreak);
     set({
       votes: { ...state.votes, [vote.questionId]: vote },
-      votedWithCrowd: { ...state.votedWithCrowd, [vote.questionId]: withCrowd },
+      votedWithCrowd:
+        withCrowd === null
+          ? state.votedWithCrowd
+          : { ...state.votedWithCrowd, [vote.questionId]: withCrowd },
       streak: newStreak,
       longestStreak: newLongest,
       totalVotes: state.totalVotes + 1,
@@ -77,11 +97,22 @@ const createCrowdWisdom: StateCreator<CrowdWisdomState> = (set, get) => ({
     });
   },
 
+  recordPlacedBet: (questionId, bet) => {
+    const state = get();
+    if (state.placedBets[questionId]) {
+      // One prediction per question (server enforces via unique index) —
+      // ignore double-fires.
+      return;
+    }
+    set({ placedBets: { ...state.placedBets, [questionId]: bet } });
+  },
+
   clearAll: () =>
     set({
       votes: {},
       outcomes: {},
       votedWithCrowd: {},
+      placedBets: {},
       streak: 0,
       longestStreak: 0,
       totalVotes: 0,
@@ -96,6 +127,7 @@ export const useCrowdWisdomStore = create<CrowdWisdomState>()(
       votes: state.votes,
       outcomes: state.outcomes,
       votedWithCrowd: state.votedWithCrowd,
+      placedBets: state.placedBets,
       streak: state.streak,
       longestStreak: state.longestStreak,
       totalVotes: state.totalVotes,

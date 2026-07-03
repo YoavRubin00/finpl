@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronRight, Send, Pin } from 'lucide-react-native';
 
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { requestGuestGate } from '../auth/guestValueGate';
 import { getIsraelDateISO } from '../../utils/israelTime';
 import { useTradeRoomsStore } from './useTradeRoomsStore';
 import { getRoomById, getDailyEventTopic, MAX_MESSAGE_LENGTH } from './tradeRoomsData';
@@ -138,6 +139,11 @@ export function TradeRoomChatScreen(): React.ReactElement {
         setError(verdict.reason ?? 'ההודעה הוסרה על ידי קפטן שארק.');
       }
     });
+    // Guest value-gate — fire-and-forget after the value action lands
+    // (util self-guards: registered users / cooldown → no-op).
+    setTimeout(() => {
+      requestGuestGate('room_message');
+    }, 2_500);
   }, [draft, draftSentiment, roomId, sendMessage]);
 
   const dailyTopic = room.isDailyEvent ? getDailyEventTopic() : null;
@@ -270,6 +276,9 @@ export function TradeRoomChatScreen(): React.ReactElement {
         </Text>
       </View>
 
+      {/* 'padding' on BOTH platforms — deliberate (a2790a54): Android 15+
+          edge-to-edge IGNORES adjustResize, so without padding the keyboard
+          covers the composer (the founder-reported bug). Keep as-is. */}
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: CHAT_BG }}
         behavior="padding"
