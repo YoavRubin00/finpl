@@ -789,8 +789,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
               // overlap, but its gate waits on !pendingPostWalkthroughFirstChest;
               // Yoav 2026-06-26 regression: guests saw no register prompt).
               try { useTutorialStore.getState().setPendingPostWalkthroughFirstChest(false); } catch { /* non-fatal */ }
-              if (isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ } }
-              else { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
+              // Guests: the in-accordion ModuleEndSignupGate below is the ONE
+              // register surface — arming pendingPostWalkthroughCTA here too
+              // stacked a second global modal on top of it (2026-07-03 audit).
+              if (!isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
             }
             // Guests get the signup gate (#8, skipped for mod-0-1), registered
             // users any pending staged profile question (#6). Mutually exclusive.
@@ -819,8 +821,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
               // overlap, but its gate waits on !pendingPostWalkthroughFirstChest;
               // Yoav 2026-06-26 regression: guests saw no register prompt).
               try { useTutorialStore.getState().setPendingPostWalkthroughFirstChest(false); } catch { /* non-fatal */ }
-              if (isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ } }
-              else { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
+              // Guests: in-accordion gate only — see the onContinueModule note
+              // (double-modal fix, 2026-07-03 audit).
+              if (!isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
             }
             if (isGuest) { maybeShowSignupGate(); } else if (!maybeShowProfileQuestion() && !maybeShowToolNudge()) { maybeShowRatePrompt(); }
             if (summary.pct >= 100) {
@@ -832,8 +835,25 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onAdvanceToNextModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'continue' } }); } catch { /* non-fatal */ }
             setChestState(null);
+            // 2026-07-03 (root cause of "no gate + no shark wager after the
+            // mod-0-1 chest"): this PRIMARY "המשך" CTA was the ONLY chest-close
+            // path that armed nothing — guests who tapped it never saw a
+            // register surface, and Day0ExitRitualHost (gated on the
+            // moduleEndGateShown['mod-0-1'] stamp since 0a373e86) could never
+            // fire. Mirror the other close paths here.
+            if (module.id === 'mod-0-1') {
+              try { useTutorialStore.getState().setPendingPostWalkthroughFirstChest(false); } catch { /* non-fatal */ }
+              if (!isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
+            }
             onAdvanceToNextModule?.();
-            onModuleCompleted?.();
+            if (isGuest) {
+              // Arm the end-of-module register gate and KEEP the accordion
+              // mounted — onModuleCompleted unmounts it, which clears the gate's
+              // 450ms timer (cleanup above) and the modal host with it.
+              maybeShowSignupGate();
+            } else {
+              onModuleCompleted?.();
+            }
           }}
           // Yoav 2026-06-12: DoN gated on the 25% roll captured in chestState.
           // Passing undefined skips the entire DoN flow inside the modal so
