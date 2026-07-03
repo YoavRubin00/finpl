@@ -455,6 +455,15 @@ export function StreakLoungeSheet({
           <AmbientBubble leftPct={86} size={9} delay={1300} travel={2100} />
         </View>
 
+        {/* סקרים עליון — הסצנה בהירה בראשה (פני-המים + קרני-אור), והכותרת
+            נבלעה בה (יואב 3.7); גרדיאנט כהה קבוע מאחורי אזור-הכותרת מחזיר קונטרסט */}
+        <LinearGradient
+          colors={["rgba(2,10,18,0.92)", "rgba(2,10,18,0.55)", "transparent"]}
+          locations={[0, 0.55, 1]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 112 }}
+          pointerEvents="none"
+        />
+
         {/* ── כותרת ── */}
         <View style={[styles.topBar, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
           <View style={styles.topRow}>
@@ -725,12 +734,15 @@ const styles = StyleSheet.create({
   topBar: { paddingHorizontal: 14, zIndex: 20 },
   topRow: { height: 44, justifyContent: "center" },
   title: {
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: "900",
-    color: "#fbbf24",
+    color: "#fcd34d",
     textAlign: "center",
     writingDirection: "rtl",
     letterSpacing: 0.3,
+    textShadowColor: "rgba(0,0,0,0.65)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   closeBtn: { position: "absolute", right: 0, top: 0, bottom: 0, justifyContent: "center" },
   memberRow: {
