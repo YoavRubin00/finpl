@@ -27,6 +27,8 @@ import LottieView from "lottie-react-native";
 import Svg, { Circle } from "react-native-svg";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { LinearGradient } from "expo-linear-gradient";
+import { InvestorsJournalSheet } from "../investors-journal/InvestorsJournalSheet";
+import { useInvestorsJournalStore, currentJournalMonth } from "../investors-journal/useInvestorsJournalStore";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 
@@ -119,6 +121,7 @@ import { getModuleTool } from "../topic-learning/moduleToolMap";
 import type { Topic, TopicKind } from "../topic-learning/types";
 
 import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { getIsraelDateISO, israelDatePlusDays } from "../../utils/israelTime";
 import { MindMapViewer } from "../../components/ui/MindMapViewer";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useFunStore } from "../../stores/useFunStore";
@@ -604,6 +607,8 @@ function ModuleNode({
   questCompletedCount,
   questTotalCount,
   onQuestPress,
+  onJournalPress,
+  journalBadge,
 }: {
   module: Module;
   state: "completed" | "active" | "locked";
@@ -627,6 +632,12 @@ function ModuleNode({
   questCompletedCount?: number;
   questTotalCount?: number;
   onQuestPress?: () => void;
+  /** Opens the Investors Journal sheet. Rendered ONLY beside the active
+   *  ("next to learn") node, on the OPPOSITE side from the shark mascot
+   *  (Yoav 2026-07-04: "תמיד משמאל לצ'יפ; אם שארק משמאל — מימין"). */
+  onJournalPress?: () => void;
+  /** Gold pulse-dot: an event within 48h or a forecast result waiting. */
+  journalBadge?: boolean;
 }) {
   const colors = ARENA_COLORS[arenaId];
 
@@ -675,6 +686,12 @@ function ModuleNode({
   const charLeft = finnGoesRight
     ? Math.min(nodeCenter + NODE_SIZE / 2 + 6, CONTENT_W - CHAR_SIZE)
     : Math.max(nodeCenter - NODE_SIZE / 2 - CHAR_SIZE - 6, 0);
+  // Investors Journal chip — ALWAYS the mirror side of the shark (Yoav
+  // 2026-07-04): shark right → journal left of the node, and vice versa.
+  const JOURNAL_W = 54;
+  const journalLeft = finnGoesRight
+    ? Math.max(nodeCenter - NODE_SIZE / 2 - JOURNAL_W - 8, 0)
+    : Math.min(nodeCenter + NODE_SIZE / 2 + 8, CONTENT_W - JOURNAL_W);
 
   return (
     <View style={[styles.nodeRow, { height: ROW_HEIGHT }]}>
@@ -709,6 +726,67 @@ function ModuleNode({
               />
             )}
           </Animated.View>
+          {/* Investors Journal — premium 📅 chip, mirror side of the shark */}
+          {onJournalPress && (
+            <Animated.View
+              entering={FadeInDown.delay(160).duration(400)}
+              style={{ position: 'absolute', top: 16, zIndex: 20, left: journalLeft, width: JOURNAL_W, alignItems: 'center', gap: 3 }}
+            >
+              <Pressable
+                onPress={onJournalPress}
+                accessibilityRole="button"
+                accessibilityLabel={`יומן משקיעים — אירועי השוק של החודש${journalBadge ? ', יש אירוע קרוב' : ''}`}
+                style={{
+                  borderRadius: 999,
+                  shadowColor: '#3b82f6',
+                  shadowOpacity: 0.4,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 7,
+                }}
+              >
+                <LinearGradient
+                  colors={['#60a5fa', '#2563eb', '#1d4ed8']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1.5,
+                    borderColor: 'rgba(255,255,255,0.6)',
+                  }}
+                >
+                  <Text style={{ fontSize: 21 }} allowFontScaling={false}>📅</Text>
+                </LinearGradient>
+                {journalBadge && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: -2,
+                      left: -2,
+                      width: 15,
+                      height: 15,
+                      borderRadius: 8,
+                      backgroundColor: '#f59e0b',
+                      borderWidth: 2,
+                      borderColor: '#ffffff',
+                    }}
+                    accessible={false}
+                  />
+                )}
+              </Pressable>
+              <Text
+                style={{ fontSize: 10, fontWeight: '900', color: '#1d4ed8', writingDirection: 'rtl' }}
+                maxFontSizeMultiplier={1.2}
+                allowFontScaling={false}
+              >
+                יומן משקיעים
+              </Text>
+            </Animated.View>
+          )}
           {/* Speech bubble above + offset to the right of Finn so it doesn't
               cover the active module node directly below (user feedback —
               the bubble was sitting on top of the module the player was
@@ -942,6 +1020,8 @@ const ChapterSection = React.memo(function ChapterSection({
   questCompletedCount,
   questTotalCount,
   onQuestPress,
+  onJournalPress,
+  journalBadge,
   newsBadgeNode,
   isGlobalActiveChapter,
   activeIndexOverride,
@@ -1002,6 +1082,10 @@ const ChapterSection = React.memo(function ChapterSection({
   questCompletedCount?: number;
   questTotalCount?: number;
   onQuestPress?: () => void;
+  /** Opens the Investors Journal sheet — forwarded to the ACTIVE ModuleNode
+   *  only, rendered on the mirror side of the shark (Yoav 2026-07-04). */
+  onJournalPress?: () => void;
+  journalBadge?: boolean;
   /** When present, renders this node (the Daily News Challenge button) on the
    *  opposite side of the active module — the "dead space" the user's eye
    *  lands on when they open the learn screen. Only the chapter containing
@@ -1181,6 +1265,8 @@ const ChapterSection = React.memo(function ChapterSection({
                 questCompletedCount={isActive ? questCompletedCount : undefined}
                 questTotalCount={isActive ? questTotalCount : undefined}
                 onQuestPress={isActive ? onQuestPress : undefined}
+                onJournalPress={isActive ? onJournalPress : undefined}
+                journalBadge={isActive ? journalBadge : undefined}
                 onPress={() => {
                   if (isLocked) {
                     onLockedPress();
@@ -1842,6 +1928,36 @@ export function DuoLearnScreen() {
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
   const [roadmapVisible, setRoadmapVisible] = useState(false);
+
+  // ── Investors Journal (יומן משקיעים) — entry chip beside the active node ──
+  const [journalVisible, setJournalVisible] = useState(false);
+  const journalMonth = currentJournalMonth();
+  const journalEventsByMonth = useInvestorsJournalStore((s) => s.eventsByMonth);
+  const journalVotedEvents = useInvestorsJournalStore((s) => s.votedEvents);
+  const journalRewarded = useInvestorsJournalStore((s) => s.rewarded);
+  const refreshJournal = useInvestorsJournalStore((s) => s.refresh);
+  useEffect(() => {
+    void refreshJournal(journalMonth); // cache warm-up; sheet refreshes again on open
+  }, [refreshJournal, journalMonth]);
+  const handleJournalPress = useCallback(() => {
+    tapHaptic();
+    setJournalVisible(true);
+  }, []);
+  // Gold badge: an event within the next 48h, or a resolved forecast the user
+  // hasn't collected yet (Duo's "appointment" trigger — real reasons only).
+  const journalBadge = useMemo(() => {
+    const events = journalEventsByMonth[journalMonth] ?? [];
+    const today = getIsraelDateISO();
+    const in2 = israelDatePlusDays(today, 2);
+    return events.some(
+      (e) =>
+        (e.outcome === null && e.eventDate >= today && e.eventDate <= in2) ||
+        (e.outcome !== null &&
+          journalVotedEvents[e.id] !== undefined &&
+          journalVotedEvents[e.id] === e.outcome &&
+          !journalRewarded.includes(e.id)),
+    );
+  }, [journalEventsByMonth, journalMonth, journalVotedEvents, journalRewarded]);
   const [mindMapChapter, setMindMapChapter] = useState<number | null>(null);
   const [replayModule, setReplayModule] = useState<{ moduleId: string; chapterId: string; moduleIndex: number } | null>(null);
   // Topic-tree pilot: a tap on a `learningMode: 'topic-tree'` module
@@ -2765,6 +2881,7 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
+      <InvestorsJournalSheet visible={journalVisible} onClose={() => setJournalVisible(false)} />
       <DailyNewsChallengeSheet
         visible={newsSheetVisible}
         entrySource={newsEntrySource}
@@ -3069,6 +3186,8 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
+                onJournalPress={hasActiveModule ? handleJournalPress : undefined}
+                journalBadge={hasActiveModule ? journalBadge : undefined}
                 newsBadgeNode={hasActiveModule ? activeNewsBadgeNode : undefined}
                 onPearlPress={handlePearlPress}
                 onInvestorQuizPress={handleInvestorQuizPress}

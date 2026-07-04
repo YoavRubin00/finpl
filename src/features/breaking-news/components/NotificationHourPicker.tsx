@@ -84,11 +84,11 @@ export function NotificationHourPicker({
         >
           {PICKABLE_HOURS.map((hour) => {
             const selected = hour === pending;
+            // STATIC style array — a function-style ({pressed}) => [...] drops
+            // the whole style on Android (known Pressable bug): the selected
+            // pill lost its blue fill while keeping the white text = the
+            // white-on-white Yoav reported (2026-07-04).
             return (
-              {/* STATIC style array — a function-style ({pressed}) => [...] drops
-                  the whole style on Android (known Pressable bug): the selected
-                  pill lost its blue fill while keeping the white text = the
-                  white-on-white Yoav reported (2026-07-04). */}
               <Pressable
                 key={hour}
                 onPress={() => handleSelect(hour)}

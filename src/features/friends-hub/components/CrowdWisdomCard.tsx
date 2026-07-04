@@ -19,6 +19,7 @@ import { getApiBase } from '../../../db/apiBase';
 import type { LiveMarketData } from '../../live-news/liveMarketTypes';
 import { FinnCue } from './FinnCue';
 import { Ta35WeeklyForecast } from './Ta35WeeklyForecast';
+import { JournalEventPoll } from '../../investors-journal/JournalEventPoll';
 
 interface TopicTheme {
   color: string;
@@ -407,6 +408,10 @@ export function CrowdWisdomCard(): React.ReactElement {
 
       {/* ── ת"א-35 weekly forecast — pinned; real weekly %s, resets Sunday ── */}
       <Ta35WeeklyForecast />
+
+      {/* ── יומן משקיעים bridge — the nearest macro event's forecast, same
+           votes/percentages as the journal sheet (one vote everywhere) ── */}
+      <JournalEventPoll />
 
       {/* ── Poll items ── */}
       {top3.map((q, idx) => {

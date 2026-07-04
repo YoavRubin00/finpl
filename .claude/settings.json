@@ -65,7 +65,11 @@
       "Bash(node -e ' *)",
       "Bash(python -)",
       "Bash(node scripts/sql.mjs \"SELECT count\\(*\\)::int AS users FROM user_profiles\")",
-      "Bash(git revert *)"
+      "Bash(git revert *)",
+      "WebSearch",
+      "WebFetch(domain:www.federalreserve.gov)",
+      "WebFetch(domain:www.boi.org.il)",
+      "WebFetch(domain:www.bls.gov)"
     ],
     "additionalDirectories": [
       "C:\\Users\\יואב רובין\\.claude\\projects\\finpl\\src\\features\\chapter-5-content\\simulations"

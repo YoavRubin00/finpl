@@ -1,4 +1,4 @@
-import { pgTable, unique, uniqueIndex, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial, bigserial, primaryKey, doublePrecision } from "drizzle-orm/pg-core"
+import { pgTable, unique, uniqueIndex, uuid, text, integer, smallint, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial, bigserial, primaryKey, doublePrecision } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -520,6 +520,35 @@ export const contentReports = pgTable("content_reports", {
   foreignKey({ columns: [table.reporterUserId], foreignColumns: [userProfiles.id], name: "content_reports_reporter_fk" }).onDelete("cascade"),
   unique("content_reports_one_per_reporter").on(table.reporterUserId, table.targetType, table.targetId),
   check("content_reports_target_type_chk", sql`target_type IN ('portfolio','comment')`),
+]);
+
+// ─── Investors Journal (migration 0012) — the month's REAL macro events ────────
+// Curated + Waren-verified rows (earnings / rate decisions / CPI / jobs) shown
+// in the "יומן משקיעים" sheet. Cloud-updatable via X-Bar-Token — no OTA.
+export const investorJournalEvents = pgTable("investor_journal_events", {
+  id: text().primaryKey().notNull(),
+  eventDate: date("event_date").notNull(),
+  country: text().notNull(), // 'us' | 'il'
+  kind: text().notNull(), // 'earnings' | 'rate' | 'cpi' | 'jobs' | 'other'
+  emoji: text().notNull().default('📊'),
+  title: text().notNull(),
+  teaser: text().notNull().default(''),
+  explainWhat: text("explain_what").notNull(),
+  explainWhyMe: text("explain_why_me").notNull(),
+  explainMarket: text("explain_market").notNull(),
+  question: text().notNull(),
+  optionA: text("option_a").notNull(),
+  optionB: text("option_b").notNull(),
+  outcome: smallint(),
+  outcomeNote: text("outcome_note"),
+  hidden: boolean().notNull().default(false),
+  sort: integer().notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  index("ije_month_idx").using("btree", table.eventDate.asc()),
+  check("ije_country_chk", sql`country IN ('us','il')`),
+  check("ije_kind_chk", sql`kind IN ('earnings','rate','cpi','jobs','other')`),
+  check("ije_outcome_chk", sql`outcome IS NULL OR outcome IN (0,1)`),
 ]);
 
 // ─── Trade-room chat (server-backed, migration 0011) ───────────────────────────
