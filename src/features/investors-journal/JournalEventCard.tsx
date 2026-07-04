@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
-import { ChevronDown, ChevronUp, Check } from 'lucide-react-native';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { tapHaptic } from '../../utils/haptics';
 import { getIsraelDateISO } from '../../utils/israelTime';
@@ -117,6 +117,8 @@ export function ForecastSection({ event }: { event: JournalEvent }): React.React
       <Text style={[styles.forecastQuestion, RTL]} maxFontSizeMultiplier={1.3}>{event.question}</Text>
       {votedIndex === null && event.outcome === null ? (
         <View style={{ gap: 6 }}>
+          {/* Two-camp options — the same green/red visual language as the
+              crowd-wisdom card on the friends screen (Yoav 2026-07-04). */}
           {([0, 1] as const).map((idx) => (
             <Pressable
               key={idx}
@@ -124,10 +126,14 @@ export function ForecastSection({ event }: { event: JournalEvent }): React.React
               disabled={submitting}
               accessibilityRole="button"
               accessibilityLabel={`התחזית שלי: ${idx === 0 ? event.optionA : event.optionB}`}
-              style={[styles.voteBtn, submitting && { opacity: 0.6 }]}
-              android_ripple={{ color: 'rgba(37,99,235,0.1)' }}
+              style={[idx === 0 ? styles.voteBtnGreen : styles.voteBtnRed, submitting && { opacity: 0.6 }]}
+              android_ripple={{ color: idx === 0 ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)' }}
             >
-              <Text style={[styles.voteBtnText, RTL]} maxFontSizeMultiplier={1.2}>
+              <Text
+                style={[styles.voteBtnText, RTL, { color: idx === 0 ? '#166534' : '#991b1b' }]}
+                maxFontSizeMultiplier={1.2}
+                numberOfLines={1}
+              >
                 {idx === 0 ? event.optionA : event.optionB}
               </Text>
             </Pressable>
@@ -172,9 +178,12 @@ function ForecastResults({
 
   return (
     <View style={{ gap: 6 }}>
+      {/* Same visual language as the Ta35 weekly results on the friends screen:
+          green/red camps, fill = real community %, white "הבחירה שלך" pill. */}
       {([0, 1] as const).map((idx) => {
         const isMine = votedIndex === idx;
         const isWinner = resolved && event.outcome === idx;
+        const green = idx === 0;
         const pct = pcts[idx];
         return (
           <View
@@ -182,18 +191,59 @@ function ForecastResults({
             accessible
             accessibilityRole="text"
             accessibilityLabel={`${idx === 0 ? event.optionA : event.optionB}: ${live.hasData ? `${pct} אחוז` : 'עדיין אין נתונים'}${isMine ? ', התחזית שלך' : ''}${isWinner ? ', זה מה שקרה' : ''}`}
-            style={[styles.resultRow, isMine && styles.resultRowMine, isWinner && styles.resultRowWinner]}
+            style={{
+              minHeight: 42,
+              borderRadius: 10,
+              backgroundColor: '#f1f5f9',
+              borderWidth: isMine || isWinner ? 2 : 1,
+              borderColor: isWinner ? '#16a34a' : isMine ? (green ? '#16a34a' : '#dc2626') : '#e2e8f0',
+              overflow: 'hidden',
+              justifyContent: 'center',
+            }}
           >
-            {live.hasData && <View style={[styles.resultFill, { width: `${pct}%` }, isWinner && { backgroundColor: '#bbf7d0' }]} />}
-            <View style={styles.resultContent}>
-              {isWinner && <Text style={styles.winnerMark} allowFontScaling={false}>🎯</Text>}
-              <Text style={[styles.resultText, RTL, isMine && { fontWeight: '900' }]} maxFontSizeMultiplier={1.2} numberOfLines={2}>
+            {live.hasData && (
+              <View
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: `${pct}%`,
+                  backgroundColor: green ? (isMine ? '#bbf7d0' : '#dcfce7') : isMine ? '#fecaca' : '#fee2e2',
+                }}
+              />
+            )}
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, gap: 6 }}>
+              {isWinner && <Text style={{ fontSize: 13 }} allowFontScaling={false}>🎯</Text>}
+              <Text
+                style={[{ fontSize: 13, fontWeight: isMine ? '900' : '700', color: '#0f172a', flexShrink: 1 }, RTL]}
+                maxFontSizeMultiplier={1.2}
+                numberOfLines={2}
+              >
                 {idx === 0 ? event.optionA : event.optionB}
               </Text>
-              {isMine && <Check size={14} color="#2563eb" strokeWidth={3} />}
+              {isMine && (
+                <View
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: 6,
+                    paddingHorizontal: 5,
+                    paddingVertical: 1,
+                    borderWidth: 1,
+                    borderColor: green ? '#86efac' : '#fecaca',
+                  }}
+                >
+                  <Text
+                    style={{ fontSize: 9, fontWeight: '900', color: green ? '#15803d' : '#b91c1c', writingDirection: 'rtl' }}
+                    allowFontScaling={false}
+                  >
+                    ✓ הבחירה שלך
+                  </Text>
+                </View>
+              )}
               <View style={{ flex: 1 }} />
               {live.hasData && (
-                <Text style={styles.resultPct} maxFontSizeMultiplier={1.2}>{pct}%</Text>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#0f172a' }} maxFontSizeMultiplier={1.2}>{pct}%</Text>
               )}
             </View>
           </View>
@@ -226,17 +276,28 @@ function ForecastResults({
   );
 }
 
-export function JournalEventCard({ event, initiallyOpen }: { event: JournalEvent; initiallyOpen?: boolean }): React.ReactElement {
-  const [open, setOpen] = useState(initiallyOpen === true);
+export function JournalEventCard({
+  event,
+  open,
+  onToggle,
+}: {
+  event: JournalEvent;
+  /** Controlled by the sheet — one card open at a time, and a grid-day tap
+   *  opens ITS event specifically (Yoav 2026-07-04). */
+  open: boolean;
+  onToggle: () => void;
+}): React.ReactElement {
   const rel = useMemo(() => relativeLabel(event.eventDate), [event.eventDate]);
   const colors = KIND_COLOR[event.kind];
   const resolved = event.outcome !== null;
 
   return (
     <Animated.View entering={FadeInDown.duration(240)} style={[styles.card, rel.isPast && !resolved && { opacity: 0.82 }]}>
+      {/* Premium per-kind accent line */}
+      <View style={{ height: 3, backgroundColor: colors.main, opacity: 0.85 }} />
       {/* Header row — always visible */}
       <Pressable
-        onPress={() => { tapHaptic(); setOpen((v) => !v); }}
+        onPress={() => { tapHaptic(); onToggle(); }}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={`${event.title}, ${KIND_LABEL[event.kind]}, ${rel.label}. הקישו ${open ? 'לסגירה' : 'להרחבה'}`}
@@ -371,32 +432,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   forecastQuestion: { fontSize: 13.5, fontWeight: '900', color: '#1e3a8a', lineHeight: 19 },
-  voteBtn: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+  voteBtnGreen: {
+    minHeight: 42,
+    borderRadius: 10,
+    backgroundColor: '#f0fdf4',
     borderWidth: 1.5,
-    borderColor: '#93c5fd',
+    borderColor: '#86efac',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    gap: 8,
   },
-  voteBtnText: { fontSize: 13, fontWeight: '800', color: '#1e40af' },
-  forecastHint: { fontSize: 11, fontWeight: '700', color: '#64748b' },
-
-  resultRow: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+  voteBtnRed: {
+    minHeight: 42,
+    borderRadius: 10,
+    backgroundColor: '#fef2f2',
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    overflow: 'hidden',
-    position: 'relative',
+    borderColor: '#fecaca',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
-  resultRowMine: { borderColor: '#2563eb', borderWidth: 2 },
-  resultRowWinner: { borderColor: '#16a34a', borderWidth: 2 },
-  resultFill: { position: 'absolute', right: 0, top: 0, bottom: 0, backgroundColor: '#dbeafe' },
-  resultContent: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10 },
-  winnerMark: { fontSize: 13 },
-  resultText: { fontSize: 13, fontWeight: '700', color: '#0f172a', flexShrink: 1 },
-  resultPct: { fontSize: 13, fontWeight: '900', color: '#0f172a' },
+  voteBtnText: { flex: 1, fontSize: 13, fontWeight: '800' },
+  forecastHint: { fontSize: 11, fontWeight: '700', color: '#64748b' },
 
   outcomeChip: {
     flexDirection: 'row-reverse',

@@ -16,8 +16,11 @@ const FINN_CALM = require('../../../assets/webp/fin-standard.webp');
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_PAD = 16;
-const CELL = Math.floor((SCREEN_WIDTH - GRID_PAD * 2 - 6 * 4) / 7);
+// Cell width accounts for EVERYTHING around the 7 columns: sheet margins
+// (16×2) + grid card padding (8×2) + 6 inter-cell gaps (4×6) + slack. The
+// previous math missed the paddings, so Saturday (the last RTL column —
+// where "today" sat) clipped off-screen (Yoav 2026-07-04, screenshot).
+const CELL = Math.floor((SCREEN_WIDTH - 16 * 2 - 8 * 2 - 4 * 6 - 10) / 7);
 const DAY_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
 const HEB_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
@@ -57,8 +60,10 @@ interface InvestorsJournalSheetProps {
 /**
  * יומן משקיעים — the month's REAL macro events in the streak-journal UX:
  * bottom sheet, month grid as a navigator, chronological event cards below.
- * Tapping a day with an event scrolls to its card. Simple, fun, accessible
- * (Yoav 2026-07-04). Content rows are Waren-verified server data.
+ * ONE card open at a time (controlled openId); tapping an event day opens
+ * THAT event and scrolls to it. The backdrop is a SIBLING Pressable (never
+ * an ancestor of the ScrollView) so scrolling is never hijacked — the
+ * "נתקע, אי אפשר לעלות חזרה" fix (Yoav 2026-07-04).
  */
 export function InvestorsJournalSheet({ visible, onClose }: InvestorsJournalSheetProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
@@ -69,6 +74,9 @@ export function InvestorsJournalSheet({ visible, onClose }: InvestorsJournalShee
   const scrollRef = useRef<ScrollView>(null);
   const cardOffsets = useRef<Record<string, number>>({});
   const [loadedOnce, setLoadedOnce] = useState(false);
+  // ONE open card at a time; null until the events land, then the next
+  // upcoming event opens so the sheet lands on "what's next".
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -80,26 +88,42 @@ export function InvestorsJournalSheet({ visible, onClose }: InvestorsJournalShee
   const cells = useMemo(() => buildMonthCells(month, todayISO, events), [month, todayISO, events]);
   const monthTitle = `${HEB_MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
 
-  // The next upcoming event opens expanded — the sheet lands on "what's next".
   const nextUpcomingId = useMemo(() => {
     const upcoming = events.find((e) => e.eventDate >= todayISO);
     return (upcoming ?? events[0])?.id ?? null;
   }, [events, todayISO]);
 
-  const scrollToDate = (dateISO: string) => {
+  useEffect(() => {
+    if (visible && openId === null && nextUpcomingId) setOpenId(nextUpcomingId);
+  }, [visible, openId, nextUpcomingId]);
+
+  // The open event's date — highlighted on the grid (premium touch).
+  const openDate = useMemo(
+    () => events.find((e) => e.id === openId)?.eventDate ?? null,
+    [events, openId],
+  );
+
+  const openDay = (dateISO: string) => {
     const target = events.find((e) => e.eventDate === dateISO);
     if (!target) return;
     tapHaptic();
-    const y = cardOffsets.current[target.id];
-    if (typeof y === 'number') scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true });
+    setOpenId(target.id); // open THAT event specifically
+    // Scroll after the expand/collapse re-layout settles (onLayout refreshes offsets).
+    setTimeout(() => {
+      const y = cardOffsets.current[target.id];
+      if (typeof y === 'number') scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true });
+    }, 180);
   };
 
   if (!visible) return null;
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
-      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="סגירת יומן המשקיעים">
-        <Pressable style={[styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 10) }]} onPress={() => { /* swallow */ }}>
+      <View style={styles.overlay}>
+        {/* Backdrop — a SIBLING of the sheet, never wraps the ScrollView */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="סגירת יומן המשקיעים" />
+
+        <View style={[styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
           <View style={styles.handle} accessible={false} />
 
           {/* Header — premium gradient banner */}
@@ -125,8 +149,8 @@ export function InvestorsJournalSheet({ visible, onClose }: InvestorsJournalShee
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 16 }}
           >
-            {/* Month grid — a navigator: tap an event day to jump to its card */}
-            <View style={styles.grid} accessible accessibilityLabel={`לוח ${monthTitle}. ימים עם אירוע מסומנים; הקשה קופצת לאירוע`}>
+            {/* Month grid — a navigator: tap an event day to open its card */}
+            <View style={styles.grid} accessible accessibilityLabel={`לוח ${monthTitle}. ימים עם אירוע מסומנים; הקשה פותחת את האירוע`}>
               <View style={styles.weekRow}>
                 {DAY_LETTERS.map((l) => (
                   <Text key={l} style={styles.dayLetter} allowFontScaling={false}>{l}</Text>
@@ -134,42 +158,47 @@ export function InvestorsJournalSheet({ visible, onClose }: InvestorsJournalShee
               </View>
               {Array.from({ length: cells.length / 7 }, (_, w) => (
                 <View key={w} style={styles.weekRow}>
-                  {cells.slice(w * 7, w * 7 + 7).map((cell, i) => (
-                    <Pressable
-                      key={i}
-                      disabled={!cell.eventEmoji}
-                      onPress={() => cell.dateISO && scrollToDate(cell.dateISO)}
-                      accessibilityRole={cell.eventEmoji ? 'button' : undefined}
-                      accessibilityLabel={
-                        cell.day
-                          ? `${cell.day} ב${monthTitle}${cell.eventEmoji ? ', יש אירוע — הקישו לצפייה' : ''}${cell.isToday ? ', היום' : ''}`
-                          : undefined
-                      }
-                      style={[
-                        styles.dayCell,
-                        cell.isToday && styles.dayCellToday,
-                        cell.eventEmoji != null && styles.dayCellEvent,
-                      ]}
-                    >
-                      {cell.day !== null && (
-                        <>
-                          <Text style={[styles.dayNum, cell.isToday && { color: '#ea580c', fontWeight: '900' }]} allowFontScaling={false}>
-                            {cell.day}
-                          </Text>
-                          {cell.eventEmoji ? (
-                            <Text style={styles.dayEventEmoji} allowFontScaling={false}>{cell.eventEmoji}</Text>
-                          ) : (
-                            <View style={{ height: 14 }} />
-                          )}
-                        </>
-                      )}
-                    </Pressable>
-                  ))}
+                  {cells.slice(w * 7, w * 7 + 7).map((cell, i) => {
+                    const isOpenDay = cell.dateISO !== null && cell.dateISO === openDate;
+                    return (
+                      <Pressable
+                        key={i}
+                        disabled={!cell.eventEmoji}
+                        onPress={() => cell.dateISO && openDay(cell.dateISO)}
+                        android_ripple={cell.eventEmoji ? { color: 'rgba(37,99,235,0.12)' } : undefined}
+                        accessibilityRole={cell.eventEmoji ? 'button' : undefined}
+                        accessibilityLabel={
+                          cell.day
+                            ? `${cell.day} ב${monthTitle}${cell.eventEmoji ? ', יש אירוע — הקישו לפתיחה' : ''}${cell.isToday ? ', היום' : ''}`
+                            : undefined
+                        }
+                        style={[
+                          styles.dayCell,
+                          cell.eventEmoji != null && styles.dayCellEvent,
+                          cell.isToday && styles.dayCellToday,
+                          isOpenDay && styles.dayCellOpen,
+                        ]}
+                      >
+                        {cell.day !== null && (
+                          <>
+                            <Text style={[styles.dayNum, cell.isToday && { color: '#ea580c', fontWeight: '900' }]} allowFontScaling={false}>
+                              {cell.day}
+                            </Text>
+                            {cell.eventEmoji ? (
+                              <Text style={styles.dayEventEmoji} allowFontScaling={false}>{cell.eventEmoji}</Text>
+                            ) : (
+                              <View style={{ height: 14 }} />
+                            )}
+                          </>
+                        )}
+                      </Pressable>
+                    );
+                  })}
                 </View>
               ))}
             </View>
 
-            {/* Event cards — chronological */}
+            {/* Event cards — chronological, one open at a time */}
             {events.length === 0 ? (
               <Animated.View entering={FadeIn.duration(240)} style={styles.emptyWrap}>
                 <ExpoImage source={FINN_CALM} style={{ width: 96, height: 96 }} contentFit="contain" autoplay accessible={false} />
@@ -188,7 +217,11 @@ export function InvestorsJournalSheet({ visible, onClose }: InvestorsJournalShee
                   key={e.id}
                   onLayout={(ev) => { cardOffsets.current[e.id] = ev.nativeEvent.layout.y; }}
                 >
-                  <JournalEventCard event={e} initiallyOpen={e.id === nextUpcomingId} />
+                  <JournalEventCard
+                    event={e}
+                    open={openId === e.id}
+                    onToggle={() => setOpenId((cur) => (cur === e.id ? null : e.id))}
+                  />
                 </View>
               ))
             )}
@@ -198,8 +231,8 @@ export function InvestorsJournalSheet({ visible, onClose }: InvestorsJournalShee
               התוכן ביומן הוא הסבר לימודי בלבד — לא ייעוץ השקעות, לא המלצה ולא תחליף לייעוץ מקצועי.
             </Text>
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -264,7 +297,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 12,
     paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     gap: 2,
     shadowColor: '#3e3c8f',
     shadowOpacity: 0.07,
@@ -274,9 +307,9 @@ const styles = StyleSheet.create({
   },
   weekRow: {
     flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     gap: 4,
-    paddingHorizontal: 4,
+    marginBottom: 2,
   },
   dayLetter: {
     width: CELL,
@@ -292,13 +325,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dayCellEvent: {
+    backgroundColor: '#eff6ff',
+  },
   dayCellToday: {
     borderWidth: 2,
     borderColor: '#f97316',
     backgroundColor: 'rgba(249,115,22,0.08)',
   },
-  dayCellEvent: {
-    backgroundColor: '#eff6ff',
+  dayCellOpen: {
+    borderWidth: 2,
+    borderColor: '#2563eb',
   },
   dayNum: { fontSize: 11, fontWeight: '700', color: '#334155' },
   dayEventEmoji: { fontSize: 12, marginTop: 1 },

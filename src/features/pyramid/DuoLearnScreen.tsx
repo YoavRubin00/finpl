@@ -688,10 +688,12 @@ function ModuleNode({
     : Math.max(nodeCenter - NODE_SIZE / 2 - CHAR_SIZE - 6, 0);
   // Investors Journal chip — ALWAYS the mirror side of the shark (Yoav
   // 2026-07-04): shark right → journal left of the node, and vice versa.
-  const JOURNAL_W = 54;
+  // Positioned BELOW the module-title pill (which lives on the same mirror
+  // side) — logo only, no text (Yoav's polish round).
+  const JOURNAL_W = 44;
   const journalLeft = finnGoesRight
-    ? Math.max(nodeCenter - NODE_SIZE / 2 - JOURNAL_W - 8, 0)
-    : Math.min(nodeCenter + NODE_SIZE / 2 + 8, CONTENT_W - JOURNAL_W);
+    ? Math.max(nodeCenter - NODE_SIZE / 2 - JOURNAL_W - 10, 0)
+    : Math.min(nodeCenter + NODE_SIZE / 2 + 10, CONTENT_W - JOURNAL_W);
 
   return (
     <View style={[styles.nodeRow, { height: ROW_HEIGHT }]}>
@@ -726,23 +728,25 @@ function ModuleNode({
               />
             )}
           </Animated.View>
-          {/* Investors Journal — premium 📅 chip, mirror side of the shark */}
+          {/* Investors Journal — logo-only 📅 chip, mirror side of the shark,
+              BELOW the module-title pill so it never covers text */}
           {onJournalPress && (
             <Animated.View
               entering={FadeInDown.delay(160).duration(400)}
-              style={{ position: 'absolute', top: 16, zIndex: 20, left: journalLeft, width: JOURNAL_W, alignItems: 'center', gap: 3 }}
+              style={{ position: 'absolute', top: 70, zIndex: 20, left: journalLeft, width: JOURNAL_W, alignItems: 'center' }}
             >
               <Pressable
                 onPress={onJournalPress}
                 accessibilityRole="button"
                 accessibilityLabel={`יומן משקיעים — אירועי השוק של החודש${journalBadge ? ', יש אירוע קרוב' : ''}`}
+                hitSlop={8}
                 style={{
                   borderRadius: 999,
                   shadowColor: '#3b82f6',
                   shadowOpacity: 0.4,
-                  shadowRadius: 10,
-                  shadowOffset: { width: 0, height: 4 },
-                  elevation: 7,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 6,
                 }}
               >
                 <LinearGradient
@@ -750,16 +754,16 @@ function ModuleNode({
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
+                    width: 42,
+                    height: 42,
+                    borderRadius: 21,
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1.5,
                     borderColor: 'rgba(255,255,255,0.6)',
                   }}
                 >
-                  <Text style={{ fontSize: 21 }} allowFontScaling={false}>📅</Text>
+                  <Text style={{ fontSize: 19 }} allowFontScaling={false}>📅</Text>
                 </LinearGradient>
                 {journalBadge && (
                   <View
@@ -767,9 +771,9 @@ function ModuleNode({
                       position: 'absolute',
                       top: -2,
                       left: -2,
-                      width: 15,
-                      height: 15,
-                      borderRadius: 8,
+                      width: 14,
+                      height: 14,
+                      borderRadius: 7,
                       backgroundColor: '#f59e0b',
                       borderWidth: 2,
                       borderColor: '#ffffff',
@@ -778,13 +782,6 @@ function ModuleNode({
                   />
                 )}
               </Pressable>
-              <Text
-                style={{ fontSize: 10, fontWeight: '900', color: '#1d4ed8', writingDirection: 'rtl' }}
-                maxFontSizeMultiplier={1.2}
-                allowFontScaling={false}
-              >
-                יומן משקיעים
-              </Text>
             </Animated.View>
           )}
           {/* Speech bubble above + offset to the right of Finn so it doesn't
