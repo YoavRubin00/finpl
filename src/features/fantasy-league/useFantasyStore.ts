@@ -20,6 +20,10 @@ import {
   isDraftOpen,
   REQUIRED_PICKS,
   DRAFT_STREAK_BONUSES,
+  getBenchmarkReturn,
+  BEAT_MODEST_MULT,
+  BEAT_CRUSH_MULT,
+  CRUSH_MARGIN_PP,
 } from './fantasyData';
 import { israelDatePlusDays } from '../../utils/israelTime';
 import { captureEvent } from '../../lib/posthog';
@@ -48,31 +52,46 @@ function settleEntry(entry: WeeklyEntry, useLive: boolean): WeeklyEntry {
   return { ...entry, picks };
 }
 
-/** Credits the participation floor for a settled week (P0-1 frozen model: 10%
- *  coins back + 25 base XP + the user's OWN draft-streak & completed-mission XP;
- *  NO rank/tier multipliers, NO diamonds — there is no real server settle). Fires
+/** Settles a week against the S&P 500 benchmark (Moni RULING 2 / Fable P1-8):
+ *  beat it on a positive absolute return → 1.1× the pool, crush it by ≥5pp →
+ *  1.5× (hard cap), else the 10% floor. Plus base + own streak/mission XP and a
+ *  tier beat/crush XP bonus. An abandoned 0-pick join is fully refunded. Fires
  *  the animated economy counters and returns the amounts for display. */
-function creditParticipationFloor(
+function creditSettlement(
   entry: WeeklyEntry,
+  benchmark: number,
   missions: WeeklyMission[],
 ): { coinsReturned: number; xpEarned: number } {
   const { useEconomyUIStore } = require('../economy/useEconomyUIStore');
   // Abandoned join — paid the entry but never drafted a single pick → FULL
-  // refund, not a 10% floor. The user never got to play; charging 90% for a
-  // team they never saw is a silent coin leak (Fable P1-7).
+  // refund (the user never got to play — Fable P1-7).
   if (entry.picks.length === 0) {
     useEconomyUIStore.getState().addCoins(entry.coinsPaid);
     return { coinsReturned: entry.coinsPaid, xpEarned: 0 };
   }
-  const coinsReturned = Math.round(entry.coinsPaid * 0.1);
+  // Allocation-weighted effective return (captain ×2, vice ×1.5).
+  const totalAlloc = entry.picks.reduce((s, p) => s + p.allocation, 0) || 1;
+  const eff =
+    entry.picks.reduce((s, p) => {
+      const mult = entry.captainTicker === p.ticker ? 2 : entry.viceTicker === p.ticker ? 1.5 : 1;
+      return s + p.allocation * (p.returnPercent ?? 0) * mult;
+    }, 0) / totalAlloc;
+  // Beat the market only on a POSITIVE absolute return (you can't "win" a losing
+  // week by losing less than the S&P). Crush = ≥5pp above it → the 1.5× cap.
+  const beat = eff > benchmark && eff > 0;
+  const crush = beat && eff - benchmark >= CRUSH_MARGIN_PP;
+  const mult = crush ? BEAT_CRUSH_MULT : beat ? BEAT_MODEST_MULT : 0.1;
+  const coinsReturned = Math.round(entry.coinsPaid * mult);
   let xpEarned = 25;
   const streakBonus = DRAFT_STREAK_BONUSES.filter((b) => entry.draftStreakWeeks >= b.weeks).reduce(
     (max, b) => Math.max(max, b.bonusXP),
     0,
   );
   xpEarned += streakBonus;
-  const missionBonus = missions.filter((m) => m.completed).reduce((s, m) => s + m.bonusXP, 0);
-  xpEarned += missionBonus;
+  xpEarned += missions.filter((m) => m.completed).reduce((s, m) => s + m.bonusXP, 0);
+  const tierCfg = TIER_CONFIGS[entry.tier];
+  if (crush) xpEarned += tierCfg?.crushXP ?? 0;
+  else if (beat) xpEarned += tierCfg?.beatXP ?? 0;
   useEconomyUIStore.getState().addCoins(coinsReturned);
   useEconomyUIStore.getState().addXP(xpEarned, 'challenge_complete');
   return { coinsReturned, xpEarned };
@@ -362,7 +381,7 @@ export const useFantasyStore = create<FantasyStore>()(
         // user ignored last week's card for a whole week) so no coins are lost
         // when we overwrite pendingResult below.
         if (pendingResult && !pendingResult.claimed) {
-          creditParticipationFloor(pendingResult, missions);
+          creditSettlement(pendingResult, pendingResult.benchmarkReturn ?? 0, missions);
         }
 
         // Settle + credit the outgoing live week (if any), as the new card.
@@ -372,8 +391,16 @@ export const useFantasyStore = create<FantasyStore>()(
           // ended (its Monday is exactly this liveWeekId); else use the sim.
           const liveWindowValid = israelDatePlusDays(currentEntry.weekId, 7) === liveWeekId;
           const settled = settleEntry(currentEntry, liveWindowValid);
-          const { coinsReturned, xpEarned } = creditParticipationFloor(settled, missions);
-          newPending = { ...settled, finalRank: null, coinsReturned, xpEarned, claimed: true };
+          const benchmark = getBenchmarkReturn(currentEntry.weekId, liveWindowValid);
+          const { coinsReturned, xpEarned } = creditSettlement(settled, benchmark, missions);
+          newPending = {
+            ...settled,
+            finalRank: null,
+            coinsReturned,
+            xpEarned,
+            benchmarkReturn: benchmark,
+            claimed: true,
+          };
         }
 
         if (isRolloverA && nextEntry) {

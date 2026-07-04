@@ -27,12 +27,15 @@ export const useLiveReturnsStore = create<LiveReturnsState>((set, get) => ({
     if (loading) return;
     if (fetchedAt && Date.now() - fetchedAt < REFRESH_MS) return;
     if (tickers.length === 0) return;
+    // Always fetch the S&P 500 benchmark alongside the picks so "beat the
+    // market" (Moni P1-8) has live data; the sim fills in when offline.
+    const withBenchmark = tickers.includes('SPX') ? tickers : [...tickers, 'SPX'];
 
     set({ loading: true });
     try {
       const base = getApiBase();
       const res = await fetch(
-        `${base}/api/market/weekly-returns?tickers=${encodeURIComponent(tickers.join(','))}`,
+        `${base}/api/market/weekly-returns?tickers=${encodeURIComponent(withBenchmark.join(','))}`,
       );
       if (!res.ok) return;
       const data = (await res.json()) as { ok: boolean; returns: Record<string, number | null> };

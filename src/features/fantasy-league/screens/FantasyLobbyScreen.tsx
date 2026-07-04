@@ -232,6 +232,10 @@ function ResultCard({
     ? entry.picks.reduce((a, b) => ((b.returnPercent ?? 0) > (a.returnPercent ?? 0) ? b : a))
     : null;
   const bestIsCaptain = !!best && entry.captainTicker === best.ticker;
+  // Beat-the-market delta (Moni P1-8): the S&P 500 return this week settled
+  // against, and whether the (leveraged) portfolio beat it on a positive week.
+  const bench = entry.benchmarkReturn ?? null;
+  const beatMarket = bench != null && eff > bench && eff > 0;
   useEffect(() => {
     try { successHaptic(); } catch { /* non-fatal */ }
   }, []);
@@ -251,6 +255,20 @@ function ResultCard({
               {eff.toFixed(1)}% · נכנסו לך {(entry.coinsReturned ?? 0).toLocaleString('en-US')} 🪙 ו-
               {entry.xpEarned ?? 0} XP
             </Text>
+            {bench != null && (
+              <Text
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: '800',
+                  color: beatMarket ? FANTASY.positiveDark : FANTASY.inkMuted,
+                  ...RTL,
+                  marginTop: 3,
+                }}
+              >
+                {beatMarket ? '🎯 ניצחת את השוק! ' : ''}S&P 500: {bench >= 0 ? '+' : ''}
+                {bench.toFixed(1)}%
+              </Text>
+            )}
           </View>
         </View>
         {best && (best.returnPercent ?? 0) !== 0 && (

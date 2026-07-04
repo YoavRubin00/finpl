@@ -145,6 +145,26 @@ export function formatCompetitionCountdown(now: Date = new Date()): string {
 }
 
 // ---------------------------------------------------------------------------
+// Beat-the-market settlement (Moni RULING 2 / Fable P1-8)
+// ---------------------------------------------------------------------------
+
+/** Payout multiplier on the entry pool when you beat the S&P 500 by < 5pp. */
+export const BEAT_MODEST_MULT = 1.1;
+/** Payout multiplier when you crush it — ≥ 5pp above the market (hard cap). */
+export const BEAT_CRUSH_MULT = 1.5;
+/** The "crush" margin, in percentage points above the benchmark. */
+export const CRUSH_MARGIN_PP = 5;
+
+/** The benchmark (S&P 500) weekly return, computed the SAME way as the picks:
+ *  the live Yahoo value when we're settling the just-ended week, else the
+ *  deterministic week-anchored sim — so the comparison is always fair. */
+export function getBenchmarkReturn(weekId: string, useLive: boolean): number {
+  const { getLiveWeeklyReturn } = require('./useLiveReturnsStore');
+  const live = useLive ? getLiveWeeklyReturn('SPX') : null;
+  return live ?? simulateWeeklyReturn('SPX', weekId);
+}
+
+// ---------------------------------------------------------------------------
 // Tier configs
 // ---------------------------------------------------------------------------
 
@@ -154,6 +174,8 @@ export const TIER_CONFIGS: Record<string, TierConfig> = {
     label: 'ליגת הכסף',
     emoji: '🥈',
     entryCost: 1_000,
+    beatXP: 150,
+    crushXP: 400,
     // 1st: 5× coins (5,000), 2nd: 3× (3,000), 3rd: 2× (2,000), 4th: 1.5×, 5th: 1.2×
     prizeMultipliers: [5, 3, 2, 1.5, 1.2],
     prizeXP: [500, 300, 200, 100, 50],
@@ -165,6 +187,8 @@ export const TIER_CONFIGS: Record<string, TierConfig> = {
     label: 'ליגת הזהב',
     emoji: '🥇',
     entryCost: 10_000,
+    beatXP: 400,
+    crushXP: 1000,
     // 1st: 5× (50,000), 2nd: 3× (30,000), 3rd: 2× (20,000), 4th: 1.5×, 5th: 1.2×
     prizeMultipliers: [5, 3, 2, 1.5, 1.2],
     prizeXP: [2000, 1200, 800, 400, 200],
@@ -175,6 +199,8 @@ export const TIER_CONFIGS: Record<string, TierConfig> = {
     label: 'ליגת היהלומים',
     emoji: '💎',
     entryCost: 100_000,
+    beatXP: 1000,
+    crushXP: 2500,
     // 1st: 5× (500,000), 2nd: 3× (300,000), 3rd: 2× (200,000), 4th: 1.5×, 5th: 1.2×
     prizeMultipliers: [5, 3, 2, 1.5, 1.2],
     prizeXP: [5000, 3000, 2000, 1000, 500],

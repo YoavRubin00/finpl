@@ -9,6 +9,10 @@ export interface TierConfig {
   label: string;
   emoji: string;
   entryCost: number;
+  /** XP bonus for beating the S&P 500 benchmark (Moni P1-8). */
+  beatXP: number;
+  /** XP bonus for crushing it — ≥5pp above the market. */
+  crushXP: number;
   prizeMultipliers: [number, number, number, number, number];
   prizeXP: [number, number, number, number, number];
   /** Diamonds awarded for 1st-5th place; later slots typically 0. */
@@ -54,6 +58,9 @@ export interface WeeklyEntry {
   finalRank: number | null;
   coinsReturned: number | null;
   xpEarned: number | null;
+  /** The S&P 500 weekly return this entry settled against — for the results
+   *  card's "you vs the market" delta. Null until settled (Moni P1-8). */
+  benchmarkReturn?: number | null;
   claimed: boolean;
   draftStreakWeeks: number;
   /** FPL-style captain — ticker doubles its points contribution. */

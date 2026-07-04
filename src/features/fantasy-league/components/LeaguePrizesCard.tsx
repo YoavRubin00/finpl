@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FANTASY } from '../../../constants/theme';
+import { BEAT_MODEST_MULT, BEAT_CRUSH_MULT } from '../fantasyData';
 
 type Tier = 'silver' | 'gold' | 'diamond';
 
@@ -9,9 +10,9 @@ interface LeaguePrizesCardProps {
   tier: Tier;
   tierLabel: string;
   entryCost: number;
-  // Kept for the caller's signature, but the rank-based prize model is frozen
-  // (no real opponents), so these are no longer rendered — the card now shows
-  // the honest current economy: 10% floor + XP + full refund (Moni ruling P0-2).
+  // Kept for the caller's signature; the rank-based prize model is frozen, so
+  // these aren't rendered. The card shows the "beat the S&P 500" economy
+  // (Moni RULING 2 / Fable P1-8): 1.1× on a beat, 1.5× on a crush, 10% floor.
   prizeMultipliers?: readonly number[];
   prizeDiamonds?: readonly number[];
   prizeXP?: readonly number[];
@@ -68,9 +69,9 @@ function RewardRow({ emoji, title, sub, value }: RewardRowProps): React.ReactEle
 }
 
 /**
- * "What you earn" card. The rank-based 5×/diamond prize table was fabricated
- * (no real opponents settle) and read as a scam against the 10% that actually
- * pays out, so it's replaced with the honest current economy (Moni ruling P0-2).
+ * "Beat the market" prize card (Moni RULING 2 / Fable P1-8). Scored vs the real
+ * S&P 500 weekly return — a beat pays 1.1× the pool, a crush (≥5pp above) pays
+ * 1.5× (capped), and you always keep the 10% floor. Gated on a positive return.
  */
 export function LeaguePrizesCard({
   tier,
@@ -86,7 +87,10 @@ export function LeaguePrizesCard({
   void prizeDiamonds;
   void prizeXP;
   void currentRank;
+  void tierLabel;
   const floor = Math.round(entryCost * 0.1);
+  const beatCoins = Math.round(entryCost * BEAT_MODEST_MULT);
+  const crushCoins = Math.round(entryCost * BEAT_CRUSH_MULT);
 
   return (
     <LinearGradient
@@ -112,28 +116,49 @@ export function LeaguePrizesCard({
           flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 6,
-          marginBottom: 6,
+          marginBottom: 2,
           paddingHorizontal: 4,
         }}
       >
         <Text style={{ fontSize: 16 }}>🏆</Text>
         <Text style={{ fontSize: 14, fontWeight: '900', color: FANTASY.warningDark, ...RTL }}>
-          מה מרוויחים ב{tierLabel}
+          נצחו את השוק
         </Text>
       </View>
+      <Text
+        style={{
+          fontSize: 11.5,
+          color: FANTASY.inkMuted,
+          ...RTL,
+          paddingHorizontal: 4,
+          marginBottom: 8,
+        }}
+      >
+        עברתם את תשואת ה-S&P 500?
+      </Text>
 
-      {/* Honest reward rows */}
+      {/* Beat-the-market rows */}
       <View style={{ gap: 1 }}>
-        <RewardRow emoji="🪙" title="10% מהקופה חוזר אליכם — תמיד" value={`${formatCoins(floor)} 🪙`} />
-        <RewardRow emoji="⭐" title="XP על כל משחק" sub="בסיס + רצף דראפט + משימות" />
+        <RewardRow
+          emoji="✅"
+          title="ניצחתם את השוק"
+          sub="הקופה חוזרת + 10%"
+          value={`${formatCoins(beatCoins)} 🪙`}
+        />
+        <RewardRow
+          emoji="🔥"
+          title="5% ומעלה מעל השוק"
+          sub="הקופה + 50%"
+          value={`${formatCoins(crushCoins)} 🪙`}
+        />
         <RewardRow
           emoji="🛟"
-          title="לא דרפטתם? הקופה חוזרת במלואה"
-          value={`${formatCoins(entryCost)} · 100%`}
+          title="לא ניצחתם? 10% חוזר בכל מקרה"
+          value={`${formatCoins(floor)} 🪙`}
         />
       </View>
 
-      {/* Talent framing */}
+      {/* Gate + XP */}
       <Text
         style={{
           marginTop: 8,
@@ -147,7 +172,7 @@ export function LeaguePrizesCard({
           textAlign: 'center',
         }}
       >
-        המשחק שלכם, הבחירות שלכם — הן שקובעות את הניקוד.
+        רק תשואה חיובית נחשבת — אי אפשר לנצח בשבוע יורד. ועוד XP רציני על כל ניצחון.
       </Text>
 
       {/* Entry hint */}

@@ -20,6 +20,8 @@ const _cache = new Map<string, { value: number | null; expiresAt: number }>();
 
 /** Fantasy ticker → Yahoo symbol. TASE-only names get .TA; crypto gets -USD. */
 const YAHOO_SYMBOLS: Record<string, string> = {
+  SPX: '^GSPC', // S&P 500 — the fantasy "beat the market" benchmark (Moni RULING 2)
+  TA125: '^TA125.TA', // TA-125 Israeli benchmark (reserved for future use)
   'BRK.B': 'BRK-B',
   POLI: 'POLI.TA',
   LUMI: 'LUMI.TA',
