@@ -48,7 +48,9 @@ export function LeaderboardScreen(): React.ReactElement {
 
   const localEntry = leaderboard.find((e) => e.isLocal);
   const rank = localEntry?.rank ?? leaderboard.length + 1;
-  const totalPlayers = leaderboard.length || 100;
+  const totalPlayers = leaderboard.length;
+  // No fabricated "100 players" while the board is frozen (Fable P0-6/P1-10).
+  const hasRivals = totalPlayers > 1;
   const effReturn = getEffectiveAverageReturn();
 
   // Opponent for H2H: player one rank above local
@@ -113,7 +115,7 @@ export function LeaderboardScreen(): React.ReactElement {
       <F2Ambient tone="sky" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <F2Header
-          eyebrow={`${tierLabel} · ${totalPlayers} שחקנים`}
+          eyebrow={hasRivals ? `${tierLabel} · ${totalPlayers} שחקנים` : tierLabel}
           title="דירוג"
           back
           onBack={() => {
@@ -162,7 +164,7 @@ export function LeaderboardScreen(): React.ReactElement {
 
           {/* Continuous leaderboard — top 10 + ellipsis + local row */}
           <Animated.View entering={FadeInDown.delay(120).duration(320)}>
-            <F2Section hint={`${totalPlayers} שחקנים`}>דירוג הליגה</F2Section>
+            <F2Section hint={hasRivals ? `${totalPlayers} שחקנים` : 'אתה מול השוק'}>דירוג הליגה</F2Section>
             <View style={{ gap: 5 }}>
               {top10.map((entry) => (
                 <F2LeaderRow

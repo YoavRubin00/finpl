@@ -88,7 +88,9 @@ export function LiveDashboardScreen(): React.ReactElement {
   const effReturn = getEffectiveAverageReturn();
   const captainBoost = Math.round((effReturn - avgReturn) * 100) / 100;
   const rank = localEntry?.rank ?? leaderboard.length + 1;
-  const totalPlayers = leaderboard.length || 100;
+  const totalPlayers = leaderboard.length;
+  // No fabricated field while the board is frozen (Fable P0-6/P1-10).
+  const hasRivals = totalPlayers > 1;
 
   // Real weekly returns from Yahoo when available; simulation fallback.
   const realReturns = useLiveReturnsStore((s) => s.returns);
@@ -263,7 +265,7 @@ export function LiveDashboardScreen(): React.ReactElement {
 
           {/* Leaderboard — continuous list, no zone banners */}
           <Animated.View entering={FadeInDown.delay(200).duration(320)}>
-            <F2Section hint={`#${rank} מתוך ${totalPlayers}`}>
+            <F2Section hint={hasRivals ? `#${rank} מתוך ${totalPlayers}` : `תשואה ${effReturn >= 0 ? '+' : ''}${effReturn}%`}>
               לוח התוצאות
             </F2Section>
 
