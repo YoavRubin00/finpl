@@ -15,16 +15,65 @@ import {
   getMockLeaderboard,
   simulateWeeklyReturn,
   getWeeklyMissions,
-  getCurrentWeekId,
+  getCompetitionWeekId,
+  getNextCompetitionWeekId,
+  isDraftOpen,
   DRAFT_STREAK_BONUSES,
 } from './fantasyData';
+
+// ---------------------------------------------------------------------------
+// Settlement helpers (shared by the Monday-09:00 auto-rollover)
+// ---------------------------------------------------------------------------
+
+/** Returns a copy of `entry` with each pick's final price + weekly return
+ *  filled in (real Yahoo weekly return when available, deterministic sim
+ *  otherwise). Pure — used to settle the outgoing week at rollover. */
+function settleEntry(entry: WeeklyEntry): WeeklyEntry {
+  const { getLiveWeeklyReturn } = require('./useLiveReturnsStore');
+  const picks = entry.picks.map((pick): DraftPick => {
+    const returnPct =
+      getLiveWeeklyReturn(pick.ticker) ?? simulateWeeklyReturn(pick.ticker, entry.weekId);
+    return { ...pick, finalPrice: pick.entryPrice * (1 + returnPct / 100), returnPercent: returnPct };
+  });
+  return { ...entry, picks };
+}
+
+/** Credits the participation floor for a settled week (P0-1 frozen model: 10%
+ *  coins back + 25 base XP + the user's OWN draft-streak & completed-mission XP;
+ *  NO rank/tier multipliers, NO diamonds — there is no real server settle). Fires
+ *  the animated economy counters and returns the amounts for display. */
+function creditParticipationFloor(
+  entry: WeeklyEntry,
+  missions: WeeklyMission[],
+): { coinsReturned: number; xpEarned: number } {
+  const coinsReturned = Math.round(entry.coinsPaid * 0.1);
+  let xpEarned = 25;
+  const streakBonus = DRAFT_STREAK_BONUSES.filter((b) => entry.draftStreakWeeks >= b.weeks).reduce(
+    (max, b) => Math.max(max, b.bonusXP),
+    0,
+  );
+  xpEarned += streakBonus;
+  const missionBonus = missions.filter((m) => m.completed).reduce((s, m) => s + m.bonusXP, 0);
+  xpEarned += missionBonus;
+  const { useEconomyUIStore } = require('../economy/useEconomyUIStore');
+  useEconomyUIStore.getState().addCoins(coinsReturned);
+  useEconomyUIStore.getState().addXP(xpEarned, 'challenge_complete');
+  return { coinsReturned, xpEarned };
+}
 
 // ---------------------------------------------------------------------------
 // State & actions
 // ---------------------------------------------------------------------------
 
 interface FantasyStoreState {
+  /** The team competing in the LIVE week (Mon 09:00 → next Mon 09:00). */
   currentEntry: WeeklyEntry | null;
+  /** The team being drafted for NEXT week — built in parallel during the
+   *  Thu 09:00 → Mon 09:00 draft window; promoted to `currentEntry` at rollover. */
+  nextEntry: WeeklyEntry | null;
+  /** A just-ended week, settled + already credited, awaiting the user to see the
+   *  results card in the lobby (a Monday return hook). Cleared on dismiss. */
+  pendingResult: WeeklyEntry | null;
   leaderboard: FantasyLeaderboardEntry[];
   missions: WeeklyMission[];
   lastUpdated: string | null;
@@ -47,6 +96,13 @@ interface FantasyStoreActions {
   simulateFinalPrices: () => void;
   claimResults: () => void;
   resetForNewWeek: () => void;
+  /** Advances the weekly cycle at Monday 09:00 IL: settles + credits the
+   *  outgoing live week (→ pendingResult), promotes the drafted next-week team
+   *  to live, and clears any stale entry left from a past week. Idempotent —
+   *  safe to call on every lobby mount + tick. */
+  rolloverIfDue: (now?: Date) => void;
+  /** Dismisses the lobby results card (pendingResult is already credited). */
+  dismissResult: () => void;
   getLeaderboardWithLocal: () => FantasyLeaderboardEntry[];
   /** Allocation-weighted average return (% of pool), without leverage. */
   getAverageReturn: () => number;
@@ -64,6 +120,8 @@ export const useFantasyStore = create<FantasyStore>()(
   persist(
     (set, get) => ({
       currentEntry: null,
+      nextEntry: null,
+      pendingResult: null,
       leaderboard: [],
       missions: [],
       lastUpdated: null,
@@ -71,6 +129,14 @@ export const useFantasyStore = create<FantasyStore>()(
       enterCompetition: (tier: FantasyTier): boolean => {
         const tierConfig = TIER_CONFIGS[tier];
         if (!tierConfig) return false;
+
+        // Drafting is always for the UPCOMING competition week, and only while
+        // the draft window is open (Thu 09:00 → Mon 09:00 IL).
+        if (!isDraftOpen()) return false;
+        const weekId = getNextCompetitionWeekId();
+        // Already drafted this upcoming week → don't re-charge; continue editing.
+        const existingNext = get().nextEntry;
+        if (existingNext && existingNext.weekId === weekId) return false;
 
         // Lazy imports to avoid circular dependency at module load.
         // Dev economy: balance lives in the react-query cache; spends go
@@ -83,11 +149,13 @@ export const useFantasyStore = create<FantasyStore>()(
         if (coins < tierConfig.entryCost) return false;
         fireEconomyDelta({ coinsDelta: -tierConfig.entryCost });
 
-        const weekId = getCurrentWeekId();
+        // Draft streak = consecutive weeks drafted, measured against the last
+        // team that went live (currentEntry).
         const prevEntry = get().currentEntry;
-        const streak = prevEntry?.weekId !== weekId
-          ? (prevEntry?.draftStreakWeeks ?? 0) + 1
-          : (prevEntry?.draftStreakWeeks ?? 0);
+        const streak =
+          prevEntry?.weekId !== weekId
+            ? (prevEntry?.draftStreakWeeks ?? 0) + 1
+            : (prevEntry?.draftStreakWeeks ?? 0);
 
         const newEntry: WeeklyEntry = {
           weekId,
@@ -104,19 +172,20 @@ export const useFantasyStore = create<FantasyStore>()(
           viceTicker: null,
         };
 
-        const missions = getWeeklyMissions(weekId);
-        const leaderboard = getMockLeaderboard(tier, weekId);
-
-        set({ currentEntry: newEntry, leaderboard, missions, lastUpdated: new Date().toISOString() });
+        // The team stays in the `nextEntry` slot until Monday 09:00, when
+        // rolloverIfDue() promotes it to the live competition.
+        set({ nextEntry: newEntry, lastUpdated: new Date().toISOString() });
         return true;
       },
 
+      // ── Draft-building mutations: all operate on `nextEntry` (the team being
+      //    built for next week), never the live `currentEntry`. ──
       pickStock: (categoryId: StockCategoryId, ticker: string, stockName: string, mockPrice: number) => {
-        const { currentEntry } = get();
-        if (!currentEntry || currentEntry.lockedAt) return;
+        const { nextEntry } = get();
+        if (!nextEntry || nextEntry.lockedAt) return;
 
         // Replace any existing pick in this category — one per category.
-        const existing = currentEntry.picks.filter((p) => p.categoryId !== categoryId);
+        const existing = nextEntry.picks.filter((p) => p.categoryId !== categoryId);
         const newPick: DraftPick = {
           categoryId,
           ticker,
@@ -129,106 +198,106 @@ export const useFantasyStore = create<FantasyStore>()(
 
         // Auto-equalize allocations across the new pick set.
         const newPicks = [...existing, newPick];
-        const each = Math.floor(currentEntry.coinsPaid / newPicks.length);
-        const remainder = currentEntry.coinsPaid - each * newPicks.length;
+        const each = Math.floor(nextEntry.coinsPaid / newPicks.length);
+        const remainder = nextEntry.coinsPaid - each * newPicks.length;
         const rebalanced = newPicks.map((p, i) => ({
           ...p,
           allocation: each + (i === 0 ? remainder : 0),
         }));
 
         set({
-          currentEntry: { ...currentEntry, picks: rebalanced },
+          nextEntry: { ...nextEntry, picks: rebalanced },
           lastUpdated: new Date().toISOString(),
         });
       },
 
       setAllocation: (ticker: string, amount: number) => {
-        const { currentEntry } = get();
-        if (!currentEntry || currentEntry.lockedAt) return;
-        const pick = currentEntry.picks.find((p) => p.ticker === ticker);
+        const { nextEntry } = get();
+        if (!nextEntry || nextEntry.lockedAt) return;
+        const pick = nextEntry.picks.find((p) => p.ticker === ticker);
         if (!pick) return;
 
-        const otherSum = currentEntry.picks
+        const otherSum = nextEntry.picks
           .filter((p) => p.ticker !== ticker)
           .reduce((s, p) => s + p.allocation, 0);
-        const maxAllowed = currentEntry.coinsPaid - otherSum;
+        const maxAllowed = nextEntry.coinsPaid - otherSum;
         const clamped = Math.max(0, Math.min(maxAllowed, Math.round(amount)));
 
-        const updatedPicks = currentEntry.picks.map((p) =>
+        const updatedPicks = nextEntry.picks.map((p) =>
           p.ticker === ticker ? { ...p, allocation: clamped } : p,
         );
 
         set({
-          currentEntry: { ...currentEntry, picks: updatedPicks },
+          nextEntry: { ...nextEntry, picks: updatedPicks },
           lastUpdated: new Date().toISOString(),
         });
       },
 
       redistributeAllocationsEqually: () => {
-        const { currentEntry } = get();
-        if (!currentEntry || currentEntry.lockedAt) return;
-        if (currentEntry.picks.length === 0) return;
-        const each = Math.floor(currentEntry.coinsPaid / currentEntry.picks.length);
-        const remainder = currentEntry.coinsPaid - each * currentEntry.picks.length;
-        const updatedPicks = currentEntry.picks.map((p, i) => ({
+        const { nextEntry } = get();
+        if (!nextEntry || nextEntry.lockedAt) return;
+        if (nextEntry.picks.length === 0) return;
+        const each = Math.floor(nextEntry.coinsPaid / nextEntry.picks.length);
+        const remainder = nextEntry.coinsPaid - each * nextEntry.picks.length;
+        const updatedPicks = nextEntry.picks.map((p, i) => ({
           ...p,
           allocation: each + (i === 0 ? remainder : 0),
         }));
         set({
-          currentEntry: { ...currentEntry, picks: updatedPicks },
+          nextEntry: { ...nextEntry, picks: updatedPicks },
           lastUpdated: new Date().toISOString(),
         });
       },
 
       setCaptain: (ticker: string | null) => {
-        const { currentEntry } = get();
+        const { nextEntry } = get();
         // Locked draft = leverage frozen for the whole competition (same rule
         // as pickStock/setAllocation) — switching captain mid-week would let
         // users retro-fit ×2 onto whichever pick happens to be winning.
-        if (!currentEntry || currentEntry.lockedAt) return;
-        if (ticker !== null && !currentEntry.picks.some((p) => p.ticker === ticker)) return;
+        if (!nextEntry || nextEntry.lockedAt) return;
+        if (ticker !== null && !nextEntry.picks.some((p) => p.ticker === ticker)) return;
         // Captain and vice must be distinct — only clear vice if it collides.
-        const nextVice = currentEntry.viceTicker === ticker ? null : currentEntry.viceTicker;
+        const nextVice = nextEntry.viceTicker === ticker ? null : nextEntry.viceTicker;
         set({
-          currentEntry: { ...currentEntry, captainTicker: ticker, viceTicker: nextVice },
+          nextEntry: { ...nextEntry, captainTicker: ticker, viceTicker: nextVice },
           lastUpdated: new Date().toISOString(),
         });
       },
 
       setVice: (ticker: string | null) => {
-        const { currentEntry } = get();
-        if (!currentEntry || currentEntry.lockedAt) return;
-        if (ticker !== null && !currentEntry.picks.some((p) => p.ticker === ticker)) return;
-        const nextCaptain = currentEntry.captainTicker === ticker ? null : currentEntry.captainTicker;
+        const { nextEntry } = get();
+        if (!nextEntry || nextEntry.lockedAt) return;
+        if (ticker !== null && !nextEntry.picks.some((p) => p.ticker === ticker)) return;
+        const nextCaptain = nextEntry.captainTicker === ticker ? null : nextEntry.captainTicker;
         set({
-          currentEntry: { ...currentEntry, viceTicker: ticker, captainTicker: nextCaptain },
+          nextEntry: { ...nextEntry, viceTicker: ticker, captainTicker: nextCaptain },
           lastUpdated: new Date().toISOString(),
         });
       },
 
       isReadyForBattle: (): boolean => {
-        const { currentEntry } = get();
-        if (!currentEntry) return false;
-        const allocSum = currentEntry.picks.reduce((s, p) => s + p.allocation, 0);
+        const { nextEntry } = get();
+        if (!nextEntry) return false;
+        const allocSum = nextEntry.picks.reduce((s, p) => s + p.allocation, 0);
         return (
-          currentEntry.picks.length === 5 &&
-          currentEntry.captainTicker !== null &&
-          currentEntry.viceTicker !== null &&
-          currentEntry.captainTicker !== currentEntry.viceTicker &&
-          allocSum === currentEntry.coinsPaid
+          nextEntry.picks.length === 5 &&
+          nextEntry.captainTicker !== null &&
+          nextEntry.viceTicker !== null &&
+          nextEntry.captainTicker !== nextEntry.viceTicker &&
+          allocSum === nextEntry.coinsPaid
         );
       },
 
       lockDraft: () => {
-        const { currentEntry } = get();
-        if (!currentEntry || currentEntry.lockedAt) return;
-        if (currentEntry.picks.length < 5) return;
+        const { nextEntry } = get();
+        if (!nextEntry || nextEntry.lockedAt) return;
+        if (nextEntry.picks.length < 5) return;
         // All allocations must sum to the entry pool.
-        const sumAllocation = currentEntry.picks.reduce((s, p) => s + p.allocation, 0);
-        if (sumAllocation !== currentEntry.coinsPaid) return;
+        const sumAllocation = nextEntry.picks.reduce((s, p) => s + p.allocation, 0);
+        if (sumAllocation !== nextEntry.coinsPaid) return;
 
         set({
-          currentEntry: { ...currentEntry, lockedAt: new Date().toISOString() },
+          nextEntry: { ...nextEntry, lockedAt: new Date().toISOString() },
           lastUpdated: new Date().toISOString(),
         });
       },
@@ -301,6 +370,57 @@ export const useFantasyStore = create<FantasyStore>()(
         set({ currentEntry: null, leaderboard: [], missions: [], lastUpdated: new Date().toISOString() });
       },
 
+      rolloverIfDue: (now: Date = new Date()) => {
+        const { currentEntry, nextEntry, pendingResult, missions } = get();
+        const liveWeekId = getCompetitionWeekId(now);
+
+        const isRolloverA = !!nextEntry && nextEntry.weekId <= liveWeekId;
+        const isStaleB = !!currentEntry && currentEntry.weekId < liveWeekId;
+        if (!isRolloverA && !isStaleB) return; // nothing due — cheap early exit
+
+        // Fold any still-unclaimed prior result into the economy now (rare —
+        // user ignored last week's card for a whole week) so no coins are lost
+        // when we overwrite pendingResult below.
+        if (pendingResult && !pendingResult.claimed) {
+          creditParticipationFloor(pendingResult, missions);
+        }
+
+        // Settle + credit the outgoing live week (if any), as the new card.
+        let newPending: WeeklyEntry | null = null;
+        if (currentEntry && !currentEntry.claimed) {
+          const settled = settleEntry(currentEntry);
+          const { coinsReturned, xpEarned } = creditParticipationFloor(settled, missions);
+          newPending = { ...settled, finalRank: null, coinsReturned, xpEarned, claimed: true };
+        }
+
+        if (isRolloverA && nextEntry) {
+          // The drafted team goes live; fresh leaderboard + missions for it.
+          set({
+            currentEntry: nextEntry,
+            nextEntry: null,
+            pendingResult: newPending,
+            leaderboard: getMockLeaderboard(nextEntry.tier, nextEntry.weekId),
+            missions: getWeeklyMissions(nextEntry.weekId),
+            lastUpdated: new Date().toISOString(),
+          });
+          return;
+        }
+
+        // isStaleB: week ended, nothing drafted → clear the live slot (un-sticks
+        // a stale leftover entry — the old soft-lock bug).
+        set({
+          currentEntry: null,
+          pendingResult: newPending,
+          leaderboard: [],
+          missions: [],
+          lastUpdated: new Date().toISOString(),
+        });
+      },
+
+      dismissResult: () => {
+        set({ pendingResult: null, lastUpdated: new Date().toISOString() });
+      },
+
       getLeaderboardWithLocal: (): FantasyLeaderboardEntry[] => {
         const { currentEntry, leaderboard } = get();
         if (!currentEntry) return leaderboard;
@@ -364,25 +484,44 @@ export const useFantasyStore = create<FantasyStore>()(
       },
 
       reset: () => {
-        set({ currentEntry: null, leaderboard: [], missions: [], lastUpdated: null });
+        set({
+          currentEntry: null,
+          nextEntry: null,
+          pendingResult: null,
+          leaderboard: [],
+          missions: [],
+          lastUpdated: null,
+        });
       },
     }),
     {
       name: 'fantasy-store-v5',
       storage: createJSONStorage(() => zustandStorage),
       // v1: purge the FABRICATED leaderboard that pre-purge builds persisted
-      // (fake opponents from the old getMockLeaderboard). The user's own
-      // entry/missions are real self-data and are kept as-is.
-      version: 1,
+      //     (fake opponents from the old getMockLeaderboard).
+      // v2: the weekly model changed to two slots (currentEntry + nextEntry)
+      //     with Monday-anchored weekIds. Old single-slot entries use the
+      //     incompatible "YYYY-Wnn" weekId format, so we drop any in-flight
+      //     entry and start the new cycle clean rather than mis-compare it.
+      version: 2,
       migrate: (persistedState, version) => {
-        const state = persistedState as FantasyStoreState;
-        if (version < 1) {
-          return { ...state, leaderboard: [] };
+        const state = persistedState as Partial<FantasyStoreState>;
+        if (version < 2) {
+          return {
+            ...state,
+            currentEntry: null,
+            nextEntry: null,
+            pendingResult: null,
+            leaderboard: [],
+            missions: [],
+          } as FantasyStoreState;
         }
-        return state;
+        return state as FantasyStoreState;
       },
       partialize: (state) => ({
         currentEntry: state.currentEntry,
+        nextEntry: state.nextEntry,
+        pendingResult: state.pendingResult,
         leaderboard: state.leaderboard,
         missions: state.missions,
         lastUpdated: state.lastUpdated,

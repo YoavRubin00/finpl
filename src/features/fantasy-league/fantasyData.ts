@@ -7,50 +7,50 @@ import type {
   WeeklyMission,
   CompetitionPhase,
 } from './fantasyTypes';
+import { getIsraelParts, getIsraelDateISO, israelDatePlusDays } from '../../utils/israelTime';
 
 // ---------------------------------------------------------------------------
-// Phase logic
+// Phase logic — Israel-time weekly cycle (parallel drafting)
 // ---------------------------------------------------------------------------
+//
+// Cycle (all times Asia/Jerusalem, day 0 = Sunday):
+//   Mon 09:00 → next Mon 09:00   competition — the live week (always running)
+//   Thu 09:00 → Mon 09:00        DRAFT window for NEXT week, IN PARALLEL with
+//                                the live competition (overlaps Thu–Sun)
+//   Mon 09:00                    rollover: drafted team goes live, the outgoing
+//                                week settles
+// The competition is continuous (there is always a "current week"); drafting is
+// a separate, overlapping window. So instead of one mutually-exclusive phase we
+// expose `isDraftOpen()`, and keep a best-effort `getCompetitionPhase()` only
+// for legacy display code. All boundaries read Israel wall-time via
+// `getIsraelParts`, never the raw device clock.
 
 /**
- * Computes the current competition phase based on the day of week + hour.
- * Week cycle (Israel time, day 0 = Sunday):
- *   Sat 20:00 → Mon 09:00  draft window (edit portfolio for next week)
- *   Mon 09:00 → Fri 23:05  competition (live, portfolio locked)
- *   Fri 23:05 → Sat 20:00  results (claim prizes, leagues settled)
+ * Is the draft for NEXT week's competition open right now?
+ * True from Thursday 09:00 (IL) through Monday 09:00 (IL).
  */
-export function getCompetitionPhase(now: Date = new Date()): CompetitionPhase {
-  const day = now.getDay(); // 0=Sun … 6=Sat
-  const hour = now.getHours();
-  const minute = now.getMinutes();
-  const timeDecimal = hour + minute / 60;
-
-  // ── Draft window: Sat 20:00 → Mon 09:00 ──
-  const isSatAfter20 = day === 6 && timeDecimal >= 20;
-  const isSun = day === 0;
-  const isMonBefore9 = day === 1 && timeDecimal < 9;
-  const inDraftWindow = isSatAfter20 || isSun || isMonBefore9;
-
-  // ── Competition window: Mon 09:00 → Fri 23:05 ──
-  const isMonAfter9 = day === 1 && timeDecimal >= 9;
-  const isTue = day === 2;
-  const isWed = day === 3;
-  const isThu = day === 4;
-  const isFriBefore2305 = day === 5 && (hour < 23 || (hour === 23 && minute < 5));
-  const inCompetition = isMonAfter9 || isTue || isWed || isThu || isFriBefore2305;
-
-  // ── Results window: Fri 23:05 → Sat 20:00 ──
-  const isFriAfter2305 = day === 5 && (hour > 23 || (hour === 23 && minute >= 5));
-  const isSatBefore20 = day === 6 && timeDecimal < 20;
-  const inResults = isFriAfter2305 || isSatBefore20;
-
-  if (inResults) return 'results';
-  if (inDraftWindow) return 'draft';
-  if (inCompetition) return 'competition';
-  return 'pre_draft';
+export function isDraftOpen(now: Date = new Date()): boolean {
+  const { dayOfWeek: d, timeDecimal: t } = getIsraelParts(now);
+  const thuAfter9 = d === 4 && t >= 9;
+  const friSatSun = d === 5 || d === 6 || d === 0;
+  const monBefore9 = d === 1 && t < 9;
+  return thuAfter9 || friSatSun || monBefore9;
 }
 
-/** ISO weekId: "YYYY-WNN" using Sun-start weeks aligned to competition cycle */
+/**
+ * Legacy single-phase view (Israel time), kept for older display code. With the
+ * parallel model there is always a live competition, so this returns `'draft'`
+ * while the draft window is open and `'competition'` otherwise.
+ */
+export function getCompetitionPhase(now: Date = new Date()): CompetitionPhase {
+  return isDraftOpen(now) ? 'draft' : 'competition';
+}
+
+/**
+ * ISO weekId "YYYY-WNN" on Sun-start weeks. UNCHANGED — used OUTSIDE fantasy as
+ * a weekly rotation key (crowd-wisdom BTC slider, TA-35 forecast). Do NOT
+ * re-anchor this; the competition cycle uses `getCompetitionWeekId` instead.
+ */
 export function getCurrentWeekId(now: Date = new Date()): string {
   const d = new Date(now);
   // Shift to nearest Sunday as week start
@@ -62,40 +62,62 @@ export function getCurrentWeekId(now: Date = new Date()): string {
 }
 
 /**
- * Next occurrence of `weekday` (0=Sun … 6=Sat) at `hour:minute`.
- *
- * If today already IS that weekday we look at the time of day: when the target
- * hour hasn't passed yet the deadline is still TODAY; only once it has passed do
- * we roll to the same weekday next week.
- *
- * The old helpers used `(weekday - day + 7) % 7 || 7`, where the `|| 7` forced a
- * FULL-WEEK jump on the boundary day itself — e.g. on a Friday the competition
- * end pointed to *next* Friday, so the live countdown read "7ימ׳ 18ש׳" instead
- * of the few hours left until tonight's 23:05 close.
+ * Competition week id = the Israel calendar date ("YYYY-MM-DD") of the Monday
+ * that STARTED the current competition week (its 09:00 boundary). Sortable and
+ * DST-proof (pure IL-date arithmetic). Flips exactly at Monday 09:00 IL — the
+ * rollover instant — so comparing an entry's weekId to this tells us cleanly
+ * whether it belongs to the live week, a past week, or the upcoming one.
  */
-function nextWeekdayAt(now: Date, weekday: number, hour: number, minute: number): Date {
-  const target = new Date(now);
-  target.setHours(hour, minute, 0, 0);
-  let delta = (weekday - now.getDay() + 7) % 7;
-  // Same weekday, but today's target time already passed → next week.
-  if (delta === 0 && now.getTime() >= target.getTime()) delta = 7;
-  target.setDate(target.getDate() + delta);
-  return target;
+export function getCompetitionWeekId(now: Date = new Date()): string {
+  const { dayOfWeek, timeDecimal } = getIsraelParts(now);
+  const todayISO = getIsraelDateISO(now);
+  const daysSinceMonday = (dayOfWeek + 6) % 7; // Sun→6, Mon→0, … Sat→5
+  // On Monday before 09:00 the new week hasn't begun yet → last Monday.
+  const back = daysSinceMonday + (dayOfWeek === 1 && timeDecimal < 9 ? 7 : 0);
+  return israelDatePlusDays(todayISO, -back);
 }
 
-/** Next draft open time: upcoming Saturday 20:00 (edit window opens). */
+/** The competition week id the draft is FOR — the upcoming Monday (current + 7d). */
+export function getNextCompetitionWeekId(now: Date = new Date()): string {
+  return israelDatePlusDays(getCompetitionWeekId(now), 7);
+}
+
+/**
+ * Absolute Date of the next Israel-local `weekday` at `hour:minute`, for
+ * countdown display. The Israel↔UTC offset is read from `now` (either +2 or
+ * +3), so it's exact to the minute except within the ~1h around a DST switch —
+ * cosmetic, since the real rollover uses date-anchored ids, not this.
+ */
+function nextIsraelWeekdayAt(now: Date, weekday: number, hour: number, minute: number): Date {
+  const parts = getIsraelParts(now);
+  const utcNowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const ilNowMin = parts.hour * 60 + parts.minute;
+  let offsetMin = ilNowMin - utcNowMin;
+  if (offsetMin > 14 * 60) offsetMin -= 24 * 60;
+  if (offsetMin < -14 * 60) offsetMin += 24 * 60;
+
+  const targetDecimal = hour + minute / 60;
+  let delta = (weekday - parts.dayOfWeek + 7) % 7;
+  if (delta === 0 && parts.timeDecimal >= targetDecimal) delta = 7;
+
+  const targetISO = israelDatePlusDays(getIsraelDateISO(now), delta);
+  const [y, mo, d] = targetISO.split('-').map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, hour, minute) - offsetMin * 60_000);
+}
+
+/** Next draft open: upcoming Thursday 09:00 (IL) — the parallel window opens. */
 export function getNextDraftOpen(now: Date = new Date()): Date {
-  return nextWeekdayAt(now, 6, 20, 0);
+  return nextIsraelWeekdayAt(now, 4, 9, 0);
 }
 
-/** Competition end: upcoming Friday 23:05 (Israel time — when markets close in NY) */
+/** Competition end / rollover: upcoming Monday 09:00 (IL). */
 export function getCompetitionEnd(now: Date = new Date()): Date {
-  return nextWeekdayAt(now, 5, 23, 5);
+  return nextIsraelWeekdayAt(now, 1, 9, 0);
 }
 
-/** Draft close: upcoming Monday 09:00 (edit window closes, competition starts). */
+/** Draft close: upcoming Monday 09:00 (IL) — the same instant the new week begins. */
 export function getDraftClose(now: Date = new Date()): Date {
-  return nextWeekdayAt(now, 1, 9, 0);
+  return nextIsraelWeekdayAt(now, 1, 9, 0);
 }
 
 // ---------------------------------------------------------------------------

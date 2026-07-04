@@ -10,6 +10,8 @@ import {
   getNextDraftOpen,
   getDraftClose,
   getCompetitionEnd,
+  isDraftOpen,
+  getNextCompetitionWeekId,
   STOCK_CATEGORIES,
   simulateWeeklyReturn,
   TIER_CONFIGS,
@@ -42,7 +44,7 @@ import {
   F2Bolt,
   type TierKey,
 } from '../v2/icons';
-import type { StockCategoryId, FantasyTier, CompetitionPhase } from '../fantasyTypes';
+import type { StockCategoryId, FantasyTier, CompetitionPhase, WeeklyEntry } from '../fantasyTypes';
 import type { SparkPath } from '../v2/atoms';
 import type { FantasySectorId } from '../../../constants/theme';
 
@@ -208,14 +210,71 @@ function DraftOpenCard({ hasEntered, isLocked }: DraftOpenProps): React.ReactEle
 }
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
+// ─── Results card — the week that just closed (Monday return hook) ──────────
+// pendingResult is already settled + credited at rollover, so this is a
+// celebratory recap + dismiss, not a claim gate.
+function ResultCard({
+  entry,
+  onDismiss,
+}: {
+  entry: WeeklyEntry;
+  onDismiss: () => void;
+}): React.ReactElement {
+  const totalAlloc = entry.picks.reduce((s, p) => s + p.allocation, 0) || 1;
+  const eff =
+    entry.picks.reduce((s, p) => {
+      const mult =
+        entry.captainTicker === p.ticker ? 2 : entry.viceTicker === p.ticker ? 1.5 : 1;
+      return s + p.allocation * (p.returnPercent ?? 0) * mult;
+    }, 0) / totalAlloc;
+  const up = eff >= 0;
+  return (
+    <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 12 }}>
+      <F2Panel pad={14} accent={up ? FANTASY.positive : FANTASY.primary}>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12 }}>
+          <F2SharkMark size={44} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: FANTASY.ink, ...RTL }}>
+              השבוע נסגר!
+            </Text>
+            <Text
+              style={{ fontSize: 12, color: FANTASY.inkMuted, ...RTL, marginTop: 3, lineHeight: 18 }}
+            >
+              תשואת התיק: {up ? '+' : ''}
+              {eff.toFixed(1)}% · נכנסו לך {(entry.coinsReturned ?? 0).toLocaleString('en-US')} 🪙 ו-
+              {entry.xpEarned ?? 0} XP
+            </Text>
+          </View>
+        </View>
+      </F2Panel>
+      <F2Button tone="ghost" size="md" onPress={onDismiss}>
+        יאללה, לשבוע הבא
+      </F2Button>
+    </Animated.View>
+  );
+}
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 export function FantasyLobbyScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
+  const nextEntry = useFantasyStore((s) => s.nextEntry);
+  const pendingResult = useFantasyStore((s) => s.pendingResult);
   const getLeaderboardWithLocal = useFantasyStore((s) => s.getLeaderboardWithLocal);
+  const rolloverIfDue = useFantasyStore((s) => s.rolloverIfDue);
+  const dismissResult = useFantasyStore((s) => s.dismissResult);
 
   const phase = getCompetitionPhase();
-  const hasEntered = currentEntry !== null;
+  const hasEntered = currentEntry !== null; // has a LIVE team this week
   const isLocked = !!currentEntry?.lockedAt;
   const picks = currentEntry?.picks ?? [];
+
+  // Next-week draft state — parallel to the live team, open Thu 09:00 → Mon
+  // 09:00 IL. `hasNextTeam` guards against a stale slot the rollover hasn't
+  // cleared yet (belt-and-suspenders; rolloverIfDue below normally clears it).
+  const draftOpen = isDraftOpen();
+  const hasNextTeam =
+    nextEntry !== null && nextEntry.weekId === getNextCompetitionWeekId();
+  const isNextLocked = !!nextEntry?.lockedAt;
 
   // Live tick — refreshes simulated returns every minute (cache-stable for 5
   // ticks). Gated on app-active: the tick re-sorts the ~100-row leaderboard,
@@ -229,6 +288,13 @@ export function FantasyLobbyScreen(): React.ReactElement {
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
   }, [appActive]);
+
+  // Advance the weekly cycle at Monday 09:00 IL: promote a drafted next-week
+  // team to live + settle the outgoing week. Idempotent — safe on every show
+  // and on each minute tick, so a rollover fires even if the app is left open.
+  useEffect(() => {
+    rolloverIfDue();
+  }, [rolloverIfDue, appActive, tick]);
 
   // Real weekly returns from Yahoo when available; the deterministic
   // simulation keeps the league alive offline. Refresh rides the minute tick.
@@ -319,11 +385,19 @@ export function FantasyLobbyScreen(): React.ReactElement {
             }}
           />
 
-          {phase === 'draft' && !isLocked && (
-            <DraftOpenCard hasEntered={hasEntered} isLocked={isLocked} />
+          {/* Results of the week that just closed — a Monday return hook. */}
+          {pendingResult && (
+            <ResultCard entry={pendingResult} onDismiss={dismissResult} />
           )}
-          {/* Not joined this cycle → always a clear next-action, never blank. */}
-          {!hasEntered && phase !== 'draft' && <PreDraftCard phase={phase} />}
+
+          {/* Next-week draft — runs in parallel with the live team below
+              (Thu 09:00 → Mon 09:00 IL). Reuses DraftOpenCard, keyed on the
+              NEXT-week slot; when closed, a countdown to Thursday 09:00. */}
+          {draftOpen ? (
+            <DraftOpenCard hasEntered={hasNextTeam} isLocked={isNextLocked} />
+          ) : (
+            !hasNextTeam && <PreDraftCard phase={phase} />
+          )}
 
           {/* League arena card — tier shield + rank (no promote/relegate zones) */}
           {hasEntered && currentEntry && (

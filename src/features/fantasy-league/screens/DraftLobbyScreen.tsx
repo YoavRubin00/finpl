@@ -13,7 +13,7 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { FANTASY, type FantasySectorId } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
 import { useFantasyStore } from '../useFantasyStore';
-import { STOCK_CATEGORIES, TIER_CONFIGS } from '../fantasyData';
+import { STOCK_CATEGORIES, TIER_CONFIGS, getNextCompetitionWeekId } from '../fantasyData';
 import { TierSelectionCard } from '../components/TierSelectionCard';
 import { DraftCategoryTabs } from '../components/DraftCategoryTabs';
 import { SharkAnalysisModal } from '../components/SharkAnalysisModal';
@@ -65,10 +65,12 @@ function riskForChange(change: number): 'low' | 'med' | 'high' {
 }
 
 export function DraftLobbyScreen(): React.ReactElement {
-  const currentEntry = useFantasyStore((s) => s.currentEntry);
-  const picks = currentEntry?.picks ?? [];
-  // No hard manual lock — portfolio is editable for the entire draft phase
-  // (Sat 20:00 → Mon 09:00). At competition start, phase logic freezes edits.
+  // The draft screen builds the NEXT-week team (the `nextEntry` slot), which
+  // runs in parallel with the live competition — never the live `currentEntry`.
+  const nextEntry = useFantasyStore((s) => s.nextEntry);
+  const picks = nextEntry?.picks ?? [];
+  // No hard manual lock — the portfolio is editable for the whole draft window
+  // (Thu 09:00 → Mon 09:00 IL). The Monday-09:00 rollover freezes edits.
   const isLocked = false;
   const enterCompetition = useFantasyStore((s) => s.enterCompetition);
   const pickStock = useFantasyStore((s) => s.pickStock);
@@ -80,7 +82,8 @@ export function DraftLobbyScreen(): React.ReactElement {
   const [confirmJoin, setConfirmJoin] = useState(false);
   const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
 
-  const hasEntered = currentEntry !== null;
+  const hasEntered =
+    nextEntry !== null && nextEntry.weekId === getNextCompetitionWeekId();
   const pickedCategories = picks.map((p) => p.categoryId);
 
   const activeCategoryData = STOCK_CATEGORIES.find((c) => c.id === activeCategory);

@@ -17,10 +17,11 @@ import Animated, {
 import { tapHaptic } from '../../../utils/haptics';
 import { useFantasyStore } from '../../fantasy-league/useFantasyStore';
 import {
-  getCurrentWeekId,
-  getCompetitionPhase,
-  getDraftClose,
   getCompetitionEnd,
+  getDraftClose,
+  getNextDraftOpen,
+  getNextCompetitionWeekId,
+  isDraftOpen,
 } from '../../fantasy-league/fantasyData';
 
 interface PremiumFantasyButtonProps {
@@ -55,6 +56,7 @@ interface FantasyLiveState {
  */
 function useFantasyLiveState(): FantasyLiveState {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
+  const nextEntry = useFantasyStore((s) => s.nextEntry);
 
   // Re-render each minute so the countdown stays fresh.
   const [, setTick] = useState(0);
@@ -64,40 +66,52 @@ function useFantasyLiveState(): FantasyLiveState {
   }, []);
 
   const now = new Date();
-  const weekId = getCurrentWeekId(now);
-  const phase = getCompetitionPhase(now);
-  const joinedThisWeek = !!currentEntry && currentEntry.weekId === weekId;
-  const picks = joinedThisWeek ? currentEntry.picks.length : 0;
-  const locked = joinedThisWeek && (!!currentEntry.lockedAt || phase === 'competition');
+  const draftOpen = isDraftOpen(now);
+  const upcomingWeekId = getNextCompetitionWeekId(now);
+  const hasNextTeam = !!nextEntry && nextEntry.weekId === upcomingWeekId;
+  const nextPicks = hasNextTeam ? nextEntry.picks.length : 0;
+  const nextLocked = hasNextTeam && !!nextEntry.lockedAt;
+  const hasLive = !!currentEntry;
 
-  if (!joinedThisWeek) {
-    const sub =
-      phase === 'draft'
-        ? 'הדראפט פתוח · בוחרים 5 מניות'
-        : phase === 'competition'
-          ? 'התחרות רצה · הצטרפו לשבוע הבא'
-          : 'בוחרים 5 מניות · תחרות שבועית';
-    return { sub, picksBadge: null, locked: false };
+  // Priority 1: the draft for next week is open and still needs action.
+  if (draftOpen && !nextLocked) {
+    if (!hasNextTeam) {
+      return {
+        sub: hasLive ? 'הדראפט לשבוע הבא פתוח · בוחרים 5' : 'הדראפט פתוח · בוחרים 5 מניות',
+        picksBadge: null,
+        locked: false,
+      };
+    }
+    const remaining = formatUntil(getDraftClose(now), now);
+    return {
+      sub: remaining
+        ? `בחרתם ${nextPicks}/5 לשבוע הבא · נעילה בעוד ${remaining}`
+        : `בחרתם ${nextPicks}/5 · נעילה בקרוב`,
+      picksBadge: `${nextPicks}/5`,
+      locked: false,
+    };
   }
 
-  if (phase === 'results') {
-    return { sub: 'התוצאות בפנים · אספו פרסים', picksBadge: null, locked: true };
+  // Priority 2: next-week team already locked (still inside the open window).
+  if (draftOpen && nextLocked) {
+    return { sub: 'קבוצת שבוע הבא ננעלה · מתחילה שני 09:00', picksBadge: null, locked: true };
   }
 
-  if (locked) {
+  // Priority 3: a live team is competing this week (draft closed).
+  if (hasLive) {
     const remaining = formatUntil(getCompetitionEnd(now), now);
     return {
-      sub: remaining ? `${picks} מניות ננעלו · נסגר בעוד ${remaining}` : `${picks} מניות ננעלו · התחרות רצה`,
+      sub: remaining ? `התיק שלך רץ · נסגר בעוד ${remaining}` : 'התיק שלך רץ · נסגר בקרוב',
       picksBadge: null,
       locked: true,
     };
   }
 
-  // Draft open, not yet locked — show real picks progress + real lock countdown.
-  const remaining = formatUntil(getDraftClose(now), now);
+  // Priority 4: nothing yet + draft closed → the next window opens Thursday.
+  const remaining = formatUntil(getNextDraftOpen(now), now);
   return {
-    sub: remaining ? `בחרתם ${picks}/5 · נעילה בעוד ${remaining}` : `בחרתם ${picks}/5 · נעילה בקרוב`,
-    picksBadge: `${picks}/5`,
+    sub: remaining ? `הדראפט נפתח בעוד ${remaining}` : 'הדראפט נפתח בקרוב',
+    picksBadge: null,
     locked: false,
   };
 }

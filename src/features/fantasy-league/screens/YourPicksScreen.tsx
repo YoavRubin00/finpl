@@ -37,8 +37,8 @@ const CATEGORY_TO_SECTOR: Record<StockCategoryId, FantasySectorId> = {
  * vice, and allocations all persist in the store across the round trip.
  */
 export function YourPicksScreen(): React.ReactElement {
-  const currentEntry = useFantasyStore((s) => s.currentEntry);
-  const picks = currentEntry?.picks ?? [];
+  const nextEntry = useFantasyStore((s) => s.nextEntry);
+  const picks = nextEntry?.picks ?? [];
   const setAllocation = useFantasyStore((s) => s.setAllocation);
   const setCaptain = useFantasyStore((s) => s.setCaptain);
   const setVice = useFantasyStore((s) => s.setVice);
@@ -49,7 +49,7 @@ export function YourPicksScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const [confirmJoin, setConfirmJoin] = React.useState(false);
 
-  const poolMax = currentEntry?.coinsPaid ?? 0;
+  const poolMax = nextEntry?.coinsPaid ?? 0;
   const allocatedTotal = useMemo(
     () => picks.reduce((s, p) => s + p.allocation, 0),
     [picks],
@@ -74,7 +74,10 @@ export function YourPicksScreen(): React.ReactElement {
     successHaptic();
     lockDraft();
     setConfirmJoin(false);
-    router.push('/fantasy/live');
+    // The team is locked for NEXT week — return to the lobby, which shows both
+    // the live competition and the "next-week team locked · starts Mon 09:00"
+    // card. (Routing to /fantasy/live would show the *current* live team.)
+    router.replace('/(tabs)/fantasy');
   }, [lockDraft]);
 
   const handleBattle = useCallback(() => {
@@ -82,13 +85,13 @@ export function YourPicksScreen(): React.ReactElement {
     setConfirmJoin(true);
   }, [ready]);
 
-  const hint = !currentEntry
+  const hint = !nextEntry
     ? 'אין דראפט פעיל — חזור ובחר מניות'
     : picks.length < 5
       ? `חסרות ${5 - picks.length} מניות — חזור לדרפט`
-      : !currentEntry.captainTicker
+      : !nextEntry.captainTicker
         ? 'סמן מניה אחת ל-×2 (קפטן)'
-        : !currentEntry.viceTicker
+        : !nextEntry.viceTicker
           ? 'סמן מניה אחרת ל-×1.5 (משנה)'
           : !balanced
             ? poolRemaining > 0
@@ -179,8 +182,8 @@ export function YourPicksScreen(): React.ReactElement {
           <View style={{ gap: 8 }}>
             {picks.map((p) => {
               const sector = CATEGORY_TO_SECTOR[p.categoryId] ?? 'tech';
-              const isCaptain = currentEntry?.captainTicker === p.ticker;
-              const isVice = currentEntry?.viceTicker === p.ticker;
+              const isCaptain = nextEntry?.captainTicker === p.ticker;
+              const isVice = nextEntry?.viceTicker === p.ticker;
               return (
                 <YourPicksRow
                   key={p.ticker}
@@ -247,7 +250,7 @@ export function YourPicksScreen(): React.ReactElement {
           message="לאחר נעילה לא ניתן לשנות עד יום שני 09:00 — סיום הדראפט וסטארט התחרות."
           confirmLabel="כן, נעלו את התיק"
           cancelLabel="עוד רגע"
-          tier={currentEntry?.tier ?? 'silver'}
+          tier={nextEntry?.tier ?? 'silver'}
           onConfirm={handleConfirm}
           onCancel={() => setConfirmJoin(false)}
         />
