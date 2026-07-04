@@ -59,7 +59,13 @@
       "mcp__Neon__run_sql",
       "mcp__Neon__get_database_tables",
       "mcp__Neon__describe_table_schema",
-      "mcp__Neon__list_slow_queries"
+      "mcp__Neon__list_slow_queries",
+      "PowerShell(git -C \"c:/Users/yrubi/OneDrive/Desktop/.claude/projects/finpl-current\" log --format=\"%h %ad %s\" --date=short -L 164,172:src/features/fantasy-league/fantasyData.ts)",
+      "PowerShell(git -C \"C:\\\\Users\\\\yrubi\\\\OneDrive\\\\Desktop\\\\.claude\\\\projects\\\\finpl-current\" show f12ed06c --stat --format=\"%H %ad %s\" --date=short)",
+      "Bash(node -e ' *)",
+      "Bash(python -)",
+      "Bash(node scripts/sql.mjs \"SELECT count\\(*\\)::int AS users FROM user_profiles\")",
+      "Bash(git revert *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\יואב רובין\\.claude\\projects\\finpl\\src\\features\\chapter-5-content\\simulations"

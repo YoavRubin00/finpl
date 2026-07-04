@@ -62,24 +62,46 @@ export async function GET(request: Request): Promise<Response> {
 
     const db = getDb();
 
+    // Resolve the caller's uuid — the referral tables are keyed by user_id
+    // (uuid FK), NOT auth_id, since the identity rekey (migration 0004). The
+    // old *_auth_id column references errored ("column does not exist") → 500.
+    const meRows = await db.execute(sql`
+      SELECT id FROM user_profiles WHERE auth_id = ${authId} LIMIT 1
+    `);
+    const meRow = ((meRows as unknown as { rows?: { id: string }[] }).rows
+      ?? (meRows as unknown as { id: string }[]))[0];
+    const callerUserId = meRow?.id;
+    if (!callerUserId) {
+      const empty: MeResponse = {
+        ok: true,
+        friends: [],
+        totalYesterdayLearningCoins: 0,
+        dividendAvailable: 0,
+        alreadyCollectedToday: false,
+        todayDateUTC: new Date().toISOString().slice(0, 10),
+        pendingSignupBonus: 0,
+      };
+      return Response.json(empty);
+    }
+
     // Fetch each referred friend + sum of their yesterday learning coins, joined
-    // with user_profiles for display name. Single round-trip.
+    // with user_profiles for display name + auth_id. Single round-trip.
     const friendsResult = await db.execute(sql`
       SELECT
-        r.referee_auth_id   AS auth_id,
-        up.display_name     AS display_name,
-        r.linked_at         AS linked_at,
+        ref.auth_id       AS auth_id,
+        ref.display_name  AS display_name,
+        r.linked_at       AS linked_at,
         COALESCE((
           SELECT SUM(ce.amount)::int
             FROM coin_events ce
-           WHERE ce.auth_id = r.referee_auth_id
+           WHERE ce.user_id = r.referee_user_id
              AND ce.source IN ('lesson','quiz','daily-quest')
              AND ce.granted_at >= (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '1 day')
              AND ce.granted_at <  date_trunc('day', now() AT TIME ZONE 'UTC')
         ), 0) AS yesterday_learning_coins
       FROM referrals r
-      LEFT JOIN user_profiles up ON up.auth_id = r.referee_auth_id
-      WHERE r.referrer_auth_id = ${authId}
+      LEFT JOIN user_profiles ref ON ref.id = r.referee_user_id
+      WHERE r.referrer_user_id = ${callerUserId}
       ORDER BY r.linked_at DESC
     `);
 

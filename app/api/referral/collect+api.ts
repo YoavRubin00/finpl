@@ -59,16 +59,28 @@ export async function POST(request: Request): Promise<Response> {
 
     const db = getDb();
 
+    // Resolve caller uuid — referral tables are keyed by user_id, not auth_id
+    // (identity rekey / migration 0004). Unknown caller → nothing to collect.
+    const meRows = await db.execute(sql`
+      SELECT id FROM user_profiles WHERE auth_id = ${authId} LIMIT 1
+    `);
+    const callerUserId = ((meRows as unknown as { rows?: { id: string }[] }).rows
+      ?? (meRows as unknown as { id: string }[]))[0]?.id;
+    if (!callerUserId) {
+      const nothing: CollectAlready = { ok: true, amount: 0, alreadyCollected: true };
+      return Response.json(nothing);
+    }
+
     // 1. Compute today's would-be dividend.
     const sumResult = await db.execute(sql`
       SELECT COALESCE(SUM(ce.amount), 0)::int AS total_yesterday
         FROM referrals r
         JOIN coin_events ce
-          ON ce.auth_id = r.referee_auth_id
+          ON ce.user_id = r.referee_user_id
          AND ce.source IN ('lesson','quiz','daily-quest')
          AND ce.granted_at >= (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '1 day')
          AND ce.granted_at <  date_trunc('day', now() AT TIME ZONE 'UTC')
-       WHERE r.referrer_auth_id = ${authId}
+       WHERE r.referrer_user_id = ${callerUserId}
     `);
     const sumRow =
       ((sumResult as unknown as { rows?: { total_yesterday: number | string }[] }).rows?.[0])
@@ -81,13 +93,13 @@ export async function POST(request: Request): Promise<Response> {
       // repeated DB hits. PK prevents duplicates.
       try {
         await db.execute(sql`
-          INSERT INTO dividend_collections (auth_id, date_collected, amount)
+          INSERT INTO dividend_collections (user_id, date_collected, amount)
           VALUES (
-            ${authId},
+            ${callerUserId},
             (date_trunc('day', now() AT TIME ZONE 'UTC'))::date,
             0
           )
-          ON CONFLICT (auth_id, date_collected) DO NOTHING
+          ON CONFLICT (user_id, date_collected) DO NOTHING
         `);
       } catch { /* benign — already exists */ }
 
@@ -103,16 +115,16 @@ export async function POST(request: Request): Promise<Response> {
     try {
       await db.execute(sql`
         WITH inserted AS (
-          INSERT INTO dividend_collections (auth_id, date_collected, amount)
+          INSERT INTO dividend_collections (user_id, date_collected, amount)
           VALUES (
-            ${authId},
+            ${callerUserId},
             (date_trunc('day', now() AT TIME ZONE 'UTC'))::date,
             ${dividendAmount}
           )
-          RETURNING auth_id
+          RETURNING user_id
         )
-        INSERT INTO coin_events (auth_id, amount, source)
-        SELECT ${authId}, ${dividendAmount}, 'referral-dividend'
+        INSERT INTO coin_events (user_id, amount, source)
+        SELECT ${callerUserId}, ${dividendAmount}, 'referral-dividend'
           FROM inserted
       `);
     } catch (err) {

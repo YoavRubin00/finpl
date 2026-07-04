@@ -59,21 +59,29 @@ export async function POST(request: Request): Promise<Response> {
 
     const db = getDb();
 
-    // 1. Lookup referrer by code.
+    // 1. Lookup referrer by code — need their uuid (tables are user_id-keyed
+    //    since migration 0004; the old *_auth_id columns no longer exist).
     const lookup = await db.execute(sql`
-      SELECT auth_id FROM user_profiles WHERE referral_code = ${inviteCode} LIMIT 1
+      SELECT id, auth_id FROM user_profiles WHERE referral_code = ${inviteCode} LIMIT 1
     `);
-    const lookupRow = (lookup as unknown as { rows?: { auth_id: string }[]; auth_id?: string }[])[0]
-      ?? (lookup as unknown as { auth_id: string }[])[0];
-    const referrerAuthId =
-      typeof lookupRow === 'object' && lookupRow !== null && 'auth_id' in lookupRow
-        ? (lookupRow as { auth_id: string }).auth_id
-        : undefined;
-
-    if (!referrerAuthId) {
+    const referrerRow = ((lookup as unknown as { rows?: { id: string; auth_id: string }[] }).rows
+      ?? (lookup as unknown as { id: string; auth_id: string }[]))[0];
+    const referrerUserId = referrerRow?.id;
+    const referrerAuthId = referrerRow?.auth_id;
+    if (!referrerUserId || !referrerAuthId) {
       return Response.json({ error: 'Unknown invite code', code: 'CODE_NOT_FOUND' }, { status: 404 });
     }
-    if (referrerAuthId === refereeAuthId) {
+
+    // Resolve the referee's uuid from their auth_id (they're a registered user).
+    const refereeLookup = await db.execute(sql`
+      SELECT id FROM user_profiles WHERE auth_id = ${refereeAuthId} LIMIT 1
+    `);
+    const refereeUserId = ((refereeLookup as unknown as { rows?: { id: string }[] }).rows
+      ?? (refereeLookup as unknown as { id: string }[]))[0]?.id;
+    if (!refereeUserId) {
+      return Response.json({ error: 'Referee not registered', code: 'REFEREE_NOT_FOUND' }, { status: 400 });
+    }
+    if (referrerUserId === refereeUserId) {
       return Response.json({ error: 'Cannot self-refer', code: 'SELF_REFERRAL' }, { status: 400 });
     }
 
@@ -82,18 +90,18 @@ export async function POST(request: Request): Promise<Response> {
     try {
       await db.execute(sql`
         WITH inserted AS (
-          INSERT INTO referrals (referee_auth_id, referrer_auth_id, invite_code, signup_bonus_paid)
-          VALUES (${refereeAuthId}, ${referrerAuthId}, ${inviteCode}, true)
-          RETURNING referee_auth_id
+          INSERT INTO referrals (referee_user_id, referrer_user_id, invite_code, signup_bonus_paid)
+          VALUES (${refereeUserId}, ${referrerUserId}, ${inviteCode}, true)
+          RETURNING referee_user_id
         ),
         bonus_referrer AS (
-          INSERT INTO coin_events (auth_id, amount, source)
-          SELECT ${referrerAuthId}, ${SIGNUP_BONUS_COINS}, 'referral-signup-bonus'
+          INSERT INTO coin_events (user_id, amount, source)
+          SELECT ${referrerUserId}, ${SIGNUP_BONUS_COINS}, 'referral-signup-bonus'
           FROM inserted
         ),
         bonus_referee AS (
-          INSERT INTO coin_events (auth_id, amount, source)
-          SELECT ${refereeAuthId}, ${SIGNUP_BONUS_COINS}, 'referral-signup-bonus'
+          INSERT INTO coin_events (user_id, amount, source)
+          SELECT ${refereeUserId}, ${SIGNUP_BONUS_COINS}, 'referral-signup-bonus'
           FROM inserted
         )
         SELECT 1
