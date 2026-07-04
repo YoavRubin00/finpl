@@ -121,6 +121,29 @@ export function getDraftClose(now: Date = new Date()): Date {
   return nextIsraelWeekdayAt(now, 1, 9, 0);
 }
 
+/**
+ * Day index within the live competition week, 1–7, in Israel time. Day 1 =
+ * Monday (from 09:00). Monday before 09:00 still counts as day 7 of the week
+ * that's about to roll over. Was device-clock + Sunday-anchored (Fable P0-7).
+ */
+export function getGameweekDay(now: Date = new Date()): number {
+  const { dayOfWeek, timeDecimal } = getIsraelParts(now);
+  if (dayOfWeek === 1 && timeDecimal < 9) return 7; // Mon before 09:00 → prior week
+  const daysSinceMonday = (dayOfWeek + 6) % 7; // Sun→6, Mon→0 … Sat→5
+  return daysSinceMonday + 1;
+}
+
+/** "3ימ׳ 5ש׳" (or "HH:MM" within the last day) until the Monday-09:00 rollover. */
+export function formatCompetitionCountdown(now: Date = new Date()): string {
+  const ms = getCompetitionEnd(now).getTime() - now.getTime();
+  if (ms <= 0) return 'נגמר';
+  const days = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  if (days > 0) return `${days}ימ׳ ${hours}ש׳`;
+  const mins = Math.floor((ms % 3600000) / 60000);
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
 // ---------------------------------------------------------------------------
 // Tier configs
 // ---------------------------------------------------------------------------

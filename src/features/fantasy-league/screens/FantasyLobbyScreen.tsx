@@ -12,6 +12,7 @@ import {
   getCompetitionEnd,
   isDraftOpen,
   getNextCompetitionWeekId,
+  getGameweekDay,
   STOCK_CATEGORIES,
   simulateWeeklyReturn,
   TIER_CONFIGS,
@@ -93,12 +94,7 @@ function formatCountdown(target: Date): { days: number; hours: number; label: st
   return { days: 0, hours, label: `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}` };
 }
 
-// Day index within the gameweek (1-based, capped at 7)
-function getGameweekDay(now: Date = new Date()): number {
-  // Sunday = day 1, Saturday = day 7
-  const d = now.getDay(); // 0=Sun .. 6=Sat
-  return d + 1;
-}
+// getGameweekDay now lives in fantasyData (Israel-time, Monday-anchored — Fable P0-7).
 
 // ─── Not-entered state — honest next-draft countdown ────────────────────────
 // Shown to a user who has NOT joined the current cycle. Copy adapts to the
@@ -327,7 +323,10 @@ export function FantasyLobbyScreen(): React.ReactElement {
     currentEntry.picks.forEach((pick) => {
       const r = liveReturns[pick.ticker] ?? pick.returnPercent ?? 0;
       plain += pick.allocation * r;
-      const mult = currentEntry.captainTicker === pick.ticker ? 2 : 1;
+      const mult =
+        currentEntry.captainTicker === pick.ticker ? 2
+        : currentEntry.viceTicker === pick.ticker ? 1.5
+        : 1;
       eff += pick.allocation * r * mult;
     });
     return {
@@ -420,8 +419,8 @@ export function FantasyLobbyScreen(): React.ReactElement {
               <F2ScoreboardHero
                 returnPercent={effReturn}
                 rank={rank}
-                rankDelta={rank <= 3 ? 2 : 0}
-                prevRank={rank + 2}
+                rankDelta={0}
+                prevRank={rank}
                 captainBoost={Math.abs(captainBoost) > 0.01 ? captainBoost : undefined}
               />
             </Animated.View>
@@ -518,7 +517,7 @@ export function FantasyLobbyScreen(): React.ReactElement {
                         ticker={pick.ticker}
                         name={pick.stockName}
                         sector={sector}
-                        todayChange={ret / 5}
+                        todayChange={0}
                         totalChange={ret}
                         isCaptain={isCap}
                         allocation={pick.allocation}

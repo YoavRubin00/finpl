@@ -7,7 +7,12 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { FANTASY, type FantasySectorId } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
 import { useEconomy } from '../../economy/useEconomy';
-import { STOCK_CATEGORIES, simulateWeeklyReturn } from '../fantasyData';
+import {
+  STOCK_CATEGORIES,
+  simulateWeeklyReturn,
+  getGameweekDay,
+  formatCompetitionCountdown,
+} from '../fantasyData';
 import { useLiveReturnsStore } from '../useLiveReturnsStore';
 import {
   F2Header,
@@ -207,15 +212,15 @@ export function LiveDashboardScreen(): React.ReactElement {
             <F2ScoreboardHero
               returnPercent={effReturn}
               rank={rank}
-              rankDelta={rank <= 3 ? 2 : -1}
-              prevRank={rank + 2}
+              rankDelta={0}
+              prevRank={rank}
               captainBoost={Math.abs(captainBoost) > 0.01 ? captainBoost : undefined}
             />
           </Animated.View>
 
           {/* Gameweek meter */}
           <Animated.View entering={FadeInDown.delay(60).duration(320)}>
-            <F2GameweekMeter day={4} total={7} deadline="2י׳ 14:32" />
+            <F2GameweekMeter day={getGameweekDay()} total={7} deadline={formatCompetitionCountdown()} />
           </Animated.View>
 
           {/* Portfolio */}
@@ -243,7 +248,7 @@ export function LiveDashboardScreen(): React.ReactElement {
                         ticker={pick.ticker}
                         name={pick.stockName}
                         sector={sector}
-                        todayChange={ret / 5}
+                        todayChange={0}
                         totalChange={ret}
                         isCaptain={isCap}
                         allocation={pick.allocation}

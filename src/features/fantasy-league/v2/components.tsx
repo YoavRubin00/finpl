@@ -43,7 +43,7 @@ export function F2ScoreboardHero({
   rankDelta,
   prevRank,
   captainBoost,
-  gameweek = 14,
+  gameweek,
 }: ScoreboardHeroProps): React.ReactElement {
   const goingUp = rankDelta > 0;
   const positive = returnPercent >= 0;
@@ -86,7 +86,7 @@ export function F2ScoreboardHero({
           justifyContent: 'space-between',
         }}>
           <View>
-            <F2LiveDot color={FANTASY.positive} label={`GAMEWEEK ${gameweek} · LIVE`} />
+            <F2LiveDot color={FANTASY.positive} label={gameweek ? `GAMEWEEK ${gameweek} · LIVE` : 'LIVE'} />
             <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 4, marginTop: 6 }}>
               <Text style={[
                 {
