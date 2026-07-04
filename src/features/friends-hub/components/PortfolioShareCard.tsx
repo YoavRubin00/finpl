@@ -518,7 +518,10 @@ export function PortfolioShareCard(): React.ReactElement {
       avatarId: myAvatarId,
     });
     if (portfolio) {
-      try { track({ name: 'portfolio_shared_server', props: { picks: picks.length } }); } catch { /* non-fatal */ }
+      try {
+        track({ name: 'portfolio_shared_server', props: { picks: picks.length } });
+        track({ name: 'social_action', props: { action_type: 'portfolio_share', surface: 'friends_hub' } });
+      } catch { /* non-fatal */ }
     }
     if (rewardCoins > 0) showReward(rewardCoins, 'התיק שותף!');
   };

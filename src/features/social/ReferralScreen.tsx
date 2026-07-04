@@ -146,6 +146,8 @@ export function ReferralScreen() {
     // Native Share doesn't reliably report success/cancel cross-platform —
     // fire on tap so we have at least the "intent to share" signal.
     track({ name: 'referral_link_shared', props: { code: referralCode } });
+    // North-Star social action umbrella.
+    try { track({ name: 'social_action', props: { action_type: 'referral_share', surface: 'referral' } }); } catch { /* non-fatal */ }
   }, [referralCode]);
 
   const handleCollectDividend = useCallback(async () => {

@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronRight, Send, Pin, Pencil } from 'lucide-react-native';
 
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { track } from '../../lib/analytics/events';
 import { requestGuestGate } from '../auth/guestValueGate';
 import { getIsraelDateISO } from '../../utils/israelTime';
 import { useTradeRoomsStore } from './useTradeRoomsStore';
@@ -141,6 +142,8 @@ export function TradeRoomChatScreen(): React.ReactElement {
     setError(null);
     setDraft('');
     setDraftSentiment(undefined);
+    // North-Star social action — a real message posted to a community room.
+    try { track({ name: 'social_action', props: { action_type: 'room_message', surface: 'trade_rooms' } }); } catch { /* non-fatal */ }
     if (result.reward) {
       successHaptic();
       setRewardBanner(result.reward);

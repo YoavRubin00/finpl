@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useAuthStore } from '../auth/useAuthStore';
 import { tokenStore } from '../../lib/auth/secureStore';
 import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 import {
   fetchFriendGraph,
   sendFriendRequestApi,
@@ -80,7 +81,11 @@ export const useFriendsStore = create<FriendsState>()((set, get) => ({
     }
     try {
       const state = await sendFriendRequestApi({ ...args, targetUserId: target.id });
-      try { captureEvent('friend_request_sent', { result: state }); } catch { /* non-fatal */ }
+      try {
+        captureEvent('friend_request_sent', { result: state });
+        // North-Star social action — sending a friend request is a real social move.
+        track({ name: 'social_action', props: { action_type: 'friend_request', surface: 'friends' } });
+      } catch { /* non-fatal */ }
       // Pull the truth (also picks up an instant mutual-accept). Fire-and-forget.
       void get().refresh();
       return state === 'friends' ? 'friends' : 'pending';

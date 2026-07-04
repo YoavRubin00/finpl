@@ -22,6 +22,7 @@ import {
 import { PendingModerationOverlay } from './components/PendingModerationOverlay';
 import { getApiBase } from '../../db/apiBase';
 import { DUO } from '../../constants/theme';
+import { track } from '../../lib/analytics/events';
 import { A } from './strings';
 import type { ModerationResult } from './anonAdviceTypes';
 
@@ -171,6 +172,9 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
       tags: mod.tags ?? [],
       status: 'approved',
     });
+
+    // North-Star social action — a real anonymous post reached the feed.
+    try { track({ name: 'social_action', props: { action_type: 'anon_post', surface: 'anon_advice' } }); } catch { /* non-fatal */ }
 
     setModerating(false);
     onPosted?.(result.post.id, result.reward);

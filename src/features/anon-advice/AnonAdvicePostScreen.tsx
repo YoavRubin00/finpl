@@ -14,6 +14,7 @@ import { DUO } from '../../constants/theme';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { formatVoteCount } from '../friends-hub/lib/honestCounts';
 import { tapHaptic } from '../../utils/haptics';
+import { track } from '../../lib/analytics/events';
 import { A } from './strings';
 
 interface AnonAdvicePostScreenProps {
@@ -61,6 +62,9 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
       return;
     }
     const result = submitReply({ postId: post.id, body: trimmed, agreedWith });
+    if (result) {
+      try { track({ name: 'social_action', props: { action_type: 'anon_reply', surface: 'anon_advice' } }); } catch { /* non-fatal */ }
+    }
     if (result?.reward) {
       setCoinToast(result.reward.coins);
       setTimeout(() => setCoinToast(null), 2200);

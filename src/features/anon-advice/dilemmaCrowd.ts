@@ -3,6 +3,7 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { requestGuestGate } from '../auth/guestValueGate';
 import { submitCrowdVote, type CrowdQuestionStats } from '../../db/sync/syncCrowdQuestion';
 import { useAnonAdviceStore } from './useAnonAdviceStore';
+import { track } from '../../lib/analytics/events';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 
 /**
@@ -68,6 +69,11 @@ export function useDilemmaVote(postId: string): DilemmaVote {
           voteOnPostOnce(postId, index); // local record + dedupe guard
           setOptimisticStats({ countA: result.countA, countB: result.countB, total: result.total });
           successHaptic();
+          // Analytics — same pair as the TA-35 forecast (shared crowd rails).
+          try {
+            track({ name: 'crowd_vote_submitted', props: { question_id: dilemmaQuestionId(postId), choice_id: index === 0 ? 'a' : 'b', is_bet: false, surface: 'dilemma' } });
+            track({ name: 'social_action', props: { action_type: 'crowd_vote', surface: 'dilemma' } });
+          } catch { /* non-fatal */ }
         } catch {
           errorHaptic(); // offline/server hiccup — user can simply tap again
         } finally {

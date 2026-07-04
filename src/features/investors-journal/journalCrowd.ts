@@ -3,6 +3,7 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { requestGuestGate } from '../auth/guestValueGate';
 import { submitCrowdVote, type CrowdQuestionStats } from '../../db/sync/syncCrowdQuestion';
 import { useInvestorsJournalStore } from './useInvestorsJournalStore';
+import { track } from '../../lib/analytics/events';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 
 /**
@@ -63,6 +64,12 @@ export function useJournalVote(eventId: string): JournalVote {
           recordVote(eventId, index); // local record + one-time XP
           setOptimisticStats({ countA: result.countA, countB: result.countB, total: result.total });
           successHaptic();
+          // Analytics — same pair as the TA-35 weekly forecast (shared rails):
+          // the per-feature vote event + the North-Star social_action.
+          try {
+            track({ name: 'crowd_vote_submitted', props: { question_id: journalQuestionId(eventId), choice_id: index === 0 ? 'a' : 'b', is_bet: false, surface: 'investors_journal' } });
+            track({ name: 'social_action', props: { action_type: 'crowd_vote', surface: 'investors_journal' } });
+          } catch { /* non-fatal */ }
         } catch {
           errorHaptic(); // offline — user can tap again
         } finally {
