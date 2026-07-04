@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Image, FlatList } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, FlatList } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,10 +9,10 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAnonAdviceStore } from './useAnonAdviceStore';
 import { AnonAdviceComposeModal } from './AnonAdviceComposeModal';
 import { PostCard } from './components/PostCard';
-import { SEED_DILEMMAS, isSeedDilemma } from './seedDilemmas';
 import type { AnonAdvicePost } from './anonAdviceTypes';
 import { DUO } from '../../constants/theme';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { tapHaptic } from '../../utils/haptics';
 import { A } from './strings';
 
 const FILTERS: { id: string | null; label: string }[] = [
@@ -25,15 +26,18 @@ const FILTERS: { id: string | null; label: string }[] = [
 export function AnonAdviceFeedScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const allPosts = useAnonAdviceStore((s) => s.getPosts)();
+  const ensureSeedPosts = useAnonAdviceStore((s) => s.ensureSeedPosts);
+  const votedOptionByPost = useAnonAdviceStore((s) => s.votedOptionByPost);
+  const voteOnPostOnce = useAnonAdviceStore((s) => s.voteOnPostOnce);
   const [filter, setFilter] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [reward, setReward] = useState<{ coins: number; xp: number; firstBonus: boolean } | null>(null);
 
-  const realPosts: AnonAdvicePost[] = filter ? allPosts.filter((p) => p.tags.includes(filter)) : allPosts;
-  // Cold-start: example dilemmas ONLY while the real feed is truly empty (no
-  // filter active) — they self-retire the instant a real post exists.
-  const showingSeeds = allPosts.length === 0 && filter === null;
-  const posts: AnonAdvicePost[] = showingSeeds ? SEED_DILEMMAS : realPosts;
+  // Cold-start: the example dilemmas live in the store like any other post
+  // (they retire automatically once a real post exists — getPosts).
+  useEffect(() => { ensureSeedPosts(); }, [ensureSeedPosts]);
+
+  const posts: AnonAdvicePost[] = filter ? allPosts.filter((p) => p.tags.includes(filter)) : allPosts;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: DUO.bg }} edges={['top']}>
@@ -72,20 +76,26 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
             {A.subtitle}
           </Text>
         </View>
+        {/* Captain Shark, top-left. ExpoImage — RN core Image renders animated
+            WebP as an empty box on some Android devices (Yoav 2026-07-04). */}
         <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
+            width: 48,
+            height: 48,
+            borderRadius: 24,
             backgroundColor: DUO.blueSurface,
+            borderWidth: 1.5,
+            borderColor: '#bfdbfe',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Image
+          <ExpoImage
             source={require('../../../assets/webp/fin-happy.webp')}
-            style={{ width: 34, height: 34 }}
-            resizeMode="contain"
+            style={{ width: 40, height: 40 }}
+            contentFit="contain"
+            accessible={false}
+            autoplay
           />
         </View>
       </View>
@@ -124,10 +134,11 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
       {/* Feed */}
       {posts.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 14 }}>
-          <Image
+          <ExpoImage
             source={require('../../../assets/webp/fin-empathic.webp')}
             style={{ width: 140, height: 140 }}
-            resizeMode="contain"
+            contentFit="contain"
+            autoplay
           />
           <Text style={{ fontSize: 16, fontWeight: '800', color: DUO.text, writingDirection: 'rtl', textAlign: 'center' }}>
             {A.feedEmpty}
@@ -137,34 +148,12 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
         <FlatList
           data={posts}
           keyExtractor={(p) => p.id}
-          ListHeaderComponent={
-            showingSeeds ? (
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: '800',
-                  color: DUO.textMuted,
-                  writingDirection: 'rtl',
-                  textAlign: 'right',
-                  paddingHorizontal: 20,
-                  paddingBottom: 4,
-                }}
-                maxFontSizeMultiplier={1.15}
-              >
-                דוגמאות מהקהילה · שתפו דילמה אמיתית ותהיו הראשונים בפיד
-              </Text>
-            ) : null
-          }
           renderItem={({ item }) => (
             <PostCard
               post={item}
-              // Seed examples have no store entry → the post screen would be
-              // blank. They open the composer instead ("ask your own").
-              onPress={() =>
-                isSeedDilemma(item.id)
-                  ? setComposing(true)
-                  : router.push(`/anon-advice/post/${item.id}` as never)
-              }
+              votedIndex={votedOptionByPost[item.id] ?? null}
+              onVote={(idx) => { tapHaptic(); voteOnPostOnce(item.id, idx); }}
+              onPress={() => router.push(`/anon-advice/post/${item.id}` as never)}
             />
           )}
           contentContainerStyle={{ paddingTop: 12, paddingBottom: insets.bottom + 108 }}
@@ -256,10 +245,11 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
             elevation: 4,
           }}
         >
-          <Image
+          <ExpoImage
             source={require('../../../assets/webp/fin-happy.webp')}
             style={{ width: 40, height: 40 }}
-            resizeMode="contain"
+            contentFit="contain"
+            autoplay
           />
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

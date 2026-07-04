@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { MessageCircle } from 'lucide-react-native';
+import { MessageCircle, Check } from 'lucide-react-native';
 import type { AnonAdvicePost } from '../anonAdviceTypes';
 import { AnonAvatar } from './AnonAvatar';
 import { DUO } from '../../../constants/theme';
@@ -9,6 +9,10 @@ import { A } from '../strings';
 interface PostCardProps {
   post: AnonAdvicePost;
   onPress: () => void;
+  /** The option index this user already voted for (feed-level), or null. */
+  votedIndex?: 0 | 1 | null;
+  /** Cast a feed-level vote. Omit to hide the in-card poll buttons. */
+  onVote?: (index: 0 | 1) => void;
 }
 
 function formatTimeAgo(iso: string): string {
@@ -21,11 +25,15 @@ function formatTimeAgo(iso: string): string {
   return A.timeAgo.days(Math.floor(hours / 24));
 }
 
-export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
+export function PostCard({ post, onPress, votedIndex = null, onVote }: PostCardProps): React.ReactElement {
+  const showPoll = onVote !== undefined && post.options.length === 2;
   return (
+    // STATIC style only — a function-style ({pressed}) => ({...layout}) drops the
+    // whole style on Android (known Pressable bug), which stripped these cards of
+    // margins/padding/background (the "cramped, overflowing" feed Yoav saw).
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({
+      style={{
         marginHorizontal: 16,
         marginBottom: 12,
         backgroundColor: '#ffffff',
@@ -33,8 +41,8 @@ export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
         borderWidth: 1,
         borderColor: post.isSelf ? DUO.blue : DUO.border,
         padding: 14,
-        opacity: pressed ? 0.92 : 1,
-      })}
+      }}
+      android_ripple={{ color: 'rgba(24,119,242,0.05)' }}
     >
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
         <AnonAvatar alias={post.alias} size={32} isSelf={post.isSelf} />
@@ -93,6 +101,55 @@ export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
       >
         {post.question}
       </Text>
+
+      {/* Two-option poll — vote right from the feed. Your pick highlights;
+          no percentages are invented (only real accumulated votes exist). */}
+      {showPoll && (
+        <View style={{ gap: 6, marginBottom: 10 }}>
+          {([0, 1] as const).map((idx) => {
+            const isChoice = votedIndex === idx;
+            const voted = votedIndex !== null;
+            return (
+              <Pressable
+                key={idx}
+                onPress={() => { if (!voted) onVote?.(idx); }}
+                disabled={voted}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isChoice, disabled: voted }}
+                accessibilityLabel={`הצביעו: ${post.options[idx]}`}
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: isChoice ? DUO.blue : DUO.bg,
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: isChoice ? DUO.blue : DUO.border,
+                  paddingHorizontal: 12,
+                  paddingVertical: 9,
+                  opacity: voted && !isChoice ? 0.55 : 1,
+                }}
+              >
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    fontWeight: '800',
+                    color: isChoice ? '#ffffff' : DUO.text,
+                    writingDirection: 'rtl',
+                    textAlign: 'right',
+                  }}
+                  numberOfLines={2}
+                  maxFontSizeMultiplier={1.15}
+                >
+                  {post.options[idx]}
+                </Text>
+                {isChoice && <Check size={16} color="#ffffff" strokeWidth={3} />}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       {/* Tags + reply count */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

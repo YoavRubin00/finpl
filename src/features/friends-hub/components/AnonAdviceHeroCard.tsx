@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -13,8 +14,9 @@ import Animated, {
   interpolate,
   FadeInDown,
 } from 'react-native-reanimated';
-import { UserRound, MessageCircle, Bell } from 'lucide-react-native';
+import { UserRound, MessageCircle, Bell, ChevronLeft } from 'lucide-react-native';
 import { useAnonAdviceStore } from '../../anon-advice/useAnonAdviceStore';
+import { isSeedDilemma } from '../../anon-advice/seedDilemmas';
 import {
   formatAnonLabel,
   REWARD_POST_COINS,
@@ -128,13 +130,21 @@ export function AnonAdviceHeroCard(): React.ReactElement {
   const rawPosts = useAnonAdviceStore((s) => s.posts);
   const unseenReplyPostIds = useAnonAdviceStore((s) => s.unseenReplyPostIds);
   const markRepliesSeen = useAnonAdviceStore((s) => s.markRepliesSeen);
+  const ensureSeedPosts = useAnonAdviceStore((s) => s.ensureSeedPosts);
+
+  // Surface the example dilemmas on the hub too until real ones exist
+  // (Yoav 2026-07-04: "תקפיץ למסך הראשי את הדוגמאות עד שיהיו אמיתיים").
+  useEffect(() => { ensureSeedPosts(); }, [ensureSeedPosts]);
 
   const { recent, total } = useMemo(() => {
     const approved = rawPosts.filter((p) => p.status === 'approved');
-    const sorted = [...approved].sort(
+    // Example dilemmas retire the moment a real post exists (same rule as getPosts).
+    const hasReal = approved.some((p) => !isSeedDilemma(p.id));
+    const visible = hasReal ? approved.filter((p) => !isSeedDilemma(p.id)) : approved;
+    const sorted = [...visible].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-    return { recent: sorted.slice(0, 2), total: approved.length };
+    return { recent: sorted.slice(0, 2), total: visible.length };
   }, [rawPosts]);
 
   // Honest count — a number is shown ONLY once there are ≥100 real questions.
@@ -184,34 +194,43 @@ export function AnonAdviceHeroCard(): React.ReactElement {
       }}
     >
       {/* ── Section header — tappable "see all" ── */}
+      {/* STATIC style — function-style ({pressed}) drops the whole style on
+          Android (known Pressable bug): this header collapsed into a column and
+          the title clipped at the right edge (Yoav 2026-07-04). */}
       <Pressable
         onPress={() => { tapHaptic(); router.push('/anon-advice' as never); }}
         accessibilityRole="button"
         accessibilityLabel={headerA11y}
-        style={({ pressed }) => ({
+        style={{
           flexDirection: 'row-reverse',
           alignItems: 'center',
           paddingHorizontal: 16,
           paddingVertical: 14,
-          backgroundColor: pressed ? STITCH.surfaceLow : '#ffffff',
+          backgroundColor: '#ffffff',
           gap: 10,
-        })}
+        }}
+        android_ripple={{ color: 'rgba(24,119,242,0.06)' }}
       >
         <View
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 21,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
             backgroundColor: DUO.blueSurface,
+            borderWidth: 1.5,
+            borderColor: '#bfdbfe',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Image
+          {/* ExpoImage — RN core Image shows animated WebP as an empty box on
+              some Android devices ("חסר וובפ של שארק"). */}
+          <ExpoImage
             source={require('../../../../assets/webp/fin-empathic.webp')}
-            style={{ width: 36, height: 36 }}
-            resizeMode="contain"
+            style={{ width: 37, height: 37 }}
+            contentFit="contain"
             accessible={false}
+            autoplay
           />
         </View>
         <View style={{ flex: 1 }}>
@@ -241,7 +260,7 @@ export function AnonAdviceHeroCard(): React.ReactElement {
             {subtitle}
           </Text>
         </View>
-        <Text style={{ fontSize: 20, color: STITCH.primary }}>‹</Text>
+        <ChevronLeft size={22} color={STITCH.primary} strokeWidth={2.6} />
       </Pressable>
 
       {/* ── A4 · "יש תגובה חדשה לשאלה שלך" — real inbound reciprocity only.
@@ -253,7 +272,7 @@ export function AnonAdviceHeroCard(): React.ReactElement {
             onPress={openUnseenReply}
             accessibilityRole="button"
             accessibilityLabel="יש תגובה חדשה לשאלה שלך. לחצו לצפייה"
-            style={({ pressed }) => ({
+            style={{
               flexDirection: 'row-reverse',
               alignItems: 'center',
               gap: 8,
@@ -262,10 +281,11 @@ export function AnonAdviceHeroCard(): React.ReactElement {
               paddingHorizontal: 12,
               paddingVertical: 10,
               borderRadius: 12,
-              backgroundColor: pressed ? '#dbeafe' : DUO.blueSurface,
+              backgroundColor: DUO.blueSurface,
               borderWidth: 1,
               borderColor: '#bfdbfe',
-            })}
+            }}
+            android_ripple={{ color: 'rgba(24,119,242,0.08)' }}
           >
             <View
               style={{
@@ -293,7 +313,7 @@ export function AnonAdviceHeroCard(): React.ReactElement {
             >
               יש תגובה חדשה לשאלה שלך
             </Text>
-            <Text style={{ fontSize: 18, color: DUO.blue }}>‹</Text>
+            <ChevronLeft size={18} color={DUO.blue} strokeWidth={2.6} />
           </Pressable>
         </Animated.View>
       )}
@@ -312,11 +332,12 @@ export function AnonAdviceHeroCard(): React.ReactElement {
             gap: 8,
           }}
         >
-          <Image
+          <ExpoImage
             source={require('../../../../assets/webp/fin-empathic.webp')}
             style={{ width: 72, height: 72 }}
-            resizeMode="contain"
+            contentFit="contain"
             accessible={false}
+            autoplay
           />
           <Text
             maxFontSizeMultiplier={1.3}
@@ -353,13 +374,14 @@ export function AnonAdviceHeroCard(): React.ReactElement {
           onPress={() => { tapHaptic(); router.push(`/anon-advice/post/${post.id}` as never); }}
           accessibilityRole="button"
           accessibilityLabel={`פוסט: ${post.question}`}
-          style={({ pressed }) => ({
-            backgroundColor: pressed ? STITCH.surfaceLow : '#ffffff',
+          style={{
+            backgroundColor: '#ffffff',
             borderTopWidth: 1,
             borderTopColor: STITCH.surfaceHighest,
             paddingHorizontal: 16,
             paddingVertical: 12,
-          })}
+          }}
+          android_ripple={{ color: 'rgba(24,119,242,0.05)' }}
         >
           {/* Author row — neutral anonymous identity (no animal emoji) */}
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 6, gap: 8 }}>

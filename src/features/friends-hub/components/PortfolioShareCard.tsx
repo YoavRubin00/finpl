@@ -18,6 +18,7 @@ import { AvatarImage } from '../../avatars/AvatarImage';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { usePortfolioShareStore } from '../../portfolio-share/usePortfolioShareStore';
 import { SEED_PORTFOLIOS, rankPortfoliosByEngagement, isSeedPortfolio } from '../../portfolio-share/seedPortfolios';
+import { useSeedEngagementStore } from '../../portfolio-share/useSeedEngagementStore';
 import { moderateWithSharkBot } from '../../moderation/sharkModeratorBot';
 import { requestGuestGate } from '../../auth/guestValueGate';
 import { PortfolioComposerModal } from '../../portfolio-share/PortfolioComposerModal';
@@ -207,26 +208,33 @@ function PortfolioPost({
 
   const visibleComments = expanded ? pf.comments : pf.comments.slice(0, 1);
 
+  // Seed (example) posts behave like real ones — the engagement is the user's
+  // OWN action, stored locally (Yoav 2026-07-04: "שלא יראו כמו דוגמאות").
+  const isSeed = isSeedPortfolio(pf.id);
+  const toggleSeedLike = useSeedEngagementStore((s) => s.toggleSeedLike);
+  const rateSeed = useSeedEngagementStore((s) => s.rateSeed);
+  const addSeedComment = useSeedEngagementStore((s) => s.addSeedComment);
+
   const onRate = useCallback(
     (stars: number) => {
-      if (isSeedPortfolio(pf.id)) return; // example content — read-only
       if (isGuest) { requestGuestGate('portfolio_rate'); return; }
       successHaptic();
+      if (isSeed) { rateSeed(pf.id, stars); return; }
       void (async () => {
         const res = await rate(pf.id, stars);
         try { track({ name: 'portfolio_rated', props: { stars } }); } catch { /* non-fatal */ }
         if (res && res.rewardCoins > 0) onRewardCoins(res.rewardCoins);
       })();
     },
-    [pf.id, isGuest, rate, onRewardCoins],
+    [pf.id, isGuest, isSeed, rate, rateSeed, onRewardCoins],
   );
 
   const onLikePress = (): void => {
-    if (isSeedPortfolio(pf.id)) return; // example content — read-only
     if (isGuest) { requestGuestGate('portfolio_like'); return; }
     const willLike = !pf.likedByYou;
     tapHaptic();
-    void toggleLike(pf.id);
+    if (isSeed) toggleSeedLike(pf.id);
+    else void toggleLike(pf.id);
     if (willLike && !reduced) {
       likeScale.value = withSequence(
         withSpring(1.35, { damping: 6, stiffness: 260 }),
@@ -238,7 +246,6 @@ function PortfolioPost({
   const submitComment = (): void => {
     const text = draft.trim();
     if (!text) return;
-    if (isSeedPortfolio(pf.id)) return; // example content — read-only
     if (isGuest) { requestGuestGate('portfolio_comment'); return; }
     tapHaptic();
     setDraft('');
@@ -246,7 +253,9 @@ function PortfolioPost({
     void (async () => {
       const verdict = await moderateWithSharkBot(text);
       if (!verdict.ok) return; // Shark bot blocked it — silently drop (kept honest, no fake post)
-      await addComment(pf.id, text, displayName?.trim() ? displayName : 'אני', myAvatarId);
+      const name = displayName?.trim() ? displayName : 'אני';
+      if (isSeed) addSeedComment(pf.id, text, name, myAvatarId);
+      else await addComment(pf.id, text, name, myAvatarId);
     })();
   };
 
@@ -386,7 +395,9 @@ function PortfolioPost({
         ) : null}
       </View>
 
-      {/* Action bar */}
+      {/* Action bar — STATIC styles only: a function-style ({pressed}) => ({...})
+          drops the whole style on Android (known Pressable bug), which merged
+          these two buttons into the squashed "אהבתיהגב" Yoav saw (2026-07-04). */}
       <View style={{ flexDirection: 'row-reverse', marginHorizontal: 14, marginTop: 6, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 6 }}>
         <Pressable
           onPress={onLikePress}
@@ -394,7 +405,8 @@ function PortfolioPost({
           accessibilityLabel="אהבתי"
           accessibilityState={{ selected: pf.likedByYou }}
           hitSlop={{ top: 8, bottom: 8 }}
-          style={({ pressed }) => ({ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8, opacity: pressed ? 0.6 : 1 })}
+          style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8 }}
+          android_ripple={{ color: 'rgba(239,68,68,0.08)' }}
         >
           <Animated.View style={heartStyle}>
             <Heart size={16} color={pf.likedByYou ? '#ef4444' : TEXT_MUTED} fill={pf.likedByYou ? '#ef4444' : 'transparent'} strokeWidth={2} />
@@ -406,7 +418,8 @@ function PortfolioPost({
           accessibilityRole="button"
           accessibilityLabel="הגב"
           hitSlop={{ top: 8, bottom: 8 }}
-          style={({ pressed }) => ({ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8, opacity: pressed ? 0.6 : 1 })}
+          style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8 }}
+          android_ripple={{ color: 'rgba(24,119,242,0.08)' }}
         >
           <MessageCircle size={16} color={TEXT_MUTED} strokeWidth={2} />
           <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_MUTED }}>הגב</Text>
@@ -512,11 +525,32 @@ export function PortfolioShareCard(): React.ReactElement {
 
   // Real feed ranked by engagement; falls back to example content ONLY while the
   // real feed is empty (self-retires the instant a real portfolio exists).
+  // Example posts are merged with the user's OWN local engagement so they look
+  // and feel exactly like real posts (Yoav 2026-07-04) — counts derive solely
+  // from what this user actually did, never a fabricated crowd.
+  const likedSeeds = useSeedEngagementStore((s) => s.likedSeeds);
+  const seedRatings = useSeedEngagementStore((s) => s.seedRatings);
+  const seedComments = useSeedEngagementStore((s) => s.seedComments);
   const showingSeeds = loaded && portfolios.length === 0;
-  const feed = useMemo(
-    () => (portfolios.length > 0 ? rankPortfoliosByEngagement(portfolios) : showingSeeds ? SEED_PORTFOLIOS : []),
-    [portfolios, showingSeeds],
-  );
+  const feed = useMemo(() => {
+    if (portfolios.length > 0) return rankPortfoliosByEngagement(portfolios);
+    if (!showingSeeds) return [];
+    return SEED_PORTFOLIOS.map((pf) => {
+      const liked = likedSeeds[pf.id] === true;
+      const rating = seedRatings[pf.id];
+      const comments = seedComments[pf.id] ?? [];
+      return {
+        ...pf,
+        likedByYou: liked,
+        likeCount: liked ? 1 : 0,
+        yourRating: rating ?? null,
+        ratingAvg: rating ?? null,
+        ratingCount: rating != null ? 1 : 0,
+        comments,
+        commentCount: comments.length,
+      };
+    });
+  }, [portfolios, showingSeeds, likedSeeds, seedRatings, seedComments]);
 
   return (
     <View style={{ backgroundColor: '#fff' }}>
@@ -578,13 +612,6 @@ export function PortfolioShareCard(): React.ReactElement {
       )}
 
       {/* Feed — real content ranked by engagement; example content only while empty */}
-      {showingSeeds && (
-        <View style={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 2 }}>
-          <Text style={{ fontSize: 11, fontWeight: '900', color: TEXT_MUTED, ...RTL }} maxFontSizeMultiplier={1.15}>
-            דוגמאות מהקהילה · הרכיבו תיק אמיתי ותהיו הראשונים בפיד
-          </Text>
-        </View>
-      )}
       {feed.map((pf, i) => (
         <React.Fragment key={pf.id}>
           {i > 0 && <View style={{ height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 14 }} />}

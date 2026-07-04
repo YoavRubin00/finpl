@@ -7,12 +7,13 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronRight, Send, Pin } from 'lucide-react-native';
+import { ChevronRight, Send, Pin, Pencil } from 'lucide-react-native';
 
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { requestGuestGate } from '../auth/guestValueGate';
@@ -97,6 +98,9 @@ export function TradeRoomChatScreen(): React.ReactElement {
   const toggleLike = useTradeRoomsStore((s) => s.toggleLike);
   const markRoomRead = useTradeRoomsStore((s) => s.markRoomRead);
   const getSentimentSummary = useTradeRoomsStore((s) => s.getSentimentSummary);
+  const syncRoom = useTradeRoomsStore((s) => s.syncRoom);
+  const chatNickname = useTradeRoomsStore((s) => s.chatNickname);
+  const setChatNickname = useTradeRoomsStore((s) => s.setChatNickname);
 
   const messages = messagesByRoom[roomId] ?? [];
   const sentiment = getSentimentSummary(roomId);
@@ -106,6 +110,8 @@ export function TradeRoomChatScreen(): React.ReactElement {
   const [draftSentiment, setDraftSentiment] = React.useState<MessageSentiment | undefined>(undefined);
   const [error, setError] = React.useState<string | null>(null);
   const [rewardBanner, setRewardBanner] = React.useState<{ coins: number; xp: number } | null>(null);
+  const [nickModal, setNickModal] = React.useState(false);
+  const [nickDraft, setNickDraft] = React.useState('');
 
   const listRef = React.useRef<FlatList<TradeRoomMessage>>(null);
 
@@ -114,6 +120,14 @@ export function TradeRoomChatScreen(): React.ReactElement {
     markRoomRead(roomId);
     return () => markRoomRead(roomId);
   }, [roomId, markRoomRead]);
+
+  // REAL feed: pull the room's server messages on entry + poll while inside,
+  // so people actually see each other (before this the chat was device-local).
+  React.useEffect(() => {
+    void syncRoom(roomId);
+    const timer = setInterval(() => { void syncRoom(roomId); }, 8_000);
+    return () => clearInterval(timer);
+  }, [roomId, syncRoom]);
 
   const handleSend = React.useCallback(() => {
     const body = draft.trim();
@@ -238,6 +252,22 @@ export function TradeRoomChatScreen(): React.ReactElement {
             {subtitle}
           </Text>
         </View>
+        <Pressable
+          onPress={() => { tapHaptic(); setNickDraft(chatNickname ?? ''); setNickModal(true); }}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="בחרו כינוי לצ'אט"
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            backgroundColor: FEED_BG,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Pencil size={15} color={TEXT_PRIMARY} strokeWidth={2.4} />
+        </Pressable>
       </View>
 
       {/* Pinned Captain Shark ground rule */}
@@ -427,20 +457,22 @@ export function TradeRoomChatScreen(): React.ReactElement {
                 textAlign: 'right',
               }}
             />
+            {/* Static style ONLY — a function-style ({pressed}) => ({...layout})
+                drops the whole style on Android (the known Pressable bug), which
+                made this button invisible (Yoav 2026-07-04). */}
             <Pressable
               onPress={handleSend}
               disabled={draft.trim().length === 0}
               accessibilityRole="button"
               accessibilityLabel="שליחת הודעה"
-              style={({ pressed }) => ({
+              style={{
                 width: 44,
                 height: 44,
                 borderRadius: 22,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: draft.trim().length > 0 ? '#1877f2' : '#cbd5e1',
-                opacity: pressed ? 0.85 : 1,
-              })}
+              }}
             >
               <Send
                 size={20}
@@ -452,6 +484,75 @@ export function TradeRoomChatScreen(): React.ReactElement {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Nickname modal — the name others see next to your messages */}
+      <Modal visible={nickModal} transparent animationType="fade" onRequestClose={() => setNickModal(false)}>
+        <Pressable
+          onPress={() => setNickModal(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'center', padding: 24 }}
+        >
+          <Pressable onPress={() => { /* swallow taps */ }} style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 18, gap: 10 }}>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: TEXT_PRIMARY, writingDirection: 'rtl', textAlign: 'right' }}>
+              הכינוי שלכם בצ'אט
+            </Text>
+            <Text style={{ fontSize: 12, color: TEXT_MUTED, writingDirection: 'rtl', textAlign: 'right', lineHeight: 17 }}>
+              ככה יראו אתכם בחדרים. 2–24 תווים, בלי פרטים אישיים.
+            </Text>
+            <TextInput
+              value={nickDraft}
+              onChangeText={setNickDraft}
+              placeholder="למשל: כריש הנגב"
+              placeholderTextColor="#9ca3af"
+              maxLength={24}
+              autoFocus
+              style={{
+                backgroundColor: FEED_BG,
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                fontSize: 15,
+                color: TEXT_PRIMARY,
+                writingDirection: 'rtl',
+                textAlign: 'right',
+              }}
+            />
+            <View style={{ flexDirection: 'row-reverse', gap: 10, marginTop: 4 }}>
+              <Pressable
+                onPress={() => {
+                  tapHaptic();
+                  setChatNickname(nickDraft);
+                  setNickModal(false);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="שמרו את הכינוי"
+                style={{
+                  flex: 1,
+                  backgroundColor: '#1877f2',
+                  borderRadius: 12,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#ffffff' }}>שמירה</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setNickModal(false)}
+                accessibilityRole="button"
+                accessibilityLabel="ביטול"
+                style={{
+                  paddingHorizontal: 18,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  backgroundColor: FEED_BG,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '800', color: TEXT_MUTED }}>ביטול</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }

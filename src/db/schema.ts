@@ -522,6 +522,26 @@ export const contentReports = pgTable("content_reports", {
   check("content_reports_target_type_chk", sql`target_type IN ('portfolio','comment')`),
 ]);
 
+// ─── Trade-room chat (server-backed, migration 0011) ───────────────────────────
+// Real community messages per room. Before this table the rooms were local-only —
+// nobody ever saw anyone else's messages (Yoav 2026-07-04: make it real).
+export const tradeRoomMessages = pgTable("trade_room_messages", {
+  id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+  roomId: text("room_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  displayName: text("display_name").notNull(),
+  avatarId: text("avatar_id"),
+  body: text().notNull(),
+  sentiment: text(), // 'bull' | 'bear' | null
+  hidden: boolean().notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  index("trade_room_messages_room_idx").using("btree", table.roomId.asc(), table.createdAt.asc()),
+  foreignKey({ columns: [table.userId], foreignColumns: [userProfiles.id], name: "trade_room_messages_user_fk" }).onDelete("cascade"),
+  check("trade_room_messages_body_len", sql`char_length(body) BETWEEN 1 AND 240`),
+  check("trade_room_messages_sentiment_chk", sql`sentiment IS NULL OR sentiment IN ('bull','bear')`),
+]);
+
 // A blocker never sees the blocked user's shares or comments again.
 export const userBlocks = pgTable("user_blocks", {
   blockerUserId: uuid("blocker_user_id").notNull(),

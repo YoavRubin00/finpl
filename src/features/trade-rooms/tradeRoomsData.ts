@@ -76,17 +76,6 @@ export const TRADE_ROOMS: TradeRoom[] = [
     pinnedTip:
       'החדר הזה קדוש: אין לעג, אין זלזול. כולנו התחלנו ממים רדודים.',
   },
-  {
-    id: 'league-talk',
-    name: 'חדר הליגה',
-    emoji: '🏆',
-    tagline: 'טראש-טוק של ליגת הפנטזי — מי לוקח את השבוע?',
-    accentColor: '#a855f7',
-    accentBg: '#f3e8ff',
-    memberBase: 347,
-    pinnedTip:
-      'טראש-טוק זה חלק מהמשחק. על התיק של היריב — לא על היריב.',
-  },
 ];
 
 export function getRoomById(id: TradeRoomId): TradeRoom {
@@ -100,13 +89,20 @@ export interface DailyEventTopic {
   subtitle: string;
 }
 
+// Big-number, pick-a-side prompts (Yoav 2026-07-04: large sums, cooler hooks).
+// Rotation is deterministic per IL calendar day — a fresh topic every day,
+// the whole community sees the same one.
 const DAILY_EVENT_TOPICS: DailyEventTopic[] = [
-  { title: 'עונת הדוחות של ענקיות הטק', subtitle: 'מי מפתיעה ומי מאכזבת?' },
-  { title: 'ביטקוין חצה עוד שיא?', subtitle: 'האם זה רכבת או בלון?' },
-  { title: 'המניה שכולם מדברים עליה', subtitle: 'הייפ אמיתי או עדר?' },
-  { title: 'שקל חזק, דולר חלש', subtitle: 'מי מרוויח ומי בוכה?' },
-  { title: 'קרן חירום או השקעה?', subtitle: 'הוויכוח הנצחי — צד אחד לבחירה' },
-  { title: 'ת״א 35 מול S&P 500', subtitle: 'איפה הייתם שמים 1,000 שקל?' },
+  { title: 'נפלו עליכם 100,000 ש״ח', subtitle: 'ת״א 35, S&P 500, קריפטו — או מקדמה לדירה?' },
+  { title: 'עונת הדוחות של ענקיות הטק', subtitle: '250,000 ש״ח על טק אמריקאי — מי מפתיעה ומי קורסת?' },
+  { title: 'ביטקוין ב-100% תוך שנה?', subtitle: '50,000 ש״ח פנויים — נכנסים או בורחים?' },
+  { title: 'המניה שכולם מדברים עליה', subtitle: '30,000 ש״ח על ההייפ — אומץ או טעות של עדר?' },
+  { title: 'שקל חזק, דולר חלש', subtitle: '80,000 ש״ח בעו״ש — ממירים לדולר או נשארים בשקל?' },
+  { title: '100,000 ש״ח מירושה', subtitle: 'סוגרים משכנתא מוקדם — או משקיעים הכל במדדים?' },
+  { title: 'ת״א 35 מול S&P 500', subtitle: 'איפה הייתם שמים 100,000 ש״ח לעשור הקרוב?' },
+  { title: 'דירה להשקעה בפריפריה', subtitle: '400,000 ש״ח הון עצמי — נדל״ן או תיק מניות?' },
+  { title: 'הבונוס השנתי נחת: 40,000 ש״ח', subtitle: 'טיול חלומות, קרן חירום או שוק ההון?' },
+  { title: 'פנסיה בגיל 45 — אפשרי?', subtitle: 'כמה באמת צריך? מיליון? שלושה? עשרה?' },
 ];
 
 /** Deterministic per IL calendar date — the whole community sees the same topic. */
@@ -193,14 +189,6 @@ const SEED_LINES: Record<TradeRoomId, SeedLine[]> = {
     { aliasIdx: 3, body: 'שנה פה ועדיין לומד משהו חדש כל שבוע. החדר הזה זהב', likes: 9, minutesAgo: 95 },
     { aliasIdx: 9, body: 'שאלה: כמה כסף בכלל צריך כדי להתחיל? חשבתי שזה רק לעשירים', minutesAgo: 45 },
     { aliasIdx: 5, body: 'ממש לא. היום אפשר להתחיל גם עם מאות שקלים. העיקרון חשוב מהסכום — קביעות מנצחת גודל.', likes: 11, minutesAgo: 38 },
-  ],
-  'league-talk': [
-    { aliasIdx: 6, body: 'מי שם קריפטו כקפטן השבוע — נתראה בתחתית הטבלה', sentiment: 'bear', likes: 5, minutesAgo: 140 },
-    { aliasIdx: 1, body: 'תצחק תצחק. הקפטן שלי עשה 12% שבוע שעבר בזמן שהטק שלך ישן', sentiment: 'bull', likes: 8, minutesAgo: 132 },
-    { aliasIdx: 4, body: 'הדראפט נסגר עוד מעט וחצי מהליגה עוד לא בחרה. קלאסי', minutesAgo: 120 },
-    { isShark: true, aliasIdx: 0, body: 'טיפ לדראפט: הקפטן שלכם שווה כפול — אבל כפול עובד גם בירידות. יציבות בקפטן, הרפתקאות בשאר התיק.', likes: 13, minutesAgo: 110 },
-    { aliasIdx: 7, body: 'שלוש עונות ברצף שאני מסיים מעל החכם. שיבוא השבוע', likes: 4, minutesAgo: 80 },
-    { aliasIdx: 0, body: 'דיברת ועכשיו תפסיד. חוקי הליגה', likes: 6, minutesAgo: 72 },
   ],
 };
 

@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import { ChevronLeft } from 'lucide-react-native';
 import { useShallow } from 'zustand/react/shallow';
 import { CROWD_QUESTIONS } from '../../crowd-question/crowdQuestionsData';
 import { useCrowdQuestionStore } from '../../crowd-question/useCrowdQuestionStore';
@@ -312,19 +313,22 @@ export function CrowdWisdomCard(): React.ReactElement {
         onPress={handlePressQuestion}
         accessibilityRole="button"
         accessibilityLabel="חכמת ההמונים. לחצו לצפייה"
-        style={({ pressed }) => ({
+        // STATIC style only — a function-style ({pressed}) => ({...layout}) drops
+        // the WHOLE style on Android (known Pressable bug), which stacked this
+        // header into a column and clipped the title at the right edge. That was
+        // the "broken header" Yoav kept seeing (2026-07-04) — the earlier padding
+        // fix lived inside the dropped style, so it never applied.
+        style={{
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          // Right inset clears the 4px accent strip pinned at right:0 (matches the
-          // 16px inset used by the rest of the card, so the title/subtitle get the
-          // full remaining width and don't clip at the RTL border — Yoav 2026-07-03).
           paddingRight: 16,
           paddingLeft: 12,
           paddingTop: 14,
           paddingBottom: 12,
           gap: 10,
-          backgroundColor: pressed ? STITCH.surfaceLow : '#ffffff',
-        })}
+          backgroundColor: '#ffffff',
+        }}
+        android_ripple={{ color: 'rgba(124,58,237,0.08)' }}
       >
         <View
           style={{
@@ -372,7 +376,7 @@ export function CrowdWisdomCard(): React.ReactElement {
             סנטימנט הקהילה בשאלות הגדולות
           </Text>
         </View>
-        <Text style={{ fontSize: 20, color: STITCH.primary }}>‹</Text>
+        <ChevronLeft size={22} color={STITCH.primary} strokeWidth={2.6} />
       </Pressable>
 
       {/* ── Personal stats strip (A3) — REAL market accuracy + participation streak ── */}
@@ -416,12 +420,13 @@ export function CrowdWisdomCard(): React.ReactElement {
               onPress={handlePressQuestion}
               accessibilityRole="button"
               accessibilityLabel={`שאלה: ${q.text}. לחצו להצבעה`}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? STITCH.surfaceLow : '#ffffff',
+              // Static style — function-style drops on Android (see header note).
+              style={{
+                backgroundColor: '#ffffff',
                 borderTopWidth: 1,
                 borderTopColor: STITCH.surfaceHighest,
-                transform: [{ scale: pressed && !reduced ? 0.99 : 1 }],
-              })}
+              }}
+              android_ripple={{ color: 'rgba(124,58,237,0.06)' }}
             >
               {/* Topic accent line */}
               <View style={{ height: 3, backgroundColor: theme.color, opacity: 0.85 }} />

@@ -1,17 +1,19 @@
 import type { AnonAdvicePost } from './anonAdviceTypes';
 
 /**
- * Cold-start example dilemmas (Yoav 2026-07-04). Shown ONLY while the real
- * feed is empty, so a first visitor sees the format instead of a blank screen —
- * they self-retire the instant any real post exists. Written in the style of
- * real Israeli finance-community posts (first person, real numbers, a genuine
- * tension) — NOT generic textbook questions.
+ * Cold-start example dilemmas (Yoav 2026-07-04). Injected INTO the anon-advice
+ * store (ensureSeedPosts) while the real feed is empty, so they behave exactly
+ * like real posts — post screen, replies and option votes all work. Written in
+ * the style of real Israeli finance-community posts (first person, real
+ * numbers, a genuine tension).
  *
  * Honesty guard-rails (these are NOT real users):
- *  - zero fabricated engagement: 0 replies, 0 option votes.
- *  - ids are `seed-*` → the feed screen renders them read-only (no navigation
- *    into a post screen that has no store entry, no voting).
- *  - clearly labeled "דוגמאות מהקהילה" above the list.
+ *  - zero fabricated engagement: they START at 0 replies / 0 option votes;
+ *    any engagement that accumulates is this user's own real activity.
+ *  - Yoav ruling (2026-07-04, later): NO "examples" label — they must read like
+ *    posts a real person wrote.
+ *  - they retire from every surface (getPosts) the moment a real approved
+ *    post exists.
  */
 
 export function isSeedDilemma(id: string): boolean {

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { SEED_DILEMMAS, isSeedDilemma } from './seedDilemmas';
 import type { AnonAdvicePost, AnonAdviceReply, AnonAlias, ModerationStatus } from './anonAdviceTypes';
 import {
   generateAlias,
@@ -73,6 +74,9 @@ interface AnonAdviceState {
   // (posts + replies), each stamped with the award time. The weekly-summary
   // getter sums entries in the last 7 days — 100% real self-data.
   adviceCoinLedger: { at: string; coins: number }[];
+  // Feed-level option votes this user already cast (one vote per post — the
+  // dedupe guard for the in-card poll buttons). The vote itself is REAL.
+  votedOptionByPost: Record<string, 0 | 1>;
   // Filter state (not persisted)
 
   // Selectors
@@ -105,6 +109,14 @@ interface AnonAdviceState {
     agreedWith?: 0 | 1;
   }) => { reply: AnonAdviceReply; reward: { coins: number; xp: number } | null } | null;
   votePostOption: (postId: string, optionIndex: 0 | 1) => void;
+  /** One-shot vote from the feed card (dedupe-guarded). Returns false if the
+   *  user already voted on this post. */
+  voteOnPostOnce: (postId: string, optionIndex: 0 | 1) => boolean;
+  /** Cold-start: put the example dilemmas INTO the store so they behave exactly
+   *  like real posts (post screen, replies, votes). Yoav ruling 2026-07-04 —
+   *  they must not look like examples. Zero fabricated engagement: they start
+   *  at 0 replies / 0 votes and retire once a real post exists (getPosts). */
+  ensureSeedPosts: () => void;
   toggleReplyUpvote: (replyId: string) => void;
   togglePostLike: (postId: string) => void;
   // A4 — clear the "new reply" flag once the author has looked at that post
@@ -129,11 +141,34 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
       postLikes: {},
       unseenReplyPostIds: [],
       adviceCoinLedger: [],
+      votedOptionByPost: {},
 
       getPosts: () => {
-        return [...get().posts]
-          .filter((p) => p.status === 'approved')
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        // Example dilemmas show only while there is no real approved post —
+        // the instant one exists they retire from every surface.
+        const approved = get().posts.filter((p) => p.status === 'approved');
+        const hasReal = approved.some((p) => !isSeedDilemma(p.id));
+        const visible = hasReal ? approved.filter((p) => !isSeedDilemma(p.id)) : approved;
+        return [...visible].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      },
+
+      ensureSeedPosts: () => {
+        const posts = get().posts;
+        const hasSeeds = posts.some((p) => isSeedDilemma(p.id));
+        const hasRealApproved = posts.some((p) => p.status === 'approved' && !isSeedDilemma(p.id));
+        if (hasSeeds || hasRealApproved) return;
+        set((state) => ({ posts: [...state.posts, ...SEED_DILEMMAS] }));
+      },
+
+      voteOnPostOnce: (postId, optionIndex) => {
+        if (get().votedOptionByPost[postId] !== undefined) return false;
+        set((state) => ({
+          votedOptionByPost: { ...state.votedOptionByPost, [postId]: optionIndex },
+        }));
+        get().votePostOption(postId, optionIndex);
+        return true;
       },
 
       getPostById: (id) => get().posts.find((p) => p.id === id),
@@ -410,6 +445,7 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
         postLikes: state.postLikes,
         unseenReplyPostIds: state.unseenReplyPostIds,
         adviceCoinLedger: state.adviceCoinLedger,
+        votedOptionByPost: state.votedOptionByPost,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
@@ -424,6 +460,9 @@ export const useAnonAdviceStore = create<AnonAdviceState>()(
         if (typeof state.firstPostBonusGiven !== 'boolean') state.firstPostBonusGiven = false;
         if (typeof state.dailyPostsCount !== 'number') state.dailyPostsCount = 0;
         if (typeof state.dailyRepliesCount !== 'number') state.dailyRepliesCount = 0;
+        if (state.votedOptionByPost === null || typeof state.votedOptionByPost !== 'object' || Array.isArray(state.votedOptionByPost)) {
+          state.votedOptionByPost = {};
+        }
         // P0-5: NO re-seed. Posts/replies come only from real data (isSelf/server).
         if (!Array.isArray(state.posts)) state.posts = [];
         if (!Array.isArray(state.replies)) state.replies = [];

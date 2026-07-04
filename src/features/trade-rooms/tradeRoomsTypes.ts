@@ -10,7 +10,6 @@ export type BuiltinTradeRoomId =
   | 'telaviv'
   | 'crypto'
   | 'beginners'
-  | 'league-talk'
   | 'daily-event';
 
 export type TradeRoomId = BuiltinTradeRoomId | (string & {});
@@ -45,6 +44,10 @@ export interface TradeRoomMessage {
   alias: AnonAlias | null;
   /** Game avatar id (AvatarImage mascot); falls back to alias emoji. */
   avatarId?: string | null;
+  /** Chat nickname (server display_name) — takes precedence over alias. */
+  displayName?: string | null;
+  /** Server row id once the message is synced — the dedupe key vs the server feed. */
+  serverId?: string | null;
   isSelf: boolean;
   isShark: boolean;
   body: string;

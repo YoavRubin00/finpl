@@ -6,9 +6,8 @@ import {
   TextInput,
   Pressable,
   ScrollView,
-  Image,
-  ActivityIndicator,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAnonAdviceStore } from './useAnonAdviceStore';
 import {
@@ -23,7 +22,7 @@ import { PendingModerationOverlay } from './components/PendingModerationOverlay'
 import { getApiBase } from '../../db/apiBase';
 import { DUO } from '../../constants/theme';
 import { A } from './strings';
-import type { ModerationResult, RephraseResult } from './anonAdviceTypes';
+import type { ModerationResult } from './anonAdviceTypes';
 
 interface AnonAdviceComposeModalProps {
   visible: boolean;
@@ -70,8 +69,6 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
   const [option2, setOption2] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [moderating, setModerating] = useState(false);
-  const [rephrasing, setRephrasing] = useState(false);
-  const [originalDraft, setOriginalDraft] = useState<{ s: string; q: string; o1: string; o2: string } | null>(null);
   const [rejection, setRejection] = useState<string | null>(null);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
 
@@ -95,63 +92,14 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
     setOption1('');
     setOption2('');
     setError(null);
-    setOriginalDraft(null);
     setRejection(null);
     setActiveTemplateId(null);
   }, []);
 
   function handleClose(): void {
-    if (moderating || rephrasing) return;
+    if (moderating) return;
     reset();
     onClose();
-  }
-
-  async function handleRephrase(): Promise<void> {
-    if (rephrasing || moderating) return;
-    if (situation.trim().length < 20) {
-      setError('כדי לנסח מחדש, התיאור צריך להיות לפחות 20 תווים.');
-      return;
-    }
-    setError(null);
-    setOriginalDraft({ s: situation, q: question, o1: option1, o2: option2 });
-    setRephrasing(true);
-    try {
-      const res = await fetch(`${getApiBase()}/api/anon-advice/rephrase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          situation,
-          question,
-          options: [option1, option2].filter((o) => o.trim().length > 0),
-        }),
-      });
-      const data = (await res.json()) as RephraseResult;
-      if (data.ok) {
-        if (data.situation) setSituation(data.situation);
-        if (data.question) setQuestion(data.question);
-        if (Array.isArray(data.options)) {
-          setOption1(data.options[0] ?? '');
-          setOption2(data.options[1] ?? '');
-        }
-      } else {
-        setError(data.error ?? 'הניסוח נכשל. נסו שוב.');
-        setOriginalDraft(null);
-      }
-    } catch {
-      setError('בעיית רשת. הניסוח לא הסתיים.');
-      setOriginalDraft(null);
-    } finally {
-      setRephrasing(false);
-    }
-  }
-
-  function handleRevert(): void {
-    if (!originalDraft) return;
-    setSituation(originalDraft.s);
-    setQuestion(originalDraft.q);
-    setOption1(originalDraft.o1);
-    setOption2(originalDraft.o2);
-    setOriginalDraft(null);
   }
 
   async function handleSubmit(): Promise<void> {
@@ -247,7 +195,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             backgroundColor: '#ffffff',
           }}
         >
-          <Pressable onPress={handleClose} hitSlop={12} disabled={moderating || rephrasing}>
+          <Pressable onPress={handleClose} hitSlop={12} disabled={moderating}>
             <Text style={{ fontSize: 22, color: DUO.textMuted }}>✕</Text>
           </Pressable>
           <Text
@@ -263,10 +211,11 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
           >
             {A.composeTitle}
           </Text>
-          <Image
+          <ExpoImage
             source={require('../../../assets/webp/fin-standard.webp')}
             style={{ width: 36, height: 36 }}
-            resizeMode="contain"
+            contentFit="contain"
+            autoplay
           />
         </View>
 
@@ -279,7 +228,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
                 <Pressable
                   key={tpl.id}
                   onPress={() => applyTemplate(tpl)}
-                  disabled={moderating || rephrasing}
+                  disabled={moderating}
                   accessibilityRole="button"
                   accessibilityLabel={tpl.chip}
                   style={{
@@ -316,7 +265,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             multiline
             maxLength={MAX_SITUATION_LENGTH}
             style={inputStyle({ minHeight: 130 })}
-            editable={!moderating && !rephrasing}
+            editable={!moderating}
           />
           <CharCounter current={sLen} max={MAX_SITUATION_LENGTH} min={MIN_SITUATION_LENGTH} />
 
@@ -330,7 +279,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             multiline
             maxLength={MAX_QUESTION_LENGTH}
             style={inputStyle({ minHeight: 60 })}
-            editable={!moderating && !rephrasing}
+            editable={!moderating}
           />
           <CharCounter current={qLen} max={MAX_QUESTION_LENGTH} min={MIN_QUESTION_LENGTH} />
 
@@ -343,7 +292,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             placeholderTextColor="#94a3b8"
             maxLength={MAX_OPTION_LENGTH}
             style={inputStyle()}
-            editable={!moderating && !rephrasing}
+            editable={!moderating}
           />
           <View style={{ height: 8 }} />
           <TextInput
@@ -353,7 +302,7 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             placeholderTextColor="#94a3b8"
             maxLength={MAX_OPTION_LENGTH}
             style={inputStyle()}
-            editable={!moderating && !rephrasing}
+            editable={!moderating}
           />
 
           {/* Error / rejection */}
@@ -380,7 +329,9 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
           )}
         </ScrollView>
 
-        {/* Sticky footer — actions */}
+        {/* Sticky footer — submit only (the AI-rephrase button was removed at
+            Yoav's request, 2026-07-04). Static style — function-style drops on
+            Android (known Pressable bug). */}
         <View
           style={{
             position: 'absolute',
@@ -394,62 +345,18 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             gap: 10,
           }}
         >
-          <View style={{ flexDirection: 'row-reverse', gap: 10 }}>
-            <Pressable
-              onPress={originalDraft ? handleRevert : handleRephrase}
-              disabled={rephrasing || moderating}
-              accessibilityRole="button"
-              accessibilityLabel={`AI — ${originalDraft ? A.composeRephraseRevert : A.composeRephraseWithShark}`}
-              style={({ pressed }) => ({
-                flex: 1,
-                backgroundColor: pressed ? DUO.blueDark : DUO.blue,
-                borderRadius: 14,
-                paddingVertical: 12,
-                alignItems: 'center',
-                flexDirection: 'row-reverse',
-                gap: 8,
-                justifyContent: 'center',
-                opacity: rephrasing || moderating ? 0.6 : 1,
-              })}
-            >
-              {/* Captain Shark webp beside the label — makes it unmistakably the
-                  "let Shark help me phrase it" AI action (Yoav 2026-07-03). The
-                  spinner replaces the mascot only while it's actively working. */}
-              {rephrasing ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <Image
-                  source={require('../../../assets/webp/fin-tablet-1.webp')}
-                  style={{ width: 30, height: 30 }}
-                  resizeMode="contain"
-                />
-              )}
-              <Text style={{ fontSize: 15, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>
-                {rephrasing ? A.composeRephrasing : originalDraft ? A.composeRephraseRevert : A.composeRephraseWithShark}
-              </Text>
-              {/* AI affordance pill — signals this is an AI assist, not a manual edit */}
-              <View
-                style={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: 999,
-                  paddingHorizontal: 7,
-                  paddingVertical: 2,
-                }}
-              >
-                <Text style={{ fontSize: 11, fontWeight: '900', color: DUO.blue, letterSpacing: 0.5 }}>AI</Text>
-              </View>
-            </Pressable>
-          </View>
-
           <Pressable
             onPress={handleSubmit}
-            disabled={moderating || rephrasing}
-            style={({ pressed }) => ({
-              backgroundColor: moderating || rephrasing ? '#94a3b8' : pressed ? DUO.blueDark : DUO.blue,
+            disabled={moderating}
+            accessibilityRole="button"
+            accessibilityLabel={A.composeSubmit}
+            style={{
+              backgroundColor: moderating ? '#94a3b8' : DUO.blue,
               borderRadius: 14,
               paddingVertical: 14,
               alignItems: 'center',
-            })}
+            }}
+            android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
           >
             <Text style={{ fontSize: 16, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>
               {A.composeSubmit}

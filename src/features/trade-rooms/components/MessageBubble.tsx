@@ -26,13 +26,16 @@ const NAME_COLORS = [
   '#c2255c', '#0c8599', '#e67700', '#5f3dc4', '#087f5b',
 ];
 
-function nameColor(alias: AnonAlias): string {
-  const seed = `${alias.emoji}${alias.noun}${alias.number}`;
+function nameColor(seed: string): string {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {
     hash = (hash * 31 + seed.charCodeAt(i)) | 0;
   }
   return NAME_COLORS[Math.abs(hash) % NAME_COLORS.length];
+}
+
+function aliasSeed(alias: AnonAlias): string {
+  return `${alias.emoji}${alias.noun}${alias.number}`;
 }
 
 function formatTime(isoStr: string): string {
@@ -80,8 +83,15 @@ export const MessageBubble = React.memo(function MessageBubble({
   const showLikes = message.likes > 0 || message.likedBySelf;
 
   const bubbleBg = isShark ? SHARK_BUBBLE : isSelf ? SELF_BUBBLE : OTHER_BUBBLE;
-  const senderName = isShark ? 'קפטן שארק' : message.alias ? formatAlias(message.alias) : '';
-  const senderColor = isShark ? SHARK_NAME : message.alias ? nameColor(message.alias) : TEXT_MUTED;
+  // Server messages carry a chat nickname (display_name); local alias is the fallback.
+  const senderName = isShark
+    ? 'קפטן שארק'
+    : message.displayName ?? (message.alias ? formatAlias(message.alias) : '');
+  const senderColor = isShark
+    ? SHARK_NAME
+    : senderName
+      ? nameColor(message.alias ? aliasSeed(message.alias) : senderName)
+      : TEXT_MUTED;
 
   // Physical corners (app runs LTR): self hugs the right, others hug the left.
   const tailOverride = isFirstInGroup

@@ -3,6 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { useAnonAdviceStore } from '../anon-advice/useAnonAdviceStore';
 import { useAuthStore } from '../auth/useAuthStore';
+import { tokenStore } from '../../lib/auth/secureStore';
+import { fetchRoomMessagesApi, sendRoomMessageApi } from '../../db/sync/syncTradeRooms';
+import { formatAlias } from '../anon-advice/anonAdviceData';
 import type {
   TradeRoom,
   TradeRoomId,
@@ -90,6 +93,8 @@ interface TradeRoomsState {
   chatRewardDate: string | null;
   /** Rooms the user created — appear alongside the built-in rooms. */
   customRooms: TradeRoom[];
+  /** The name others see in chat (Yoav 2026-07-04). null → alias fallback. */
+  chatNickname: string | null;
 
   // Selectors
   getMessages: (roomId: TradeRoomId) => TradeRoomMessage[];
@@ -116,6 +121,9 @@ interface TradeRoomsState {
   removeMessage: (roomId: TradeRoomId, messageId: string) => void;
   toggleLike: (roomId: TradeRoomId, messageId: string) => void;
   markRoomRead: (roomId: TradeRoomId) => void;
+  setChatNickname: (nickname: string | null) => void;
+  /** Pull the room's REAL server feed and merge it in (registered users only). */
+  syncRoom: (roomId: TradeRoomId) => Promise<void>;
 }
 
 function appendBounded(
@@ -134,6 +142,7 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
       lastReadAt: seedReadAt(seedNow),
       chatRewardDate: null,
       customRooms: [],
+      chatNickname: null,
 
       getMessages: (roomId) => get().messagesByRoom[roomId] ?? [],
 
@@ -198,11 +207,13 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
 
         const alias = useAnonAdviceStore.getState().ensureSelfAlias();
         const avatarId = useAuthStore.getState().profile?.avatarId ?? null;
+        const nickname = get().chatNickname;
         const msg: TradeRoomMessage = {
           id: makeId('trm'),
           roomId,
           alias,
           avatarId,
+          displayName: nickname,
           isSelf: true,
           isShark: false,
           body: body.trim(),
@@ -218,6 +229,39 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
             [roomId]: appendBounded(state.messagesByRoom[roomId] ?? [], msg),
           },
         }));
+
+        // Fire-and-forget: publish to the REAL room feed (registered users).
+        // On success the local message learns its server id so the next sync
+        // doesn't duplicate it. Guests stay local-only (guest gate nudges).
+        const authId = useAuthStore.getState().email;
+        if (authId) {
+          void (async () => {
+            try {
+              const syncToken = await tokenStore.get();
+              const sent = await sendRoomMessageApi({
+                authId,
+                syncToken,
+                roomId,
+                body: msg.body,
+                sentiment,
+                displayName: nickname ?? useAuthStore.getState().displayName ?? formatAlias(alias),
+                avatarId,
+              });
+              if (sent.id) {
+                set((state) => ({
+                  messagesByRoom: {
+                    ...state.messagesByRoom,
+                    [roomId]: (state.messagesByRoom[roomId] ?? []).map((m) =>
+                      m.id === msg.id ? { ...m, serverId: sent.id } : m,
+                    ),
+                  },
+                }));
+              }
+            } catch {
+              /* offline / server hiccup — the message stays local, honest */
+            }
+          })();
+        }
 
         // First message of the day earns a small reward — talking is playing.
         const today = todayISO();
@@ -319,6 +363,56 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
           lastReadAt: { ...state.lastReadAt, [roomId]: new Date().toISOString() },
         }));
       },
+
+      setChatNickname: (nickname) => {
+        const clean = nickname?.trim() ?? '';
+        set({ chatNickname: clean.length >= 2 ? clean.slice(0, 24) : null });
+      },
+
+      syncRoom: async (roomId) => {
+        const authId = useAuthStore.getState().email;
+        if (!authId) return; // guests: local-only until they register
+        try {
+          const syncToken = await tokenStore.get();
+          const serverMsgs = await fetchRoomMessagesApi({ authId, syncToken, roomId });
+          if (serverMsgs.length === 0) return;
+          set((state) => {
+            const existing = state.messagesByRoom[roomId] ?? [];
+            const known = new Set<string>();
+            for (const m of existing) {
+              known.add(m.id);
+              if (m.serverId) known.add(m.serverId);
+            }
+            const fresh: TradeRoomMessage[] = serverMsgs
+              .filter((sm) => !known.has(sm.id))
+              .map((sm) => ({
+                id: sm.id,
+                roomId,
+                alias: null,
+                avatarId: sm.avatarId,
+                displayName: sm.displayName,
+                serverId: sm.id,
+                isSelf: sm.isSelf,
+                isShark: false,
+                body: sm.body,
+                sentiment: sm.sentiment ?? undefined,
+                likes: 0,
+                likedBySelf: false,
+                sentAt: sm.sentAt,
+              }));
+            if (fresh.length === 0) return state;
+            const merged = [...existing, ...fresh]
+              .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime())
+              .slice(-MAX_MESSAGES_PER_ROOM);
+            return {
+              ...state,
+              messagesByRoom: { ...state.messagesByRoom, [roomId]: merged },
+            };
+          });
+        } catch {
+          /* offline / server hiccup — keep whatever we have */
+        }
+      },
       };
     },
     {
@@ -329,10 +423,12 @@ export const useTradeRoomsStore = create<TradeRoomsState>()(
         lastReadAt: state.lastReadAt,
         chatRewardDate: state.chatRewardDate,
         customRooms: state.customRooms,
+        chatNickname: state.chatNickname,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (!Array.isArray(state.customRooms)) state.customRooms = [];
+        if (typeof state.chatNickname !== 'string') state.chatNickname = null;
         const nowStr = new Date().toISOString();
         const messages: Record<string, TradeRoomMessage[]> = { ...state.messagesByRoom };
         const reads: Record<string, string> = { ...state.lastReadAt };
