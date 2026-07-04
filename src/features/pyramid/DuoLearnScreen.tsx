@@ -609,6 +609,8 @@ function ModuleNode({
   onQuestPress,
   onJournalPress,
   journalBadge,
+  onLoungePress,
+  loungeBadge,
 }: {
   module: Module;
   state: "completed" | "active" | "locked";
@@ -638,6 +640,10 @@ function ModuleNode({
   onJournalPress?: () => void;
   /** Gold pulse-dot: an event within 48h or a forecast result waiting. */
   journalBadge?: boolean;
+  /** Opens the Streak Lounge (הטרקלין) — chip sits LEFT of the journal chip
+   *  (Yoav 2026-07-04). */
+  onLoungePress?: () => void;
+  loungeBadge?: boolean;
 }) {
   const colors = ARENA_COLORS[arenaId];
 
@@ -686,14 +692,15 @@ function ModuleNode({
   const charLeft = finnGoesRight
     ? Math.min(nodeCenter + NODE_SIZE / 2 + 6, CONTENT_W - CHAR_SIZE)
     : Math.max(nodeCenter - NODE_SIZE / 2 - CHAR_SIZE - 6, 0);
-  // Investors Journal chip — ALWAYS the mirror side of the shark (Yoav
-  // 2026-07-04): shark right → journal left of the node, and vice versa.
-  // Positioned BELOW the module-title pill (which lives on the same mirror
-  // side) — logo only, no text (Yoav's polish round).
-  const JOURNAL_W = 44;
+  // Journal + Lounge chips — ALWAYS the mirror side of the shark (Yoav
+  // 2026-07-04): shark right → chips left of the node, and vice versa.
+  // Positioned BELOW the module-title pill (same mirror side) — logos only.
+  // Physical order inside the row: [🛋️ טרקלין][📅 יומן] — the lounge sits
+  // LEFT of the journal (Yoav's explicit placement).
+  const CHIP_ROW_W = onLoungePress ? 42 * 2 + 8 : 44;
   const journalLeft = finnGoesRight
-    ? Math.max(nodeCenter - NODE_SIZE / 2 - JOURNAL_W - 10, 0)
-    : Math.min(nodeCenter + NODE_SIZE / 2 + 10, CONTENT_W - JOURNAL_W);
+    ? Math.max(nodeCenter - NODE_SIZE / 2 - CHIP_ROW_W - 10, 0)
+    : Math.min(nodeCenter + NODE_SIZE / 2 + 10, CONTENT_W - CHIP_ROW_W);
 
   return (
     <View style={[styles.nodeRow, { height: ROW_HEIGHT }]}>
@@ -728,13 +735,62 @@ function ModuleNode({
               />
             )}
           </Animated.View>
-          {/* Investors Journal — logo-only 📅 chip, mirror side of the shark,
-              BELOW the module-title pill so it never covers text */}
+          {/* Journal + Lounge — logo-only chips, mirror side of the shark,
+              BELOW the module-title pill so they never cover text */}
           {onJournalPress && (
             <Animated.View
               entering={FadeInDown.delay(160).duration(400)}
-              style={{ position: 'absolute', top: 70, zIndex: 20, left: journalLeft, width: JOURNAL_W, alignItems: 'center' }}
+              style={{ position: 'absolute', top: 70, zIndex: 20, left: journalLeft, width: CHIP_ROW_W, flexDirection: 'row', gap: 8 }}
             >
+              {onLoungePress && (
+                <Pressable
+                  onPress={onLoungePress}
+                  accessibilityRole="button"
+                  accessibilityLabel={`הטרקלין — מועדון הרצף${loungeBadge ? ', יש חדש' : ''}`}
+                  hitSlop={8}
+                  style={{
+                    borderRadius: 999,
+                    shadowColor: '#f59e0b',
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 3 },
+                    elevation: 6,
+                  }}
+                >
+                  <LinearGradient
+                    colors={['#fcd34d', '#f59e0b', '#d97706']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(255,255,255,0.6)',
+                    }}
+                  >
+                    <Text style={{ fontSize: 19 }} allowFontScaling={false}>🛋️</Text>
+                  </LinearGradient>
+                  {loungeBadge && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: -2,
+                        left: -2,
+                        width: 14,
+                        height: 14,
+                        borderRadius: 7,
+                        backgroundColor: '#ef4444',
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                      }}
+                      accessible={false}
+                    />
+                  )}
+                </Pressable>
+              )}
               <Pressable
                 onPress={onJournalPress}
                 accessibilityRole="button"
@@ -1019,6 +1075,8 @@ const ChapterSection = React.memo(function ChapterSection({
   onQuestPress,
   onJournalPress,
   journalBadge,
+  onLoungePress,
+  loungeBadge,
   newsBadgeNode,
   isGlobalActiveChapter,
   activeIndexOverride,
@@ -1083,6 +1141,9 @@ const ChapterSection = React.memo(function ChapterSection({
    *  only, rendered on the mirror side of the shark (Yoav 2026-07-04). */
   onJournalPress?: () => void;
   journalBadge?: boolean;
+  /** Opens the Streak Lounge (הטרקלין) — chip left of the journal chip. */
+  onLoungePress?: () => void;
+  loungeBadge?: boolean;
   /** When present, renders this node (the Daily News Challenge button) on the
    *  opposite side of the active module — the "dead space" the user's eye
    *  lands on when they open the learn screen. Only the chapter containing
@@ -1264,6 +1325,8 @@ const ChapterSection = React.memo(function ChapterSection({
                 onQuestPress={isActive ? onQuestPress : undefined}
                 onJournalPress={isActive ? onJournalPress : undefined}
                 journalBadge={isActive ? journalBadge : undefined}
+                onLoungePress={isActive ? onLoungePress : undefined}
+                loungeBadge={isActive ? loungeBadge : undefined}
                 onPress={() => {
                   if (isLocked) {
                     onLockedPress();
@@ -1715,9 +1778,6 @@ export function DuoLearnScreen() {
   // מה-query המדולג → מוסתר לגמרי. (שינוי מפסיקת-ים המקורית: teaser ב-1.)
   const [clubSheetVisible, setClubSheetVisible] = useState(false);
   const clubHasUnseen = useStreakClubStore((s) => s.hasUnseenToday());
-  // ⚠️⚠️ DEV-ONLY זמני (יואב 2.7, בדיקת הטרקלין בווב): רצף-5 מדומה לשער-
-  // המועדון בלבד. __DEV__=false בפרודקשן — ובכל זאת להסיר לפני OTA! ⚠️⚠️
-  const clubStreak = __DEV__ ? Math.max(streak, 5) : streak;
   // Per-session memory of which modules already triggered the
   // PROFILE_QUESTION_BACKSTOPS modal. Skipping the modal doesn't flip the
   // store flag — without this guard a user could be re-prompted on every
@@ -2847,9 +2907,9 @@ export function DuoLearnScreen() {
         <MondialMailBadge isNew={!mondialOpenedAt} onPress={handleMondialBadgePress} />
       ) : null}
       {/* יום-0 hook (ים 3.7): מופיע גם ל-streak=0 במצב טיזר-נעול. locked=streak<1 מטופל בכרטיס. */}
-      <StreakClubEntryCard streak={clubStreak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
+      <StreakClubEntryCard streak={streak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
     </View>
-  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, clubStreak, clubHasUnseen, handleStreakClubPress]);
+  ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, streak, clubHasUnseen, handleStreakClubPress]);
 
   const activeQuestPathNodeProps = useMemo(() => ({
     completedCount: questCompletedCount,
@@ -2886,38 +2946,11 @@ export function DuoLearnScreen() {
       />
       <StreakLoungeSheet
         visible={clubSheetVisible}
-        streak={clubStreak}
+        streak={streak}
         onClose={() => setClubSheetVisible(false)}
       />
-      {/* ⚠️⚠️ DEV-ONLY זמני (יואב 2.7): כפתור-מועדון צף לבדיקה מקומית —
-          עוקף את מיקום שורת-הבאדג'ים. להסיר לפני OTA! ⚠️⚠️ */}
-      {__DEV__ && (
-        <Pressable
-          testID="club-dev-pill"
-          onPress={handleStreakClubPress}
-          style={{
-            position: "absolute",
-            bottom: 110,
-            alignSelf: "center",
-            zIndex: 999,
-            elevation: 30,
-            backgroundColor: "#0e3a5c",
-            borderColor: "#fbbf24",
-            borderWidth: 2,
-            borderRadius: 999,
-            paddingHorizontal: 24,
-            paddingVertical: 14,
-            shadowColor: "#000",
-            shadowOpacity: 0.4,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 6 },
-          }}
-        >
-          <Text style={{ color: "#fbbf24", fontSize: 17, fontWeight: "900", writingDirection: "rtl" }} allowFontScaling={false}>
-            🛋️ הטרקלין — בדיקה
-          </Text>
-        </Pressable>
-      )}
+      {/* The DEV-only floating lounge pill (Yoav 2.7) was removed — the lounge
+          now has a permanent 🛋️ chip beside the journal chip on the map. */}
       {/* Swipe quest modal. Hosts whichever of the 3 rotating swipe-games is
           assigned to today (see dailySwipeKind above). finishSwipeQuest is
           the single closer — every card path funnels through it so the
@@ -3185,6 +3218,8 @@ export function DuoLearnScreen() {
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
                 onJournalPress={hasActiveModule ? handleJournalPress : undefined}
                 journalBadge={hasActiveModule ? journalBadge : undefined}
+                onLoungePress={hasActiveModule ? handleStreakClubPress : undefined}
+                loungeBadge={hasActiveModule ? clubHasUnseen : undefined}
                 newsBadgeNode={hasActiveModule ? activeNewsBadgeNode : undefined}
                 onPearlPress={handlePearlPress}
                 onInvestorQuizPress={handleInvestorQuizPress}
