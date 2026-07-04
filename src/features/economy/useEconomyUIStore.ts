@@ -78,13 +78,42 @@ function daysBetween(dateA: string, dateB: string): number {
  * and mirrored into the React Query cache on hydration so the header shows the
  * correct streak even for guests who can't read the server-side counter.
  */
+/** IL day-of-week for a "YYYY-MM-DD" string: 0=Sunday … 5=Friday, 6=Saturday.
+ *  Anchored at noon-UTC so no timezone offset can nudge it across a boundary. */
+function isoDayOfWeek(iso: string): number {
+  return new Date(iso + 'T12:00:00Z').getUTCDay();
+}
+
+/** The calendar day before an IL "YYYY-MM-DD" string. */
+function isoPrevDay(iso: string): string {
+  const d = new Date(iso + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Shabbat bridge (Yoav 2026-07-04): Saturday is auto-credited to the streak, so
+ * Shabbat-observant users don't lose their run for not opening the app on שבת.
+ * True when the last active day was a FRIDAY and `today` is the SUNDAY two days
+ * later — i.e. the ONLY skipped day is Saturday. Friday → (Sat auto) → Sunday
+ * keeps AND grows the streak, no freeze consumed.
+ */
+export function isShabbatBridge(lastActiveISO: string | null | undefined, today: string): boolean {
+  if (!lastActiveISO) return false;
+  return daysBetween(lastActiveISO, today) === 2 && isoDayOfWeek(lastActiveISO) === 5;
+}
+
 export function deriveStreakFromDates(activeDates: string[], frozenDates: string[]): number {
   const dateSet = new Set([...activeDates, ...frozenDates]);
+  // Shabbat bridge: a Saturday counts as active when the preceding Friday is —
+  // so the backward walk never breaks over שבת even though it's unmarked.
+  const isActive = (iso: string): boolean =>
+    dateSet.has(iso) || (isoDayOfWeek(iso) === 6 && dateSet.has(isoPrevDay(iso)));
   const today2 = todayISO();
   const yest2 = yesterdayISO();
-  let cursor: Date | null = dateSet.has(today2)
+  let cursor: Date | null = isActive(today2)
     ? new Date()
-    : dateSet.has(yest2)
+    : isActive(yest2)
       ? (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() - 1); return d; })()
       : null;
   let count = 0;
@@ -95,7 +124,7 @@ export function deriveStreakFromDates(activeDates: string[], frozenDates: string
     // initial today/yesterday check passed but the loop's first IL→UTC
     // mismatch broke the chain at count=0.
     const iso = IL_DATE_FMT.format(cursor);
-    if (!dateSet.has(iso)) break;
+    if (!isActive(iso)) break;
     count++;
     cursor.setUTCDate(cursor.getUTCDate() - 1);
     if (count > 365) break;
@@ -382,7 +411,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
 
         const isConsecutiveDay = lastDailyTaskDate === yesterdayISO();
         const gap = lastDailyTaskDate ? daysBetween(lastDailyTaskDate, today) : 999;
-        const canFreeze = gap === 2 && streakFreezes > 0;
+        const bridge = isShabbatBridge(lastDailyTaskDate, today); // Shabbat auto-counts
+        const canFreeze = !bridge && gap === 2 && streakFreezes > 0;
         const now = Date.now();
         const weeklyShieldActive = weeklyShieldUntil != null && weeklyShieldUntil > now;
         const monthlyShieldActive = monthlyShieldUntil != null && monthlyShieldUntil > now;
@@ -393,7 +423,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         let newStreak: number;
         let freezeConsumed = false;
         let streakBroke = false;
-        if (isConsecutiveDay) {
+        if (isConsecutiveDay || bridge) {
           newStreak = derivedStreak + 1;
         } else if (canFreeze) {
           newStreak = derivedStreak + 1;
@@ -405,7 +435,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           streakBroke = derivedStreak >= 3;
         }
 
-        const streakBonus = (isConsecutiveDay || freezeConsumed) ? STREAK_BONUS_BASE_XP * newStreak : 0;
+        const streakBonus = (isConsecutiveDay || bridge || freezeConsumed) ? STREAK_BONUS_BASE_XP * newStreak : 0;
         let milestoneBonus = 0;
         if (newStreak === 7) milestoneBonus = STREAK_7_BONUS_XP;
         if (newStreak > 0 && newStreak % 30 === 0) milestoneBonus = STREAK_30_BONUS_XP;
@@ -493,7 +523,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         const lastActive = lastDailyTaskDate ?? lastLoginBonusDate;
         const isConsecutiveDay = lastActive === yesterdayISO();
         const gap = lastActive ? daysBetween(lastActive, today) : 999;
-        const canFreeze = gap === 2 && streakFreezes > 0;
+        const bridge = isShabbatBridge(lastActive, today); // Shabbat auto-counts
+        const canFreeze = !bridge && gap === 2 && streakFreezes > 0;
         const now = Date.now();
         const weeklyShieldActive = weeklyShieldUntil != null && weeklyShieldUntil > now;
         const monthlyShieldActive = monthlyShieldUntil != null && monthlyShieldUntil > now;
@@ -504,7 +535,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         let newStreak: number;
         let freezeConsumed = false;
         let streakBroke = false;
-        if (isConsecutiveDay) {
+        if (isConsecutiveDay || bridge) {
           newStreak = derivedStreak + 1;
         } else if (lastActive === today) {
           newStreak = derivedStreak;

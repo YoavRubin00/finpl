@@ -15,6 +15,15 @@ function diffDays(later: string, earlier: string): number {
   return Math.round((a - b) / (1000 * 60 * 60 * 24));
 }
 
+// Shabbat bridge (Yoav 2026-07-04): Saturday is auto-credited. When the last
+// active day was a Friday and today is the Sunday two days later, the only
+// skipped day is שבת — the streak survives AND both Sat+Sun count (+2), so a
+// Shabbat-observant user who plays Fri then Sun sees a 3-day streak. Anchored
+// at noon-UTC so no offset nudges the weekday across a boundary. 5 = Friday.
+function isFriday(dateIl: string): boolean {
+  return new Date(dateIl + 'T12:00:00Z').getUTCDay() === 5;
+}
+
 // Server-side "today" in Israel time — the same calendar the client uses for
 // dateIl (todayIsraelDate in src/features/economy/useStreak.ts). All streak
 // math is IL-zoned, so reconciliation must be too.
@@ -55,7 +64,9 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     let streak = row;
     if (row?.lastActiveDate && row.currentStreak) {
       const gap = diffDays(todayIsraelDate(), row.lastActiveDate);
-      if (gap > 1) streak = { ...row, currentStreak: 0 };
+      // Shabbat bridge: a Fri→Sun gap (Saturday skipped) is still alive.
+      const shabbatAlive = gap === 2 && isFriday(row.lastActiveDate);
+      if (gap > 1 && !shabbatAlive) streak = { ...row, currentStreak: 0 };
     }
     return res.status(200).json({ ok: true, streak });
   }
@@ -88,6 +99,9 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     } else {
       const diff = diffDays(body.dateIl, last);
       if (diff === 1) newCurrent = (cur?.currentStreak ?? 0) + 1;
+      // Shabbat bridge: Friday → (Sat auto) → Sunday keeps the streak and counts
+      // BOTH the auto-Saturday and Sunday (+2), so Fri+Sun reads as 3.
+      else if (diff === 2 && isFriday(last)) newCurrent = (cur?.currentStreak ?? 0) + 2;
       else if (diff > 1) newCurrent = 1;
       // diff <= 0 means client clock skew — leave streak unchanged.
     }
