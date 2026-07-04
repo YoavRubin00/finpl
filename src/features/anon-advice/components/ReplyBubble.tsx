@@ -94,12 +94,13 @@ export function ReplyBubble({
 
       {/* Helpful vote */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 8 }}>
+        {/* Static style — function-style drops on Android (known Pressable bug). */}
         <Pressable
           onPress={() => onToggleUpvote?.(reply.id)}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="תשובה מועילה"
-          style={({ pressed }) => ({
+          style={{
             flexDirection: 'row-reverse',
             alignItems: 'center',
             gap: 5,
@@ -107,8 +108,7 @@ export function ReplyBubble({
             borderRadius: 999,
             paddingHorizontal: 10,
             paddingVertical: 5,
-            opacity: pressed ? 0.85 : 1,
-          })}
+          }}
         >
           <ThumbsUp
             size={13}

@@ -6,6 +6,7 @@ import {
   TextInput,
   Pressable,
   ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -183,6 +184,10 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: DUO.bg }} edges={['top']}>
+        {/* 'padding' on BOTH platforms — Android 15+ edge-to-edge ignores
+            adjustResize, so without this the keyboard covers the inputs
+            ("המקלדת חוסמת את החלון", Yoav 2026-07-04). */}
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
         {/* Header */}
         <View
           style={{
@@ -363,6 +368,8 @@ export function AnonAdviceComposeModal({ visible, onClose, onPosted }: AnonAdvic
             </Text>
           </Pressable>
         </View>
+
+        </KeyboardAvoidingView>
 
         <PendingModerationOverlay visible={moderating} />
       </SafeAreaView>

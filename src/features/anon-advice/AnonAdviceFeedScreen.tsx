@@ -12,7 +12,6 @@ import { PostCard } from './components/PostCard';
 import type { AnonAdvicePost } from './anonAdviceTypes';
 import { DUO } from '../../constants/theme';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
-import { tapHaptic } from '../../utils/haptics';
 import { A } from './strings';
 
 const FILTERS: { id: string | null; label: string }[] = [
@@ -27,8 +26,6 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const allPosts = useAnonAdviceStore((s) => s.getPosts)();
   const ensureSeedPosts = useAnonAdviceStore((s) => s.ensureSeedPosts);
-  const votedOptionByPost = useAnonAdviceStore((s) => s.votedOptionByPost);
-  const voteOnPostOnce = useAnonAdviceStore((s) => s.voteOnPostOnce);
   const [filter, setFilter] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [reward, setReward] = useState<{ coins: number; xp: number; firstBonus: boolean } | null>(null);
@@ -151,8 +148,6 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
           renderItem={({ item }) => (
             <PostCard
               post={item}
-              votedIndex={votedOptionByPost[item.id] ?? null}
-              onVote={(idx) => { tapHaptic(); voteOnPostOnce(item.id, idx); }}
               onPress={() => router.push(`/anon-advice/post/${item.id}` as never)}
             />
           )}

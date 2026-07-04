@@ -1,18 +1,15 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { MessageCircle, Check } from 'lucide-react-native';
+import { MessageCircle } from 'lucide-react-native';
 import type { AnonAdvicePost } from '../anonAdviceTypes';
 import { AnonAvatar } from './AnonAvatar';
+import { DilemmaPoll } from './OptionPoll';
 import { DUO } from '../../../constants/theme';
 import { A } from '../strings';
 
 interface PostCardProps {
   post: AnonAdvicePost;
   onPress: () => void;
-  /** The option index this user already voted for (feed-level), or null. */
-  votedIndex?: 0 | 1 | null;
-  /** Cast a feed-level vote. Omit to hide the in-card poll buttons. */
-  onVote?: (index: 0 | 1) => void;
 }
 
 function formatTimeAgo(iso: string): string {
@@ -25,8 +22,7 @@ function formatTimeAgo(iso: string): string {
   return A.timeAgo.days(Math.floor(hours / 24));
 }
 
-export function PostCard({ post, onPress, votedIndex = null, onVote }: PostCardProps): React.ReactElement {
-  const showPoll = onVote !== undefined && post.options.length === 2;
+export function PostCard({ post, onPress }: PostCardProps): React.ReactElement {
   return (
     // STATIC style only — a function-style ({pressed}) => ({...layout}) drops the
     // whole style on Android (known Pressable bug), which stripped these cards of
@@ -102,52 +98,11 @@ export function PostCard({ post, onPress, votedIndex = null, onVote }: PostCardP
         {post.question}
       </Text>
 
-      {/* Two-option poll — vote right from the feed. Your pick highlights;
-          no percentages are invented (only real accumulated votes exist). */}
-      {showPoll && (
-        <View style={{ gap: 6, marginBottom: 10 }}>
-          {([0, 1] as const).map((idx) => {
-            const isChoice = votedIndex === idx;
-            const voted = votedIndex !== null;
-            return (
-              <Pressable
-                key={idx}
-                onPress={() => { if (!voted) onVote?.(idx); }}
-                disabled={voted}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isChoice, disabled: voted }}
-                accessibilityLabel={`הצביעו: ${post.options[idx]}`}
-                style={{
-                  flexDirection: 'row-reverse',
-                  alignItems: 'center',
-                  gap: 8,
-                  backgroundColor: isChoice ? DUO.blue : DUO.bg,
-                  borderRadius: 12,
-                  borderWidth: 1.5,
-                  borderColor: isChoice ? DUO.blue : DUO.border,
-                  paddingHorizontal: 12,
-                  paddingVertical: 9,
-                  opacity: voted && !isChoice ? 0.55 : 1,
-                }}
-              >
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 13,
-                    fontWeight: '800',
-                    color: isChoice ? '#ffffff' : DUO.text,
-                    writingDirection: 'rtl',
-                    textAlign: 'right',
-                  }}
-                  numberOfLines={2}
-                  maxFontSizeMultiplier={1.15}
-                >
-                  {post.options[idx]}
-                </Text>
-                {isChoice && <Check size={16} color="#ffffff" strokeWidth={3} />}
-              </Pressable>
-            );
-          })}
+      {/* Two-option poll — vote right from the feed; REAL cross-user
+          percentages appear after picking (crowd-question rails). */}
+      {post.options.length === 2 && (
+        <View style={{ marginBottom: 10 }}>
+          <DilemmaPoll post={post} />
         </View>
       )}
 

@@ -213,19 +213,8 @@ export const SEED_QUESTIONS: readonly CrowdWisdomQuestion[] = [
       body: "כל שקל שמופרש לפנסיה חוסך מס + צובר ריבית דריבית. תוספת של 1% בלבד מהשכר במשך 30 שנה יכולה להוסיף עשרות אלפי שקלים לפנסיה.",
     },
   },
-  {
-    id: "sentiment_inflation_direction",
-    category: "sentiment",
-    prompt: "לאן הולכת האינפלציה בשנה הקרובה?",
-    contextChip: "קצב עליית המחירים במשק",
-    choices: [
-      { id: "down", label: "תרד", glyph: "📉", seedVotes: 2210, accentColor: "#10b981" },
-      { id: "stay", label: "תישאר", glyph: "↔️", seedVotes: 1640, accentColor: "#94a3b8" },
-      { id: "up", label: "תעלה", glyph: "📈", seedVotes: 940, accentColor: "#dc2626" },
-    ],
-    seedTotalVoters: 4790,
-    closesInHours: 168,
-  },
+  // "לאן הולכת האינפלציה" was deleted (Yoav 2026-07-04): worthless question —
+  // "היא תמיד עולה". Don't re-add an inflation-direction poll.
 ] as const;
 
 /** Returns questions filtered by category, or all when category is null. */

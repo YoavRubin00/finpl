@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Image, KeyboardAvoidingView } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ThumbsUp, MessageCircle } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAnonAdviceStore } from './useAnonAdviceStore';
 import { AnonAvatar } from './components/AnonAvatar';
-import { OptionPoll } from './components/OptionPoll';
+import { DilemmaPoll } from './components/OptionPoll';
 import { ReplyBubble } from './components/ReplyBubble';
 import { MAX_REPLY_LENGTH } from './anonAdviceData';
 import { DUO } from '../../constants/theme';
@@ -107,10 +108,13 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
         </Text>
       </View>
 
+      {/* 'padding' on BOTH platforms — deliberate (a2790a54): Android 15+
+          edge-to-edge IGNORES adjustResize, so without padding the keyboard
+          covers the reply composer ("המקלדת חוסמת", Yoav 2026-07-04). */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={80}
+        behavior="padding"
+        keyboardVerticalOffset={0}
       >
         <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
           {/* Author + meta */}
@@ -174,9 +178,9 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
               {post.question}
             </Text>
 
-            {/* Section: אופציות */}
+            {/* Section: אופציות — tap to vote, real cross-user percentages */}
             <SectionHeader num={3} title={A.postOptions} />
-            <OptionPoll options={post.options} votes={post.optionVotes} />
+            <DilemmaPoll post={post} />
 
             {/* Tags */}
             {post.tags.length > 0 && (
@@ -212,13 +216,14 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
                 paddingTop: 6,
               }}
             >
+              {/* Static styles — function-style drops on Android (known bug). */}
               <Pressable
                 onPress={() => { tapHaptic(); togglePostLike(post.id); }}
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityState={{ selected: likedBySelf }}
                 accessibilityLabel="אהבתי"
-                style={({ pressed }) => ({
+                style={{
                   flex: 1,
                   height: 44,
                   flexDirection: 'row-reverse',
@@ -226,8 +231,8 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
                   justifyContent: 'center',
                   gap: 6,
                   borderRadius: 10,
-                  backgroundColor: pressed ? DUO.blueSurface : 'transparent',
-                })}
+                }}
+                android_ripple={{ color: 'rgba(24,119,242,0.08)' }}
               >
                 <ThumbsUp
                   size={18}
@@ -248,7 +253,7 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityLabel="תגובה"
-                style={({ pressed }) => ({
+                style={{
                   flex: 1,
                   height: 44,
                   flexDirection: 'row-reverse',
@@ -256,8 +261,8 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
                   justifyContent: 'center',
                   gap: 6,
                   borderRadius: 10,
-                  backgroundColor: pressed ? DUO.bg : 'transparent',
-                })}
+                }}
+                android_ripple={{ color: 'rgba(107,114,128,0.08)' }}
               >
                 <MessageCircle size={18} color={DUO.textMuted} strokeWidth={2.2} />
                 <Text
@@ -291,10 +296,11 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
 
           {replies.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 24, gap: 8 }}>
-              <Image
+              <ExpoImage
                 source={require('../../../assets/webp/fin-talking-1.webp')}
                 style={{ width: 90, height: 90 }}
-                resizeMode="contain"
+                contentFit="contain"
+                autoplay
               />
               <Text style={{ fontSize: 13, color: DUO.textMuted, writingDirection: 'rtl', textAlign: 'center' }}>
                 {A.postNoReplies}
@@ -399,14 +405,16 @@ export function AnonAdvicePostScreen({ postId }: AnonAdvicePostScreenProps): Rea
             <Pressable
               onPress={handleSend}
               disabled={!body.trim()}
-              style={({ pressed }) => ({
+              accessibilityRole="button"
+              accessibilityLabel="שליחת תגובה"
+              style={{
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: !body.trim() ? '#cbd5e1' : pressed ? DUO.blueDark : DUO.blue,
+                backgroundColor: !body.trim() ? '#cbd5e1' : DUO.blue,
                 alignItems: 'center',
                 justifyContent: 'center',
-              })}
+              }}
             >
               <Text style={{ fontSize: 20, color: '#ffffff' }}>↑</Text>
             </Pressable>

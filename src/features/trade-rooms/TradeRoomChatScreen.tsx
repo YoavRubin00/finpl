@@ -424,7 +424,19 @@ export function TradeRoomChatScreen(): React.ReactElement {
             })}
           </View>
 
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 8 }}>
+          {/* Composer — same pattern as the portfolio-comment box (Yoav liked
+              that one): input pill with the blue send icon INSIDE it. */}
+          <View
+            style={{
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: FEED_BG,
+              borderRadius: 22,
+              paddingHorizontal: 16,
+              paddingVertical: 4,
+            }}
+          >
             <TextInput
               value={draft}
               onChangeText={(t) => {
@@ -445,11 +457,7 @@ export function TradeRoomChatScreen(): React.ReactElement {
               maxLength={MAX_MESSAGE_LENGTH}
               style={{
                 flex: 1,
-                backgroundColor: FEED_BG,
-                borderRadius: 20,
-                paddingHorizontal: 16,
-                paddingTop: 10,
-                paddingBottom: 10,
+                paddingVertical: 8,
                 fontSize: 14,
                 color: TEXT_PRIMARY,
                 maxHeight: 100,
@@ -457,30 +465,16 @@ export function TradeRoomChatScreen(): React.ReactElement {
                 textAlign: 'right',
               }}
             />
-            {/* Static style ONLY — a function-style ({pressed}) => ({...layout})
-                drops the whole style on Android (the known Pressable bug), which
-                made this button invisible (Yoav 2026-07-04). */}
-            <Pressable
-              onPress={handleSend}
-              disabled={draft.trim().length === 0}
-              accessibilityRole="button"
-              accessibilityLabel="שליחת הודעה"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: draft.trim().length > 0 ? '#1877f2' : '#cbd5e1',
-              }}
-            >
-              <Send
-                size={20}
-                color="#ffffff"
-                strokeWidth={2.4}
-                style={{ transform: [{ scaleX: -1 }], marginRight: 2 }}
-              />
-            </Pressable>
+            {draft.trim().length > 0 && (
+              <Pressable
+                onPress={handleSend}
+                accessibilityRole="button"
+                accessibilityLabel="שליחת הודעה"
+                hitSlop={10}
+              >
+                <Send size={18} color="#1877f2" strokeWidth={2.4} />
+              </Pressable>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>

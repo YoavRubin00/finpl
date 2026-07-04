@@ -409,9 +409,9 @@ function PortfolioPost({
           android_ripple={{ color: 'rgba(239,68,68,0.08)' }}
         >
           <Animated.View style={heartStyle}>
-            <Heart size={16} color={pf.likedByYou ? '#ef4444' : TEXT_MUTED} fill={pf.likedByYou ? '#ef4444' : 'transparent'} strokeWidth={2} />
+            <Heart size={18} color="#ef4444" fill={pf.likedByYou ? '#ef4444' : 'transparent'} strokeWidth={2.2} />
           </Animated.View>
-          <Text style={{ fontSize: 12, fontWeight: '800', color: pf.likedByYou ? '#ef4444' : TEXT_MUTED }}>אהבתי</Text>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#ef4444' }}>אהבתי</Text>
         </Pressable>
         <Pressable
           onPress={() => { tapHaptic(); setExpanded((v) => !v); }}
@@ -421,8 +421,8 @@ function PortfolioPost({
           style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8 }}
           android_ripple={{ color: 'rgba(24,119,242,0.08)' }}
         >
-          <MessageCircle size={16} color={TEXT_MUTED} strokeWidth={2} />
-          <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_MUTED }}>הגב</Text>
+          <MessageCircle size={18} color="#1877f2" strokeWidth={2.2} />
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#1877f2' }}>הגב</Text>
         </Pressable>
       </View>
 
