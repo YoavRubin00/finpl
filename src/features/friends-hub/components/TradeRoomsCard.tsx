@@ -219,31 +219,46 @@ export function TradeRoomsCard(): React.ReactElement {
         />
       ))}
 
-      {/* Footer link-row — see all rooms */}
+      {/* Footer — full-width "all rooms" button (Yoav 2026-07-04: a real
+          tappable button, not a bare text link). Colour lives on the inner
+          <View> so Android doesn't drop the function-style Pressable's bg. */}
       <Pressable
         onPress={openList}
         accessibilityRole="button"
         accessibilityLabel="כל החדרים"
         style={({ pressed }) => ({
           marginHorizontal: 16,
-          marginTop: 2,
-          paddingVertical: 10,
-          borderRadius: 12,
-          alignItems: 'center',
-          backgroundColor: pressed ? '#e0f2fe' : 'transparent',
+          marginTop: 6,
+          opacity: pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
         })}
       >
-        <Text
-          maxFontSizeMultiplier={1.15}
+        <View
           style={{
-            fontSize: 13,
-            fontWeight: '800',
-            color: FB_BLUE,
-            writingDirection: 'rtl',
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            paddingVertical: 12,
+            borderRadius: 12,
+            backgroundColor: '#eff6ff',
+            borderWidth: 1,
+            borderColor: '#bfdbfe',
           }}
         >
-          כל החדרים ›
-        </Text>
+          <Text
+            maxFontSizeMultiplier={1.15}
+            style={{
+              fontSize: 13.5,
+              fontWeight: '900',
+              color: FB_BLUE,
+              writingDirection: 'rtl',
+            }}
+          >
+            כל החדרים
+          </Text>
+          <ChevronLeft size={18} color={FB_BLUE} strokeWidth={2.6} />
+        </View>
       </Pressable>
     </View>
   );
