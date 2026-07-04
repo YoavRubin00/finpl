@@ -7,7 +7,7 @@
  * When you bump this, also update TERMS_UPDATE_SUMMARY_HE below to describe
  * what changed — that's what the user sees in the re-consent modal.
  */
-export const CURRENT_TERMS_VERSION = '2026-06-04b';
+export const CURRENT_TERMS_VERSION = '2026-07-03';
 
 /**
  * Consolidated Hebrew bullets shown in the re-consent modal.
