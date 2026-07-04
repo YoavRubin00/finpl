@@ -34,6 +34,7 @@ function formatUntil(target: Date, now: Date): string | null {
   const ms = target.getTime() - now.getTime();
   if (ms <= 0) return null;
   const hours = Math.floor(ms / 3_600_000);
+  if (hours >= 24) return `${Math.floor(hours / 24)} ימים`;
   if (hours >= 1) return `${hours} שעות`;
   const mins = Math.max(1, Math.floor(ms / 60_000));
   return `${mins} דקות`;
