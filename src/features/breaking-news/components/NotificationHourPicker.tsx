@@ -85,14 +85,15 @@ export function NotificationHourPicker({
           {PICKABLE_HOURS.map((hour) => {
             const selected = hour === pending;
             return (
+              {/* STATIC style array — a function-style ({pressed}) => [...] drops
+                  the whole style on Android (known Pressable bug): the selected
+                  pill lost its blue fill while keeping the white text = the
+                  white-on-white Yoav reported (2026-07-04). */}
               <Pressable
                 key={hour}
                 onPress={() => handleSelect(hour)}
-                style={({ pressed }) => [
-                  styles.pill,
-                  selected && styles.pillSelected,
-                  pressed && { opacity: 0.7 },
-                ]}
+                style={[styles.pill, selected && styles.pillSelected]}
+                android_ripple={{ color: 'rgba(37,99,235,0.12)' }}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 accessibilityLabel={`שעה ${hour}:00`}
@@ -110,7 +111,8 @@ export function NotificationHourPicker({
 
         <Pressable
           onPress={handleConfirm}
-          style={({ pressed }) => [styles.confirmBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] }]}
+          style={styles.confirmBtn}
+          android_ripple={{ color: 'rgba(255,255,255,0.18)' }}
           accessibilityRole="button"
           accessibilityLabel={`אשר התראה בשעה ${pending}:00`}
         >

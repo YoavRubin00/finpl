@@ -378,9 +378,11 @@ export function BreakingNewsScreen(): React.ReactElement {
               <Text style={styles.dayLabel} allowFontScaling={false}>
                 {serverTradingDay ? `סיכום ליום ${serverTradingDay}` : 'הסיכום היומי שלך'}
               </Text>
+              {/* Static style — function-style drops on Android (known Pressable bug). */}
               <Pressable
                 onPress={() => { tapHaptic(); setHourPickerOpen(true); }}
-                style={({ pressed }) => [styles.hourChip, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
+                style={styles.hourChip}
+                android_ripple={{ color: 'rgba(255,255,255,0.18)' }}
                 accessibilityRole="button"
                 accessibilityLabel={`התראה יומית בשעה ${notificationHour}:00`}
               >
@@ -424,10 +426,8 @@ export function BreakingNewsScreen(): React.ReactElement {
             ) : (
               <Pressable
                 onPress={handleOpenPicker}
-                style={({ pressed }) => [
-                  styles.addBtn,
-                  pressed && { opacity: 0.85 },
-                ]}
+                style={styles.addBtn}
+                android_ripple={{ color: 'rgba(255,255,255,0.18)' }}
                 accessibilityRole="button"
                 accessibilityLabel={atLimit ? 'הגעת למקסימום מניות' : 'הוסף מניה'}
               >
