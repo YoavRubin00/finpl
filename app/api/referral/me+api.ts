@@ -81,7 +81,8 @@ export async function GET(request: Request): Promise<Response> {
         todayDateUTC: new Date().toISOString().slice(0, 10),
         pendingSignupBonus: 0,
       };
-      return Response.json(empty);
+      // eslint-disable-next-line -- undici Response vs global Response (baseline pattern)
+      return Response.json(empty) as unknown as Response;
     }
 
     // Fetch each referred friend + sum of their yesterday learning coins, joined
@@ -131,11 +132,12 @@ export async function GET(request: Request): Promise<Response> {
     );
     const grossDividend = Math.floor(totalYesterdayLearningCoins * DIVIDEND_RATE);
 
-    // Has the user already collected today?
+    // Has the user already collected today? dividend_collections is keyed by
+    // user_id (identity rekey / migration 0004) — the old auth_id column is gone.
     const todayResult = await db.execute(sql`
       SELECT 1 AS hit
         FROM dividend_collections
-       WHERE auth_id = ${authId}
+       WHERE user_id = ${callerUserId}
          AND date_collected = (date_trunc('day', now() AT TIME ZONE 'UTC'))::date
        LIMIT 1
     `);
@@ -154,7 +156,7 @@ export async function GET(request: Request): Promise<Response> {
       WITH credited AS (
         UPDATE referrals
            SET referrer_local_credited = true
-         WHERE referrer_auth_id = ${authId}
+         WHERE referrer_user_id = ${callerUserId}
            AND referrer_local_credited = false
         RETURNING 1
       )

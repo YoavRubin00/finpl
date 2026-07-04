@@ -68,7 +68,8 @@ export async function POST(request: Request): Promise<Response> {
       ?? (meRows as unknown as { id: string }[]))[0]?.id;
     if (!callerUserId) {
       const nothing: CollectAlready = { ok: true, amount: 0, alreadyCollected: true };
-      return Response.json(nothing);
+      // eslint-disable-next-line -- undici Response vs global Response (baseline pattern)
+      return Response.json(nothing) as unknown as Response;
     }
 
     // 1. Compute today's would-be dividend.

@@ -79,7 +79,8 @@ export async function POST(request: Request): Promise<Response> {
     const refereeUserId = ((refereeLookup as unknown as { rows?: { id: string }[] }).rows
       ?? (refereeLookup as unknown as { id: string }[]))[0]?.id;
     if (!refereeUserId) {
-      return Response.json({ error: 'Referee not registered', code: 'REFEREE_NOT_FOUND' }, { status: 400 });
+      // eslint-disable-next-line -- undici Response vs global Response (baseline pattern)
+      return Response.json({ error: 'Referee not registered', code: 'REFEREE_NOT_FOUND' }, { status: 400 }) as unknown as Response;
     }
     if (referrerUserId === refereeUserId) {
       return Response.json({ error: 'Cannot self-refer', code: 'SELF_REFERRAL' }, { status: 400 });
