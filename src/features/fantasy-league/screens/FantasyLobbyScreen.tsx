@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { FANTASY } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
 import { captureEvent } from '../../../lib/posthog';
+import { successHaptic } from '../../../utils/haptics';
 import {
   getCompetitionPhase,
   getNextDraftOpen,
@@ -226,6 +227,14 @@ function ResultCard({
       return s + p.allocation * (p.returnPercent ?? 0) * mult;
     }, 0) / totalAlloc;
   const up = eff >= 0;
+  // Best pick of the week — the celebration beat (Fable P1-2).
+  const best = entry.picks.length
+    ? entry.picks.reduce((a, b) => ((b.returnPercent ?? 0) > (a.returnPercent ?? 0) ? b : a))
+    : null;
+  const bestIsCaptain = !!best && entry.captainTicker === best.ticker;
+  useEffect(() => {
+    try { successHaptic(); } catch { /* non-fatal */ }
+  }, []);
   return (
     <Animated.View entering={FadeInDown.duration(320)} style={{ gap: 12 }}>
       <F2Panel pad={14} accent={up ? FANTASY.positive : FANTASY.primary}>
@@ -244,6 +253,25 @@ function ResultCard({
             </Text>
           </View>
         </View>
+        {best && (best.returnPercent ?? 0) !== 0 && (
+          <View
+            style={{
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              gap: 6,
+              marginTop: 10,
+              paddingTop: 10,
+              borderTopWidth: 1,
+              borderTopColor: FANTASY.border,
+            }}
+          >
+            <Text style={{ fontSize: 15 }}>{bestIsCaptain ? '👑' : '🔥'}</Text>
+            <Text style={{ fontSize: 12, color: FANTASY.inkSoft, ...RTL, flex: 1 }}>
+              הכוכב שלך: {best.ticker} {(best.returnPercent ?? 0) >= 0 ? '+' : ''}
+              {(best.returnPercent ?? 0).toFixed(1)}%{bestIsCaptain ? ' · קפטן ×2' : ''}
+            </Text>
+          </View>
+        )}
       </F2Panel>
       <F2Button tone="ghost" size="md" onPress={onDismiss}>
         יאללה, לשבוע הבא
