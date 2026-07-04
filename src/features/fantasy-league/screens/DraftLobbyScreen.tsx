@@ -14,6 +14,7 @@ import { FANTASY, type FantasySectorId } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
 import { useFantasyStore } from '../useFantasyStore';
 import { STOCK_CATEGORIES, TIER_CONFIGS, getNextCompetitionWeekId } from '../fantasyData';
+import { getHypeStocksForWeek } from '../hypeStocks';
 import { TierSelectionCard } from '../components/TierSelectionCard';
 import { DraftCategoryTabs } from '../components/DraftCategoryTabs';
 import { SharkAnalysisModal } from '../components/SharkAnalysisModal';
@@ -33,6 +34,7 @@ const CATEGORY_TO_SECTOR: Record<StockCategoryId, FantasySectorId> = {
   energy: 'energy',
   israel: 'israel',
   crypto: 'crypto',
+  hype: 'hype',
 };
 
 // Real AI score (35-98) — momentum-weighted, no random noise.
@@ -87,9 +89,14 @@ export function DraftLobbyScreen(): React.ReactElement {
   const pickedCategories = picks.map((p) => p.categoryId);
 
   const activeCategoryData = STOCK_CATEGORIES.find((c) => c.id === activeCategory);
-  const activeStocks = activeCategoryData?.stocks ?? [];
+  // The hype category rotates weekly — surface THIS draft's set (for the week
+  // being drafted), not the full pool. Other categories show their fixed roster.
+  const activeStocks =
+    activeCategory === 'hype'
+      ? getHypeStocksForWeek(getNextCompetitionWeekId())
+      : (activeCategoryData?.stocks ?? []);
 
-  const allPicked = picks.length === 5;
+  const allPicked = picks.length === 6;
 
   const handleEnter = useCallback(() => {
     setConfirmJoin(true);
@@ -313,7 +320,7 @@ export function DraftLobbyScreen(): React.ReactElement {
                 textAlign: 'center',
                 writingDirection: 'rtl',
               }}>
-                {allPicked ? '✓ כל המניות נבחרו — הזמן לסדר את התיק' : `בחרת ${picks.length}/5 מניות`}
+                {allPicked ? '✓ כל המניות נבחרו — הזמן לסדר את התיק' : `בחרת ${picks.length}/6 מניות`}
               </Text>
 
               {/* Mini progress dots — 1 per category */}

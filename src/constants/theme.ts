@@ -204,6 +204,7 @@ export const SECTOR = {
   energy:      { chip: '#ea580c', chipText: '#ffffff', surface: '#ffedd5', spark: '#f97316' },
   israel:      { chip: '#0d80ff', chipText: '#ffffff', surface: '#dbeafe', spark: '#3b82f6' },
   crypto:      { chip: '#7c3aed', chipText: '#ffffff', surface: '#ede9fe', spark: '#a855f7' },
+  hype:        { chip: '#e11d48', chipText: '#ffffff', surface: '#ffe4e6', spark: '#f43f5e' },
 } as const;
 
 /**
@@ -291,6 +292,7 @@ export const F2_SECTORS = {
   health:      { id: 'health',      label: 'בריאות',    short: 'בריאות',color: '#ef4444', g1: '#f87171', g2: '#b91c1c' },
   crypto:      { id: 'crypto',      label: 'קריפטו',    short: 'קריפטו',color: '#a78bfa', g1: '#c4b5fd', g2: '#6d28d9' },
   consumer:    { id: 'consumer',    label: 'צריכה',     short: 'צריכה', color: '#ec4899', g1: '#f472b6', g2: '#be185d' },
+  hype:        { id: 'hype',        label: 'טרנד',      short: 'טרנד',  color: '#f43f5e', g1: '#fb7185', g2: '#be123c' },
 } as const;
 
 export type FantasySectorId = keyof typeof F2_SECTORS;

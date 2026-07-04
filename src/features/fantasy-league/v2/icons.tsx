@@ -99,6 +99,7 @@ const SECTOR_GLYPH: Record<FantasySectorId, (p: IconProps) => React.ReactElement
   health: SectorHealth,
   crypto: SectorCrypto,
   consumer: SectorConsumer,
+  hype: SectorSpecGrowth, // rocket glyph fits the momentum/meme vibe
 };
 
 // ─── Sector tile (gradient with glyph) ──────────────────────────────────────

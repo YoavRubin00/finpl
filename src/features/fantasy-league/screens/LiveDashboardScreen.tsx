@@ -34,6 +34,7 @@ const CATEGORY_TO_SECTOR: Record<StockCategoryId, FantasySectorId> = {
   energy: 'energy',
   israel: 'israel',
   crypto: 'crypto',
+  hype: 'hype',
 };
 
 const TIER_LABEL: Record<FantasyTier, string> = {

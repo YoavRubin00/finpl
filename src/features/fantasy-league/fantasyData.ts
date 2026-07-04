@@ -8,6 +8,7 @@ import type {
   CompetitionPhase,
 } from './fantasyTypes';
 import { getIsraelParts, getIsraelDateISO, israelDatePlusDays } from '../../utils/israelTime';
+import { HYPE_CATEGORY } from './hypeStocks';
 
 // ---------------------------------------------------------------------------
 // Phase logic — Israel-time weekly cycle (parallel drafting)
@@ -566,6 +567,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
       },
     ],
   },
+  HYPE_CATEGORY,
 ];
 
 // ---------------------------------------------------------------------------
@@ -584,6 +586,9 @@ export const STOCK_CATEGORIES: StockCategory[] = [
 //
 // mockWeeklyChange is 0 for every index on purpose — we do NOT fabricate a
 // weekly move for a real index; 0 is the honest "unknown until measured" value.
+
+/** Number of stocks a draft requires — one per category in STOCK_CATEGORIES. */
+export const REQUIRED_PICKS = STOCK_CATEGORIES.length;
 
 type PortfolioCategoryId = StockCategoryId | 'indices';
 

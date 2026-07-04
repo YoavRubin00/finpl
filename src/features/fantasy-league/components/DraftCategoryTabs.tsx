@@ -31,6 +31,7 @@ const TAB_PALETTE: Record<
   energy:      { g1: '#fbbf24', g2: '#b45309', color: '#d97706', bg: '#fffbeb', border: '#fde68a' }, // gold (ערך)
   israel:      { g1: '#38bdf8', g2: '#0369a1', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' }, // sky cyan
   crypto:      { g1: '#fb923c', g2: '#c2410c', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' }, // bitcoin orange
+  hype:        { g1: '#fb7185', g2: '#be123c', color: '#e11d48', bg: '#fff1f2', border: '#fecdd3' }, // hype rose-red
 };
 
 export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSelect }: Props): React.ReactElement {

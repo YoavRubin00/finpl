@@ -21,6 +21,7 @@ const CATEGORY_TO_SECTOR: Record<StockCategoryId, FantasySectorId> = {
   energy: 'energy',
   israel: 'israel',
   crypto: 'crypto',
+  hype: 'hype',
 };
 
 /**
@@ -87,8 +88,8 @@ export function YourPicksScreen(): React.ReactElement {
 
   const hint = !nextEntry
     ? 'אין דראפט פעיל — חזור ובחר מניות'
-    : picks.length < 5
-      ? `חסרות ${5 - picks.length} מניות — חזור לדרפט`
+    : picks.length < 6
+      ? `חסרות ${6 - picks.length} מניות — חזור לדרפט`
       : !nextEntry.captainTicker
         ? 'סמן מניה אחת ל-×2 (קפטן)'
         : !nextEntry.viceTicker
@@ -122,7 +123,7 @@ export function YourPicksScreen(): React.ReactElement {
                 סמנו מניה ל-×2 ומניה ל-×1.5 — וקבעו את ההקצאה
               </Text>
               <Text style={{ fontSize: 11, color: FANTASY.inkMuted, marginTop: 4, ...RTL }}>
-                ברירת מחדל: 20% לכל מניה. הקפטן והמשנה חייבים להיות שתי מניות שונות.
+                ברירת מחדל: בחלקים שווים. הקפטן והמשנה חייבים להיות שתי מניות שונות.
               </Text>
 
               {/* Pool progress */}

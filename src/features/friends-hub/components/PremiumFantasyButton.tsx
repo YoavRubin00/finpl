@@ -77,7 +77,7 @@ function useFantasyLiveState(): FantasyLiveState {
   if (draftOpen && !nextLocked) {
     if (!hasNextTeam) {
       return {
-        sub: hasLive ? 'הדראפט לשבוע הבא פתוח · בוחרים 5' : 'הדראפט פתוח · בוחרים 5 מניות',
+        sub: hasLive ? 'הדראפט לשבוע הבא פתוח · בוחרים 6' : 'הדראפט פתוח · בוחרים 6 מניות',
         picksBadge: null,
         locked: false,
       };
@@ -85,9 +85,9 @@ function useFantasyLiveState(): FantasyLiveState {
     const remaining = formatUntil(getDraftClose(now), now);
     return {
       sub: remaining
-        ? `בחרתם ${nextPicks}/5 לשבוע הבא · נעילה בעוד ${remaining}`
-        : `בחרתם ${nextPicks}/5 · נעילה בקרוב`,
-      picksBadge: `${nextPicks}/5`,
+        ? `בחרתם ${nextPicks}/6 לשבוע הבא · נעילה בעוד ${remaining}`
+        : `בחרתם ${nextPicks}/6 · נעילה בקרוב`,
+      picksBadge: `${nextPicks}/6`,
       locked: false,
     };
   }

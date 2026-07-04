@@ -1,6 +1,6 @@
 export type CompetitionPhase = 'pre_draft' | 'draft' | 'competition' | 'results';
 export type FantasyTier = 'silver' | 'gold' | 'diamond';
-export type StockCategoryId = 'tech' | 'spec_growth' | 'energy' | 'israel' | 'crypto';
+export type StockCategoryId = 'tech' | 'spec_growth' | 'energy' | 'israel' | 'crypto' | 'hype';
 
 export type Currency = '$' | '₪';
 

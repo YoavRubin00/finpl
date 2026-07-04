@@ -18,6 +18,7 @@ import {
   getCompetitionWeekId,
   getNextCompetitionWeekId,
   isDraftOpen,
+  REQUIRED_PICKS,
   DRAFT_STREAK_BONUSES,
 } from './fantasyData';
 
@@ -129,6 +130,11 @@ export const useFantasyStore = create<FantasyStore>()(
       enterCompetition: (tier: FantasyTier): boolean => {
         const tierConfig = TIER_CONFIGS[tier];
         if (!tierConfig) return false;
+
+        // Settle any due rollover FIRST — otherwise a stale nextEntry from a
+        // past week could be silently overwritten here and its coins lost
+        // (e.g. reaching /fantasy/draft via a deep link before the lobby ran).
+        get().rolloverIfDue();
 
         // Drafting is always for the UPCOMING competition week, and only while
         // the draft window is open (Thu 09:00 → Mon 09:00 IL).
@@ -280,7 +286,7 @@ export const useFantasyStore = create<FantasyStore>()(
         if (!nextEntry) return false;
         const allocSum = nextEntry.picks.reduce((s, p) => s + p.allocation, 0);
         return (
-          nextEntry.picks.length === 5 &&
+          nextEntry.picks.length === REQUIRED_PICKS &&
           nextEntry.captainTicker !== null &&
           nextEntry.viceTicker !== null &&
           nextEntry.captainTicker !== nextEntry.viceTicker &&
@@ -291,7 +297,11 @@ export const useFantasyStore = create<FantasyStore>()(
       lockDraft: () => {
         const { nextEntry } = get();
         if (!nextEntry || nextEntry.lockedAt) return;
-        if (nextEntry.picks.length < 5) return;
+        if (nextEntry.picks.length < REQUIRED_PICKS) return;
+        // Captain + vice are mandatory and must be distinct (parity with
+        // isReadyForBattle — a direct lock must not slip a captainless team by).
+        if (!nextEntry.captainTicker || !nextEntry.viceTicker) return;
+        if (nextEntry.captainTicker === nextEntry.viceTicker) return;
         // All allocations must sum to the entry pool.
         const sumAllocation = nextEntry.picks.reduce((s, p) => s + p.allocation, 0);
         if (sumAllocation !== nextEntry.coinsPaid) return;

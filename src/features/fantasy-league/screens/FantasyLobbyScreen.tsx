@@ -57,6 +57,7 @@ const CATEGORY_TO_SECTOR: Record<StockCategoryId, FantasySectorId> = {
   energy: 'energy',
   israel: 'israel',
   crypto: 'crypto',
+  hype: 'hype',
 };
 
 // Map tier to shield tier
@@ -114,8 +115,8 @@ function PreDraftCard({ phase }: { phase: CompetitionPhase }): React.ReactElemen
         : 'הדראפט הבא נפתח בקרוב';
   const body =
     phase === 'competition' || phase === 'results'
-      ? 'ההצטרפות נפתחת בדראפט הבא: בחירת 5 מניות, מינוי קפטן, ותחרות שבועית. בינתיים — צוברים מטבעות.'
-      : 'בחירת 5 מניות, מינוי קפטן, וצבירת נקודות שבועיות. בינתיים — צוברים מטבעות.';
+      ? 'ההצטרפות נפתחת בדראפט הבא: בחירת 6 מניות, מינוי קפטן, ותחרות שבועית. בינתיים — צוברים מטבעות.'
+      : 'בחירת 6 מניות, מינוי קפטן, וצבירת נקודות שבועיות. בינתיים — צוברים מטבעות.';
   return (
     <Animated.View
       entering={FadeInDown.delay(80).duration(320)}
@@ -358,7 +359,7 @@ export function FantasyLobbyScreen(): React.ReactElement {
   const gameweekDay = getGameweekDay();
 
   // No-captain nudge
-  const hasNoCaptain = isLocked && currentEntry && !currentEntry.captainTicker && picks.length === 5;
+  const hasNoCaptain = isLocked && currentEntry && !currentEntry.captainTicker && picks.length === 6;
 
   // Prize breakdown for the current league (shown in the lobby).
   const tierConfig = currentEntry ? TIER_CONFIGS[currentEntry.tier] : null;
@@ -554,7 +555,7 @@ export function FantasyLobbyScreen(): React.ReactElement {
                   איך עובד פנטזי ליג?
                 </Text>
                 {[
-                  'בחר 5 מניות — אחת מכל קטגוריה',
+                  'בחר 6 מניות — אחת מכל קטגוריה',
                   'מנה קפטן (×2 נקודות) וסגן (×1.5)',
                   'התחרה שבוע, התקדם בליגות',
                 ].map((step, i) => (
