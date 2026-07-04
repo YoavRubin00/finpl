@@ -614,6 +614,11 @@ function RootLayoutInner() {
       "salary-net-calculator", "tax-refund-calculator", "mortgage-calculator",
       "pension-fees-comparator", "breaking-news", "coming-soon",
       "net-worth-dashboard", "financial-profile",
+      // יומן משקיעים — opened from the Tools hub as its own route. Without this
+      // the auth/onboarding guard below bounced it to /(tabs) ~2s after mount
+      // (Yoav 2026-07-04: "קורס אחרי 2 שניות ועובר למסך הלמידה"). The learn-map
+      // chip is unaffected — it opens the sheet in place, never pushes a route.
+      "investors-journal",
       // R6 topic-tree — dedicated per-module chat screen reached from
       // the `chat` topic chip. Without listing it here the redirect
       // guard below bounces the user back to /(tabs) before the screen
