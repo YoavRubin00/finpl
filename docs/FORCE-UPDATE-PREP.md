@@ -30,8 +30,8 @@ export const CURRENT_TERMS_VERSION = '2026-07-03';    // ← אחרי (מפעי�
 ```json
 {
   "enabled": true,
-  "minSupportedVersion": "1.5.0",
-  "iosStoreUrl": "itms-apps://apps.apple.com/app/idXXXXXXXXX",
+  "minSupportedVersion": "1.4.2",
+  "iosStoreUrl": "itms-apps://apps.apple.com/app/id6761650222",
   "androidStoreUrl": "market://details?id=com.finplay.app",
   "title": "עדכון חדש מחכה לכם",
   "message": "שדרגנו את FinPlay: עמוד חברים חדש — חדרי שיח, חכמת המונים, ליגת פנטזי ולוחות מובילים; שיפורי חוויה בשיעורים; ותנאי שימוש מעודכנים. כדי להמשיך, עדכנו לגרסה החדשה מהחנות.",
@@ -39,14 +39,14 @@ export const CURRENT_TERMS_VERSION = '2026-07-03';    // ← אחרי (מפעי�
   "publishedAt": "2026-07-03T00:00:00Z"
 }
 ```
-- `minSupportedVersion` = גרסת הבילד החדש (עדכן ל-version שתפרסם בפועל; `1.5.0` הוא מציין-מקום). כל גרסה נמוכה ממנו נחסמת.
+- `minSupportedVersion` = גרסת הבילד החדש (עדכן ל-version שתפרסם בפועל; `1.4.2` = גרסת היעד). כל גרסה נמוכה ממנו נחסמת.
 - `iosStoreUrl` — החלף במזהה האפליקציה האמיתי ב-App Store.
 - `enabled: true` = הפעלה. כרגע בפרודקשן זה `false` (כבוי) — הפורס-אפדייט לא פעיל עד שתפרסם את זה.
 
 ---
 
 ## צ'קליסט שחרור (בסדר הזה)
-1. **בילד נייטיב חדש** (1.5.0) שכולל את השינויים החברתיים + את שינוי `CURRENT_TERMS_VERSION` → `'2026-07-03'`. העלאה ל-App Store + Google Play, אישור והפצה.
+1. **בילד נייטיב חדש** (1.4.2) שכולל את השינויים החברתיים + את שינוי `CURRENT_TERMS_VERSION` → `'2026-07-03'`. העלאה ל-App Store + Google Play, אישור והפצה.
 2. **פרסם את מסמך התנאים המעודכן** ל-finplay.me (privacy-policy + terms-of-service).
 3. **המתן** שהבילד יאושר ויהיה זמין בחנויות בשתי הפלטפורמות.
 4. **פרסם את `app-config.json`** עם `enabled:true` + `minSupportedVersion` = הגרסה החדשה (`scripts/publish-app-config.ts`). מרגע זה משתמשים בגרסאות ישנות רואים את מסך הפורס-אפדייט.
