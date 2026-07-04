@@ -26,6 +26,7 @@ import { getApiBase } from "../../db/apiBase";
 import { useAuthStore } from "../auth/useAuthStore";
 import { tokenStore } from "../../lib/auth/secureStore";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { track } from "../../lib/analytics/events";
 
 // The market-sentiment question powers the pinned live gauge — it's rendered by
 // BullBearGauge (which reads live market data), so it's excluded from the list.
@@ -143,6 +144,20 @@ export function CrowdWisdomScreen(): React.ReactElement {
       // header coin counter via the economy-UI store.
       useEconomyUIStore.getState().addCoins(VOTE_COIN_REWARD);
       successHaptic();
+
+      // Analytics: the crowd-vote was DARK until now. Fired here (not at the
+      // server sync below) so it also catches rich-id votes that never sync.
+      track({
+        name: "crowd_vote_submitted",
+        props: {
+          question_id: questionId,
+          choice_id: choiceId,
+          is_bet: false,
+          surface: "crowd_wisdom",
+          category: question.category,
+        },
+      });
+      track({ name: "social_action", props: { action_type: "crowd_vote", surface: "crowd_wisdom" } });
 
       // Best-effort Neon sync. The current /api/crowd-question/vote endpoint
       // only accepts {choice: 'a' | 'b'} — crowd-wisdom choices use richer IDs

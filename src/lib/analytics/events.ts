@@ -184,6 +184,22 @@ export type AppEvent =
   | { name: 'portfolio_rated'; props: { stars: number } }
   | { name: 'pf_feed_viewed'; props: { count: number } }
 
+  // ── Crowd wisdom · votes & bets (predictions) ──────────────────────────
+  // The highest-frequency friends-page action, previously DARK — no event
+  // fired at ANY vote/bet site, so crowd-wisdom engagement was unmeasurable.
+  // `is_bet` splits a coin-staked prediction from a free vote; `bet_amount`
+  // is the stake when is_bet. Fired client-side from every crowd-wisdom entry
+  // point (poll vote, slider lock, bet placement) so it catches rich-id votes
+  // that never reach the server /vote endpoint (which only accepts a/b).
+  | { name: 'crowd_vote_submitted'; props: { question_id: string; choice_id: string; is_bet: boolean; bet_amount?: number; surface: 'crowd_wisdom' | 'slider_forecast' | string; category?: string } }
+
+  // ── Social-action umbrella (North Star enabler) ────────────────────────
+  // One event fired at every REAL social action so the friends-page KPI
+  // (share of active users doing a social action) reads a single clean event
+  // instead of a fragile OR of many per-feature events. `action_type` slices
+  // by kind. Fired ALONGSIDE the per-feature event at each site.
+  | { name: 'social_action'; props: { action_type: 'crowd_vote' | 'crowd_bet' | 'slider_forecast' | 'referral_share' | 'portfolio_share' | 'friend_request' | 'whatsapp' | string; surface?: string } }
+
   // ── Referral / Friends ─────────────────────────────────────────────────
   | { name: 'referral_screen_viewed'; props: { has_code: boolean; friends_count: number; dividend_available: number; already_collected_today: boolean } }
   | { name: 'referral_link_copied'; props: { code: string } }

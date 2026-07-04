@@ -10,6 +10,7 @@ import { getCurrentWeekId } from '../../fantasy-league/fantasyData';
 import { buildForecastRange } from '../lib/validateQuestion';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import { getApiBase } from '../../../db/apiBase';
+import { track } from '../../../lib/analytics/events';
 import type { LiveMarketData, RateItem } from '../../live-news/liveMarketTypes';
 
 const fmtUsd = (n: number): string => `$${Math.round(n).toLocaleString('en-US')}`;
@@ -132,6 +133,18 @@ export function SliderForecastCard(): React.ReactElement | null {
     } catch {
       /* skip */
     }
+
+    // Analytics: the weekly slider forecast — a distinct crowd-wisdom action.
+    track({
+      name: 'crowd_vote_submitted',
+      props: {
+        question_id: questionId,
+        choice_id: String(value),
+        is_bet: false,
+        surface: 'slider_forecast',
+      },
+    });
+    track({ name: 'social_action', props: { action_type: 'slider_forecast', surface: 'crowd_wisdom' } });
   };
 
   const ratio = range.max > range.min ? (current - range.min) / (range.max - range.min) : 0.5;

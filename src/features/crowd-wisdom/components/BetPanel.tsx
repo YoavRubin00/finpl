@@ -23,6 +23,7 @@ import { tokenStore } from '../../../lib/auth/secureStore';
 import { fetchBetOdds, placeBet, type ChoiceOdds } from '../../../db/sync/syncCrowdBets';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import { useCrowdWisdomStore } from '../useCrowdWisdomStore';
+import { track } from '../../../lib/analytics/events';
 import type { CrowdWisdomQuestion } from '../types';
 
 // Quick-fill shortcuts — the stake itself is a free-typed amount (Yoav: not
@@ -165,6 +166,20 @@ export function BetPanel({ question, selectedChoiceId }: BetPanelProps): React.R
       });
       spendCoins(stake);
       successHaptic();
+
+      // Analytics: a coin-staked prediction — the highest-intent crowd action,
+      // dark until now. is_bet:true + bet_amount split it from a free vote.
+      track({
+        name: 'crowd_vote_submitted',
+        props: {
+          question_id: question.id,
+          choice_id: selectedChoiceId,
+          is_bet: true,
+          bet_amount: stake,
+          surface: 'crowd_wisdom',
+        },
+      });
+      track({ name: 'social_action', props: { action_type: 'crowd_bet', surface: 'crowd_wisdom' } });
       // Persisted (not setState) — flips this panel to the locked view now AND
       // on every future mount, incl. after app restarts.
       useCrowdWisdomStore.getState().recordPlacedBet(question.id, {
