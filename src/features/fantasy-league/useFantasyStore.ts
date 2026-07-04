@@ -21,19 +21,23 @@ import {
   REQUIRED_PICKS,
   DRAFT_STREAK_BONUSES,
 } from './fantasyData';
+import { israelDatePlusDays } from '../../utils/israelTime';
 
 // ---------------------------------------------------------------------------
 // Settlement helpers (shared by the Monday-09:00 auto-rollover)
 // ---------------------------------------------------------------------------
 
 /** Returns a copy of `entry` with each pick's final price + weekly return
- *  filled in (real Yahoo weekly return when available, deterministic sim
- *  otherwise). Pure — used to settle the outgoing week at rollover. */
-function settleEntry(entry: WeeklyEntry): WeeklyEntry {
+ *  filled in. Uses the real Yahoo weekly return ONLY when `useLive` is true —
+ *  i.e. we're settling the week that JUST ended, so the API's trailing-7-day
+ *  window actually lines up with this entry's Mon→Fri. When the app is opened
+ *  late (settling an older week), the live window is the WRONG week, so we fall
+ *  back to the deterministic, week-anchored sim. Pure. */
+function settleEntry(entry: WeeklyEntry, useLive: boolean): WeeklyEntry {
   const { getLiveWeeklyReturn } = require('./useLiveReturnsStore');
   const picks = entry.picks.map((pick): DraftPick => {
-    const returnPct =
-      getLiveWeeklyReturn(pick.ticker) ?? simulateWeeklyReturn(pick.ticker, entry.weekId);
+    const live = useLive ? getLiveWeeklyReturn(pick.ticker) : null;
+    const returnPct = live ?? simulateWeeklyReturn(pick.ticker, entry.weekId);
     return { ...pick, finalPrice: pick.entryPrice * (1 + returnPct / 100), returnPercent: returnPct };
   });
   return { ...entry, picks };
@@ -47,6 +51,14 @@ function creditParticipationFloor(
   entry: WeeklyEntry,
   missions: WeeklyMission[],
 ): { coinsReturned: number; xpEarned: number } {
+  const { useEconomyUIStore } = require('../economy/useEconomyUIStore');
+  // Abandoned join — paid the entry but never drafted a single pick → FULL
+  // refund, not a 10% floor. The user never got to play; charging 90% for a
+  // team they never saw is a silent coin leak (Fable P1-7).
+  if (entry.picks.length === 0) {
+    useEconomyUIStore.getState().addCoins(entry.coinsPaid);
+    return { coinsReturned: entry.coinsPaid, xpEarned: 0 };
+  }
   const coinsReturned = Math.round(entry.coinsPaid * 0.1);
   let xpEarned = 25;
   const streakBonus = DRAFT_STREAK_BONUSES.filter((b) => entry.draftStreakWeeks >= b.weeks).reduce(
@@ -56,7 +68,6 @@ function creditParticipationFloor(
   xpEarned += streakBonus;
   const missionBonus = missions.filter((m) => m.completed).reduce((s, m) => s + m.bonusXP, 0);
   xpEarned += missionBonus;
-  const { useEconomyUIStore } = require('../economy/useEconomyUIStore');
   useEconomyUIStore.getState().addCoins(coinsReturned);
   useEconomyUIStore.getState().addXP(xpEarned, 'challenge_complete');
   return { coinsReturned, xpEarned };
@@ -78,6 +89,9 @@ interface FantasyStoreState {
   leaderboard: FantasyLeaderboardEntry[];
   missions: WeeklyMission[];
   lastUpdated: string | null;
+  /** Coins owed back from a persist migration that dropped a paid in-flight
+   *  entry — credited on the next rolloverIfDue so none are silently lost. */
+  refundDue: number;
 }
 
 interface FantasyStoreActions {
@@ -123,6 +137,7 @@ export const useFantasyStore = create<FantasyStore>()(
       leaderboard: [],
       missions: [],
       lastUpdated: null,
+      refundDue: 0,
 
       enterCompetition: (tier: FantasyTier): boolean => {
         const tierConfig = TIER_CONFIGS[tier];
@@ -310,7 +325,14 @@ export const useFantasyStore = create<FantasyStore>()(
       },
 
       rolloverIfDue: (now: Date = new Date()) => {
-        const { currentEntry, nextEntry, pendingResult, missions } = get();
+        const { currentEntry, nextEntry, pendingResult, missions, refundDue } = get();
+        // Credit any migration refund owed (a paid entry dropped by persist-v2),
+        // exactly once, the first time the cycle is checked (Fable P1-9).
+        if (refundDue > 0) {
+          const { useEconomyUIStore } = require('../economy/useEconomyUIStore');
+          useEconomyUIStore.getState().addCoins(refundDue);
+          set({ refundDue: 0 });
+        }
         const liveWeekId = getCompetitionWeekId(now);
 
         const isRolloverA = !!nextEntry && nextEntry.weekId <= liveWeekId;
@@ -327,7 +349,10 @@ export const useFantasyStore = create<FantasyStore>()(
         // Settle + credit the outgoing live week (if any), as the new card.
         let newPending: WeeklyEntry | null = null;
         if (currentEntry && !currentEntry.claimed) {
-          const settled = settleEntry(currentEntry);
+          // Live returns line up only when we're settling the week that JUST
+          // ended (its Monday is exactly this liveWeekId); else use the sim.
+          const liveWindowValid = israelDatePlusDays(currentEntry.weekId, 7) === liveWeekId;
+          const settled = settleEntry(currentEntry, liveWindowValid);
           const { coinsReturned, xpEarned } = creditParticipationFloor(settled, missions);
           newPending = { ...settled, finalRank: null, coinsReturned, xpEarned, claimed: true };
         }
@@ -430,6 +455,7 @@ export const useFantasyStore = create<FantasyStore>()(
           leaderboard: [],
           missions: [],
           lastUpdated: null,
+          refundDue: 0,
         });
       },
     }),
@@ -453,6 +479,12 @@ export const useFantasyStore = create<FantasyStore>()(
             pendingResult: null,
             leaderboard: [],
             missions: [],
+            // Refund coins from any paid in-flight entry we're dropping, so the
+            // model change doesn't silently eat up to 100k coins (Fable P1-9).
+            refundDue:
+              (state.currentEntry?.coinsPaid ?? 0) +
+              (state.nextEntry?.coinsPaid ?? 0) +
+              (state.refundDue ?? 0),
           } as FantasyStoreState;
         }
         return state as FantasyStoreState;
@@ -464,6 +496,7 @@ export const useFantasyStore = create<FantasyStore>()(
         leaderboard: state.leaderboard,
         missions: state.missions,
         lastUpdated: state.lastUpdated,
+        refundDue: state.refundDue,
       }),
     },
   ),

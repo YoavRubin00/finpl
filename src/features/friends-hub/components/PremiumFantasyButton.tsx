@@ -58,10 +58,16 @@ function useFantasyLiveState(): FantasyLiveState {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const nextEntry = useFantasyStore((s) => s.nextEntry);
 
-  // Re-render each minute so the countdown stays fresh.
+  // Re-render each minute so the countdown stays fresh, and advance the weekly
+  // cycle here too — not only from the lobby — so a rolled-over week's "נסגר
+  // בעוד X" doesn't linger forever on this button (Fable P0-4).
   const [, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    useFantasyStore.getState().rolloverIfDue();
+    const id = setInterval(() => {
+      useFantasyStore.getState().rolloverIfDue();
+      setTick((t) => t + 1);
+    }, 60_000);
     return () => clearInterval(id);
   }, []);
 
