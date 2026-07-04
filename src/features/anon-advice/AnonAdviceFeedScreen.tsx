@@ -8,6 +8,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAnonAdviceStore } from './useAnonAdviceStore';
 import { AnonAdviceComposeModal } from './AnonAdviceComposeModal';
 import { PostCard } from './components/PostCard';
+import { SEED_DILEMMAS, isSeedDilemma } from './seedDilemmas';
 import type { AnonAdvicePost } from './anonAdviceTypes';
 import { DUO } from '../../constants/theme';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
@@ -28,7 +29,11 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
   const [composing, setComposing] = useState(false);
   const [reward, setReward] = useState<{ coins: number; xp: number; firstBonus: boolean } | null>(null);
 
-  const posts: AnonAdvicePost[] = filter ? allPosts.filter((p) => p.tags.includes(filter)) : allPosts;
+  const realPosts: AnonAdvicePost[] = filter ? allPosts.filter((p) => p.tags.includes(filter)) : allPosts;
+  // Cold-start: example dilemmas ONLY while the real feed is truly empty (no
+  // filter active) — they self-retire the instant a real post exists.
+  const showingSeeds = allPosts.length === 0 && filter === null;
+  const posts: AnonAdvicePost[] = showingSeeds ? SEED_DILEMMAS : realPosts;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: DUO.bg }} edges={['top']}>
@@ -132,8 +137,35 @@ export function AnonAdviceFeedScreen(): React.ReactElement {
         <FlatList
           data={posts}
           keyExtractor={(p) => p.id}
+          ListHeaderComponent={
+            showingSeeds ? (
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '800',
+                  color: DUO.textMuted,
+                  writingDirection: 'rtl',
+                  textAlign: 'right',
+                  paddingHorizontal: 20,
+                  paddingBottom: 4,
+                }}
+                maxFontSizeMultiplier={1.15}
+              >
+                דוגמאות מהקהילה · שתפו דילמה אמיתית ותהיו הראשונים בפיד
+              </Text>
+            ) : null
+          }
           renderItem={({ item }) => (
-            <PostCard post={item} onPress={() => router.push(`/anon-advice/post/${item.id}` as never)} />
+            <PostCard
+              post={item}
+              // Seed examples have no store entry → the post screen would be
+              // blank. They open the composer instead ("ask your own").
+              onPress={() =>
+                isSeedDilemma(item.id)
+                  ? setComposing(true)
+                  : router.push(`/anon-advice/post/${item.id}` as never)
+              }
+            />
           )}
           contentContainerStyle={{ paddingTop: 12, paddingBottom: insets.bottom + 108 }}
           showsVerticalScrollIndicator={false}

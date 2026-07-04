@@ -74,6 +74,18 @@ export function israelDatePlusDays(iso: string, days: number): string {
 }
 
 /**
+ * The Sunday (start-of-week in Israel) of the current Israel-local week, as
+ * ISO "YYYY-MM-DD". Deterministic weekly bucket key — rolls over at 00:00
+ * Asia/Jerusalem between Saturday and Sunday. Used by weekly-reset features
+ * (e.g. the TA-35 weekly crowd forecast).
+ */
+export function getIsraelWeekAnchorISO(now: Date = new Date()): string {
+  const iso = getIsraelDateISO(now);
+  const dayOfWeek = new Date(`${iso}T12:00:00Z`).getUTCDay(); // 0=Sunday
+  return israelDatePlusDays(iso, -dayOfWeek);
+}
+
+/**
  * Milliseconds until the next 00:00 Asia/Jerusalem boundary, useful for
  * scheduling a reset on the client when the day rolls over.
  */

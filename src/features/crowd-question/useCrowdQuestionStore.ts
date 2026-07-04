@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
-import { getIsraelDateISO } from '../../utils/israelTime';
+import { getIsraelDateISO, getIsraelWeekAnchorISO, israelDatePlusDays } from '../../utils/israelTime';
 import { CROWD_QUESTIONS } from './crowdQuestionsData';
 import { getCloudPolls } from './crowdQuestionsApi';
 import { buildSelectionContext, selectTodayQuestion } from './selectQuestion';
@@ -29,6 +29,19 @@ const MARKET_WIN_COINS = 50;
 
 type ResolvedVerdict = 'right' | 'wrong';
 
+/**
+ * Server vote-bucket for the TA-35 WEEKLY question. crowd_question_votes has a
+ * UNIQUE (user_id, vote_date_il) index shared with the DAILY vote, so the
+ * weekly vote can't use a real current-week date — on Sunday it would collide
+ * with that day's daily vote and be silently dropped (onConflictDoNothing).
+ * Shifting the week anchor 7000 days back gives a deterministic, collision-free
+ * bucket (daily votes only ever use TODAY'S date). Identical on all clients →
+ * this week's votes aggregate under one key and the stats COUNT(*) is real.
+ */
+export function ta35WeeklyVoteBucket(weekAnchorISO: string): string {
+  return israelDatePlusDays(weekAnchorISO, -7000);
+}
+
 interface CrowdQuestionState {
   votedDates: string[];
   userVotes: Record<string, CrowdOption['id']>;
@@ -43,6 +56,9 @@ interface CrowdQuestionState {
   /** Set on a market win — celebrated on next entry to CrowdWisdomCard. */
   pendingWin: { questionId: string; coins: number } | null;
   cachedSelection: CachedSelection | null;
+  /** TA-35 weekly forecast — the user's pick for the CURRENT Israel week.
+   *  Auto-resets when the week (Sunday) rolls over: a stale weekKey reads null. */
+  ta35Weekly: { weekKey: string; choice: CrowdOption['id'] } | null;
 
   getTodayQuestion: (market?: MarketSnapshot) => CrowdQuestion;
   hasVotedToday: () => boolean;
@@ -52,6 +68,11 @@ interface CrowdQuestionState {
   getVotingStreak: () => number;
   /** Grant the next unclaimed streak milestone if reached. Idempotent. */
   claimStreakMilestone: () => { milestone: number; coins: number } | null;
+  /** The user's TA-35 weekly pick for the current week, or null (incl. after
+   *  the weekly reset). Does NOT touch the daily vote/streak. */
+  getTa35WeeklyVote: () => CrowdOption['id'] | null;
+  /** Persist this week's TA-35 pick locally (server vote is sent by the card). */
+  recordTa35WeeklyVote: (choice: CrowdOption['id']) => void;
   /** Resolve a directional index vote against a REAL live market direction.
    *  Grants coins + queues a celebration on a win. No-op (returns null) when
    *  the period hasn't elapsed, the vote is already resolved, or the question
@@ -125,6 +146,7 @@ export const useCrowdQuestionStore = create<CrowdQuestionState>()(
       resolvedVotes: {},
       pendingWin: null,
       cachedSelection: null,
+      ta35Weekly: null,
 
       getTodayQuestion: (market?: MarketSnapshot) => {
         const today = getIsraelDateISO();
@@ -165,6 +187,17 @@ export const useCrowdQuestionStore = create<CrowdQuestionState>()(
       },
 
       getVotingStreak: () => computeVotingStreak(get().votedDates),
+
+      getTa35WeeklyVote: () => {
+        const entry = get().ta35Weekly;
+        if (!entry) return null;
+        // Stale week → weekly reset (the entry is simply ignored).
+        return entry.weekKey === getIsraelWeekAnchorISO() ? entry.choice : null;
+      },
+
+      recordTa35WeeklyVote: (choice) => {
+        set({ ta35Weekly: { weekKey: getIsraelWeekAnchorISO(), choice } });
+      },
 
       claimStreakMilestone: () => {
         const streak = computeVotingStreak(get().votedDates);
@@ -230,6 +263,7 @@ export const useCrowdQuestionStore = create<CrowdQuestionState>()(
           resolvedVotes: {},
           pendingWin: null,
           cachedSelection: null,
+          ta35Weekly: null,
         }),
     }),
     {
@@ -242,6 +276,7 @@ export const useCrowdQuestionStore = create<CrowdQuestionState>()(
         lastStreakMilestoneRewarded: state.lastStreakMilestoneRewarded,
         resolvedVotes: state.resolvedVotes,
         cachedSelection: state.cachedSelection,
+        ta35Weekly: state.ta35Weekly,
         // pendingWin is session-only (celebrated once, then cleared).
       }),
     },

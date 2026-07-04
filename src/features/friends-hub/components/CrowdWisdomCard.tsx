@@ -17,6 +17,7 @@ import { tapHaptic, successHaptic } from '../../../utils/haptics';
 import { getApiBase } from '../../../db/apiBase';
 import type { LiveMarketData } from '../../live-news/liveMarketTypes';
 import { FinnCue } from './FinnCue';
+import { Ta35WeeklyForecast } from './Ta35WeeklyForecast';
 
 interface TopicTheme {
   color: string;
@@ -399,6 +400,9 @@ export function CrowdWisdomCard(): React.ReactElement {
           />
         </View>
       )}
+
+      {/* ── ת"א-35 weekly forecast — pinned; real weekly %s, resets Sunday ── */}
+      <Ta35WeeklyForecast />
 
       {/* ── Poll items ── */}
       {top3.map((q, idx) => {

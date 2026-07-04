@@ -269,3 +269,25 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
     },
   },
 ];
+
+/**
+ * The TA-35 WEEKLY forecast (Yoav 2026-07-04) — a standing question pinned in
+ * the friends-hub crowd-wisdom card, separate from the daily rotation (NOT in
+ * CROWD_QUESTIONS, so it never affects the daily pick). The user's vote resets
+ * every Israel week (Sunday), and after voting the card shows the REAL
+ * percentages of everyone's votes this week (server COUNT(*) — never seeded).
+ */
+export const TA35_WEEKLY_QUESTION: CrowdQuestion = {
+  id: 'cq-tlv35-weekly',
+  text: 'ת״א-35 יסגור את השבוע בירוק או באדום?',
+  options: [
+    { id: 'a', label: 'ירוק', emoji: '🟢', sentiment: 'green' },
+    { id: 'b', label: 'אדום', emoji: '🔴', sentiment: 'red' },
+  ],
+  baselinePct: [50, 50], // neutral placeholder — NEVER displayed (real % only)
+  baselineN: 0,
+  tags: {
+    timing: 'weekly',
+    topic: 'tlv35',
+  },
+};

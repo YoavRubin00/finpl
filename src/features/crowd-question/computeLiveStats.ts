@@ -30,9 +30,12 @@ interface Args {
   questionId: string;
   userVote: CrowdOption['id'] | null;
   optimisticStats: CrowdQuestionStats | null;
+  /** Override the vote-date bucket (default: today, Israel time). The TA-35
+   *  weekly forecast passes its week bucket so counts aggregate per-week. */
+  voteDateIL?: string;
 }
 
-export function useLivePercents({ questionId, userVote, optimisticStats }: Args): LivePercents {
+export function useLivePercents({ questionId, userVote, optimisticStats, voteDateIL }: Args): LivePercents {
   const [stats, setStats] = useState<CrowdQuestionStats | null>(optimisticStats);
   const [isLoading, setIsLoading] = useState<boolean>(optimisticStats === null);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +48,7 @@ export function useLivePercents({ questionId, userVote, optimisticStats }: Args)
 
     async function load() {
       try {
-        const dateIL = getIsraelDateISO();
+        const dateIL = voteDateIL ?? getIsraelDateISO();
         const next = await fetchCrowdStats({ questionId, voteDateIL: dateIL });
         if (cancelledRef.current) return;
         setStats(next);
@@ -72,7 +75,7 @@ export function useLivePercents({ questionId, userVote, optimisticStats }: Args)
       if (pollTimer) clearInterval(pollTimer);
       if (dayBoundaryTimer) clearTimeout(dayBoundaryTimer);
     };
-  }, [questionId]);
+  }, [questionId, voteDateIL]);
 
   useEffect(() => {
     if (optimisticStats) {
