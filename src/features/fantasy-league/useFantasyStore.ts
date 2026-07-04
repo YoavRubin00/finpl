@@ -24,6 +24,10 @@ import {
 import { israelDatePlusDays } from '../../utils/israelTime';
 import { captureEvent } from '../../lib/posthog';
 
+/** Why an enterCompetition attempt did (not) succeed — lets the draft screen
+ *  show the real reason instead of a generic "not enough coins" (Fable P1-6). */
+export type EnterResult = 'ok' | 'coins' | 'closed' | 'already';
+
 // ---------------------------------------------------------------------------
 // Settlement helpers (shared by the Monday-09:00 auto-rollover)
 // ---------------------------------------------------------------------------
@@ -96,7 +100,7 @@ interface FantasyStoreState {
 }
 
 interface FantasyStoreActions {
-  enterCompetition: (tier: FantasyTier) => boolean;
+  enterCompetition: (tier: FantasyTier) => EnterResult;
   pickStock: (categoryId: StockCategoryId, ticker: string, stockName: string, mockPrice: number) => void;
   /** Set how many coins are allocated to one pick. Clamped so total ≤ entry pool. */
   setAllocation: (ticker: string, amount: number) => void;
@@ -140,9 +144,9 @@ export const useFantasyStore = create<FantasyStore>()(
       lastUpdated: null,
       refundDue: 0,
 
-      enterCompetition: (tier: FantasyTier): boolean => {
+      enterCompetition: (tier: FantasyTier): EnterResult => {
         const tierConfig = TIER_CONFIGS[tier];
-        if (!tierConfig) return false;
+        if (!tierConfig) return 'closed';
 
         // Settle any due rollover FIRST — otherwise a stale nextEntry from a
         // past week could be silently overwritten here and its coins lost
@@ -151,11 +155,11 @@ export const useFantasyStore = create<FantasyStore>()(
 
         // Drafting is always for the UPCOMING competition week, and only while
         // the draft window is open (Thu 09:00 → Mon 09:00 IL).
-        if (!isDraftOpen()) return false;
+        if (!isDraftOpen()) return 'closed';
         const weekId = getNextCompetitionWeekId();
         // Already drafted this upcoming week → don't re-charge; continue editing.
         const existingNext = get().nextEntry;
-        if (existingNext && existingNext.weekId === weekId) return false;
+        if (existingNext && existingNext.weekId === weekId) return 'already';
 
         // Lazy imports to avoid circular dependency at module load.
         // Dev economy: balance lives in the react-query cache; spends go
@@ -165,7 +169,7 @@ export const useFantasyStore = create<FantasyStore>()(
         const { fireEconomyDelta } = require('../economy/useEconomyUIStore');
         const coins: number =
           queryClient.getQueryData(economyQueryKey)?.coins ?? 0;
-        if (coins < tierConfig.entryCost) return false;
+        if (coins < tierConfig.entryCost) return 'coins';
         fireEconomyDelta({ coinsDelta: -tierConfig.entryCost });
 
         // Draft streak = consecutive weeks drafted, measured against the last
@@ -197,7 +201,7 @@ export const useFantasyStore = create<FantasyStore>()(
         try {
           captureEvent('fantasy_entered', { tier, draft_streak: streak, week_id: weekId });
         } catch { /* non-fatal */ }
-        return true;
+        return 'ok';
       },
 
       // ── Draft-building mutations: all operate on `nextEntry` (the team being

@@ -105,13 +105,19 @@ export function DraftLobbyScreen(): React.ReactElement {
   const handleConfirmJoin = useCallback(() => {
     setConfirmJoin(false);
     const config = TIER_CONFIGS[selectedTier];
-    const ok = enterCompetition(selectedTier);
-    if (!ok) {
+    const result = enterCompetition(selectedTier);
+    if (result === 'coins') {
       setErrorModal({
         title: 'הקופה לא מספיקה, מלח',
         message: `נדרשים ${config.entryCost.toLocaleString('he-IL')} מטבעות כדי לעלות על הסיפון. תאסוף קצת ונחזור לקרב!`,
       });
+    } else if (result === 'closed') {
+      setErrorModal({
+        title: 'הדראפט סגור כרגע',
+        message: 'הדראפט לשבוע הבא נפתח ביום חמישי ב-09:00. בינתיים — צוברים מטבעות ומתכוננים לקרב.',
+      });
     }
+    // 'already' = כבר נכנסת השבוע (ממשיכים לערוך); 'ok' = הצלחה. שניהם לא שגיאה.
   }, [selectedTier, enterCompetition]);
 
   const handlePickStock = useCallback(
