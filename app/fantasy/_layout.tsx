@@ -6,7 +6,6 @@ export default function FantasyLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="draft" />
       <Stack.Screen name="live" />
-      <Stack.Screen name="results" />
     </Stack>
   );
 }

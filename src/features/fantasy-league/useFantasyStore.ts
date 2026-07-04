@@ -94,9 +94,6 @@ interface FantasyStoreActions {
   /** True when picks=5, captain+vice set on distinct stocks, allocations sum to entry pool. */
   isReadyForBattle: () => boolean;
   lockDraft: () => void;
-  simulateFinalPrices: () => void;
-  claimResults: () => void;
-  resetForNewWeek: () => void;
   /** Advances the weekly cycle at Monday 09:00 IL: settles + credits the
    *  outgoing live week (→ pendingResult), promotes the drafted next-week team
    *  to live, and clears any stale entry left from a past week. Idempotent —
@@ -310,74 +307,6 @@ export const useFantasyStore = create<FantasyStore>()(
           nextEntry: { ...nextEntry, lockedAt: new Date().toISOString() },
           lastUpdated: new Date().toISOString(),
         });
-      },
-
-      simulateFinalPrices: () => {
-        const { currentEntry } = get();
-        if (!currentEntry) return;
-
-        const updatedPicks = currentEntry.picks.map((pick): DraftPick => {
-          const { getLiveWeeklyReturn } = require('./useLiveReturnsStore');
-          const returnPct = getLiveWeeklyReturn(pick.ticker) ?? simulateWeeklyReturn(pick.ticker, currentEntry.weekId);
-          const finalPrice = pick.entryPrice * (1 + returnPct / 100);
-          return { ...pick, finalPrice, returnPercent: returnPct };
-        });
-
-        set({
-          currentEntry: { ...currentEntry, picks: updatedPicks },
-          lastUpdated: new Date().toISOString(),
-        });
-      },
-
-      claimResults: () => {
-        const { currentEntry } = get();
-        if (!currentEntry || currentEntry.claimed) return;
-
-        // ── P0-1: RANK-BASED PRIZE PAYOUT FROZEN ────────────────────────────
-        // There is NO server-side settle against real, registered competitors
-        // yet. Paying rank-based prizes (5×/3×/2× coins, tier prizeXP, diamonds)
-        // computed against a FABRICATED leaderboard was both fabrication AND a
-        // real coin leak — a "1st place vs bots" could pay 5× the entry.
-        //
-        // Until a real settle exists we credit ONLY the fixed, non-rank-based
-        // participation floor that already existed (10% consolation + base 25
-        // XP), plus the user's OWN self-earned bonuses (draft-streak XP +
-        // completed-mission XP). NO rank, NO tier multipliers, NO diamonds.
-        const coinsReturned = Math.round(currentEntry.coinsPaid * 0.1);
-        let xpEarned = 25;
-
-        // Streak bonus XP — self-data (the user's own consecutive draft weeks).
-        const streakBonus = DRAFT_STREAK_BONUSES
-          .filter((b) => currentEntry.draftStreakWeeks >= b.weeks)
-          .reduce((max, b) => Math.max(max, b.bonusXP), 0);
-        xpEarned += streakBonus;
-
-        // Mission bonus XP — self-data (missions the user actually completed).
-        const { missions } = get();
-        const missionBonus = missions.filter((m) => m.completed).reduce((s, m) => s + m.bonusXP, 0);
-        xpEarned += missionBonus;
-
-        // Apply to economy (UI store — fires the animated counters). No gems:
-        // diamonds were a rank-based prize vs fabricated opponents.
-        const { useEconomyUIStore } = require('../economy/useEconomyUIStore');
-        useEconomyUIStore.getState().addCoins(coinsReturned);
-        useEconomyUIStore.getState().addXP(xpEarned, 'challenge_complete');
-
-        set({
-          currentEntry: {
-            ...currentEntry,
-            // No fabricated rank without real competitors.
-            finalRank: null,
-            coinsReturned,
-            xpEarned,
-            claimed: true,
-          },
-          lastUpdated: new Date().toISOString(),
-        });
-      },
-
-      resetForNewWeek: () => {
-        set({ currentEntry: null, leaderboard: [], missions: [], lastUpdated: new Date().toISOString() });
       },
 
       rolloverIfDue: (now: Date = new Date()) => {
