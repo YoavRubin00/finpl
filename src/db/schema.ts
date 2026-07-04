@@ -450,6 +450,7 @@ export const sharedPortfolios = pgTable("shared_portfolios", {
   picks: jsonb().notNull(),
   caption: text(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  hidden: boolean().notNull().default(false),
 }, (table) => [
   index("shared_portfolios_recent_idx").using("btree", table.createdAt.desc()),
   index("shared_portfolios_user_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
@@ -495,9 +496,41 @@ export const portfolioComments = pgTable("portfolio_comments", {
   authorAvatarId: text("author_avatar_id"),
   body: text().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  hidden: boolean().notNull().default(false),
 }, (table) => [
   index("portfolio_comments_portfolio_idx").using("btree", table.portfolioId.asc().nullsLast().op("uuid_ops"), table.createdAt.asc()),
   foreignKey({ columns: [table.portfolioId], foreignColumns: [sharedPortfolios.id], name: "portfolio_comments_portfolio_fk" }).onDelete("cascade"),
   foreignKey({ columns: [table.authorUserId], foreignColumns: [userProfiles.id], name: "portfolio_comments_author_fk" }).onDelete("cascade"),
   check("portfolio_comments_body_len", sql`char_length(body) BETWEEN 1 AND 300`),
+]);
+
+// ─── UGC moderation (Apple App Store Guideline 1.2) — reports + blocks ─────────
+// A report flags objectionable content; enough distinct reports (REPORT_AUTO_HIDE)
+// or a moderator flips shared_portfolios.hidden / portfolio_comments.hidden = true.
+export const contentReports = pgTable("content_reports", {
+  id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+  reporterUserId: uuid("reporter_user_id").notNull(),
+  reporterAuthId: text("reporter_auth_id").notNull(),
+  targetType: text("target_type").notNull(), // 'portfolio' | 'comment'
+  targetId: uuid("target_id").notNull(),
+  reason: text(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  index("content_reports_target_idx").using("btree", table.targetType.asc(), table.targetId.asc()),
+  foreignKey({ columns: [table.reporterUserId], foreignColumns: [userProfiles.id], name: "content_reports_reporter_fk" }).onDelete("cascade"),
+  unique("content_reports_one_per_reporter").on(table.reporterUserId, table.targetType, table.targetId),
+  check("content_reports_target_type_chk", sql`target_type IN ('portfolio','comment')`),
+]);
+
+// A blocker never sees the blocked user's shares or comments again.
+export const userBlocks = pgTable("user_blocks", {
+  blockerUserId: uuid("blocker_user_id").notNull(),
+  blockedUserId: uuid("blocked_user_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.blockerUserId, table.blockedUserId], name: "user_blocks_pkey" }),
+  index("user_blocks_blocker_idx").using("btree", table.blockerUserId.asc()),
+  foreignKey({ columns: [table.blockerUserId], foreignColumns: [userProfiles.id], name: "user_blocks_blocker_fk" }).onDelete("cascade"),
+  foreignKey({ columns: [table.blockedUserId], foreignColumns: [userProfiles.id], name: "user_blocks_blocked_fk" }).onDelete("cascade"),
+  check("user_blocks_not_self", sql`blocker_user_id <> blocked_user_id`),
 ]);

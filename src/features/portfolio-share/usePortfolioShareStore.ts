@@ -15,6 +15,8 @@ import {
   ratePortfolioApi,
   toggleLikeApi,
   addCommentApi,
+  reportContentApi,
+  blockUserApi,
   type RatedPortfolio,
   type RatedPick,
 } from '../../db/sync/syncPortfolioShare';
@@ -86,6 +88,10 @@ interface PortfolioShareState {
   ) => Promise<{ ratingAvg: number | null; ratingCount: number; yourRating: number; rewardCoins: number } | null>;
   toggleLike: (portfolioId: string) => Promise<void>;
   addComment: (portfolioId: string, body: string, displayName: string, avatarId: string | null) => Promise<void>;
+  /** Report a portfolio or comment as objectionable (Apple 1.2). Removes it locally. */
+  report: (target: { type: 'portfolio' | 'comment'; id: string; portfolioId?: string }) => Promise<boolean>;
+  /** Block a user — hides all their content, then refreshes the block-filtered feed. */
+  blockUser: (targetUserId: string) => Promise<boolean>;
 }
 
 export const usePortfolioShareStore = create<PortfolioShareState>()(
@@ -230,6 +236,51 @@ export const usePortfolioShareStore = create<PortfolioShareState>()(
         } catch {
           /* network failure — comment not added */
         }
+      },
+
+      report: async (target) => {
+        const auth = await resolveAuth();
+        if (!auth) return false;
+        try {
+          await reportContentApi({ ...auth, targetType: target.type, targetId: target.id });
+        } catch {
+          return false;
+        }
+        // Optimistically remove the reported item for THIS user immediately —
+        // they flagged it, so they stop seeing it now (server auto-hides for
+        // everyone once enough distinct users report it).
+        set((state) => {
+          if (target.type === 'portfolio') {
+            return { portfolios: state.portfolios.filter((pf) => pf.id !== target.id) };
+          }
+          return {
+            portfolios: state.portfolios.map((pf) =>
+              pf.id === target.portfolioId
+                ? {
+                    ...pf,
+                    comments: pf.comments.filter((c) => c.id !== target.id),
+                    commentCount: Math.max(0, pf.commentCount - 1),
+                  }
+                : pf,
+            ),
+          };
+        });
+        return true;
+      },
+
+      blockUser: async (targetUserId) => {
+        const auth = await resolveAuth();
+        if (!auth) return false;
+        try {
+          await blockUserApi({ ...auth, targetUserId });
+        } catch {
+          return false;
+        }
+        // Drop their portfolios from view immediately; the refresh pulls the
+        // fully block-filtered feed (also strips their comments elsewhere).
+        set((state) => ({ portfolios: state.portfolios.filter((pf) => pf.authorUserId !== targetUserId) }));
+        void get().refresh();
+        return true;
       },
     }),
     {

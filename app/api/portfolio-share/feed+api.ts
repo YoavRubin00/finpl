@@ -17,7 +17,7 @@
  * defaulted, seeded, or invented. Empty = null/0 (honest).
  */
 
-import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, notInArray, sql } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import {
@@ -26,6 +26,8 @@ import {
   portfolioRatings,
   portfolioLikes,
   portfolioComments,
+  contentReports,
+  userBlocks,
 } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
@@ -46,6 +48,10 @@ const MIN_PICKS = 2;
 const MAX_PICKS = 6;
 const MAX_CAPTION = 140;
 const MAX_COMMENT = 300;
+const MAX_REASON = 300;
+// Distinct reporters that auto-hide a target globally (a moderator can also hide
+// manually). The reporter always stops seeing it immediately, client-side.
+const REPORT_AUTO_HIDE = 3;
 
 interface Pick {
   ticker: string;
@@ -131,10 +137,23 @@ export async function GET(request: Request): Promise<Response> {
     const caller = await authCaller(db, request, authId);
     if (!caller) return json({ error: 'Unauthorized' }, { status: 401 });
 
+    // Users this caller has blocked — their shares + comments are filtered out
+    // entirely (Apple 1.2: a way to block abusive users).
+    const blocks = await db
+      .select({ blockedUserId: userBlocks.blockedUserId })
+      .from(userBlocks)
+      .where(eq(userBlocks.blockerUserId, caller.id));
+    const blockedIds = blocks.map((b) => b.blockedUserId);
+
+    // hidden=false (moderated content is removed) + not-from-blocked + cursor.
+    const feedConds = [eq(sharedPortfolios.hidden, false)];
+    if (cursor) feedConds.push(lt(sharedPortfolios.createdAt, cursor));
+    if (blockedIds.length) feedConds.push(notInArray(sharedPortfolios.userId, blockedIds));
+
     const rows = await db
       .select()
       .from(sharedPortfolios)
-      .where(cursor ? lt(sharedPortfolios.createdAt, cursor) : undefined)
+      .where(and(...feedConds))
       .orderBy(desc(sharedPortfolios.createdAt))
       .limit(PAGE_SIZE);
 
@@ -168,10 +187,12 @@ export async function GET(request: Request): Promise<Response> {
       .from(portfolioLikes)
       .where(and(inArray(portfolioLikes.portfolioId, ids), eq(portfolioLikes.userId, caller.id)));
 
+    const commentConds = [inArray(portfolioComments.portfolioId, ids), eq(portfolioComments.hidden, false)];
+    if (blockedIds.length) commentConds.push(notInArray(portfolioComments.authorUserId, blockedIds));
     const commentRows = await db
       .select()
       .from(portfolioComments)
-      .where(inArray(portfolioComments.portfolioId, ids))
+      .where(and(...commentConds))
       .orderBy(portfolioComments.createdAt);
 
     const ratingMap = new Map(ratingAgg.map((r) => [r.portfolioId, r]));
@@ -236,6 +257,10 @@ export async function POST(request: Request): Promise<Response> {
       body?: string;
       displayName?: string;
       avatarId?: string;
+      targetType?: string;
+      targetId?: string;
+      targetUserId?: string;
+      reason?: string;
     } | null;
     if (!body) return json({ error: 'Bad request' }, { status: 400 });
 
@@ -282,6 +307,53 @@ export async function POST(request: Request): Promise<Response> {
         commentCount: 0,
       };
       return json({ ok: true, portfolio: view });
+    }
+
+    // ── block a user (Apple 1.2: hide all their content from the caller) ──
+    if (body.action === 'block') {
+      const targetUserId = sanitizeString(body.targetUserId ?? null, 64);
+      if (!targetUserId || !UUID_RE.test(targetUserId)) {
+        return json({ error: 'Bad user id' }, { status: 400 });
+      }
+      if (targetUserId === caller.id) return json({ error: 'cannot_block_self' }, { status: 403 });
+      await db
+        .insert(userBlocks)
+        .values({ blockerUserId: caller.id, blockedUserId: targetUserId })
+        .onConflictDoNothing();
+      return json({ ok: true, blocked: true });
+    }
+
+    // ── report content (Apple 1.2: flag objectionable content) ──
+    if (body.action === 'report') {
+      const targetType =
+        body.targetType === 'comment' ? 'comment' : body.targetType === 'portfolio' ? 'portfolio' : null;
+      const targetId = sanitizeString(body.targetId ?? null, 64);
+      if (!targetType || !targetId || !UUID_RE.test(targetId)) {
+        return json({ error: 'Bad report target' }, { status: 400 });
+      }
+      const reason = sanitizeString(body.reason ?? null, MAX_REASON) ?? null;
+      await db
+        .insert(contentReports)
+        .values({ reporterUserId: caller.id, reporterAuthId: authId as string, targetType, targetId, reason })
+        .onConflictDoNothing();
+
+      // Auto-hide once REPORT_AUTO_HIDE distinct users have flagged the same
+      // target (a moderator can also hide manually by setting hidden=true).
+      const distinct = await db
+        .select({ n: sql<number>`COUNT(DISTINCT ${contentReports.reporterUserId})::int` })
+        .from(contentReports)
+        .where(and(eq(contentReports.targetType, targetType), eq(contentReports.targetId, targetId)));
+      const reportCount = distinct[0] ? Number(distinct[0].n) : 0;
+      let hidden = false;
+      if (reportCount >= REPORT_AUTO_HIDE) {
+        if (targetType === 'portfolio') {
+          await db.update(sharedPortfolios).set({ hidden: true }).where(eq(sharedPortfolios.id, targetId));
+        } else {
+          await db.update(portfolioComments).set({ hidden: true }).where(eq(portfolioComments.id, targetId));
+        }
+        hidden = true;
+      }
+      return json({ ok: true, reported: true, hidden });
     }
 
     const portfolioId = sanitizeString(body.portfolioId ?? null, 64);

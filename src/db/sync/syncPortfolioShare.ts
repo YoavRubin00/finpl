@@ -146,3 +146,39 @@ export async function addCommentApi(
   const data = (await res.json()) as { ok: boolean; comment: RatedComment };
   return data.comment;
 }
+
+/** Report a portfolio or comment as objectionable (Apple Guideline 1.2). */
+export async function reportContentApi(
+  args: AuthArgs & { targetType: 'portfolio' | 'comment'; targetId: string; reason?: string },
+): Promise<{ reported: boolean; hidden: boolean }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}${ENDPOINT}`, {
+    method: 'POST',
+    headers: headers(args.syncToken),
+    body: JSON.stringify({
+      authId: args.authId,
+      action: 'report',
+      targetType: args.targetType,
+      targetId: args.targetId,
+      reason: args.reason,
+    }),
+  });
+  if (!res.ok) throw new Error(`report failed: ${res.status}`);
+  const data = (await res.json()) as { ok: boolean; reported: boolean; hidden: boolean };
+  return { reported: data.reported === true, hidden: data.hidden === true };
+}
+
+/** Block a user — hides all their shares + comments from the caller (Apple 1.2). */
+export async function blockUserApi(
+  args: AuthArgs & { targetUserId: string },
+): Promise<{ blocked: boolean }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}${ENDPOINT}`, {
+    method: 'POST',
+    headers: headers(args.syncToken),
+    body: JSON.stringify({ authId: args.authId, action: 'block', targetUserId: args.targetUserId }),
+  });
+  if (!res.ok) throw new Error(`block failed: ${res.status}`);
+  const data = (await res.json()) as { ok: boolean; blocked: boolean };
+  return { blocked: data.blocked === true };
+}

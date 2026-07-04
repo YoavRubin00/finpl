@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown,
@@ -10,7 +10,7 @@ import Animated, {
   withSpring,
   withSequence,
 } from 'react-native-reanimated';
-import { Heart, MessageCircle, Send, ChevronDown, ShieldCheck, ScrollText, Plus, Star } from 'lucide-react-native';
+import { Heart, MessageCircle, Send, ChevronDown, ShieldCheck, ScrollText, Plus, Star, MoreHorizontal } from 'lucide-react-native';
 import { FANTASY, F2_SECTORS, type FantasySectorId } from '../../../constants/theme';
 import { tapHaptic, successHaptic } from '../../../utils/haptics';
 import { track } from '../../../lib/analytics/events';
@@ -152,19 +152,27 @@ function StarRate({ value, onRate }: { value: number | null; onRate: (n: number)
   );
 }
 
-function CommentRow({ comment }: { comment: RatedComment }): React.ReactElement {
+function CommentRow({ comment, onReport }: { comment: RatedComment; onReport?: () => void }): React.ReactElement {
   return (
     <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 8, marginTop: 8 }}>
       <AvatarImage avatarId={comment.authorAvatarId} size={26} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <View style={{ backgroundColor: FEED_BG, borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10 }}>
-          <Text style={{ fontSize: 11, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }} numberOfLines={1}>
-            {comment.authorName}{comment.isSelf ? ' (אני)' : ''}
-          </Text>
-          <Text style={{ fontSize: 12, color: TEXT_PRIMARY, ...RTL, lineHeight: 17, marginTop: 1 }}>
-            {comment.body}
-          </Text>
-        </View>
+        <Pressable
+          onLongPress={onReport}
+          delayLongPress={350}
+          disabled={!onReport}
+          accessibilityRole={onReport ? 'button' : undefined}
+          accessibilityHint={onReport ? 'לחיצה ארוכה לדיווח על התגובה' : undefined}
+        >
+          <View style={{ backgroundColor: FEED_BG, borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10 }}>
+            <Text style={{ fontSize: 11, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }} numberOfLines={1}>
+              {comment.authorName}{comment.isSelf ? ' (אני)' : ''}
+            </Text>
+            <Text style={{ fontSize: 12, color: TEXT_PRIMARY, ...RTL, lineHeight: 17, marginTop: 1 }}>
+              {comment.body}
+            </Text>
+          </View>
+        </Pressable>
         <Text style={{ fontSize: 10, color: TEXT_FAINT, fontWeight: '700', paddingHorizontal: 10, marginTop: 3 }}>
           {timeAgo(comment.createdAt)}
         </Text>
@@ -186,6 +194,8 @@ function PortfolioPost({
   const rate = usePortfolioShareStore((s) => s.rate);
   const toggleLike = usePortfolioShareStore((s) => s.toggleLike);
   const addComment = usePortfolioShareStore((s) => s.addComment);
+  const report = usePortfolioShareStore((s) => s.report);
+  const blockUser = usePortfolioShareStore((s) => s.blockUser);
   const displayName = useAuthStore((s) => s.displayName);
   const myAvatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
   const isGuest = !useAuthStore((s) => s.email);
@@ -236,6 +246,52 @@ function PortfolioPost({
     })();
   };
 
+  // Apple Guideline 1.2 — report objectionable content / block an abusive user.
+  const onMorePress = (): void => {
+    if (isGuest) { requestGuestGate('portfolio_comment'); return; }
+    tapHaptic();
+    Alert.alert(
+      'אפשרויות',
+      `התיק של ${pf.authorName}`,
+      [
+        {
+          text: 'דווח על התיק',
+          style: 'destructive',
+          onPress: () => {
+            void report({ type: 'portfolio', id: pf.id });
+            Alert.alert('הדיווח התקבל', 'נבדוק את התוכן. הוא הוסתר עבורך מעכשיו.');
+          },
+        },
+        {
+          text: 'חסום את המשתמש',
+          style: 'destructive',
+          onPress: () => {
+            void blockUser(pf.authorUserId);
+            Alert.alert('המשתמש נחסם', 'לא תראו יותר תוכן מהמשתמש הזה.');
+          },
+        },
+        { text: 'ביטול', style: 'cancel' },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  const onReportComment = (c: RatedComment): void => {
+    if (isGuest) { requestGuestGate('portfolio_comment'); return; }
+    tapHaptic();
+    Alert.alert('דיווח על תגובה', 'לדווח על התגובה הזו כתוכן פוגעני?', [
+      {
+        text: 'דווח',
+        style: 'destructive',
+        onPress: () => {
+          void report({ type: 'comment', id: c.id, portfolioId: pf.id });
+          Alert.alert('הדיווח התקבל', 'נבדוק את התוכן.');
+        },
+      },
+      { text: 'ביטול', style: 'cancel' },
+    ]);
+  };
+
   return (
     <View style={{ backgroundColor: '#fff', paddingVertical: 12 }}>
       {/* Header: avatar + name + time */}
@@ -249,6 +305,11 @@ function PortfolioPost({
             {timeAgo(pf.createdAt)}
           </Text>
         </View>
+        {!pf.isSelf && (
+          <Pressable onPress={onMorePress} hitSlop={10} accessibilityRole="button" accessibilityLabel="אפשרויות תוכן — דיווח או חסימה">
+            <MoreHorizontal size={18} color={TEXT_FAINT} />
+          </Pressable>
+        )}
       </View>
 
       {/* Caption */}
@@ -351,7 +412,11 @@ function PortfolioPost({
       {/* Comments */}
       <View style={{ paddingHorizontal: 14 }}>
         {visibleComments.map((comment) => (
-          <CommentRow key={comment.id} comment={comment} />
+          <CommentRow
+            key={comment.id}
+            comment={comment}
+            onReport={comment.isSelf ? undefined : () => onReportComment(comment)}
+          />
         ))}
         {!expanded && pf.comments.length > 1 && (
           <Pressable onPress={() => setExpanded(true)} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 8 }} hitSlop={6}>
