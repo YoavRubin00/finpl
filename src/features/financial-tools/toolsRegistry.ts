@@ -11,6 +11,7 @@
  */
 
 import {
+  CalendarDays,
   Coins,
   FileText,
   Home,
@@ -36,6 +37,7 @@ export type ToolKey =
   | 'breaking-news'
   | 'portfolio'
   | 'analyst'
+  | 'journal'
   | 'cashflow';
 
 export type ToolStatus = 'active' | 'coming_soon';
@@ -70,6 +72,21 @@ export interface ToolMeta {
 }
 
 export const TOOLS_REGISTRY: readonly ToolMeta[] = [
+  {
+    key: 'journal',
+    route: '/investors-journal',
+    label: 'יומן משקיעים',
+    subtitle: 'אירועי השוק של החודש',
+    Icon: CalendarDays,
+    hue: '#2563eb',
+    light: '#dbeafe',
+    deep: '#1d4ed8',
+    emoji: '📅',
+    premiumDark: false,
+    xpReward: 5,
+    status: 'active',
+    category: 'investor',
+  },
   {
     key: 'analyst',
     route: '/stock-analyst',
