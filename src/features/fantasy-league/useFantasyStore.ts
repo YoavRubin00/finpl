@@ -22,6 +22,7 @@ import {
   DRAFT_STREAK_BONUSES,
 } from './fantasyData';
 import { israelDatePlusDays } from '../../utils/israelTime';
+import { captureEvent } from '../../lib/posthog';
 
 // ---------------------------------------------------------------------------
 // Settlement helpers (shared by the Monday-09:00 auto-rollover)
@@ -193,6 +194,9 @@ export const useFantasyStore = create<FantasyStore>()(
         // The team stays in the `nextEntry` slot until Monday 09:00, when
         // rolloverIfDue() promotes it to the live competition.
         set({ nextEntry: newEntry, lastUpdated: new Date().toISOString() });
+        try {
+          captureEvent('fantasy_entered', { tier, draft_streak: streak, week_id: weekId });
+        } catch { /* non-fatal */ }
         return true;
       },
 
@@ -322,6 +326,14 @@ export const useFantasyStore = create<FantasyStore>()(
           nextEntry: { ...nextEntry, lockedAt: new Date().toISOString() },
           lastUpdated: new Date().toISOString(),
         });
+        try {
+          captureEvent('fantasy_draft_locked', {
+            tier: nextEntry.tier,
+            picks: nextEntry.picks.length,
+            has_captain: !!nextEntry.captainTicker,
+            has_vice: !!nextEntry.viceTicker,
+          });
+        } catch { /* non-fatal */ }
       },
 
       rolloverIfDue: (now: Date = new Date()) => {
@@ -338,6 +350,9 @@ export const useFantasyStore = create<FantasyStore>()(
         const isRolloverA = !!nextEntry && nextEntry.weekId <= liveWeekId;
         const isStaleB = !!currentEntry && currentEntry.weekId < liveWeekId;
         if (!isRolloverA && !isStaleB) return; // nothing due — cheap early exit
+        try {
+          captureEvent('fantasy_rolled_over', { promoted: isRolloverA, had_live: !!currentEntry });
+        } catch { /* non-fatal */ }
 
         // Fold any still-unclaimed prior result into the economy now (rare —
         // user ignored last week's card for a whole week) so no coins are lost

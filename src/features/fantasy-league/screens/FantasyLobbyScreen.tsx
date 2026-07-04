@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { FANTASY } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
+import { captureEvent } from '../../../lib/posthog';
 import {
   getCompetitionPhase,
   getNextDraftOpen,
@@ -292,6 +293,17 @@ export function FantasyLobbyScreen(): React.ReactElement {
   useEffect(() => {
     rolloverIfDue();
   }, [rolloverIfDue, appActive, tick]);
+
+  // Fire once per surfaced results card — the Monday return-hook impression.
+  useEffect(() => {
+    if (!pendingResult) return;
+    try {
+      captureEvent('fantasy_result_viewed', {
+        coins_returned: pendingResult.coinsReturned ?? 0,
+        xp_earned: pendingResult.xpEarned ?? 0,
+      });
+    } catch { /* non-fatal */ }
+  }, [pendingResult?.weekId]);
 
   // Real weekly returns from Yahoo when available; the deterministic
   // simulation keeps the league alive offline. Refresh rides the minute tick.
