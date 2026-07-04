@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -17,6 +17,7 @@ import { track } from '../../../lib/analytics/events';
 import { AvatarImage } from '../../avatars/AvatarImage';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { usePortfolioShareStore } from '../../portfolio-share/usePortfolioShareStore';
+import { SEED_PORTFOLIOS, rankPortfoliosByEngagement, isSeedPortfolio } from '../../portfolio-share/seedPortfolios';
 import { moderateWithSharkBot } from '../../moderation/sharkModeratorBot';
 import { requestGuestGate } from '../../auth/guestValueGate';
 import { PortfolioComposerModal } from '../../portfolio-share/PortfolioComposerModal';
@@ -208,6 +209,7 @@ function PortfolioPost({
 
   const onRate = useCallback(
     (stars: number) => {
+      if (isSeedPortfolio(pf.id)) return; // example content — read-only
       if (isGuest) { requestGuestGate('portfolio_rate'); return; }
       successHaptic();
       void (async () => {
@@ -220,6 +222,7 @@ function PortfolioPost({
   );
 
   const onLikePress = (): void => {
+    if (isSeedPortfolio(pf.id)) return; // example content — read-only
     if (isGuest) { requestGuestGate('portfolio_like'); return; }
     const willLike = !pf.likedByYou;
     tapHaptic();
@@ -235,6 +238,7 @@ function PortfolioPost({
   const submitComment = (): void => {
     const text = draft.trim();
     if (!text) return;
+    if (isSeedPortfolio(pf.id)) return; // example content — read-only
     if (isGuest) { requestGuestGate('portfolio_comment'); return; }
     tapHaptic();
     setDraft('');
@@ -305,7 +309,7 @@ function PortfolioPost({
             {timeAgo(pf.createdAt)}
           </Text>
         </View>
-        {!pf.isSelf && (
+        {!pf.isSelf && !isSeedPortfolio(pf.id) && (
           <Pressable onPress={onMorePress} hitSlop={10} accessibilityRole="button" accessibilityLabel="אפשרויות תוכן — דיווח או חסימה">
             <MoreHorizontal size={18} color={TEXT_FAINT} />
           </Pressable>
@@ -506,6 +510,14 @@ export function PortfolioShareCard(): React.ReactElement {
     if (rewardCoins > 0) showReward(rewardCoins, 'התיק שותף!');
   };
 
+  // Real feed ranked by engagement; falls back to example content ONLY while the
+  // real feed is empty (self-retires the instant a real portfolio exists).
+  const showingSeeds = loaded && portfolios.length === 0;
+  const feed = useMemo(
+    () => (portfolios.length > 0 ? rankPortfoliosByEngagement(portfolios) : showingSeeds ? SEED_PORTFOLIOS : []),
+    [portfolios, showingSeeds],
+  );
+
   return (
     <View style={{ backgroundColor: '#fff' }}>
       {/* Header + add-portfolio CTA */}
@@ -565,44 +577,20 @@ export function PortfolioShareCard(): React.ReactElement {
         </Animated.View>
       )}
 
-      {/* Posts — real community content only */}
-      {portfolios.length === 0 ? (
-        <View style={{ paddingHorizontal: 14, paddingVertical: 20, alignItems: 'center', gap: 12 }}>
-          <View style={{ alignItems: 'center', gap: 4 }}>
-            <Text style={{ fontSize: 14, fontWeight: '900', color: TEXT_PRIMARY, ...RTL }} maxFontSizeMultiplier={1.15}>
-              עוד אין תיקים משותפים
-            </Text>
-            <Text style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: '600', textAlign: 'center', writingDirection: 'rtl' }} maxFontSizeMultiplier={1.15}>
-              הרכיבו תיק ראשון — והקהילה תדרג ותגיב
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => { tapHaptic(); setComposerOpen(true); }}
-            accessibilityRole="button"
-            accessibilityLabel="הרכיבו תיק השקעות ושתפו"
-            style={({ pressed }) => ({ alignSelf: 'stretch', borderRadius: 14, opacity: pressed ? 0.92 : 1, shadowColor: '#3b82f6', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 })}
-          >
-            <LinearGradient
-              colors={['#93c5fd', '#3b82f6', '#1d4ed8']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 14, borderWidth: 1.5, borderColor: '#bfdbfe', paddingVertical: 13, paddingHorizontal: 16 }}
-            >
-              <Plus size={16} color="#ffffff" strokeWidth={3} />
-              <Text style={{ fontSize: 14, fontWeight: '900', color: '#ffffff', flexShrink: 1 }} maxFontSizeMultiplier={1.15}>
-                הרכיבו תיק ושתפו
-              </Text>
-            </LinearGradient>
-          </Pressable>
+      {/* Feed — real content ranked by engagement; example content only while empty */}
+      {showingSeeds && (
+        <View style={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 2 }}>
+          <Text style={{ fontSize: 11, fontWeight: '900', color: TEXT_MUTED, ...RTL }} maxFontSizeMultiplier={1.15}>
+            דוגמאות מהקהילה · הרכיבו תיק אמיתי ותהיו הראשונים בפיד
+          </Text>
         </View>
-      ) : (
-        portfolios.map((pf, i) => (
-          <React.Fragment key={pf.id}>
-            {i > 0 && <View style={{ height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 14 }} />}
-            <PortfolioPost pf={pf} onRewardCoins={(coins) => showReward(coins, 'דירגתם!')} />
-          </React.Fragment>
-        ))
       )}
+      {feed.map((pf, i) => (
+        <React.Fragment key={pf.id}>
+          {i > 0 && <View style={{ height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 14 }} />}
+          <PortfolioPost pf={pf} onRewardCoins={(coins) => showReward(coins, 'דירגתם!')} />
+        </React.Fragment>
+      ))}
 
       {/* Legal disclaimer */}
       <View style={{ backgroundColor: '#fef2f2', borderTopWidth: 1, borderTopColor: '#fee2e2', paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 8 }}>
