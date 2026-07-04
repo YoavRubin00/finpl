@@ -2849,6 +2849,7 @@ export function LessonFlowScreen() {
         // Keep flowing — pre-chest chips, the pending knowledgeLevel question, OR
         // post-chest chips on the way to 100%. Track the new phase to re-fire.
         tt_initialPhaseRef.current = phase;
+        bumpTtSeam((t) => t + 1); // force the guard-release re-render (see decl)
         return;
       }
       // 100% → bonus gold + XP. RewardAnimationProvider (app-root) auto-detects the
@@ -3394,6 +3395,14 @@ export function LessonFlowScreen() {
   // seam: bumped once per chip completion (NOT the chest-crossing one).
   const [calloutSeq, setCalloutSeq] = useState(0);
   const [calloutRemaining, setCalloutRemaining] = useState(3);
+  // seam-bump: the auto-flow "keep flowing" branch only updates a REF
+  // (tt_initialPhaseRef) — no re-render. A transition whose completed phase
+  // isn't mapped in TT_PHASE_TO_KIND (sim-intro→sim, mid-quiz-video→quizzes)
+  // therefore stayed stuck on the empty-View guard (~line 4319) — the WHITE
+  // SCREEN on the continuous path into the sandbox (Yoav 2026-07-04; entering
+  // the sim from the accordion deep-links straight to 'sim' and never hits
+  // the seam). Bumping this dummy state forces the release re-render.
+  const [, bumpTtSeam] = useState(0);
   // Init TRUE on the FIRST render for mod-0-1b (non-Pro, unseen) so the intro
   // audio's `audioPaused` is true from frame 0 — otherwise the intro card's audio
   // effect (a child) runs before a mount effect would and the voice blips before
