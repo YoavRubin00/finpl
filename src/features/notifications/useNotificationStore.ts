@@ -18,7 +18,14 @@ Notifications.setNotificationHandler({
 });
 
 // ─── Notification content definitions ───────────────────────────────────────
-const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentInput> = {
+// Fantasy owns three variant payloads (draft opens / lock soon / results)
+// rather than a single per-channel default, so it's excluded from the
+// channel-keyed defaults and its contents are added explicitly below.
+const CONTENT: Record<Exclude<NotificationChannelId, "fantasy">, Notifications.NotificationContentInput> & {
+  fantasyDraftOpen: Notifications.NotificationContentInput;
+  fantasyLockSoon: Notifications.NotificationContentInput;
+  fantasyResults: Notifications.NotificationContentInput;
+} = {
   // Push titles intentionally emoji-free (2026-05-30 audit: CALM theme dictates
   // restraint; emojis read as casino-creep). Emojis in body copy still ok when
   // they add information (e.g. mascot avatar).
@@ -100,6 +107,22 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     body: "גלה את הכלי הפיננסי של היום. בדיקה של דקה.",
     data: { screen: "/fire-calculator" },
   },
+  // ─── Fantasy league weekly cycle (P1-3) — one channel, three moments ───
+  fantasyDraftOpen: {
+    title: "הדראפט נפתח!",
+    body: "בונים קבוצה חדשה לשבוע הבא — 6 מניות, קפטן, וקדימה.",
+    data: { screen: "/(tabs)/fantasy" },
+  },
+  fantasyLockSoon: {
+    title: "נעילה מתקרבת",
+    body: "הדראפט נסגר ביום שני 09:00 — עוד לא בנית קבוצה? זה הזמן.",
+    data: { screen: "/(tabs)/fantasy" },
+  },
+  fantasyResults: {
+    title: "התוצאות שלך מוכנות",
+    body: "השבוע נסגר — בוא לראות איך הקבוצה שלך סגרה.",
+    data: { screen: "/(tabs)/fantasy" },
+  },
 
 };
 
@@ -160,6 +183,10 @@ async function ensureAndroidChannels() {
     name: "הכלי הפיננסי של היום",
     importance: Notifications.AndroidImportance.DEFAULT,
   });
+  await Notifications.setNotificationChannelAsync("fantasy", {
+    name: "ליגת הפנטזי",
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
 
 }
 
@@ -212,6 +239,11 @@ interface NotificationActions {
   scheduleMarketHook: (content: Notifications.NotificationContentInput) => Promise<void>;
   scheduleChestReady: (delayMs: number) => Promise<void>;
   scheduleDailyChallenge: (hourOfDay?: number) => Promise<void>;
+  /** Fantasy-league weekly cycle (P1-3, founder-approved to exceed the daily
+   *  cap): three recurring WEEKLY pushes in device-local time — draft opens
+   *  (Thu 09:00), lock-soon nudge (Sun 20:00), results (Mon 09:00). Cancels the
+   *  prior fantasy stack first so re-grants/app-opens never duplicate it. */
+  scheduleFantasyWeekly: () => Promise<void>;
   /** Schedule the daily Breaking News push at `hourOfDay` (0-23, local TZ).
    *  Cancels any previous breakingNews schedule. No-op when permission isn't
    *  granted. Free-standing — not tied to any preference flag. */
@@ -292,6 +324,9 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
               },
               appointmentHour ?? 20,
             );
+            // Fantasy weekly cycle (P1-3) — founder authorized exceeding the
+            // "Cap stays 2" above; these are weekly, not daily, pushes.
+            await get().scheduleFantasyWeekly();
             track({ name: 'next_day_reminder_scheduled', props: { source: source ?? 'permission_grant' } });
           } catch { /* non-fatal — the daily scheduler re-arms on the next app open */ }
         }
@@ -383,6 +418,60 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
           scheduled: [
             ...scheduled,
             { channelId: "dailyChallenge", identifier },
+          ],
+        });
+      },
+
+      /** Schedule the three recurring weekly fantasy-league pushes (device-local
+       *  time): draft opens Thu 09:00, lock-soon nudge Sun 20:00, results Mon
+       *  09:00. Founder-approved (P1-3) to run alongside the daily cap. */
+      scheduleFantasyWeekly: async (): Promise<void> => {
+        const { permissionGranted, cancelChannel } = get();
+        if (!permissionGranted) return;
+        // The 'fantasy' Android channel is NEW — re-register defensively so
+        // scheduling to channelId:'fantasy' isn't silently dropped on Android 8+
+        // when called outside the permission-grant flow (which already runs it).
+        await ensureAndroidChannels();
+        await cancelChannel("fantasy");
+        const draftIdentifier = await Notifications.scheduleNotificationAsync({
+          content: withChannel(CONTENT.fantasyDraftOpen, "fantasy"),
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+            weekday: 5, // Thursday (1=Sunday … 7=Saturday)
+            hour: 9,
+            minute: 0,
+            channelId: "fantasy",
+          },
+        });
+        const lockIdentifier = await Notifications.scheduleNotificationAsync({
+          content: withChannel(CONTENT.fantasyLockSoon, "fantasy"),
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+            weekday: 1, // Sunday
+            hour: 20,
+            minute: 0,
+            channelId: "fantasy",
+          },
+        });
+        const resultsIdentifier = await Notifications.scheduleNotificationAsync({
+          content: withChannel(CONTENT.fantasyResults, "fantasy"),
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+            weekday: 2, // Monday
+            hour: 9,
+            minute: 0,
+            channelId: "fantasy",
+          },
+        });
+        // Re-read after cancelChannel's set() (the captured array would be
+        // stale) and filter defensively so the channel never accumulates
+        // duplicate entries on repeated scheduling.
+        set({
+          scheduled: [
+            ...get().scheduled.filter((s) => s.channelId !== "fantasy"),
+            { channelId: "fantasy" as const, identifier: draftIdentifier },
+            { channelId: "fantasy" as const, identifier: lockIdentifier },
+            { channelId: "fantasy" as const, identifier: resultsIdentifier },
           ],
         });
       },

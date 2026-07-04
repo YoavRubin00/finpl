@@ -12,7 +12,8 @@ export type NotificationChannelId =
   | "aiInsight"
   | "upgradeNudge"
   | "tools"
-  | "breakingNews";
+  | "breakingNews"
+  | "fantasy";
 
 export interface ScheduledNotification {
   channelId: NotificationChannelId;
