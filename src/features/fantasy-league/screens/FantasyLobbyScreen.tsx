@@ -354,7 +354,10 @@ export function FantasyLobbyScreen(): React.ReactElement {
   );
   const localEntry = leaderboard.find((e) => e.isLocal);
   const rank = localEntry?.rank ?? leaderboard.length + 1;
-  const totalPlayers = leaderboard.length || 100;
+  const totalPlayers = leaderboard.length;
+  // No real opponents settle while the board is frozen — don't invent a field
+  // of "100 players" (Fable P0-6 / Moni P0-2). Rank UI shows only with rivals.
+  const hasRivals = totalPlayers > 1;
 
   // Build StockCategoryId → ticker map for sectors
   const stockToCategory = useMemo(() => {
@@ -411,8 +414,8 @@ export function FantasyLobbyScreen(): React.ReactElement {
             !hasNextTeam && <PreDraftCard phase={phase} />
           )}
 
-          {/* League arena card — tier shield + rank (no promote/relegate zones) */}
-          {hasEntered && currentEntry && (
+          {/* League arena card — only with real rivals (no fabricated field) */}
+          {hasEntered && currentEntry && hasRivals && (
             <Animated.View entering={FadeInDown.duration(360)}>
               <F2LeagueArenaCard
                 tier={currentEntry.tier as 'silver' | 'gold' | 'diamond'}
@@ -488,13 +491,13 @@ export function FantasyLobbyScreen(): React.ReactElement {
                 />
                 <F2QuickAction
                   label="לוח חי"
-                  sub={`#${rank} מ-${totalPlayers}`}
+                  sub={hasRivals ? `#${rank} מ-${totalPlayers}` : `תשואה ${effReturn >= 0 ? '+' : ''}${effReturn}%`}
                   icon={<F2Bolt size={20} color={FANTASY.primary} />}
                   onPress={() => router.push('/fantasy/live')}
                 />
                 <F2QuickAction
                   label="דירוג"
-                  sub={`#${rank} · ${totalPlayers}`}
+                  sub={hasRivals ? `#${rank} · ${totalPlayers}` : 'משחק יחיד'}
                   icon={<F2Users size={20} color={FANTASY.primary} />}
                   onPress={() => router.push('/fantasy/leaderboard')}
                 />

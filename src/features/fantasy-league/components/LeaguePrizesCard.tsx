@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FANTASY } from '../../../constants/theme';
-import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 
 type Tier = 'silver' | 'gold' | 'diamond';
 
@@ -10,18 +9,17 @@ interface LeaguePrizesCardProps {
   tier: Tier;
   tierLabel: string;
   entryCost: number;
-  prizeMultipliers: readonly [number, number, number, number, number];
-  prizeDiamonds:    readonly [number, number, number, number, number];
-  prizeXP?:         readonly [number, number, number, number, number];
-  /** Highlights the row that matches the player's current rank. */
+  // Kept for the caller's signature, but the rank-based prize model is frozen
+  // (no real opponents), so these are no longer rendered — the card now shows
+  // the honest current economy: 10% floor + XP + full refund (Moni ruling P0-2).
+  prizeMultipliers?: readonly number[];
+  prizeDiamonds?: readonly number[];
+  prizeXP?: readonly number[];
   currentRank?: number;
 }
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const NUM_STYLE = { fontVariant: ['tabular-nums' as const] };
-
-const MEDALS = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'] as const;
-const PLACE_LABELS = ['מקום ראשון', 'מקום שני', 'מקום שלישי', 'מקום רביעי', 'מקום חמישי'] as const;
 
 function formatCoins(n: number): string {
   if (n >= 1_000_000) {
@@ -35,73 +33,45 @@ function formatCoins(n: number): string {
   return n.toLocaleString('en-US');
 }
 
-interface PrizeRowProps {
-  place: number;
-  coins: number;
-  diamonds: number;
-  xp: number;
-  highlight: boolean;
+interface RewardRowProps {
+  emoji: string;
+  title: string;
+  sub?: string;
+  value?: string;
 }
 
-function PrizeRow({ place, coins, diamonds, xp, highlight }: PrizeRowProps): React.ReactElement {
+function RewardRow({ emoji, title, sub, value }: RewardRowProps): React.ReactElement {
   return (
     <View
       style={{
         flexDirection: 'row-reverse',
         alignItems: 'center',
         gap: 10,
-        paddingVertical: 8,
-        paddingHorizontal: 10,
-        borderRadius: 10,
-        backgroundColor: highlight ? '#fffbeb' : 'transparent',
-        borderWidth: highlight ? 1.5 : 0,
-        borderColor: highlight ? FANTASY.goldStroke : 'transparent',
+        paddingVertical: 7,
+        paddingHorizontal: 6,
       }}
     >
-      <Text style={{ fontSize: 20, width: 28, textAlign: 'center' }}>{MEDALS[place - 1]}</Text>
-      <Text style={{
-        fontSize: 12,
-        fontWeight: '800',
-        color: highlight ? FANTASY.warningDark : FANTASY.inkLabel,
-        ...RTL,
-        flex: 1,
-      }}>
-        {PLACE_LABELS[place - 1]}
-      </Text>
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 3 }}>
-          <GoldCoinIcon size={13} />
-          <Text style={[
-            { fontSize: 13, fontWeight: '900', color: FANTASY.ink },
-            NUM_STYLE,
-          ]}>
-            {formatCoins(coins)}
-          </Text>
-        </View>
-        {diamonds > 0 && (
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 2 }}>
-            <Text style={{ fontSize: 11 }}>💎</Text>
-            <Text style={[
-              { fontSize: 12, fontWeight: '900', color: FANTASY.primary },
-              NUM_STYLE,
-            ]}>
-              {diamonds}
-            </Text>
-          </View>
-        )}
-        {xp > 0 && (
-          <Text style={[
-            { fontSize: 10, fontWeight: '800', color: FANTASY.inkFaint },
-            NUM_STYLE,
-          ]}>
-            +{xp} XP
-          </Text>
-        )}
+      <Text style={{ fontSize: 18, width: 26, textAlign: 'center' }}>{emoji}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 12.5, fontWeight: '800', color: FANTASY.ink, ...RTL }}>{title}</Text>
+        {sub ? (
+          <Text style={{ fontSize: 10.5, color: FANTASY.inkMuted, ...RTL, marginTop: 1 }}>{sub}</Text>
+        ) : null}
       </View>
+      {value ? (
+        <Text style={[{ fontSize: 12.5, fontWeight: '900', color: FANTASY.warningDark }, NUM_STYLE]}>
+          {value}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
+/**
+ * "What you earn" card. The rank-based 5×/diamond prize table was fabricated
+ * (no real opponents settle) and read as a scam against the 10% that actually
+ * pays out, so it's replaced with the honest current economy (Moni ruling P0-2).
+ */
 export function LeaguePrizesCard({
   tier,
   tierLabel,
@@ -111,9 +81,12 @@ export function LeaguePrizesCard({
   prizeXP,
   currentRank,
 }: LeaguePrizesCardProps): React.ReactElement {
-  // Consolation = 10% of entry for rank 6+ (matches claimResults logic).
-  const consolationCoins = Math.round(entryCost * 0.1);
   void tier;
+  void prizeMultipliers;
+  void prizeDiamonds;
+  void prizeXP;
+  void currentRank;
+  const floor = Math.round(entryCost * 0.1);
 
   return (
     <LinearGradient
@@ -134,102 +107,60 @@ export function LeaguePrizesCard({
       }}
     >
       {/* Header */}
-      <View style={{
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-        paddingHorizontal: 4,
-      }}>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-          <Text style={{ fontSize: 16 }}>🏆</Text>
-          <Text style={{
-            fontSize: 14,
-            fontWeight: '900',
-            color: FANTASY.warningDark,
-            ...RTL,
-          }}>
-            פרסי {tierLabel}
-          </Text>
-        </View>
-        {currentRank != null && (
-          <View style={{
-            backgroundColor: FANTASY.surfaceCard,
-            borderWidth: 1,
-            borderColor: FANTASY.borderStrong,
-            paddingVertical: 2,
-            paddingHorizontal: 8,
-            borderRadius: 999,
-          }}>
-            <Text style={[
-              { fontSize: 10, fontWeight: '900', color: FANTASY.ink },
-              NUM_STYLE,
-            ]}>
-              המיקום שלך · #{currentRank}
-            </Text>
-          </View>
-        )}
+      <View
+        style={{
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 6,
+          marginBottom: 6,
+          paddingHorizontal: 4,
+        }}
+      >
+        <Text style={{ fontSize: 16 }}>🏆</Text>
+        <Text style={{ fontSize: 14, fontWeight: '900', color: FANTASY.warningDark, ...RTL }}>
+          מה מרוויחים ב{tierLabel}
+        </Text>
       </View>
 
-      {/* Prize rows 1-5 */}
-      <View style={{ gap: 2 }}>
-        {[1, 2, 3, 4, 5].map((place) => {
-          const i = place - 1;
-          const coins = Math.round(entryCost * prizeMultipliers[i]);
-          const diamonds = prizeDiamonds[i] ?? 0;
-          const xp = prizeXP?.[i] ?? 0;
-          return (
-            <PrizeRow
-              key={place}
-              place={place}
-              coins={coins}
-              diamonds={diamonds}
-              xp={xp}
-              highlight={currentRank === place}
-            />
-          );
-        })}
+      {/* Honest reward rows */}
+      <View style={{ gap: 1 }}>
+        <RewardRow emoji="🪙" title="10% מהקופה חוזר אליכם — תמיד" value={`${formatCoins(floor)} 🪙`} />
+        <RewardRow emoji="⭐" title="XP על כל משחק" sub="בסיס + רצף דראפט + משימות" />
+        <RewardRow
+          emoji="🛟"
+          title="לא דרפטתם? הקופה חוזרת במלואה"
+          value={`${formatCoins(entryCost)} · 100%`}
+        />
       </View>
 
-      {/* Consolation footer */}
-      <View style={{
-        marginTop: 8,
-        paddingTop: 8,
-        borderTopWidth: 1,
-        borderTopColor: '#fde68a',
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 4,
-      }}>
-        <Text style={{
+      {/* Talent framing */}
+      <Text
+        style={{
+          marginTop: 8,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          borderTopColor: '#fde68a',
           fontSize: 11,
-          fontWeight: '800',
+          fontWeight: '700',
           color: FANTASY.inkMuted,
           ...RTL,
-        }}>
-          מקום 6 ומטה · ניחומים
-        </Text>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 3 }}>
-          <GoldCoinIcon size={11} />
-          <Text style={[
-            { fontSize: 11, fontWeight: '900', color: FANTASY.inkMuted },
-            NUM_STYLE,
-          ]}>
-            {formatCoins(consolationCoins)}
-          </Text>
-        </View>
-      </View>
+          textAlign: 'center',
+        }}
+      >
+        המשחק שלכם, הבחירות שלכם — הן שקובעות את הניקוד.
+      </Text>
 
       {/* Entry hint */}
-      <Text style={{
-        marginTop: 6,
-        fontSize: 10,
-        color: FANTASY.inkFaint,
-        fontWeight: '700',
-        textAlign: 'center',
-        writingDirection: 'rtl',
-      }}>
+      <Text
+        style={{
+          marginTop: 6,
+          fontSize: 10,
+          color: FANTASY.inkFaint,
+          fontWeight: '700',
+          textAlign: 'center',
+          writingDirection: 'rtl',
+        }}
+      >
         עלות כניסה: {formatCoins(entryCost)} 🪙 · קופה אחת לשבוע
       </Text>
     </LinearGradient>

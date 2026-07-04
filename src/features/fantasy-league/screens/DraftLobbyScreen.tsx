@@ -392,7 +392,7 @@ export function DraftLobbyScreen(): React.ReactElement {
         <SharkConfirmModal
           visible={confirmJoin}
           title={`עולים על הסיפון, ${TIER_CONFIGS[selectedTier].label}?`}
-          message={`קופת הקרב — ${TIER_CONFIGS[selectedTier].entryCost.toLocaleString('he-IL')} מטבעות. תחלק חכם בין 5 המניות, מנף את הסוס המוביל, ותתפוס לי מקום בפודיום!`}
+          message={`קופת הקרב — ${TIER_CONFIGS[selectedTier].entryCost.toLocaleString('he-IL')} מטבעות. לחלק חכם בין 6 המניות, למנף את הסוס המוביל, ולהראות לשוק מי הכריש כאן.`}
           confirmLabel="צאו לקרב"
           cancelLabel="עוד רגע"
           tier={selectedTier}

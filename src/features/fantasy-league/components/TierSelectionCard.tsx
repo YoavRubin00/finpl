@@ -29,10 +29,18 @@ const TIER_INK: Record<FantasyTier, string> = {
   diamond: '#0a1e3a',
 };
 
+function shortCoins(n: number): string {
+  return n >= 1000 ? `${n % 1000 ? (n / 1000).toFixed(1) : n / 1000}K` : String(n);
+}
+
 export function TierSelectionCard({ config, selected, disabled, onSelect }: Props): React.ReactElement {
   const gradient = TIER_GRADIENTS[config.id];
   const glow = TIER_GLOW[config.id];
   const ink = TIER_INK[config.id];
+  // Honest reward = 10% of the entry back (the participation floor that actually
+  // pays out). The old top-3 medal breakdown advertised rank prizes that are
+  // frozen and never settle — a scam against the 10% (Moni ruling P0-2).
+  const floorReturn = Math.round(config.entryCost * 0.1);
 
   return (
     <Pressable
@@ -42,7 +50,7 @@ export function TierSelectionCard({ config, selected, disabled, onSelect }: Prop
         opacity: disabled ? 0.45 : pressed ? 0.88 : 1,
       })}
       accessibilityRole="button"
-      accessibilityLabel={`${config.label} — ${config.entryCost.toLocaleString('he-IL')} מטבעות`}
+      accessibilityLabel={`${config.label} — ${config.entryCost.toLocaleString('he-IL')} מטבעות, מחזיר ${floorReturn.toLocaleString('he-IL')}`}
       accessibilityState={{ selected, disabled }}
     >
       <LinearGradient
@@ -95,48 +103,12 @@ export function TierSelectionCard({ config, selected, disabled, onSelect }: Prop
             {config.entryCost.toLocaleString('he-IL')}
           </Text>
         </View>
-        {/* Top 3 prize breakdown */}
-        <View style={{ gap: 2, marginTop: 2, alignItems: 'center' }}>
-          {[0, 1, 2].map((i) => {
-            const place = i + 1;
-            const coins = Math.round(config.entryCost * config.prizeMultipliers[i]);
-            const diamonds = config.prizeDiamonds[i];
-            const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉';
-            return (
-              <View
-                key={place}
-                style={{
-                  flexDirection: 'row-reverse',
-                  alignItems: 'center',
-                  gap: 3,
-                }}
-              >
-                <Text style={{ fontSize: 9 }}>{medal}</Text>
-                <Text
-                  style={{
-                    fontSize: 9,
-                    fontWeight: '900',
-                    color: ink,
-                    opacity: 0.85,
-                  }}
-                >
-                  🪙{coins >= 1000 ? `${(coins / 1000).toFixed(coins % 1000 ? 1 : 0)}K` : coins}
-                </Text>
-                {diamonds > 0 && (
-                  <Text
-                    style={{
-                      fontSize: 9,
-                      fontWeight: '900',
-                      color: ink,
-                      opacity: 0.85,
-                    }}
-                  >
-                    💎{diamonds}
-                  </Text>
-                )}
-              </View>
-            );
-          })}
+        {/* Honest reward — 10% of entry back + XP (rank prizes are frozen) */}
+        <View style={{ marginTop: 2, alignItems: 'center', gap: 1 }}>
+          <Text style={{ fontSize: 9.5, fontWeight: '900', color: ink, opacity: 0.9 }}>
+            חוזר 🪙{shortCoins(floorReturn)}
+          </Text>
+          <Text style={{ fontSize: 8.5, fontWeight: '800', color: ink, opacity: 0.72 }}>+ XP</Text>
         </View>
         {selected && (
           <View
