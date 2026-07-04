@@ -364,6 +364,8 @@ export function F2QuickAction({ label, sub, icon, badge, onPress }: QuickActionP
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={sub ? `${label}, ${sub}` : label}
       style={({ pressed }) => ({
         flex: 1,
         backgroundColor: FANTASY.surfaceCard,

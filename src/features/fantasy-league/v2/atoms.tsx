@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  useReducedMotion,
   cancelAnimation,
   withTiming,
   withSequence,
@@ -137,12 +138,13 @@ export function F2Tag({ children, color = FANTASY.primary, tone = 'soft', size =
 interface LiveDotProps { color?: string; label?: string }
 export function F2LiveDot({ color = FANTASY.positive, label = 'LIVE' }: LiveDotProps): React.ReactElement {
   const op = useSharedValue(1);
+  const reduced = useReducedMotion();
   // Pulse only while the app is foregrounded — the dot is a live indicator,
   // so it keeps pulsing whenever visible; it just stops burning frames in
-  // the background.
+  // the background. Respect reduced-motion: hold steady, no pulse (Fable P1-11).
   const appActive = useAppActive();
   useEffect(() => {
-    if (!appActive) {
+    if (!appActive || reduced) {
       cancelAnimation(op);
       op.value = 1;
       return;
@@ -155,7 +157,7 @@ export function F2LiveDot({ color = FANTASY.positive, label = 'LIVE' }: LiveDotP
       -1,
     );
     return () => cancelAnimation(op);
-  }, [appActive, op]);
+  }, [appActive, op, reduced]);
   const dotStyle = useAnimatedStyle(() => ({ opacity: op.value }));
   return (
     <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5 }}>
