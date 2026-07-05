@@ -406,7 +406,11 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
   // too sensitive for adaptive traffic). The arm is drawn once per install and
   // persisted (useTutorialStore.firstRunArm) by firstRunExperiment.ts — this
   // config only supplies the draw weights + the analytics variant ids.
-  // Success metric: chest_opened{mod-0-1} within 72h of assignment.
+  // Success metric — the COMPOUND, not activation alone: chest_opened{mod-0-1}
+  // within 72h of assignment, which structurally requires completed onboarding
+  // (the chest lives on the post-onboarding map in BOTH arms), and the
+  // recordConversion site double-checks hasCompletedOnboarding explicitly.
+  // A v1 user who finishes the module but drops at profiling does NOT convert.
   // Pre-registered guardrails (coordinator 5.7, approved): v1 is disqualified
   // if post-module profiling completion < 85% of v0, or signup < 90% of v0.
   // Kill switches: allocation v1→0 (new users), pinned control, or

@@ -523,15 +523,21 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       });
     } catch { /* non-fatal */ }
     // Module-first first-run experiment (onboarding_module_first): the mod-0-1
-    // chest IS the activation metric. Record the bandit conversion for
-    // whichever arm this install was assigned — fires symmetrically for both
-    // arms at the same moment (this chest), so the in-app report compares
-    // apples to apples. The authoritative read stays the PostHog chest_opened
-    // event above, sliced by person.bandit_variant__onboarding_module_first.
+    // chest IS the activation metric — but a conversion counts ONLY as the
+    // COMPOUND "activated AND completed onboarding" (Yoav 5.7.26: an arm that
+    // produces module-finishers who never finish profiling must not win).
+    // Structurally the map is post-onboarding in both arms already, so the
+    // hasCompletedOnboarding check is a belt-and-suspenders invariant: if the
+    // chest ever moves (or a pre-onboarding map path appears), the metric
+    // degrades loudly to zero instead of silently becoming activation-only.
+    // Fires symmetrically for both arms at the same moment (this chest); the
+    // authoritative read stays the PostHog chest_opened event above, sliced
+    // by person.bandit_variant__onboarding_module_first.
     if (module.id === 'mod-0-1') {
       try {
         const arm = useTutorialStore.getState().firstRunArm;
-        if (arm !== null) {
+        const onboarded = useAuthStore.getState().hasCompletedOnboarding;
+        if (arm !== null && onboarded) {
           useBanditStore.getState().recordConversion(FIRST_RUN_EXPERIMENT_ID, firstRunVariantId(arm));
         }
       } catch { /* non-fatal */ }
