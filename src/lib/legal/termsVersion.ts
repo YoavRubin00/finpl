@@ -6,8 +6,15 @@
  *
  * When you bump this, also update TERMS_UPDATE_SUMMARY_HE below to describe
  * what changed — that's what the user sees in the re-consent modal.
+ *
+ * HELD AT '2026-06-04b' ON PURPOSE (Yoav 2026-07-05): bumping to '2026-07-03'
+ * arms a blocking re-consent modal for EVERY existing user, and this constant
+ * rides OTA. Per docs/FORCE-UPDATE-PREP.md the bump ships only INSIDE the
+ * native 1.4.3 force-update build — set it to '2026-07-03' on that build's
+ * branch, never on an OTA train. (The 2026-07-03 summary bullets below are
+ * inert until the version is bumped.)
  */
-export const CURRENT_TERMS_VERSION = '2026-07-03';
+export const CURRENT_TERMS_VERSION = '2026-06-04b';
 
 /**
  * Consolidated Hebrew bullets shown in the re-consent modal.
