@@ -46,7 +46,6 @@ export default function TabsLayout() {
           <Tabs.Screen name="shop" options={{ href: null }} />
           <Tabs.Screen name="profile" options={{ href: null }} />
           <Tabs.Screen name="fantasy" options={{ href: null }} />
-          <Tabs.Screen name="arena" options={{ href: null }} />
         </Tabs>
       </View>
       {/* Captain Shark retention nudges — session bonus / seasonal events / hearts-full */}
