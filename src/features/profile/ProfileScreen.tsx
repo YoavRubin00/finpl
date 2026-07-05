@@ -16,11 +16,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   Zap, Star, Target, ChevronRight,
-  Crown, Swords, Pencil, X,
+  Crown, Pencil, X,
 } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
-import { useDuelsStore } from "../social/useDuelsStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useIsPro } from "../subscription/useSubscription";
 import { HeartsDisplay } from "../subscription/HeartsUI";
@@ -132,7 +131,6 @@ export function ProfileScreen() {
   const xp = economyData?.xp ?? 0;
   const coins = economyData?.coins ?? 0;
   const streak = streakData?.currentStreak ?? 0;
-  const duelRecord = useDuelsStore((s) => s.record);
   const displayName = useAuthStore((s) => s.displayName);
   const profile = useAuthStore((s) => s.profile);
   const isPro = useIsPro();
@@ -157,7 +155,6 @@ export function ProfileScreen() {
   const xpCardStyle = useEntranceAnimation(fadeInUp, { delay: 180 });
   const statsLeftStyle = useEntranceAnimation(slideInLeft, { delay: 260 });
   const statsRightStyle = useEntranceAnimation(slideInRight, { delay: 260 });
-  const duelCardStyle = useEntranceAnimation(fadeInUp, { delay: 340 });
   const profileInfoStyle = useEntranceAnimation(fadeInUp, { delay: 420 });
   const actionsStyle = useEntranceAnimation(fadeInUp, { delay: 660 });
 
@@ -413,38 +410,6 @@ export function ProfileScreen() {
                 </View>
               </LinearGradient>
             </AnimatedPressable>
-          )}
-
-          {/* Duel W/L Record */}
-          {(duelRecord.wins > 0 || duelRecord.losses > 0 || duelRecord.draws > 0) && (
-            <Animated.View style={[duelCardStyle, styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <View style={[styles.cardTopBorder, { backgroundColor: "#dc2626" }]} />
-              <View style={styles.cardBody}>
-                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                  <Swords size={16} color="#dc2626" />
-                  <Text style={[styles.cardLabel, { color: "#dc2626" }]}>דו-קרב 1v1</Text>
-                </View>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <View style={[styles.duelStat, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-                    <Text style={[styles.duelStatValue, { color: "#16a34a" }]}>{duelRecord.wins}</Text>
-                    <Text style={[styles.duelStatLabel, { color: theme.textMuted }]}>ניצחונות</Text>
-                  </View>
-                  <View style={[styles.duelStat, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-                    <Text style={[styles.duelStatValue, { color: "#dc2626" }]}>{duelRecord.losses}</Text>
-                    <Text style={[styles.duelStatLabel, { color: theme.textMuted }]}>הפסדים</Text>
-                  </View>
-                  <View style={[styles.duelStat, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-                    <Text style={[styles.duelStatValue, { color: "#6b7280" }]}>{duelRecord.draws}</Text>
-                    <Text style={[styles.duelStatLabel, { color: theme.textMuted }]}>תיקו</Text>
-                  </View>
-                </View>
-                {(duelRecord.wins + duelRecord.losses) > 0 && (
-                  <Text style={[styles.cardMuted, { marginTop: 8, textAlign: "center", color: theme.textMuted }]}>
-                    אחוז ניצחון: {Math.round((duelRecord.wins / (duelRecord.wins + duelRecord.losses)) * 100)}%
-                  </Text>
-                )}
-              </View>
-            </Animated.View>
           )}
 
 
@@ -1054,27 +1019,6 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: 999,
-  },
-  // Duel stats
-  duelStat: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "#f9fafb",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  duelStatValue: {
-    fontSize: 22,
-    fontWeight: "900",
-    fontVariant: ["tabular-nums"],
-  },
-  duelStatLabel: {
-    fontSize: 10,
-    color: "#64748b",
-    fontWeight: "600",
-    writingDirection: "rtl",
   },
   // Profile chips
   profileChip: {
