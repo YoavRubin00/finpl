@@ -23,7 +23,7 @@ import { useBanditStore } from '../bandit/useBanditStore';
 import { FIRST_RUN_EXPERIMENT_ID, firstRunVariantId } from '../onboarding/firstRunExperiment';
 import type { Module } from '../chapter-1-content/types';
 import type { Topic, ChestRarity } from './types';
-import { CHEST_RARITY_BONUS, chipsToChestFor } from './types';
+import { CHEST_RARITY_BONUS, chipsToChestFor, MODULE_TT_XP, MODULE_TT_COINS, CHEST_ENERGY_REWARD } from './types';
 import { resolveTopics } from './topicResolver';
 import { getModuleTool, buildToolTopic } from './moduleToolMap';
 import { getModuleCarousel, buildCarouselTopic } from './moduleCarouselMap';
@@ -41,19 +41,14 @@ import { ModuleSharkCallCard } from './components/ModuleSharkCallCard';
 import { useModuleSharkCall } from './components/useModuleSharkCall';
 import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleComprehensionStore';
 
-/** Base reward on topic-tree 70% completion. Lower than the legacy
- *  LessonFlowScreen MODULE_COMPLETE_XP (30) because topics also yield
- *  per-topic micro-XP in a future loop. Tunable from a single point. */
-const MODULE_TT_XP = 30;
-const MODULE_TT_COINS = 150;
+// MODULE_TT_XP / MODULE_TT_COINS / CHEST_ENERGY_REWARD moved to ./types.ts —
+// the module-first first-run grants the same chest from LessonFlowScreen, so
+// the amounts live in one shared place.
 /** Small 100%-completion pop (Yoav 2026-06-26). Per-chip rewards were removed —
  *  the only post-70% reward is this modest coin/XP fly-out when the module hits
  *  100% (no modal; RewardAnimationProvider fires the fly-out on the economy delta). */
 const HUNDRED_PCT_XP = 15;
 const HUNDRED_PCT_COINS = 60;
-/** Energy (⚡) the 70% chest grants — real grantEnergy + a fly-out in the
- *  ChestCelebrationModal (Yoav 2026-06-22: "בתיבה יקבלו גם 2 אנרגיה"). */
-const CHEST_ENERGY_REWARD = 2;
 /** R6 Epic 5 — second chest at 100%. Larger reward than the 70%
  *  threshold drop. Mirrors the "you actually finished EVERYTHING"
  *  framing the user gets in the modal copy. */

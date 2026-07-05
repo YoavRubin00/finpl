@@ -41,7 +41,9 @@ import { StreakCelebrationScreen } from "../streak/StreakCelebrationScreen";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { SignupGateStep } from "./SignupGateStep";
-import { isModuleFirstArm } from "./firstRunExperiment";
+import { isModuleFirstArm, FIRST_RUN_EXPERIMENT_ID, firstRunVariantId } from "./firstRunExperiment";
+import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
+import { useBanditStore } from "../bandit/useBanditStore";
 import { getApiBase } from "../../db/apiBase";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
@@ -2910,6 +2912,19 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     try {
       const tut = useTutorialStore.getState();
       if (tut.firstRunArm !== null) tut.setFirstRunStage('done');
+      // Module-first v1 COMPOUND conversion (Yoav 5.7.26): in the reordered
+      // arm the chest fires BEFORE onboarding, so "activated AND onboarded"
+      // completes HERE — onboarding just finished for a user whose mod-0-1
+      // threshold is already stamped. Control converts at the accordion chest
+      // (post-onboarding) instead; the sites are mutually exclusive via the
+      // modulesPastThreshold stamp (a stamped module never re-fires the
+      // accordion chest, and control is never stamped before this point).
+      if (
+        tut.firstRunArm === 'module_first' &&
+        Boolean(useTopicProgressStore.getState().modulesPastThreshold['mod-0-1'])
+      ) {
+        useBanditStore.getState().recordConversion(FIRST_RUN_EXPERIMENT_ID, firstRunVariantId('module_first'));
+      }
     } catch { /* non-fatal */ }
     router.replace("/(tabs)" as Href);
   }

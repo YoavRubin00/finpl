@@ -123,6 +123,14 @@ import { PopModal } from "../../components/ui/PopModal";
 import { useAuthStore } from "../auth/useAuthStore";
 import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { isModuleFirstArm } from "../onboarding/firstRunExperiment";
+import { ChestCelebrationModal } from "../topic-learning/ChestCelebrationModal";
+import {
+  CHEST_RARITY_BONUS,
+  MODULE_TT_XP,
+  MODULE_TT_COINS,
+  CHEST_ENERGY_REWARD,
+  type ChestRarity as TTChestRarity,
+} from "../topic-learning/types";
 import { pearlConfigFor } from "../pearls/pearlConfig";
 import { useRewardedAd } from "../../hooks/useRewardedAd";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
@@ -2134,20 +2142,86 @@ export function LessonFlowScreen() {
     if (router.canGoBack()) router.dismissTo(path as never);
     else router.replace(path as never);
   }, [router]);
+  /** Module-first v1 (Yoav 5.7.26): the earned mod-0-1 threshold chest opens
+   *  AT the lesson→profiling seam — instant gratification at the win moment —
+   *  instead of waiting on the post-onboarding map. null = not showing. */
+  const [handoffChest, setHandoffChest] = useState<{
+    xp: number; coins: number; energy: number; rarity: TTChestRarity; thresholdPct: number;
+  } | null>(null);
+
+  /** Grant the mod-0-1 threshold chest at the module-first handoff — the SAME
+   *  stamp + rarity roll + rewards + completion records the accordion chest
+   *  performs on the map, so the accordion's own chest (guarded by
+   *  modulesPastThreshold) can never double-fire afterwards. Returns false
+   *  when already stamped (resume after a mid-modal kill) — the caller then
+   *  navigates without repeating the ceremony or the rewards. */
+  function grantHandoffChest(): boolean {
+    if (!mod) return false;
+    const progress = useTopicProgressStore.getState();
+    if (!progress.stampModuleThreshold('mod-0-1')) return false;
+    // Full completion record — dedupe, lesson_completed, streak, server sync.
+    completeModule('mod-0-1');
+    const { multiplier, rarity } = progress.recordChestOpen();
+    const coins = Math.round(MODULE_TT_COINS * multiplier * CHEST_RARITY_BONUS[rarity]);
+    try {
+      useEconomyUIStore.getState().addXP(MODULE_TT_XP, 'daily_task');
+      useEconomyUIStore.getState().addCoins(coins, 'lesson');
+    } catch { /* non-fatal */ }
+    try { useHeartsStore.getState().grantEnergy(CHEST_ENERGY_REWARD, 'chest'); } catch { /* non-fatal */ }
+    successHaptic();
+    try { playSound('modal_open_3'); } catch { /* non-fatal */ }
+    // Same event shape as the accordion chest so every chest funnel and the
+    // chest-completion metric keep counting this open. NOTE: for v1 this
+    // fires PRE-onboarding — the compound experiment read pairs it with
+    // onboarding_completed (see banditConfig).
+    try {
+      track({
+        name: 'chest_opened',
+        props: {
+          module_id: 'mod-0-1',
+          chapter_id: 'chapter-0',
+          rarity,
+          xp: MODULE_TT_XP,
+          coins,
+          offered_don: false,
+          offered_quit: false,
+          reveal_variant: 'mystery',
+        },
+      });
+    } catch { /* non-fatal */ }
+    const topics = resolveTopics(mod);
+    const thresholdPct = Math.round((chipsToChestFor('mod-0-1', Math.max(1, topics.length)) / Math.max(1, topics.length)) * 100);
+    setHandoffChest({ xp: MODULE_TT_XP, coins, energy: CHEST_ENERGY_REWARD, rarity, thresholdPct });
+    return true;
+  }
+
+  /** Close the handoff chest → continue to profiling. */
+  function closeHandoffChest() {
+    setHandoffChest(null);
+    router.replace('/(auth)/onboarding' as never);
+  }
+
   /** Module-first first-run (onboarding_module_first v1, Yoav 5.7.26): ANY
    *  exit from mod-0-1 while the guest is still pre-onboarding must hand off
    *  to ProfilingFlow instead of the map — the map is blocked pre-onboarding,
    *  so a map navigation would get bounced by the _layout guard right back
    *  into this lesson (an infinite trap). Covers the auto-flow chest-threshold
    *  exit, back-button bails, and the post-module nav paths. Returns true when
-   *  it navigated (callers must stop their own navigation). */
+   *  it navigated / took ownership of navigation (callers must stop theirs). */
   function maybeHandoffToProfiling(trigger: string): boolean {
     if (id !== 'mod-0-1') return false;
     if (!isModuleFirstArm()) return false;
     const tut = useTutorialStore.getState();
     if (tut.firstRunStage !== 'module') return false;
+    // Flip the stage BEFORE any UI: from here on, a kill resumes into
+    // profiling (the chest rewards, once granted, are not re-earnable).
     tut.setFirstRunStage('profiling');
     try { captureEvent('onboarding_module_first_handoff', { trigger }); } catch { /* non-fatal */ }
+    // Natural threshold completion → open the earned chest HERE (Yoav 5.7.26:
+    // the reward lands at the win moment, not after profiling). The modal's
+    // close CTA performs the navigation. Bails (back / force-exit) skip the
+    // ceremony — their chest fires later from the accordion, like control's.
+    if (trigger === 'chest_threshold' && grantHandoffChest()) return true;
     router.replace('/(auth)/onboarding' as never);
     return true;
   }
@@ -5754,6 +5828,23 @@ export function LessonFlowScreen() {
         </PopModal>
         );
       })()}
+
+      {/* Module-first v1: the earned threshold chest, opened at the
+          lesson→profiling seam. Every close path continues to onboarding. */}
+      {handoffChest && (
+        <ChestCelebrationModal
+          visible
+          xp={handoffChest.xp}
+          coins={handoffChest.coins}
+          energy={handoffChest.energy}
+          rarity={handoffChest.rarity}
+          thresholdPct={handoffChest.thresholdPct}
+          isFinale={false}
+          onContinueModule={closeHandoffChest}
+          onAdvanceToNextModule={closeHandoffChest}
+          onDismiss={closeHandoffChest}
+        />
+      )}
 
       {/* Graduate Onboarding: profile question after specific modules */}
       {profileQuestionKind && (

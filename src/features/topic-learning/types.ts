@@ -134,6 +134,18 @@ export const PITY_TIMER_THRESHOLD = 3;
 export const MYTHIC_DROP_RATE = 0.01;
 export const RARE_DROP_RATE = 0.12;
 
+/** Base reward on topic-tree threshold (70%) chest. Lower than the legacy
+ *  LessonFlowScreen MODULE_COMPLETE_XP (30) because topics also yield
+ *  per-topic micro-XP in a future loop. Tunable from a single point.
+ *  Lives here (not in TopicTreeAccordion) because the module-first
+ *  first-run also grants this chest from LessonFlowScreen at the
+ *  lesson→profiling handoff — one source of truth for the amounts. */
+export const MODULE_TT_XP = 30;
+export const MODULE_TT_COINS = 150;
+/** Energy (⚡) the threshold chest grants — real grantEnergy + a fly-out in
+ *  the ChestCelebrationModal (Yoav 2026-06-22: "בתיבה יקבלו גם 2 אנרגיה"). */
+export const CHEST_ENERGY_REWARD = 2;
+
 /** R8 T3.1 — per-module first-chest threshold override map. The default
  *  75% gate is fine for most modules but feels far in the very first onboarding
  *  module where the user is brand new and hasn't yet experienced a

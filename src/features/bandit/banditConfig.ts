@@ -406,11 +406,16 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
   // too sensitive for adaptive traffic). The arm is drawn once per install and
   // persisted (useTutorialStore.firstRunArm) by firstRunExperiment.ts — this
   // config only supplies the draw weights + the analytics variant ids.
-  // Success metric — the COMPOUND, not activation alone: chest_opened{mod-0-1}
-  // within 72h of assignment, which structurally requires completed onboarding
-  // (the chest lives on the post-onboarding map in BOTH arms), and the
-  // recordConversion site double-checks hasCompletedOnboarding explicitly.
-  // A v1 user who finishes the module but drops at profiling does NOT convert.
+  // Success metric — the COMPOUND, never activation alone (activation alone
+  // is structurally higher for module_first — all pre-module friction is
+  // removed): a user counts only with BOTH chest_opened{mod-0-1} AND
+  // onboarding_completed within 72h of assignment (PostHog: unordered pair,
+  // sliced by the person property). In-app recordConversion fires when the
+  // SECOND milestone lands: control → accordion chest (post-onboarding,
+  // hasCompletedOnboarding-guarded); module_first → enterFirstModule
+  // (onboarding completes after the handoff chest), guarded on the mod-0-1
+  // threshold stamp. Mutually exclusive via modulesPastThreshold — a v1 user
+  // who finishes the module but drops at profiling does NOT convert.
   // Pre-registered guardrails (coordinator 5.7, approved): v1 is disqualified
   // if post-module profiling completion < 85% of v0, or signup < 90% of v0.
   // Kill switches: allocation v1→0 (new users), pinned control, or

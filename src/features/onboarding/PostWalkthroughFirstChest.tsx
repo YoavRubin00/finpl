@@ -130,7 +130,9 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
           {/* Heading */}
           <Animated.View entering={FadeInUp.duration(360)} style={styles.headingWrap}>
             <Text style={[styles.heading, RTL_CENTER]} allowFontScaling={false}>
-              {opened ? 'יש! 🎁' : 'התיבה הראשונה שלך!'}
+              {/* Module-first v1 already opened their earned lesson chest at the
+                  handoff — for them this is a bonus, not "the first". */}
+              {opened ? 'יש! 🎁' : isModuleFirstArm() ? 'תיבת בונוס בשבילך!' : 'התיבה הראשונה שלך!'}
             </Text>
             {!opened && (
               <Text style={[styles.subheading, RTL_CENTER]} allowFontScaling={false}>
