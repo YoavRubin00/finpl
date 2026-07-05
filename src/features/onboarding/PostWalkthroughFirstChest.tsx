@@ -36,7 +36,9 @@ import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useRouter } from 'expo-router';
 import { FINN_HAPPY } from '../retention-loops/finnMascotConfig';
 import { captureEvent } from '../../lib/posthog';
-import { isModuleFirstArm } from './firstRunExperiment';
+import { isModuleFirstArm, FIRST_RUN_EXPERIMENT_ID, firstRunVariantId } from './firstRunExperiment';
+import { useTopicProgressStore } from '../topic-learning/useTopicProgressStore';
+import { useBanditStore } from '../bandit/useBanditStore';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -96,6 +98,24 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
       try { addCoins(FIRST_CHEST_COINS, 'lesson'); } catch { /* non-fatal */ }
       try { addXP(FIRST_CHEST_XP, 'lesson_complete'); } catch { /* non-fatal */ }
       try { captureEvent('first_chest_opened', { coins: FIRST_CHEST_COINS, xp: FIRST_CHEST_XP }); } catch { /* non-fatal */ }
+      // Module-first v1 journey END (Yoav 5.7.26: "הסיום של הוריאנט החדש היא
+      // בהגעה לתיבה שבסוף ההדרכה"): reaching THIS chest means the full
+      // reordered first-run completed — module + its chest + profiling + tour.
+      // Convert HERE, guarded on the activation stamp (a v1 user who bailed
+      // the module pre-threshold must not convert; they convert later at the
+      // accordion chest like control) and one-shot via the PERSISTED
+      // firstChestOpened flag — grantedRef alone resets if a kill between
+      // open and continue re-shows this modal.
+      try {
+        const tut = useTutorialStore.getState();
+        if (
+          !tut.firstChestOpened &&
+          isModuleFirstArm() &&
+          Boolean(useTopicProgressStore.getState().modulesPastThreshold['mod-0-1'])
+        ) {
+          useBanditStore.getState().recordConversion(FIRST_RUN_EXPERIMENT_ID, firstRunVariantId('module_first'));
+        }
+      } catch { /* non-fatal */ }
       // Unlock the notification-permission ask at this earliest guaranteed win —
       // every new user opens the welcome chest, so even those who later drop DURING
       // mod-0-1 still get asked for push (→ the streak comeback reminder fires).
