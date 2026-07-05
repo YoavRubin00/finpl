@@ -19,6 +19,8 @@ import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStor
 import { useHeartsStore } from '../subscription/useHeartsStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
+import { useBanditStore } from '../bandit/useBanditStore';
+import { FIRST_RUN_EXPERIMENT_ID, firstRunVariantId } from '../onboarding/firstRunExperiment';
 import type { Module } from '../chapter-1-content/types';
 import type { Topic, ChestRarity } from './types';
 import { CHEST_RARITY_BONUS, chipsToChestFor } from './types';
@@ -520,6 +522,20 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
+    // Module-first first-run experiment (onboarding_module_first): the mod-0-1
+    // chest IS the activation metric. Record the bandit conversion for
+    // whichever arm this install was assigned — fires symmetrically for both
+    // arms at the same moment (this chest), so the in-app report compares
+    // apples to apples. The authoritative read stays the PostHog chest_opened
+    // event above, sliced by person.bandit_variant__onboarding_module_first.
+    if (module.id === 'mod-0-1') {
+      try {
+        const arm = useTutorialStore.getState().firstRunArm;
+        if (arm !== null) {
+          useBanditStore.getState().recordConversion(FIRST_RUN_EXPERIMENT_ID, firstRunVariantId(arm));
+        }
+      } catch { /* non-fatal */ }
+    }
   }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // Small 100%-completion pop (Yoav 2026-06-26). Per-chip rewards were removed,

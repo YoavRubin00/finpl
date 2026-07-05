@@ -120,6 +120,7 @@ import { Day0ExitRitualHost } from "../src/features/retention-loops/Day0ExitRitu
 import { PredictionResultsHost } from "../src/features/crowd-wisdom/PredictionResultsHost";
 import { GuestValueGateHost } from "../src/features/auth/guestValueGate";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
+import { ensureFirstRunAssignment, MODULE_FIRST_ENABLED } from "../src/features/onboarding/firstRunExperiment";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
@@ -513,6 +514,11 @@ function RootLayoutInner() {
   // in via the topic-tree Mod01WalkthroughPromptModal (before mod-0-1 is
   // fully completed). See the AppWalkthroughOverlay gate below.
   const walkthroughTriggered = useTutorialStore((s) => s.walkthroughTriggered);
+  // Module-first first-run experiment (onboarding_module_first, Yoav 5.7.26).
+  // The redirect guard below must let a v1 guest INTO /lesson/mod-0-1 before
+  // onboarding completes — and resume a killed app back into it.
+  const firstRunArm = useTutorialStore((s) => s.firstRunArm);
+  const firstRunStage = useTutorialStore((s) => s.firstRunStage);
   const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
@@ -585,7 +591,24 @@ function RootLayoutInner() {
 
   // Cold-launch boot: attempt to restore session from stored JWT before rendering routes
   useEffect(() => {
-    bootFromToken().finally(() => setBootComplete(true));
+    bootFromToken().finally(async () => {
+      // Assign the module-first first-run arm BEFORE routes render (all
+      // rendering is gated on bootComplete below) — a v1 user must never
+      // paint a frame of IntroStep, or its useBandit('onboarding_welcome_hook')
+      // pollutes that pinned experiment. Both stores must be hydrated first:
+      // the idempotence guard + first-run predicate read persisted state.
+      try {
+        const awaitHydration = (store: { persist: { hasHydrated: () => boolean; onFinishHydration: (fn: () => void) => () => void } }) =>
+          store.persist.hasHydrated()
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                const unsub = store.persist.onFinishHydration(() => { unsub(); resolve(); });
+              });
+        await Promise.all([awaitHydration(useAuthStore), awaitHydration(useTutorialStore)]);
+        ensureFirstRunAssignment();
+      } catch { /* non-fatal — unassigned users get the control flow */ }
+      setBootComplete(true);
+    });
   }, []);
 
   // Daily streak tick — fire `recordDailyActivity` once per Israeli day on app
@@ -658,6 +681,22 @@ function RootLayoutInner() {
         router.replace("/(auth)/onboarding");
       }
     } else if (!hasCompletedOnboarding) {
+      // Module-first first-run (onboarding_module_first v1, Yoav 5.7.26):
+      // while the guest is in the 'module' stage, mod-0-1 is the ONE content
+      // route allowed pre-onboarding — and a cold start resumes INTO it
+      // instead of bouncing to onboarding (which would both strand the run
+      // and, worse, loop: the lesson's own exits route by stage). Scoped to
+      // exactly `lesson/mod-0-1` so a deep link to any other lesson still
+      // bounces and the guest paywall on mod-0-2+ stays intact.
+      const moduleFirstInModule =
+        MODULE_FIRST_ENABLED && firstRunArm === "module_first" && firstRunStage === "module";
+      if (moduleFirstInModule) {
+        const onMod01 = segments[0] === "lesson" && (segments as string[])[1] === "mod-0-1";
+        if (!onMod01) {
+          router.replace("/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree" as never);
+        }
+        return;
+      }
       // Allow auth routes (register, sign-in, terms) even before onboarding is
       // complete. The SignupGateStep at the end of the mini-onboarding sends
       // users to /(auth)/register and we do not want to bounce them back.
@@ -701,7 +740,7 @@ function RootLayoutInner() {
         router.replace("/(tabs)");
       }
     }
-  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete, walkthroughTriggered]);
+  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete, walkthroughTriggered, firstRunArm, firstRunStage]);
 
   // Fallback walkthrough re-arm (Yoav 2026-06-26, D1 lever). Diagnosed: ~38% of
   // users who commit (onboarding_enter_first_module) never fire walkthrough_started

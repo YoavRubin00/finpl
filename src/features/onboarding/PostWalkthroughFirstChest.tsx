@@ -36,6 +36,7 @@ import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useRouter } from 'expo-router';
 import { FINN_HAPPY } from '../retention-loops/finnMascotConfig';
 import { captureEvent } from '../../lib/posthog';
+import { isModuleFirstArm } from './firstRunExperiment';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -108,6 +109,14 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
     tapHaptic();
     try { captureEvent('first_chest_continue', {}); } catch { /* non-fatal */ }
     clearFlag(false);
+    // Module-first first-run (onboarding_module_first v1, Yoav 5.7.26): the v1
+    // user already played mod-0-1 BEFORE profiling — their earned threshold
+    // chest is waiting on the learn map (the accordion fires it on mount).
+    // Re-pushing the lesson would replay the half-done intro; land on the map.
+    if (isModuleFirstArm()) {
+      try { router.push('/(tabs)/index' as never); } catch { /* non-fatal */ }
+      return;
+    }
     // Auto-start mod-0-1 in the continuous auto-flow (Yoav 2026-06-25): the welcome
     // chest leads STRAIGHT into the first lesson (intro→…→chest), no map detour.
     // Pro/register now fire AFTER the mod-0-1 chest, not here.

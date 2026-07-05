@@ -17,6 +17,14 @@ type ExperimentConfig<E extends ExperimentId> = {
    * measurable and the pin is reversible by deleting this field.
    */
   pinned?: string;
+  /**
+   * Fixed traffic split (variant id → weight, weights sum to ~1). When set,
+   * selectVariant does ONE weighted random draw instead of warm-up/Thompson —
+   * for experiments that need a controlled drip (e.g. a risky first-run
+   * reorder at 20%) rather than adaptive optimization. `pinned` still wins
+   * over allocation, so pinning the control remains the kill switch.
+   */
+  allocation?: Record<string, number>;
 };
 
 type AllExperimentConfigs = {
@@ -388,6 +396,38 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
     variants: [
       { id: 'day0_wager_show', label: 'show', payload: { show: true } },
       { id: 'day0_wager_hide', label: 'hide', payload: { show: false } },
+    ],
+  },
+  // Module-first first-run (Yoav 2026-07-05). Screen-1 of onboarding is the
+  // funnel's biggest leak (−18.6%, ~53% of all onboarding loss) — users bail
+  // on profiling friction BEFORE seeing value. Treatment inverts the order:
+  // one-tap hook → mod-0-1 (value first) → profiling → tour LAST.
+  // Fixed 80/20 drip via `allocation` (NOT Thompson — a first-run reorder is
+  // too sensitive for adaptive traffic). The arm is drawn once per install and
+  // persisted (useTutorialStore.firstRunArm) by firstRunExperiment.ts — this
+  // config only supplies the draw weights + the analytics variant ids.
+  // Success metric: chest_opened{mod-0-1} within 72h of assignment.
+  // Pre-registered guardrails (coordinator 5.7, approved): v1 is disqualified
+  // if post-module profiling completion < 85% of v0, or signup < 90% of v0.
+  // Kill switches: allocation v1→0 (new users), pinned control, or
+  // MODULE_FIRST_ENABLED=false in firstRunExperiment.ts (also in-flight users).
+  onboarding_module_first: {
+    goal: 'retention',
+    allocation: {
+      onboarding_module_first_v0: 0.8,
+      onboarding_module_first_v1: 0.2,
+    },
+    variants: [
+      {
+        id: 'onboarding_module_first_v0',
+        label: 'control',
+        payload: { variant: 'control' },
+      },
+      {
+        id: 'onboarding_module_first_v1',
+        label: 'module_first',
+        payload: { variant: 'module_first' },
+      },
     ],
   },
 };

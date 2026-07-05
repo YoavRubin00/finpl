@@ -11,7 +11,8 @@ export type ExperimentId =
   | 'upgrade_trigger_timing'
   | 'daily_email_variant'
   | 'onboarding_welcome_hook'
-  | 'day0_wager';
+  | 'day0_wager'
+  | 'onboarding_module_first';
 
 export interface BanditVariant {
   id: string;
@@ -91,6 +92,13 @@ export type ExperimentPayloads = {
   day0_wager: {
     /** true = show the day-0 wager (treatment); false = holdout (control). */
     show: boolean;
+  };
+  onboarding_module_first: {
+    /** First-run order. 'module_first' = one-tap hook → mod-0-1 → profiling →
+     *  tour; 'control' = the classic welcome → profiling → tour → mod-0-1.
+     *  The arm is selected ONCE at first boot and persisted in
+     *  useTutorialStore.firstRunArm — see firstRunExperiment.ts. */
+    variant: 'control' | 'module_first';
   };
 };
 

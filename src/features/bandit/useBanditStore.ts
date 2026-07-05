@@ -52,6 +52,29 @@ export const useBanditStore = create<BanditState>()(
           return pinned;
         }
 
+        // Fixed-allocation experiments (see ExperimentConfig.allocation): one
+        // weighted random draw, bypassing warm-up + Thompson entirely. Used for
+        // controlled drips where adaptive traffic-shifting is wrong (e.g. the
+        // module-first first-run reorder at 20%). Sits BELOW `pinned` so
+        // pinning the control stays the kill switch, and ABOVE warm-up so the
+        // drip percentage is exact from the very first user.
+        const allocation = EXPERIMENT_CONFIGS[experimentId]?.allocation;
+        if (allocation) {
+          const weighted = exp.variants.filter((v) => (allocation[v.id] ?? 0) > 0);
+          const totalWeight = weighted.reduce((sum, v) => sum + (allocation[v.id] ?? 0), 0);
+          if (weighted.length > 0 && totalWeight > 0) {
+            let roll = Math.random() * totalWeight;
+            for (const v of weighted) {
+              roll -= allocation[v.id] ?? 0;
+              if (roll <= 0) return v.id;
+            }
+            return weighted[weighted.length - 1].id;
+          }
+          // All weights 0 (fully dialed down) → serve the first variant
+          // (control by convention) instead of falling through to Thompson.
+          return exp.variants[0].id;
+        }
+
         // Activation threshold (Yoav 2026-05-31): until EVERY variant has at
         // least WARMUP_IMPRESSIONS exposures, sample uniformly. Below this
         // floor the prior Beta(1,1) is essentially flat — a single early

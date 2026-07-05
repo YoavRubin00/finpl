@@ -41,6 +41,7 @@ import { StreakCelebrationScreen } from "../streak/StreakCelebrationScreen";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { SignupGateStep } from "./SignupGateStep";
+import { isModuleFirstArm } from "./firstRunExperiment";
 import { getApiBase } from "../../db/apiBase";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
@@ -2541,6 +2542,109 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
+// ─── Module-first hook (onboarding_module_first v1, Yoav 5.7.26) ────────────
+// The one-tap welcome for the module-first arm: mascot + a single CTA that
+// drops the user straight into mod-0-1 (value first; profiling comes after
+// the module). Deliberately does NOT mount IntroStep and does NOT call
+// useBandit('onboarding_welcome_hook') — a v1 impression would pollute that
+// pinned experiment. Keeps the welcome screen's terms disclaimer + login
+// link (a returning user on a fresh install still needs a way in).
+
+interface ModuleFirstHookProps {
+  onStart: () => void;
+}
+
+function ModuleFirstHook({ onStart }: ModuleFirstHookProps) {
+  const hookRouter = useRouter();
+  const startedRef = useRef(false);
+  // Same entrance choreography as IntroStep's welcome — familiar-feeling beat.
+  const finnScale = useSharedValue(0.8);
+  const finnOpacity = useSharedValue(0);
+  const textOpacity = useSharedValue(0);
+  const textTy = useSharedValue(24);
+  const ctaScale = useSharedValue(0);
+  useEffect(() => {
+    finnOpacity.value = withTiming(1, { duration: 400 });
+    finnScale.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.quad) });
+    textOpacity.value = withDelay(300, withTiming(1, { duration: 300 }));
+    textTy.value = withDelay(300, withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) }));
+    ctaScale.value = withDelay(200, withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const finnStyle = useAnimatedStyle(() => ({
+    opacity: finnOpacity.value,
+    transform: [{ scale: finnScale.value }],
+  }));
+  const textStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+    transform: [{ translateY: textTy.value }],
+  }));
+  const ctaAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+
+  return (
+    <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
+      <Animated.View style={[introStyles.finnWrap, finnStyle]}>
+        <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
+        </LinearGradient>
+      </Animated.View>
+
+      <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
+        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
+          {"היי, אני קפטן שארק"}
+        </Text>
+        <Text style={[introStyles.title, { marginBottom: 12 }]}>{"קודם משחקים.\nשאלות — אחר כך."}</Text>
+        <Text style={{ fontSize: 14.5, fontWeight: "500", color: "#475569", textAlign: "center", writingDirection: "rtl", lineHeight: 21, maxWidth: 330 }}>
+          {"שיעור ראשון קצר על הכסף שלך — עם מתנות בדרך."}
+        </Text>
+      </Animated.View>
+
+      <Animated.View style={[ctaAnimStyle, { alignItems: "center", width: "100%" }]}>
+        <Pressable
+          onPress={() => {
+            if (startedRef.current) return; // double-tap guard — one navigation
+            startedRef.current = true;
+            onStart();
+          }}
+          style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
+          accessibilityRole="button"
+          accessibilityLabel="מתחילים"
+        >
+          <Text style={introStyles.ctaText}>{"מתחילים"}</Text>
+        </Pressable>
+
+        <Text
+          style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 15, maxWidth: 300 }}
+        >
+          {"המשך השימוש מהווה אישור של "}
+          <Text
+            style={{ color: "#0891b2" }}
+            accessibilityRole="link"
+            accessibilityLabel="תנאי השימוש"
+            onPress={() => hookRouter.push("/(auth)/terms" as never)}
+          >
+            תנאי השימוש
+          </Text>
+        </Text>
+
+        <Pressable
+          onPress={() => {
+            try { captureEvent('welcome_login_link_clicked'); } catch { /* non-fatal */ }
+            hookRouter.push("/(auth)/sign-in" as never);
+          }}
+          accessibilityRole="link"
+          accessibilityLabel="יש לי כבר חשבון"
+          style={{ marginTop: 36, paddingVertical: 6 }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center" }}>
+            {"יש לי כבר חשבון"}
+          </Text>
+        </Pressable>
+      </Animated.View>
+    </SafeAreaView>
+  );
+}
+
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 type FlowStep =
@@ -2606,6 +2710,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
 
   useEffect(() => {
     if (!isRedo) {
+      // Module-first v1: the one-tap hook is NOT profiling — onboarding_started
+      // fires on the post-module re-mount (stage 'profiling') instead, so the
+      // started→completed guardrail denominator stays comparable across arms.
+      if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'hook') return;
       captureEvent('onboarding_started');
     }
   }, [isRedo]);
@@ -2798,6 +2906,11 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // route, not /lesson. (Replaces the old "after the first chip" trigger.)
     try { captureEvent('onboarding_enter_first_module', { target: 'mod-0-1', chapter_id: 'chapter-0' }); } catch { /* non-fatal */ }
     try { useTutorialStore.getState().triggerWalkthrough(); } catch { /* non-fatal */ }
+    // First-run experiment bookkeeping (both arms): the reordered flow is over.
+    try {
+      const tut = useTutorialStore.getState();
+      if (tut.firstRunArm !== null) tut.setFirstRunStage('done');
+    } catch { /* non-fatal */ }
     router.replace("/(tabs)" as Href);
   }
 
@@ -2831,6 +2944,20 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     setStep("building-profile");
   }} onEditStep={editSummaryStep} />;
   if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("celebration")} />;
+  // Module-first first-run (onboarding_module_first v1): replace the welcome
+  // with the one-tap hook → guest mode → straight into mod-0-1. ProfilingFlow
+  // re-mounts AFTER the module with isGuest=true, so the step initializer
+  // starts at "dream" and this branch never renders again.
+  if (!isRedo && step === "intro" && isModuleFirstArm()) return (
+    <ModuleFirstHook
+      onStart={() => {
+        try { captureEvent('onboarding_module_first_hook_tapped'); } catch { /* non-fatal */ }
+        enterGuestMode();
+        try { useTutorialStore.getState().setFirstRunStage('module'); } catch { /* non-fatal */ }
+        router.replace("/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree" as never);
+      }}
+    />
+  );
   if (!isRedo && step === "intro") return (
     <IntroStep
       onRegister={() => router.push("/register" as never)}

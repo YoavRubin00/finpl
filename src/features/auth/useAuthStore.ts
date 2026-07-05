@@ -32,6 +32,16 @@ interface SessionState {
   isGuest: boolean;
   /** Local profile blob — used by onboarding / settings / shop flows. */
   profile: UserProfile | null;
+  /** Profile answers collected BEFORE the profile blob exists. updateProfile
+   *  was a silent no-op while `profile` is null — fine historically (nothing
+   *  patched pre-onboarding), but the module-first first-run (Yoav 5.7.26)
+   *  runs mod-0-1 before profiling, and its inline knowledgeLevel answer
+   *  landed on a null profile and vanished. Buffered here instead;
+   *  completeOnboarding merges the patch over the incoming profile (the
+   *  user's explicit answer beats enterFirstModule's null default) and
+   *  clears it. Persisted so an app-kill between module and profiling
+   *  doesn't lose the answer. */
+  pendingProfilePatch: Partial<UserProfile> | null;
   /** Transient auth error surfaced as inline banner on login/register. */
   authError: string | null;
 }
@@ -81,6 +91,7 @@ const initialState: SessionState = {
   hasCompletedOnboarding: false,
   isGuest: false,
   profile: null,
+  pendingProfilePatch: null,
   authError: null,
 };
 
@@ -186,7 +197,16 @@ export const useAuthStore = create<SessionState & SessionActions>()(
       seedProfile: (profile: UserProfile) => set({ profile }),
 
       completeOnboarding: (profile: UserProfile) => {
-        set({ hasCompletedOnboarding: true, profile });
+        // Merge any pre-onboarding answers (see pendingProfilePatch) OVER the
+        // incoming profile — the user's explicit in-module answer beats the
+        // null defaults enterFirstModule passes for the deferred fields.
+        set((state) => ({
+          hasCompletedOnboarding: true,
+          profile: state.pendingProfilePatch
+            ? { ...profile, ...state.pendingProfilePatch }
+            : profile,
+          pendingProfilePatch: null,
+        }));
         logOnboardingComplete();
         pinTermsForNewUser();
       },
@@ -194,6 +214,11 @@ export const useAuthStore = create<SessionState & SessionActions>()(
       updateProfile: (partial) =>
         set((state) => ({
           profile: state.profile ? { ...state.profile, ...partial } : state.profile,
+          // No profile yet (module-first first-run: mod-0-1 runs before
+          // profiling) → buffer the patch; completeOnboarding merges it.
+          pendingProfilePatch: state.profile
+            ? state.pendingProfilePatch
+            : { ...state.pendingProfilePatch, ...partial },
           ...(partial.displayName ? { displayName: partial.displayName } : {}),
         })),
 
@@ -282,6 +307,7 @@ export const useAuthStore = create<SessionState & SessionActions>()(
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         isGuest: state.isGuest,
         profile: state.profile,
+        pendingProfilePatch: state.pendingProfilePatch,
       }),
     },
   ),

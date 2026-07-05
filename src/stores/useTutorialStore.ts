@@ -104,6 +104,18 @@ interface TutorialState {
    *  NotificationPermissionBanner only takes over AFTER this is true. Yoav
    *  2026-06-21 ("make sure users get a one-time prompt to allow notifications").*/
   notifPromptShown: boolean;
+  /** Module-first first-run experiment (onboarding_module_first, Yoav 5.7.26).
+   *  The arm is drawn ONCE at first boot (firstRunExperiment.ts) and persisted
+   *  here so it can never flip mid-flow or on relaunch. `null` = not assigned
+   *  (existing/returning users) → every orchestration read treats it as
+   *  control, so the installed base is untouched. */
+  firstRunArm: 'control' | 'module_first' | null;
+  /** Where the module-first (v1) user is in the reordered first run:
+   *  'hook' → one-tap welcome; 'module' → inside mod-0-1 (the _layout guard
+   *  allows /lesson/mod-0-1 pre-onboarding ONLY in this stage and resumes a
+   *  killed app back into the lesson); 'profiling' → handed off to
+   *  ProfilingFlow; 'done' → enterFirstModule ran (normal app from here). */
+  firstRunStage: 'hook' | 'module' | 'profiling' | 'done' | null;
   _hydrated: boolean;
   completeTradingHubIntro: () => void;
   markTradingHubFirstEntryDone: () => void;
@@ -136,6 +148,8 @@ interface TutorialState {
   markRated: () => void;
   /** Called when the one-time notification-permission modal is shown (either CTA). */
   markNotifPromptShown: () => void;
+  setFirstRunArm: (arm: 'control' | 'module_first' | null) => void;
+  setFirstRunStage: (stage: 'hook' | 'module' | 'profiling' | 'done' | null) => void;
   markFreeSharkCallUsed: () => void;
   markSharkVoicePrivacyAccepted: () => void;
   resetWalkthrough: () => void;
@@ -176,6 +190,8 @@ export const useTutorialStore = create<TutorialState>()(
       lastRatePromptAt: null,
       ratePromptCount: 0,
       notifPromptShown: false,
+      firstRunArm: null,
+      firstRunStage: null,
       _hydrated: false,
       completeTradingHubIntro: () => set({ hasSeenTradingHubIntro: true }),
       markTradingHubFirstEntryDone: () => set({ tradingHubFirstEntryDone: true }),
@@ -207,8 +223,10 @@ export const useTutorialStore = create<TutorialState>()(
       markRatePromptShown: () => set((s) => ({ ratePromptCount: s.ratePromptCount + 1, lastRatePromptAt: Date.now() })),
       markRated: () => set({ ratePromptHandled: true }),
       markNotifPromptShown: () => set({ notifPromptShown: true }),
+      setFirstRunArm: (arm) => set({ firstRunArm: arm }),
+      setFirstRunStage: (stage) => set({ firstRunStage: stage }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenFriendsHubIntro: false, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenFriendsHubIntro: false, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, firstRunArm: null, firstRunStage: null, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",
