@@ -54,20 +54,47 @@ export function TermsReconsentGate(): React.ReactElement | null {
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const acceptedVersion = useTermsStore((s) => s.acceptedVersion);
 
+  // Hydration guard (Feivel P1-1, 2026-07-05): zustand-persist rehydrates
+  // asynchronously (MMKV getItem is async), so on a cold boot there is a
+  // render window where the auth store is already hydrated but this store
+  // still reports the initial `acceptedVersion === null`. Without this guard
+  // the backfill below stamps the legacy sentinel OVER a real stored value —
+  // showing a redundant re-consent modal to users who already accepted the
+  // current version. Decide nothing until BOTH stores finished hydrating.
+  const [hydrated, setHydrated] = useState(
+    () => useAuthStore.persist.hasHydrated() && useTermsStore.persist.hasHydrated(),
+  );
+  useEffect(() => {
+    if (hydrated) return;
+    const check = () => {
+      if (useAuthStore.persist.hasHydrated() && useTermsStore.persist.hasHydrated()) {
+        setHydrated(true);
+      }
+    };
+    const unsubAuth = useAuthStore.persist.onFinishHydration(check);
+    const unsubTerms = useTermsStore.persist.onFinishHydration(check);
+    check();
+    return () => {
+      unsubAuth();
+      unsubTerms();
+    };
+  }, [hydrated]);
+
   // Legacy backfill — cases 2 and 3 above. Runs after render, so atomic
   // updates in `completeOnboarding` / `convertGuestToUser` (case 1) have
   // already flipped `acceptedVersion` to CURRENT before this conditional
-  // evaluates, and the brand-new-signup path silently skips it.
+  // evaluates, and the brand-new-signup path silently skips it. Gated on
+  // `hydrated` so a pre-hydration `null` is never mistaken for legacy.
   useEffect(() => {
-    if (isAuthenticated && hasCompletedOnboarding && acceptedVersion === null) {
+    if (hydrated && isAuthenticated && hasCompletedOnboarding && acceptedVersion === null) {
       useTermsStore.getState().accept(LEGACY_TERMS_SENTINEL);
     }
-  }, [isAuthenticated, hasCompletedOnboarding, acceptedVersion]);
+  }, [hydrated, isAuthenticated, hasCompletedOnboarding, acceptedVersion]);
 
   const stale =
     acceptedVersion !== null && acceptedVersion < CURRENT_TERMS_VERSION;
 
-  const shouldGate = isAuthenticated && hasCompletedOnboarding && stale;
+  const shouldGate = hydrated && isAuthenticated && hasCompletedOnboarding && stale;
 
   const [dismissed, setDismissed] = useState(false);
 

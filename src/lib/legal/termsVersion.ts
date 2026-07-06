@@ -7,14 +7,14 @@
  * When you bump this, also update TERMS_UPDATE_SUMMARY_HE below to describe
  * what changed — that's what the user sees in the re-consent modal.
  *
- * HELD AT '2026-06-04b' ON PURPOSE (Yoav 2026-07-05): bumping to '2026-07-03'
- * arms a blocking re-consent modal for EVERY existing user, and this constant
- * rides OTA. Per docs/FORCE-UPDATE-PREP.md the bump ships only INSIDE the
- * native 1.4.3 force-update build — set it to '2026-07-03' on that build's
- * branch, never on an OTA train. (The 2026-07-03 summary bullets below are
- * inert until the version is bumped.)
+ * ARMED '2026-07-03' (Yoav 2026-07-06): 1.4.3 is live in BOTH stores and the
+ * updated terms are published on finplay.me — the coordinated re-consent
+ * moment from docs/FORCE-UPDATE-PREP.md. This constant rides OTA, so every
+ * existing user (old builds included) gets the blocking summary modal on
+ * next launch after this update. The hold at '2026-06-04b' (5.7) existed
+ * only because the landing pages still showed the June terms.
  */
-export const CURRENT_TERMS_VERSION = '2026-06-04b';
+export const CURRENT_TERMS_VERSION = '2026-07-03';
 
 /**
  * Consolidated Hebrew bullets shown in the re-consent modal.

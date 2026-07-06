@@ -48,7 +48,7 @@ export function StreakFreezeSaveModal({ visible, onDismiss }: StreakFreezeSaveMo
               entering={FadeInDown.delay(100).duration(300)}
               style={styles.title}
             >
-              Finn הציל לך את הרצף 🥶❄️
+              קפטן שארק הציל לך את הרצף 🥶❄️
             </Animated.Text>
 
             {/* Subtitle */}

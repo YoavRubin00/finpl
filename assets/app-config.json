@@ -1,5 +1,5 @@
 {
-  "enabled": false,
+  "enabled": true,
   "minSupportedVersion": "1.4.3",
   "iosStoreUrl": "itms-apps://apps.apple.com/app/id6761650222",
   "androidStoreUrl": "market://details?id=com.finplay.app",
