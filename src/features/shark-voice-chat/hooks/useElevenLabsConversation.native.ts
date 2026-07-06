@@ -51,9 +51,13 @@ function cleanTranscriptText(text: string): string {
 const OUTPUT_POLL_MS = 40; // ~25fps — imperceptible attack latency
 // Above this output level = sound is playing. Below the noise floor = silent.
 const OUTPUT_SPEAKING_THRESHOLD = 0.025;
-// Keep "speaking" through dips shorter than this so word-gaps don't flicker,
-// but a real sentence pause (longer) correctly shows him not talking.
-const OUTPUT_RELEASE_MS = 160;
+// END-OF-TURN quiet, not word-gap quiet (Yoav 2026-07-06: the avatar kept
+// swapping loops MID-REPLY — every inter-sentence breath crossed the old 160ms
+// release). The talking loop must hold for the WHOLE reply and flip to
+// listening only once he's genuinely finished, so the release now waits a
+// pause no TTS sentence-gap reaches. A barge-in still flips instantly via
+// onMessage(user) → 'thinking', so the long release never delays the user.
+const OUTPUT_RELEASE_MS = 1100;
 
 export function useElevenLabsConversation() {
   // DOMException (used by livekit-client at module-eval) is absent from Hermes —

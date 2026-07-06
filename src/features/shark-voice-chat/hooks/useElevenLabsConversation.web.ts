@@ -47,9 +47,10 @@ function cleanTranscriptText(text: string): string {
 const OUTPUT_POLL_MS = 40; // ~25fps — imperceptible attack latency
 // Above this output level = sound is playing. Below the noise floor = silent.
 const OUTPUT_SPEAKING_THRESHOLD = 0.025;
-// Keep "speaking" through dips shorter than this so word-gaps don't flicker,
-// but a real sentence pause (longer) correctly shows him not talking.
-const OUTPUT_RELEASE_MS = 160;
+// END-OF-TURN quiet, not word-gap quiet (Yoav 2026-07-06, parity with the
+// native hook): hold the talking loop through sentence pauses; flip to
+// listening only once the reply is genuinely over.
+const OUTPUT_RELEASE_MS = 1100;
 
 export function useElevenLabsConversation() {
   const conversationRef = useRef<ConversationHandle | null>(null);

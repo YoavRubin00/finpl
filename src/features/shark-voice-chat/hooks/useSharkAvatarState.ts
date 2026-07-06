@@ -29,11 +29,12 @@ export type SharkExpression =
   | 'empathic'
   | 'victory';
 
-// Short hold only — absorbs the SDK's brief non-speaking blips during natural
-// pauses so the avatar doesn't flip to listening mid-reply. The precise
-// "is he making sound" detection lives in the hook's output-volume loop, which
-// already debounces word-gaps, so this can stay small.
-const TALKING_HOLD_MS = 120;
+// Second line of defense after the hook's output-volume release (which now
+// waits 1100ms of END-OF-TURN quiet — Yoav 2026-07-06): absorbs any residual
+// single-tick status blip so the loop never swaps mid-reply. Kept short since
+// the volume loop owns the real hold; this only delays the settle to
+// listening once he's already finished.
+const TALKING_HOLD_MS = 250;
 
 export function useSharkAvatarState(): SharkExpression {
   const status = useSharkVoiceStore((s) => s.status);

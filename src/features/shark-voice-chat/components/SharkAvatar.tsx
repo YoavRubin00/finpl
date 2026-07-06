@@ -14,9 +14,9 @@ import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { DUO } from '../../../constants/theme';
 
 // Purpose-built live-call loops (Higgsfield Seedance → chroma-key, 2026-06-21).
-// The shark's mouth genuinely moves in the talking loops so the call feels live;
-// three talking variants are cycled mid-turn (see useSharkAvatarState) so a long
-// reply never looks like a repeating GIF.
+// The shark's mouth genuinely moves in the talking loops so the call feels live.
+// ONE talking loop (`talking-1`) is held for the entire reply — no mid-turn
+// cycling (Yoav 2026-07-06); talking-2/3 stay mapped only so the type is total.
 const SOURCES: Record<SharkExpression, number> = {
   'idle': require('../../../../assets/webp/shark-call-listening.webp'),
   'listening': require('../../../../assets/webp/shark-call-listening.webp'),
