@@ -117,6 +117,7 @@ import { PostWalkthroughProTeaserGate } from "../src/features/subscription/PostW
 import { PostWalkthroughFirstChestGate } from "../src/features/onboarding/PostWalkthroughFirstChest";
 import { NotificationPermissionPrompt } from "../src/features/notifications/NotificationPermissionPrompt";
 import { Day0ExitRitualHost } from "../src/features/retention-loops/Day0ExitRitualHost";
+import { TomorrowChestReadyHost } from "../src/features/retention-loops/TomorrowChestReadyHost";
 import { PredictionResultsHost } from "../src/features/crowd-wisdom/PredictionResultsHost";
 import { GuestValueGateHost } from "../src/features/auth/guestValueGate";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
@@ -833,6 +834,15 @@ function RootLayoutInner() {
                   first IL-day, all CTA chains cleared); also hosts the
                   next-day win/loss resolution modal. */}
               <Day0ExitRitualHost />
+              {/* Tomorrow-chest day-2 landing ceremony (RETENTION-SPRINT
+                  2026-07-06): when the sealed chest armed by yesterday's
+                  module/welcome chest is ready, runs chest → rewards →
+                  "ממשיכים מאיפה שעצרנו" straight into the next lesson.
+                  Self-gated: onboarding + walkthrough + (tabs) route + not
+                  in-lesson + never over the wager-resolution or the
+                  post-walkthrough chain; suppresses the same-day streak
+                  daily-nudge so day-2 has ONE landing ritual. */}
+              <TomorrowChestReadyHost />
               {/* Credits + announces predictions that settled while away
                   ("צדקתם בזמן שהייתם בחוץ"). Claims once on open; server dedupes. */}
               <PredictionResultsHost />

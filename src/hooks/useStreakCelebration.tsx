@@ -14,7 +14,10 @@ import { StreakCelebrationScreen } from "../features/streak/StreakCelebrationScr
 import { useNudgeQueueStore } from "../stores/useNudgeQueueStore";
 import { useTutorialStore } from "../stores/useTutorialStore";
 
-const DAILY_STREAK_NUDGE_KEY = "@finplay/streak-nudge-shown-date";
+/** Exported so same-day landing rituals (TomorrowChestReadyHost) can stamp
+ *  today and suppress this nudge — one landing popup, not two. Value format
+ *  is the UTC "YYYY-MM-DD" this file has always written. */
+export const DAILY_STREAK_NUDGE_KEY = "@finplay/streak-nudge-shown-date";
 const DAILY_STREAK_NUDGE_DELAY_MS = 5000;
 
 interface StreakCelebrationContextValue {
@@ -110,16 +113,23 @@ export function StreakCelebrationProvider({
 
       if (cancelled) return;
       timer = setTimeout(() => {
-        // Re-check at fire time: user might have completed a lesson in the
-        // 5s window, which would make the nudge stale.
-        const freshLastTask = useEconomyUIStore.getState().lastDailyTaskDate;
-        if (freshLastTask === today) return;
-        AsyncStorage.setItem(DAILY_STREAK_NUDGE_KEY, today).catch(() => {});
-        const freshStreakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
-        const freshStreak = freshStreakState?.currentStreak ?? 0;
-        setCelebrationStreak(freshStreak);
-        setVisible(true);
-        useNudgeQueueStore.getState().markStreakShown();
+        void (async () => {
+          // Re-check at fire time: user might have completed a lesson in the
+          // 5s window, which would make the nudge stale.
+          const freshLastTask = useEconomyUIStore.getState().lastDailyTaskDate;
+          if (freshLastTask === today) return;
+          // Re-read the shown-date too — a landing ritual (e.g. the
+          // tomorrow-chest ceremony) may have stamped today AFTER our mount
+          // read, claiming the day's single landing popup.
+          const freshLastShown = await AsyncStorage.getItem(DAILY_STREAK_NUDGE_KEY).catch(() => null);
+          if (freshLastShown === today || cancelled) return;
+          AsyncStorage.setItem(DAILY_STREAK_NUDGE_KEY, today).catch(() => {});
+          const freshStreakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+          const freshStreak = freshStreakState?.currentStreak ?? 0;
+          setCelebrationStreak(freshStreak);
+          setVisible(true);
+          useNudgeQueueStore.getState().markStreakShown();
+        })();
       }, DAILY_STREAK_NUDGE_DELAY_MS);
     })();
 

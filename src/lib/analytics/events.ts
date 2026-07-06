@@ -295,7 +295,19 @@ export type AppEvent =
   | { name: 'streak_wager_offered'; props: { stake: number; payout: number } }
   | { name: 'streak_wager_accepted'; props: { stake: number; payout: number } }
   | { name: 'streak_wager_declined'; props: { stake: number; payout: number } }
-  | { name: 'streak_wager_resolved'; props: { outcome: 'won' | 'lost'; stake: number; payout: number } };
+  | { name: 'streak_wager_resolved'; props: { outcome: 'won' | 'lost'; stake: number; payout: number } }
+
+  // ── Tomorrow chest (RETENTION-SPRINT 2026-07-06) ─────────────────────────
+  // The day-2 appointment mechanic: a module/welcome chest today arms a
+  // sealed chest that opens the next Israel day (map card + landing ceremony
+  // that deep-links into the next lesson). DELIBERATELY separate from
+  // `chest_opened` — chest_opened uniques ARE the learning-completion NSM
+  // (chest_completion_metric); reusing it here would silently inflate the
+  // module-completion dashboards with return-ritual opens.
+  | { name: 'tomorrow_chest_armed'; props: { source: string; opens_on: string } }
+  | { name: 'tomorrow_chest_ready_shown'; props: { trigger: 'auto' | 'card_tap'; day_gap: number } }
+  | { name: 'tomorrow_chest_opened'; props: { day_gap: number; coins: number; xp: number; rarity: string; armed_source?: string } }
+  | { name: 'tomorrow_chest_cta_tapped'; props: { cta: 'continue_lesson' | 'later'; next_module_id?: string } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event

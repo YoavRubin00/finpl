@@ -12,6 +12,7 @@ import { ChestCelebrationModal } from './ChestCelebrationModal';
 import { InModuleProfileQuestion, type ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion';
 import { ModuleEndSignupGate } from '../auth/ModuleEndSignupGate';
 import { RateAppPromptModal } from '../retention-loops/RateAppPromptModal';
+import { useTomorrowChestStore } from '../retention-loops/useTomorrowChestStore';
 import { openStoreReview } from '../../lib/openStoreReview';
 import { shouldShowRatePrompt } from '../retention-loops/rateAppPrompt';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
@@ -488,6 +489,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       : null;
 
     setChestState({ xp: totalXp, coins: totalCoins, energy: CHEST_ENERGY_REWARD, isFinale: false, rarity, offerDoN, quitLabel });
+
+    // Tomorrow-chest (RETENTION-SPRINT 2026-07-06): today's module chest arms
+    // a sealed chest that opens the next Israel day — the literal object
+    // behind the Day0ExitRitual's "מחר: ... תיבה חדשה" promise and the day-2
+    // push. Idempotent per day; never overwrites a ready-unopened chest. The
+    // visible "seal" is the map card (NO in-modal teaser — Yoav removed the
+    // Captain's-Forecast teaser from the chest modal on 2026-06-11).
+    try { useTomorrowChestStore.getState().armForTomorrow('module_chest'); } catch { /* non-fatal */ }
 
     // Snapshot the lesson's grading inputs NOW, while the session-only data
     // (quizResults, voice transcript) is still in memory — the end-of-lesson

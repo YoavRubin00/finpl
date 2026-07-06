@@ -35,6 +35,7 @@ import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useRouter } from 'expo-router';
 import { FINN_HAPPY } from '../retention-loops/finnMascotConfig';
+import { useTomorrowChestStore } from '../retention-loops/useTomorrowChestStore';
 import { captureEvent } from '../../lib/posthog';
 import { isModuleFirstArm, FIRST_RUN_EXPERIMENT_ID, firstRunVariantId } from './firstRunExperiment';
 import { useTopicProgressStore } from '../topic-learning/useTopicProgressStore';
@@ -121,6 +122,11 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
       // mod-0-1 still get asked for push (→ the streak comeback reminder fires).
       // The banner OR's this with the mod-0-1-completion gate. Yoav 2026-06-26 (D1).
       try { useTutorialStore.getState().markFirstChestOpened(); } catch { /* non-fatal */ }
+      // Tomorrow-chest (RETENTION-SPRINT 2026-07-06): the welcome chest arms
+      // the day-2 sealed chest too — this is the ONLY arm that reaches users
+      // who finish the tour but never start mod-0-1 (the leakiest segment);
+      // their day-2 ceremony CTA leads straight into the first lesson.
+      try { useTomorrowChestStore.getState().armForTomorrow('welcome_chest'); } catch { /* non-fatal */ }
     }
     setOpened(true);
   }, [opened, playSound, addCoins, addXP, glowScale, glowOpacity, bodyScale]);

@@ -136,6 +136,7 @@ import { useRewardedAd } from "../../hooks/useRewardedAd";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
 import { generateChestDrop } from "../retention-loops/chestDrops";
 import { useRetentionStore } from "../retention-loops/useRetentionStore";
+import { useTomorrowChestStore } from "../retention-loops/useTomorrowChestStore";
 import type { ChestRarity, ChestReward } from "../retention-loops/types";
 import type { Module, Flashcard, QuizQuestion } from "./types";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
@@ -2192,6 +2193,11 @@ export function LessonFlowScreen() {
     const topics = resolveTopics(mod);
     const thresholdPct = Math.round((chipsToChestFor('mod-0-1', Math.max(1, topics.length)) / Math.max(1, topics.length)) * 100);
     setHandoffChest({ xp: MODULE_TT_XP, coins, energy: CHEST_ENERGY_REWARD, rarity, thresholdPct });
+    // Tomorrow-chest (RETENTION-SPRINT 2026-07-06): the handoff chest arms
+    // tomorrow's sealed chest too, so module-first v1 users get the same
+    // day-2 appointment as control's accordion chest. Arming pre-onboarding
+    // is fine — the ready ceremony itself gates on hasCompletedOnboarding.
+    try { useTomorrowChestStore.getState().armForTomorrow('handoff_chest'); } catch { /* non-fatal */ }
     return true;
   }
 

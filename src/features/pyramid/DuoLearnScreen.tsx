@@ -99,6 +99,7 @@ import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNews
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 import { FINN_STANDARD, FINN_DAILY_CHALLENGE } from "../retention-loops/finnMascotConfig";
 import { EnergyStationCard } from "../energy/EnergyStationCard";
+import { TomorrowChestCard } from "../retention-loops/TomorrowChestCard";
 import { useHeartsStore } from "../subscription/useHeartsStore";
 // FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
 // entry lives in the Daily News Challenge card (added in Stage A).
@@ -3123,6 +3124,13 @@ export function DuoLearnScreen() {
           }}
           scrollEventThrottle={100}
         >
+
+          {/* Tomorrow-chest appointment card (RETENTION-SPRINT 2026-07-06) —
+              the visible artifact of the day-2 loop: sealed = tomorrow's
+              promise + the next lesson's hook; ready = tap → landing
+              ceremony. Renders null when nothing is armed; hidden during the
+              walkthrough so the first-run focus stays on the golden chip. */}
+          {!isWalkthroughActive && <TomorrowChestCard />}
 
           {/* Daily News Challenge — HERO at the very top of the scroll, above
               the chapters. This is the primary discovery surface (the floating
