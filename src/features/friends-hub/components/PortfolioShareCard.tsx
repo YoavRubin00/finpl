@@ -528,9 +528,10 @@ export function PortfolioShareCard(): React.ReactElement {
 
   // Real feed ranked by engagement; falls back to example content ONLY while the
   // real feed is empty (self-retires the instant a real portfolio exists).
-  // Example posts are merged with the user's OWN local engagement so they look
-  // and feel exactly like real posts (Yoav 2026-07-04) — counts derive solely
-  // from what this user actually did, never a fabricated crowd.
+  // Example posts are merged with the user's OWN local engagement. Likes show
+  // the seed's baseline social-proof count (Yoav 2026-07-06) + this user's own
+  // like on top; ratings and comments still derive solely from what this user
+  // actually did. Real (server) posts are untouched by any of this.
   const likedSeeds = useSeedEngagementStore((s) => s.likedSeeds);
   const seedRatings = useSeedEngagementStore((s) => s.seedRatings);
   const seedComments = useSeedEngagementStore((s) => s.seedComments);
@@ -545,7 +546,7 @@ export function PortfolioShareCard(): React.ReactElement {
       return {
         ...pf,
         likedByYou: liked,
-        likeCount: liked ? 1 : 0,
+        likeCount: pf.likeCount + (liked ? 1 : 0),
         yourRating: rating ?? null,
         ratingAvg: rating ?? null,
         ratingCount: rating != null ? 1 : 0,

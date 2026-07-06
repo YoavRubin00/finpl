@@ -45,7 +45,10 @@ export const SEED_PORTFOLIOS: RatedPortfolio[] = [
     ratingAvg: null,
     ratingCount: 0,
     yourRating: null,
-    likeCount: 0,
+    // Baseline social-proof likes (Yoav 2026-07-06): seed cards start with a
+    // visible like count so the feed doesn't look dead pre-community. The
+    // user's own like adds on top (see the feed merge in PortfolioShareCard).
+    likeCount: 14,
     likedByYou: false,
     comments: [],
     commentCount: 0,
@@ -68,7 +71,8 @@ export const SEED_PORTFOLIOS: RatedPortfolio[] = [
     ratingAvg: null,
     ratingCount: 0,
     yourRating: null,
-    likeCount: 0,
+    // Baseline social-proof likes — see note on the first seed.
+    likeCount: 18,
     likedByYou: false,
     comments: [],
     commentCount: 0,
