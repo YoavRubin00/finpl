@@ -72,7 +72,9 @@ interface PortfolioShareState {
   rateRewardDate: string | null;
   rateRewardCount: number;
 
-  /** Pull the fresh feed from the server. No-op (empty) for guests. */
+  /** Pull the fresh feed from the server. PUBLIC (Yoav 2026-07-07): guests get
+   *  the full community feed too — this was the "רק חברים רואים" bug: guests
+   *  never fetched, fell back to seed cards, and never saw real shares. */
   refresh: () => Promise<void>;
   /** Share a portfolio. Returns the new post + any coin reward (0 if none). */
   share: (input: {
@@ -80,6 +82,7 @@ interface PortfolioShareState {
     caption: string;
     displayName: string;
     avatarId: string | null;
+    isAnonymous?: boolean;
   }) => Promise<{ portfolio: RatedPortfolio | null; rewardCoins: number }>;
   /** Set/change your star rating. Returns recomputed aggregate + coin reward. */
   rate: (
@@ -106,21 +109,18 @@ export const usePortfolioShareStore = create<PortfolioShareState>()(
       rateRewardCount: 0,
 
       refresh: async () => {
+        // Guests fetch too (no auth params) — the feed is community-public.
         const auth = await resolveAuth();
-        if (!auth) {
-          set({ portfolios: [], loading: false, loaded: true });
-          return;
-        }
         set({ loading: true });
         try {
-          const { portfolios } = await fetchPortfolioFeed(auth);
+          const { portfolios } = await fetchPortfolioFeed(auth ?? {});
           set({ portfolios, loading: false, loaded: true });
         } catch {
           set({ loading: false, loaded: true });
         }
       },
 
-      share: async ({ picks, caption, displayName, avatarId }) => {
+      share: async ({ picks, caption, displayName, avatarId, isAnonymous }) => {
         const auth = await resolveAuth();
         if (!auth) return { portfolio: null, rewardCoins: 0 };
         let portfolio: RatedPortfolio | null = null;
@@ -131,6 +131,7 @@ export const usePortfolioShareStore = create<PortfolioShareState>()(
             caption,
             displayName,
             avatarId,
+            isAnonymous: isAnonymous === true,
           });
         } catch {
           return { portfolio: null, rewardCoins: 0 };

@@ -3,11 +3,18 @@
  * couldn't be rated/liked/commented cross-user without fabricating data). This
  * is the genuine store — shares + 1-5 star ratings + likes + comments, all real.
  *
- * GET  /api/portfolio-share/feed?authId=<email>&cursor=<iso?>
+ * GET  /api/portfolio-share/feed?authId=<email?>&cursor=<iso?>
  *   → { ok, portfolios: RatedPortfolioView[], nextCursor }
+ *   PUBLIC READ (Yoav 2026-07-07): the feed is community-wide — everyone,
+ *   including guests (no authId), sees every shared portfolio. Personal fields
+ *   (isSelf/yourRating/likedByYou) and block-filtering apply only to an
+ *   authenticated caller. Writes below still REQUIRE auth.
  *
  * POST /api/portfolio-share/feed  { authId, action, ... }
- *   action 'share'   { picks, caption, displayName, avatarId } → new portfolio
+ *   action 'share'   { picks, caption, displayName, avatarId, isAnonymous? } → new portfolio
+ *     isAnonymous=true keeps the real user_id on the row (moderation/blocks
+ *     work) but every response masks the author (name→'משקיע אנונימי',
+ *     avatar→null, authorUserId→'anon' so cross-post identity can't be linked).
  *   action 'rate'    { portfolioId, stars }                    → { ratingAvg, ratingCount, yourRating }
  *   action 'like'    { portfolioId }                           → { likeCount, likedByYou }  (toggle)
  *   action 'comment' { portfolioId, body, displayName, avatarId } → new comment
@@ -44,6 +51,11 @@ type Db = ReturnType<typeof getDb>;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PAGE_SIZE = 20;
+/** Display name for anonymous shares — the ONLY author identity ever exposed. */
+const ANON_NAME = 'משקיע אנונימי';
+/** authorUserId placeholder for anonymous rows: the real uuid must not leak,
+ *  or two posts (one named, one anonymous) by the same user become linkable. */
+const ANON_USER_ID = 'anon';
 const MIN_PICKS = 2;
 const MAX_PICKS = 6;
 const MAX_CAPTION = 140;
@@ -134,15 +146,20 @@ export async function GET(request: Request): Promise<Response> {
     const authId = sanitizeString(url.searchParams.get('authId'), 254);
     const cursor = sanitizeString(url.searchParams.get('cursor'), 40);
     const db = getDb();
+    // PUBLIC READ (Yoav 2026-07-07): no authId → guest browsing, serve the feed
+    // without personal fields. An authId that FAILS validation is still a hard
+    // 401 (never let a caller impersonate someone's personal view).
     const caller = await authCaller(db, request, authId);
-    if (!caller) return json({ error: 'Unauthorized' }, { status: 401 });
+    if (authId && !caller) return json({ error: 'Unauthorized' }, { status: 401 });
 
     // Users this caller has blocked — their shares + comments are filtered out
-    // entirely (Apple 1.2: a way to block abusive users).
-    const blocks = await db
-      .select({ blockedUserId: userBlocks.blockedUserId })
-      .from(userBlocks)
-      .where(eq(userBlocks.blockerUserId, caller.id));
+    // entirely (Apple 1.2: a way to block abusive users). Guests have no blocks.
+    const blocks = caller
+      ? await db
+          .select({ blockedUserId: userBlocks.blockedUserId })
+          .from(userBlocks)
+          .where(eq(userBlocks.blockerUserId, caller.id))
+      : [];
     const blockedIds = blocks.map((b) => b.blockedUserId);
 
     // hidden=false (moderated content is removed) + not-from-blocked + cursor.
@@ -171,10 +188,12 @@ export async function GET(request: Request): Promise<Response> {
       .where(inArray(portfolioRatings.portfolioId, ids))
       .groupBy(portfolioRatings.portfolioId);
 
-    const myRatings = await db
-      .select({ portfolioId: portfolioRatings.portfolioId, stars: portfolioRatings.stars })
-      .from(portfolioRatings)
-      .where(and(inArray(portfolioRatings.portfolioId, ids), eq(portfolioRatings.raterUserId, caller.id)));
+    const myRatings = caller
+      ? await db
+          .select({ portfolioId: portfolioRatings.portfolioId, stars: portfolioRatings.stars })
+          .from(portfolioRatings)
+          .where(and(inArray(portfolioRatings.portfolioId, ids), eq(portfolioRatings.raterUserId, caller.id)))
+      : [];
 
     const likeAgg = await db
       .select({ portfolioId: portfolioLikes.portfolioId, count: sql<number>`COUNT(*)::int` })
@@ -182,10 +201,12 @@ export async function GET(request: Request): Promise<Response> {
       .where(inArray(portfolioLikes.portfolioId, ids))
       .groupBy(portfolioLikes.portfolioId);
 
-    const myLikes = await db
-      .select({ portfolioId: portfolioLikes.portfolioId })
-      .from(portfolioLikes)
-      .where(and(inArray(portfolioLikes.portfolioId, ids), eq(portfolioLikes.userId, caller.id)));
+    const myLikes = caller
+      ? await db
+          .select({ portfolioId: portfolioLikes.portfolioId })
+          .from(portfolioLikes)
+          .where(and(inArray(portfolioLikes.portfolioId, ids), eq(portfolioLikes.userId, caller.id)))
+      : [];
 
     const commentConds = [inArray(portfolioComments.portfolioId, ids), eq(portfolioComments.hidden, false)];
     if (blockedIds.length) commentConds.push(notInArray(portfolioComments.authorUserId, blockedIds));
@@ -208,7 +229,7 @@ export async function GET(request: Request): Promise<Response> {
         authorAvatarId: c.authorAvatarId ?? null,
         body: c.body,
         createdAt: c.createdAt ?? '',
-        isSelf: c.authorUserId === caller.id,
+        isSelf: caller ? c.authorUserId === caller.id : false,
       });
       commentMap.set(c.portfolioId, list);
     }
@@ -216,12 +237,15 @@ export async function GET(request: Request): Promise<Response> {
     const portfolios: RatedPortfolioView[] = rows.map((r) => {
       const agg = ratingMap.get(r.id);
       const comments = commentMap.get(r.id) ?? [];
+      // Anonymous mask: name/avatar/id hidden for EVERYONE (the owner still
+      // gets isSelf=true so the client can badge "אתה, בעילום שם").
+      const anon = r.isAnonymous === true;
       return {
         id: r.id,
-        authorUserId: r.userId,
-        authorName: r.authorName ?? 'משתמש FinPlay',
-        authorAvatarId: r.authorAvatarId ?? null,
-        isSelf: r.userId === caller.id,
+        authorUserId: anon ? ANON_USER_ID : r.userId,
+        authorName: anon ? ANON_NAME : (r.authorName ?? 'משתמש FinPlay'),
+        authorAvatarId: anon ? null : (r.authorAvatarId ?? null),
+        isSelf: caller ? r.userId === caller.id : false,
         picks: Array.isArray(r.picks) ? (r.picks as Pick[]) : [],
         caption: r.caption ?? '',
         createdAt: r.createdAt ?? '',
@@ -257,6 +281,7 @@ export async function POST(request: Request): Promise<Response> {
       body?: string;
       displayName?: string;
       avatarId?: string;
+      isAnonymous?: boolean;
       targetType?: string;
       targetId?: string;
       targetUserId?: string;
@@ -274,8 +299,11 @@ export async function POST(request: Request): Promise<Response> {
       const picks = sanitizePicks(body.picks);
       if (!picks) return json({ error: 'Bad picks' }, { status: 400 });
       const caption = sanitizeString(body.caption ?? null, MAX_CAPTION) ?? '';
-      const authorName = sanitizeString(body.displayName ?? null, 64) ?? null;
-      const authorAvatarId = sanitizeString(body.avatarId ?? null, 48) ?? null;
+      const isAnonymous = body.isAnonymous === true;
+      // Anonymous share: never store the display snapshot at all — the mask
+      // must hold even against a future query that forgets to check the flag.
+      const authorName = isAnonymous ? null : (sanitizeString(body.displayName ?? null, 64) ?? null);
+      const authorAvatarId = isAnonymous ? null : (sanitizeString(body.avatarId ?? null, 48) ?? null);
 
       const inserted = await db
         .insert(sharedPortfolios)
@@ -286,14 +314,15 @@ export async function POST(request: Request): Promise<Response> {
           authorAvatarId,
           picks,
           caption,
+          isAnonymous,
         })
         .returning();
       const row = inserted[0];
       const view: RatedPortfolioView = {
         id: row.id,
-        authorUserId: row.userId,
-        authorName: row.authorName ?? 'משתמש FinPlay',
-        authorAvatarId: row.authorAvatarId ?? null,
+        authorUserId: isAnonymous ? ANON_USER_ID : row.userId,
+        authorName: isAnonymous ? ANON_NAME : (row.authorName ?? 'משתמש FinPlay'),
+        authorAvatarId: isAnonymous ? null : (row.authorAvatarId ?? null),
         isSelf: true,
         picks,
         caption: row.caption ?? '',

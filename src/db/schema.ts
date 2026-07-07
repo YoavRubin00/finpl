@@ -451,6 +451,10 @@ export const sharedPortfolios = pgTable("shared_portfolios", {
   caption: text(),
   createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   hidden: boolean().notNull().default(false),
+  // Anonymous share (Yoav 2026-07-07, 0013): the row keeps the real user_id
+  // (moderation/blocks/CASCADE still work) but the API masks name/avatar/id
+  // in every response when true.
+  isAnonymous: boolean("is_anonymous").notNull().default(false),
 }, (table) => [
   index("shared_portfolios_recent_idx").using("btree", table.createdAt.desc()),
   index("shared_portfolios_user_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),

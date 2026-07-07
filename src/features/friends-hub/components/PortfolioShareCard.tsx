@@ -260,9 +260,13 @@ function PortfolioPost({
   };
 
   // Apple Guideline 1.2 — report objectionable content / block an abusive user.
+  // Anonymous posts (authorUserId === 'anon', masked server-side so identities
+  // can't be linked) can be REPORTED but not blocked — there is no real id to
+  // block against, and report + auto-hide covers the moderation requirement.
   const onMorePress = (): void => {
     if (isGuest) { requestGuestGate('portfolio_comment'); return; }
     tapHaptic();
+    const canBlock = pf.authorUserId !== 'anon';
     Alert.alert(
       'אפשרויות',
       `התיק של ${pf.authorName}`,
@@ -275,14 +279,16 @@ function PortfolioPost({
             Alert.alert('הדיווח התקבל', 'נבדוק את התוכן. הוא הוסתר עבורך מעכשיו.');
           },
         },
-        {
-          text: 'חסום את המשתמש',
-          style: 'destructive',
-          onPress: () => {
-            void blockUser(pf.authorUserId);
-            Alert.alert('המשתמש נחסם', 'לא תראו יותר תוכן מהמשתמש הזה.');
-          },
-        },
+        ...(canBlock
+          ? [{
+              text: 'חסום את המשתמש',
+              style: 'destructive' as const,
+              onPress: () => {
+                void blockUser(pf.authorUserId);
+                Alert.alert('המשתמש נחסם', 'לא תראו יותר תוכן מהמשתמש הזה.');
+              },
+            }]
+          : []),
         { text: 'ביטול', style: 'cancel' },
       ],
       { cancelable: true },
@@ -501,7 +507,7 @@ export function PortfolioShareCard(): React.ReactElement {
     setTimeout(() => setRewardToast(null), 3200);
   }, []);
 
-  const handleShare = async (picks: SharedPick[], caption: string): Promise<void> => {
+  const handleShare = async (picks: SharedPick[], caption: string, isAnonymous: boolean): Promise<void> => {
     if (isGuest) { requestGuestGate('portfolio_share'); return; }
     if (caption.trim().length > 0) {
       const verdict = await moderateWithSharkBot(caption);
@@ -516,10 +522,11 @@ export function PortfolioShareCard(): React.ReactElement {
       caption,
       displayName: displayName?.trim() ? displayName : 'אני',
       avatarId: myAvatarId,
+      isAnonymous,
     });
     if (portfolio) {
       try {
-        track({ name: 'portfolio_shared_server', props: { picks: picks.length } });
+        track({ name: 'portfolio_shared_server', props: { picks: picks.length, is_anonymous: isAnonymous } });
         track({ name: 'social_action', props: { action_type: 'portfolio_share', surface: 'friends_hub' } });
       } catch { /* non-fatal */ }
     }

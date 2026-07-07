@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronRight, Plus, Minus, Check, Wand2, Trash2 } from 'lucide-react-native';
+import { ChevronRight, Plus, Minus, Check, Wand2, Trash2, EyeOff } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 
 import { F2_SECTORS, type FantasySectorId } from '../../constants/theme';
@@ -45,7 +45,7 @@ interface DraftPick {
 interface PortfolioComposerModalProps {
   visible: boolean;
   onClose: () => void;
-  onShare: (picks: SharedPick[], caption: string) => void;
+  onShare: (picks: SharedPick[], caption: string, isAnonymous: boolean) => void;
 }
 
 function sectorColor(sector: FantasySectorId): string {
@@ -117,6 +117,9 @@ export function PortfolioComposerModal({
   const [picks, setPicks] = useState<DraftPick[]>([]);
   const [caption, setCaption] = useState('');
   const [customTicker, setCustomTicker] = useState('');
+  // Anonymous share (Yoav 2026-07-07): post to the community feed without a
+  // name/avatar — the server masks the author for everyone.
+  const [anonymous, setAnonymous] = useState(false);
 
   // Live weekly returns (real market data). Where a ticker has no live value
   // yet, the % is simply hidden — never a fabricated constant.
@@ -136,6 +139,7 @@ export function PortfolioComposerModal({
   const reset = useCallback(() => {
     setPicks([]);
     setCaption('');
+    setAnonymous(false);
   }, []);
 
   const handleClose = (): void => {
@@ -224,6 +228,7 @@ export function PortfolioComposerModal({
         allocationPct: p.allocationPct,
       })),
       caption,
+      anonymous,
     );
     reset();
     onClose();
@@ -486,6 +491,55 @@ export function PortfolioComposerModal({
                 ...RTL,
               }}
             />
+          </View>
+
+          {/* Anonymous toggle (Yoav 2026-07-07) — the whole community sees the
+              feed, so give sharers a no-name option. Plain Pressable row with
+              an inner-View pill (Android function-style bg bug — see memory). */}
+          <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+            <Pressable
+              onPress={() => { tapHaptic(); setAnonymous((v) => !v); }}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: anonymous }}
+              accessibilityLabel="שיתוף אנונימי"
+            >
+              <View
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: 10,
+                  backgroundColor: anonymous ? '#ede9fe' : FEED_BG,
+                  borderWidth: 1.5,
+                  borderColor: anonymous ? '#7c3aed' : '#e5e7eb',
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                }}
+              >
+                <EyeOff size={18} color={anonymous ? '#7c3aed' : TEXT_MUTED} strokeWidth={2.4} />
+                <View style={{ flex: 1, gap: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: anonymous ? '#7c3aed' : TEXT_PRIMARY, ...RTL }}>
+                    שיתוף בעילום שם
+                  </Text>
+                  <Text style={{ fontSize: 11, color: TEXT_MUTED, ...RTL }}>
+                    {anonymous ? 'התיק יופיע בפיד בתור "משקיע אנונימי" — בלי שם ובלי אווטאר' : 'התיק יופיע עם השם והאווטאר שלך'}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    width: 44,
+                    height: 26,
+                    borderRadius: 13,
+                    backgroundColor: anonymous ? '#7c3aed' : '#d1d5db',
+                    justifyContent: 'center',
+                    paddingHorizontal: 3,
+                    alignItems: anonymous ? 'flex-start' : 'flex-end',
+                  }}
+                >
+                  <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#ffffff' }} />
+                </View>
+              </View>
+            </Pressable>
           </View>
         </ScrollView>
 

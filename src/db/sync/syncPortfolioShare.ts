@@ -52,12 +52,16 @@ function headers(syncToken?: string | null): Record<string, string> {
 
 const ENDPOINT = '/api/portfolio-share/feed';
 
-/** The community feed (real portfolios + real ratings/likes/comments). */
+/** The community feed (real portfolios + real ratings/likes/comments).
+ *  PUBLIC READ (Yoav 2026-07-07): auth is OPTIONAL — a guest (no authId) gets
+ *  the same community-wide feed, just without personal fields (isSelf/
+ *  yourRating/likedByYou come back false/null). Writes still require auth. */
 export async function fetchPortfolioFeed(
-  args: AuthArgs & { cursor?: string | null },
+  args: Partial<AuthArgs> & { cursor?: string | null },
 ): Promise<{ portfolios: RatedPortfolio[]; nextCursor: string | null }> {
   const base = getApiBase();
-  const qs = new URLSearchParams({ authId: args.authId });
+  const qs = new URLSearchParams();
+  if (args.authId) qs.set('authId', args.authId);
   if (args.cursor) qs.set('cursor', args.cursor);
   const res = await fetch(`${base}${ENDPOINT}?${qs.toString()}`, { headers: headers(args.syncToken) });
   if (!res.ok) throw new Error(`portfolio feed GET failed: ${res.status}`);
@@ -65,13 +69,15 @@ export async function fetchPortfolioFeed(
   return { portfolios: data.portfolios ?? [], nextCursor: data.nextCursor ?? null };
 }
 
-/** Share a portfolio to the server feed. */
+/** Share a portfolio to the server feed. `isAnonymous` masks the author
+ *  (name/avatar/id) in every response — see feed+api.ts (Yoav 2026-07-07). */
 export async function sharePortfolioApi(
   args: AuthArgs & {
     picks: RatedPick[];
     caption: string;
     displayName: string;
     avatarId: string | null;
+    isAnonymous?: boolean;
   },
 ): Promise<RatedPortfolio> {
   const base = getApiBase();
@@ -90,6 +96,7 @@ export async function sharePortfolioApi(
       caption: args.caption,
       displayName: args.displayName,
       avatarId: args.avatarId,
+      isAnonymous: args.isAnonymous === true,
     }),
   });
   if (!res.ok) throw new Error(`portfolio share failed: ${res.status}`);
