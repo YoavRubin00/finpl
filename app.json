@@ -2,7 +2,7 @@
   "expo": {
     "name": "FinPlay",
     "slug": "finpl",
-    "version": "1.4.3",
+    "version": "1.4.4",
     "scheme": "finpl",
     "description": "FinPlay — Learn finance through play. Gamified financial literacy for Gen-Z.",
     "platforms": [
@@ -125,7 +125,9 @@
     },
     "runtimeVersion": "1.3.7",
     "updates": {
-      "url": "https://u.expo.dev/a2e40fb6-9966-44fa-950f-177df7f5d097"
+      "url": "https://u.expo.dev/a2e40fb6-9966-44fa-950f-177df7f5d097",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 8000
     },
     "android": {
       "package": "com.finplay.app",
