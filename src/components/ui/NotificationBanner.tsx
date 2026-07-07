@@ -49,6 +49,21 @@ export function NotificationBanner({
   const translateY = useSharedValue(-80);
   const opacity = useSharedValue(0);
 
+  // Slide out WITHOUT notifying the parent. Used when the parent externally
+  // hides the banner (visible → false) — it already knows, so firing onDismiss
+  // here is wrong. This was the root of the phantom-dismiss bug (Yoav 2026-07-07):
+  // every invisible mount ran the `else` branch below and fired onDismiss, which
+  // for the permission/tools/bridge/indices banners also ran their dismiss side
+  // effects (markSeen / dismissBanner) — so those banners SUPPRESSED THEMSELVES
+  // on mount before ever showing, and PostHog logged ~511 phantom
+  // notification_banner_dismissed against ~24 real shown.
+  function animateOut() {
+    translateY.value = withSpring(-80, { damping: 18, stiffness: 220 });
+    opacity.value = withTiming(0, { duration: 200 });
+  }
+
+  // Genuine dismissal — the user tapped X, or an auto-`duration` banner timed
+  // out. ONLY these paths notify the parent via onDismiss.
   function dismiss() {
     translateY.value = withSpring(-80, { damping: 18, stiffness: 220 });
     opacity.value = withTiming(0, { duration: 200 }, (done) => {
@@ -66,7 +81,7 @@ export function NotificationBanner({
         return () => clearTimeout(timer);
       }
     } else {
-      dismiss();
+      animateOut();
     }
   }, [visible]);
 
