@@ -36,8 +36,20 @@ import { useAuthStore } from '../auth/useAuthStore';
 
 export const FIRST_RUN_EXPERIMENT_ID = 'onboarding_module_first' as const;
 
-/** Hard kill for the module-first flow, INCLUDING in-flight users. */
-export const MODULE_FIRST_ENABLED = true;
+/** Hard kill for the module-first flow, INCLUDING in-flight users.
+ *
+ *  KILLED 2026-07-07 (Yoav: "הניסוי לא עובד") — production data from the
+ *  1.4.3 rollout (4-6.7) smashed the pre-committed guardrail (v1 must hold
+ *  ≥85% of v0's onboarding completion): v1 assigned=12 → onboarding_completed
+ *  = 1 (8%) vs v0 30 → 17 (57%). Funnel autopsy: ~33% of v1 died at the hook
+ *  screen without ever firing lesson_started; of the 8 who entered mod-0-1,
+ *  only 2 reached any chest — value-first WITHOUT profiling investment
+ *  produced drive-by tourists, not activated users (no crash signal; the
+ *  flow worked, the design didn't). Flipping this to false rescues in-flight
+ *  v1 guests into the classic flow on next render. NOTE: new installs run
+ *  the EMBEDDED 1.4.3 bundle on their first session, so ~20% of new users
+ *  stay exposed until the next native build ships with this kill baked in. */
+export const MODULE_FIRST_ENABLED = false;
 
 const VARIANT_BY_ARM = {
   control: 'onboarding_module_first_v0',

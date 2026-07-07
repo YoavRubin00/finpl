@@ -424,9 +424,14 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
   // MODULE_FIRST_ENABLED=false in firstRunExperiment.ts (also in-flight users).
   onboarding_module_first: {
     goal: 'retention',
+    // KILLED 2026-07-07: guardrail smashed in the 1.4.3 rollout — v1
+    // onboarding-completion 8% vs v0 57% (pre-registered kill threshold was
+    // <85% of v0). v1 allocation → 0 stops NEW assignments; the in-flight
+    // rescue is MODULE_FIRST_ENABLED=false in firstRunExperiment.ts (both
+    // flipped together). See DECISION-LOG 2026-07-07.
     allocation: {
-      onboarding_module_first_v0: 0.8,
-      onboarding_module_first_v1: 0.2,
+      onboarding_module_first_v0: 1.0,
+      onboarding_module_first_v1: 0,
     },
     variants: [
       {
