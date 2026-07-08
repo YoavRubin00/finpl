@@ -87,7 +87,9 @@ export async function POST(request: Request): Promise<Response> {
       ((sumResult as unknown as { rows?: { total_yesterday: number | string }[] }).rows?.[0])
       ?? ((sumResult as unknown as { total_yesterday: number | string }[])[0]);
     const totalYesterday = Number(sumRow?.total_yesterday ?? 0) || 0;
-    const dividendAmount = Math.floor(totalYesterday * DIVIDEND_RATE);
+    // Daily cap 100 (מוני 8.7, approved by Yoav): a fifth of one portfolio-share
+    // reward — the dividend is a daily comeback hook, not an income source.
+    const dividendAmount = Math.min(100, Math.floor(totalYesterday * DIVIDEND_RATE));
 
     if (dividendAmount <= 0) {
       // Nothing to collect today, but record a 0-row to mark "checked today" — this prevents

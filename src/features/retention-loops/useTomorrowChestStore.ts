@@ -59,10 +59,27 @@ const TOMORROW_CHEST_ENERGY = 2;
 
 export type TomorrowChestStatus = 'none' | 'sealed' | 'ready';
 
+/** Overnight-interest economics (מוני 8.7.26, approved by Yoav):
+ *  the chest pays a FLOOR of 100 coins, plus a 50% match on the learning
+ *  coins earned on the ARMING day (capped), framed as "הכסף שלך עובד
+ *  בלילה" — returning tomorrow is the single best-paying decision of day-0,
+ *  and it's a live compound-interest lesson. Max injection ≈ 300, one-shot,
+ *  return-gated — less than one portfolio share. */
+const CHEST_COINS_FLOOR = 100;
+const OVERNIGHT_MATCH_RATE = 0.5;
+const OVERNIGHT_MATCH_CAP = 200;
+/** Ready window in days: opens-day + this many extra days, then it EXPIRES
+ *  ("לא נאסף — נשרף", מוני 8.7): urgency without a streak punishment. An
+ *  expired chest never blocks re-arming — the next real chest re-arms fresh. */
+const READY_WINDOW_DAYS = 1;
+
 /** Pure status derivation. ISO date strings compare lexicographically. */
 export function tomorrowChestStatus(opensOnDate: string | null, todayIL: string = getIsraelDateISO()): TomorrowChestStatus {
   if (!TOMORROW_CHEST_ENABLED || !opensOnDate) return 'none';
-  return todayIL >= opensOnDate ? 'ready' : 'sealed';
+  if (todayIL < opensOnDate) return 'sealed';
+  // Expired (48h window passed) reads as 'none' — the card/ceremony vanish.
+  if (todayIL > israelDatePlusDays(opensOnDate, READY_WINDOW_DAYS)) return 'none';
+  return 'ready';
 }
 
 /** Whole-day gap between two IL-ISO dates (UTC-noon anchored, DST-safe). */
@@ -110,13 +127,22 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
         if (!TOMORROW_CHEST_ENABLED) return false;
         const today = getIsraelDateISO();
         const tomorrow = israelDatePlusDays(today, 1);
-        const { opensOnDate } = get();
+        const { opensOnDate, armedOnDate } = get();
         if (opensOnDate !== null) {
-          // Ready-but-unopened (user returned but hasn't opened yet) — never
-          // steal it by re-arming; they open first, the next chest re-arms.
-          if (opensOnDate <= today) return false;
-          // Already armed for tomorrow — idempotent.
-          if (opensOnDate === tomorrow) return false;
+          const expired = today > israelDatePlusDays(opensOnDate, READY_WINDOW_DAYS);
+          if (expired) {
+            // Burned unclaimed (מוני 8.7) — log once, then fall through to a
+            // fresh arm; an expired chest must never block the loop.
+            try {
+              track({ name: 'tomorrow_chest_expired', props: { opens_on: opensOnDate, armed_on: armedOnDate ?? 'unknown' } });
+            } catch { /* non-fatal */ }
+          } else {
+            // Ready-but-unopened (inside the window) — never steal it by
+            // re-arming; they open first, the next chest re-arms.
+            if (opensOnDate <= today) return false;
+            // Already armed for tomorrow — idempotent.
+            if (opensOnDate === tomorrow) return false;
+          }
         }
         set({ opensOnDate: tomorrow, armedOnDate: today, armedSource: source });
         try { track({ name: 'tomorrow_chest_armed', props: { source, opens_on: tomorrow } }); } catch { /* non-fatal */ }
@@ -134,11 +160,19 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
         const eco = useEconomyUIStore.getState();
         const streak = deriveStreakFromDates(eco.activeDates, eco.frozenDates);
         const drop = generateChestDrop('regular', streak);
+        // Overnight interest (מוני 8.7): floor 100 + 50% match on the ARMING
+        // day's learning coins (capped 200). The match reads the real per-day
+        // ledger — never an invented number; no learning yesterday = no match.
+        const earnedOnArmDay = armedOnDate ? (eco.coinsEarnedByDay[armedOnDate] ?? 0) : 0;
+        const matchCoins = Math.min(OVERNIGHT_MATCH_CAP, Math.floor(earnedOnArmDay * OVERNIGHT_MATCH_RATE));
+        // First-ever open: guarantee a rare-or-better FEEL (raise the floor,
+        // never the ceiling — one-shot, no inflation).
+        const rarity = totalOpens === 0 && drop.rarity === 'common' ? 'rare' : drop.rarity;
         const rewards: TomorrowChestRewards = {
-          coins: drop.rewards.coins,
+          coins: Math.max(CHEST_COINS_FLOOR, drop.rewards.coins) + matchCoins,
           xp: drop.rewards.xp,
           energy: TOMORROW_CHEST_ENERGY,
-          rarity: drop.rarity,
+          rarity,
         };
 
         // Clear the arm FIRST (double-tap / re-entry safe), then grant.
@@ -160,6 +194,7 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
             props: {
               day_gap: armedOnDate ? dayGap(armedOnDate, today) : 0,
               coins: rewards.coins,
+              match_coins: matchCoins,
               xp: rewards.xp,
               rarity: rewards.rarity,
               armed_source: armedSource ?? 'unknown',

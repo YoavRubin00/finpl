@@ -130,7 +130,8 @@ export async function GET(request: Request): Promise<Response> {
       (sum, f) => sum + f.yesterdayLearningCoins,
       0,
     );
-    const grossDividend = Math.floor(totalYesterdayLearningCoins * DIVIDEND_RATE);
+    // Daily cap 100 (מוני 8.7, approved by Yoav) — must mirror collect+api.ts.
+    const grossDividend = Math.min(100, Math.floor(totalYesterdayLearningCoins * DIVIDEND_RATE));
 
     // Has the user already collected today? dividend_collections is keyed by
     // user_id (identity rekey / migration 0004) — the old auth_id column is gone.

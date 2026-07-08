@@ -148,6 +148,10 @@ interface EconomyUIState {
   starterCapitalGranted: boolean;
   activeDates: string[];     // ISO dates when user completed a task (bounded to 90 days)
   frozenDates: string[];     // ISO dates when a streak freeze was auto-consumed
+  // Learning coins earned per IL-day (lesson/quiz/daily-quest only), pruned to
+  // the last 3 days. Feeds the tomorrow-chest 50% overnight match
+  // (מוני 8.7, approved: "הכסף שלך עובד בלילה").
+  coinsEarnedByDay: Record<string, number>;
   streakFreezes: number;     // owned freeze items count
   // Board 2026-06-18: 2 free freezes granted ONCE at onboarding (see grantOnboardingFreezes).
   // This flag makes that grant idempotent across re-runs / re-installs.
@@ -221,6 +225,7 @@ const INITIAL_STATE = {
   pendingLevelUp: null as number | null,
   activeDates: [] as string[],
   frozenDates: [] as string[],
+  coinsEarnedByDay: {} as Record<string, number>,
   streakFreezes: 0,
   onboardingFreezesGranted: false,
   lastStreakDayRewardDate: null as string | null,
@@ -383,6 +388,14 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           if (seasonalMult > 1.0) finalAmount = Math.round(finalAmount * seasonalMult);
           const boostCoins = get().getActiveBoostMultipliers().coins;
           if (boostCoins > 1.0) finalAmount = Math.round(finalAmount * boostCoins);
+          // Per-day learning-earn ledger for the tomorrow-chest 50% overnight
+          // match (מוני 8.7). Pruned to 3 days so the persisted map stays tiny.
+          const dayKey = todayISO();
+          const ledger = { ...get().coinsEarnedByDay };
+          ledger[dayKey] = (ledger[dayKey] ?? 0) + finalAmount;
+          const keys = Object.keys(ledger).sort();
+          while (keys.length > 3) { delete ledger[keys.shift() as string]; }
+          set({ coinsEarnedByDay: ledger });
         }
         fireEconomyDelta({ coinsDelta: finalAmount });
         // The profile-row mirror is centralized in fireEconomyDelta (server
@@ -756,6 +769,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         starterCapitalGranted: state.starterCapitalGranted,
         activeDates: state.activeDates,
         frozenDates: state.frozenDates,
+        coinsEarnedByDay: state.coinsEarnedByDay,
         streakFreezes: state.streakFreezes,
         onboardingFreezesGranted: state.onboardingFreezesGranted,
         lastStreakDayRewardDate: state.lastStreakDayRewardDate,
