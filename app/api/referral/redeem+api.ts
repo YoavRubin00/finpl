@@ -36,6 +36,10 @@ interface RedeemSuccess {
  *   3. INSERT referrals row (PK on referee_auth_id prevents double-redeem).
  *   4. Append two coin_events rows: 500 to referrer + 500 to referee.
  *   5. Mark referrals.signup_bonus_paid=true.
+ *   6. Create an ACCEPTED friendship referrer↔referee (Yoav 2026-07-08 —
+ *      support ticket: "צירפתי חבר דרך הקישור והוא לא מופיע כחבר". Inviting
+ *      someone IS the friend request + acceptance; guarded against an
+ *      existing pair in either direction).
  *
  * If referee already has a referrals row, returns 409 (one-time link only).
  * If code unknown, returns 404.
@@ -117,6 +121,24 @@ export async function POST(request: Request): Promise<Response> {
       }
       throw err;
     }
+
+    // 3. Auto-friendship (Yoav 2026-07-08): the invite IS the friend request +
+    //    acceptance — the pair appears in both users' friends lists right away.
+    //    Skipped when a row already exists in EITHER direction (pending or
+    //    accepted) so we never create a duplicate logical pair. Best-effort:
+    //    a failure here must never roll back the paid bonuses above.
+    try {
+      await db.execute(sql`
+        INSERT INTO friendships (requester_id, addressee_id, status, accepted_at)
+        SELECT ${referrerUserId}, ${refereeUserId}, 'accepted', now()
+        WHERE NOT EXISTS (
+          SELECT 1 FROM friendships
+          WHERE (requester_id = ${referrerUserId} AND addressee_id = ${refereeUserId})
+             OR (requester_id = ${refereeUserId} AND addressee_id = ${referrerUserId})
+        )
+        ON CONFLICT (requester_id, addressee_id) DO NOTHING
+      `);
+    } catch { /* non-fatal — bonuses already granted; friendship can be added manually */ }
 
     const body_out: RedeemSuccess = {
       ok: true,

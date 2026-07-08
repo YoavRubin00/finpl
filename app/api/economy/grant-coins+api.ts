@@ -63,9 +63,18 @@ export async function POST(request: Request): Promise<Response> {
 
     const db = getDb();
 
+    // coin_events is keyed by user_id (identity rekey, migration 0004) — the
+    // old auth_id column DOES NOT EXIST. This insert used auth_id since day
+    // one, so every call 500'd ("column does not exist"), the client's
+    // fire-and-forget swallowed it, and the table stayed EMPTY forever — which
+    // is why the referral dividend never had data to compute from
+    // (Yoav 2026-07-08, dividend-system repair). Resolve the uuid, then insert.
     await db.execute(sql`
-      INSERT INTO coin_events (auth_id, amount, source)
-      VALUES (${authId}, ${amount}, ${source})
+      INSERT INTO coin_events (user_id, amount, source)
+      SELECT up.id, ${amount}, ${source}
+        FROM user_profiles up
+       WHERE up.auth_id = ${authId}
+       LIMIT 1
     `);
 
     return Response.json({ ok: true });

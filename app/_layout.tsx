@@ -567,6 +567,14 @@ function RootLayoutInner() {
           import('../src/features/social/InviteRedemptionScreen'),
         ]);
         if (cancelled) return;
+        // Auto-register this user's OWN referral code server-side (Yoav 8.7):
+        // registration used to run ONLY on ReferralScreen mount, so just
+        // 12/1094 users had a resolvable code — every other shared invite
+        // died with CODE_NOT_FOUND at redeem. Fire-and-forget + idempotent.
+        try {
+          const { useReferralStore } = await import('../src/features/social/useReferralStore');
+          void useReferralStore.getState().registerCodeWithServer(userEmail);
+        } catch { /* non-fatal */ }
         const pending = await AsyncStorage.getItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
         if (!pending) return;
         const result = await syncRef.redeemReferralCode(pending, userEmail);
