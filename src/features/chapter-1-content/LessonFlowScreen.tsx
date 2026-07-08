@@ -2201,10 +2201,25 @@ export function LessonFlowScreen() {
     return true;
   }
 
-  /** Close the handoff chest → continue to profiling. */
+  /** Close the handoff chest → v1 pre-onboarding continues to profiling;
+   *  everyone else (the INLINE mod-0-1 chest, panel item 4, Yoav 8.7) returns
+   *  to the live map exactly like the premium chip-return path. */
   function closeHandoffChest() {
     setHandoffChest(null);
-    router.replace('/(auth)/onboarding' as never);
+    if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'profiling') {
+      router.replace('/(auth)/onboarding' as never);
+      return;
+    }
+    if (router.canGoBack()) {
+      useTopicTreeReturnStore.getState().signalReturn({
+        completedPhase: phase,
+        completedModuleId: id ?? '',
+        expandedModule: id ?? '',
+      });
+      router.back();
+    } else {
+      returnToMap("/(tabs)/index");
+    }
   }
 
   /** Module-first first-run (onboarding_module_first v1, Yoav 5.7.26): ANY
@@ -2976,6 +2991,20 @@ export function LessonFlowScreen() {
     // (state-based: threshold crossed + unstamped), so the reward isn't lost —
     // it's the pull that carries them through the questions.
     if (maybeHandoffToProfiling('chest_threshold')) return;
+    // INLINE mod-0-1 chest (panel item 4, Yoav 8.7): the threshold chest now
+    // opens HERE, at the win moment — no map detour. The lesson→chest seam was
+    // the biggest in-module leak (30-35% never reached the accordion chest on
+    // the map). Explicitly re-gated on the REAL threshold + the knowledgeLevel
+    // question (this exit path also runs in chip-mode after EVERY chip — the
+    // grant must never fire early). grantHandoffChest stamps
+    // modulesPastThreshold, so the map accordion can never double-fire;
+    // closeHandoffChest routes back to the live map. mod-0-1 only — deeper
+    // modules keep the map debrief.
+    if (id === 'mod-0-1' && mod && mod01QuestionResolved) {
+      const inlineTopics = resolveTopics(mod);
+      const inlineDone = useTopicProgressStore.getState().summaryForModule('mod-0-1', inlineTopics).completed;
+      if (inlineDone >= chipsToChestFor('mod-0-1', inlineTopics.length) && grantHandoffChest()) return;
+    }
     // Premium return (Yoav 2026-06-11): under the root <Stack> the topic-tree
     // map is still mounted beneath this lesson. Signal the completion to the
     // map's store and router.back() — popping this lesson so the user lands on
