@@ -592,22 +592,17 @@ function RootLayoutInner() {
 
   // Cold-launch boot: attempt to restore session from stored JWT before rendering routes
   useEffect(() => {
-    bootFromToken().finally(async () => {
-      // Assign the module-first first-run arm BEFORE routes render (all
-      // rendering is gated on bootComplete below) — a v1 user must never
-      // paint a frame of IntroStep, or its useBandit('onboarding_welcome_hook')
-      // pollutes that pinned experiment. Both stores must be hydrated first:
-      // the idempotence guard + first-run predicate read persisted state.
-      try {
-        const awaitHydration = (store: { persist: { hasHydrated: () => boolean; onFinishHydration: (fn: () => void) => () => void } }) =>
-          store.persist.hasHydrated()
-            ? Promise.resolve()
-            : new Promise<void>((resolve) => {
-                const unsub = store.persist.onFinishHydration(() => { unsub(); resolve(); });
-              });
-        await Promise.all([awaitHydration(useAuthStore), awaitHydration(useTutorialStore)]);
-        ensureFirstRunAssignment();
-      } catch { /* non-fatal — unassigned users get the control flow */ }
+    bootFromToken().finally(() => {
+      // The module-first experiment is DEAD (ca38fda2 — guardrail smashed).
+      // Its boot gate used to AWAIT auth+tutorial store rehydration here before
+      // rendering any route; that unbounded wait shipped only in the 1.4.3
+      // binary and is the prime suspect for 1.4.3's first-screen deficit
+      // (welcome CTA 61% vs 79% on 1.4.2 — cohort 5-7.7, n=104/33, ~3σ): every
+      // ms added before a FRESH install's first paint bleeds first-tap users.
+      // Boot no longer blocks on hydration (Yoav 2026-07-08, pre-1.4.4). The
+      // assignment call stays as a harmless flag-off no-op; a revived first-run
+      // experiment MUST use a bounded (timeout-raced) wait instead.
+      try { ensureFirstRunAssignment(); } catch { /* non-fatal */ }
       setBootComplete(true);
     });
   }, []);
