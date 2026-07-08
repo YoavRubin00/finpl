@@ -17,6 +17,8 @@ const TARGETS: Record<string, string> = {
   // map home. The CTA→action gap was the 0.3% click-through killer. (P4
   // retention 2026-06-29.)
   daily_dilemma: 'finpl://quest/daily-dilemma',
+  // Social feed — the July announcement email's primary CTA (Yoav 2026-07-08).
+  friends: 'finpl://friends',
 };
 const FALLBACK_URL = 'https://finplay.me';
 
