@@ -1262,9 +1262,11 @@ const ChapterSection = React.memo(function ChapterSection({
             elevation: 3,
           }}
           accessibilityRole="button"
-          accessibilityLabel={`נתחיל מפה? קפיצה לפרק ${sectionIndex}`}
+          accessibilityLabel={sectionIndex === 4 ? 'רוצים ללמוד ישר השקעות? פתיחת פרק ההשקעות' : `נתחיל מפה? קפיצה לפרק ${sectionIndex}`}
         >
-          <Text style={{ fontFamily: 'Heebo_700Bold', color: '#ffffff', fontSize: 13 }}>נתחיל מפה?</Text>
+          <Text style={{ fontFamily: 'Heebo_700Bold', color: '#ffffff', fontSize: 13 }}>
+            {sectionIndex === 4 ? 'רוצים ללמוד ישר השקעות?' : 'נתחיל מפה?'}
+          </Text>
           <FastForward size={14} color="#ffffff" />
         </AnimatedPressable>
       )}
@@ -1540,6 +1542,11 @@ export function DuoLearnScreen() {
   const streak = streakData?.currentStreak ?? 0;
   const { data: progressData } = useProgress();
   const isPro = useIsPro();
+  // Investments fast-track (Yoav 2026-07-08): chapter 4 (צמיחה/השקעות,
+  // ALL_CHAPTERS[4]) unlocks out of sequence once the user taps
+  // "רוצה ללמוד ישר השקעות?" / "נתחיל מכאן". Every sequential-unlock
+  // computation below ORs this in for index 4 only.
+  const investJump = useTutorialStore((s) => s.investChapterJumpUnlocked);
   const displayName = useAuthStore((s) => s.displayName) ?? "";
   const isGuest = useAuthStore((s) => s.isGuest);
   // Profile-question backstops: subscribe to all three fields so the map-tap
@@ -1648,7 +1655,8 @@ export function DuoLearnScreen() {
       if (!isPro && i > 0) {
         const prev = ALL_CHAPTERS[i - 1];
         const prevDone = completedByPrefix(`mod-${storeKey(prev.id).replace('ch-', '')}-`);
-        unlocked = prev.modules.every((m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevDone.includes(m.id));
+        unlocked = prev.modules.every((m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevDone.includes(m.id))
+          || (i === 4 && investJump); // investments fast-track (Yoav 8.7)
       }
       if (!unlocked) continue;
       const done = completedByPrefix(pfx);
@@ -1731,7 +1739,8 @@ export function DuoLearnScreen() {
         const prev = ALL_CHAPTERS[i - 1];
         const prevPfx = `mod-${storeKey(prev.id).replace('ch-', '')}-`;
         const prevDone = byPrefix(prevPfx);
-        unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
+        unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
+          || (i === 4 && investJump); // investments fast-track (Yoav 8.7)
       }
       if (!unlocked) continue;
       const hasIncomplete = ch.modules.some((m) => !done.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)));
@@ -2157,7 +2166,8 @@ export function DuoLearnScreen() {
         const prevNum = storeKey(prev.id).replace('ch-', '');
         const prevPrefix = `mod-${prevNum}-`;
         const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
-        unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
+        unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
+          || (chIdx === 4 && investJump); // investments fast-track (Yoav 8.7)
       }
       if (!unlocked) break;
 
@@ -2835,7 +2845,14 @@ export function DuoLearnScreen() {
       tapHaptic();
       try { captureEvent('jump_here_clicked', { chapter_id: jumpChapter.id, chapter_index: idx, is_pro: isPro }); } catch { /* non-fatal */ }
       if (idx === 1) { handleSkipIntro(); return; }
-      if (!isPro) { router.push('/pricing' as never); return; }
+      // Investments fast-track (Yoav 2026-07-08): chapter 4 (השקעות) is FREE —
+      // "רוצים ללמוד ישר השקעות?" unlocks it out of sequence for everyone
+      // instead of routing to the paywall. One-way persisted flag; earlier
+      // chapters keep their sequential gate.
+      if (idx === 4) {
+        useTutorialStore.getState().unlockInvestChapterJump();
+        try { captureEvent('invest_fast_track_unlocked', { source: 'jump_here', is_pro: isPro }); } catch { /* non-fatal */ }
+      } else if (!isPro) { router.push('/pricing' as never); return; }
       // Yoav 2026-06-11 sweep: jump-here also routes through topic-tree
       // when the destination supports it. Without this, "JUMP HERE?"
       // dropped the user into the legacy linear flow.
@@ -3188,7 +3205,8 @@ export function DuoLearnScreen() {
               const prevNum = storeKey(prevChapter.id).replace('ch-', '');
               const prevPrefix = `mod-${prevNum}-`;
               const prevCompleted = completedByPrefix(prevPrefix);
-              isUnlocked = prevChapter.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id));
+              isUnlocked = prevChapter.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id))
+                || (idx === 4 && investJump); // investments fast-track (Yoav 8.7)
             }
 
             // Active marker (cursor / quest widget / news badge) belongs to the
@@ -3212,7 +3230,11 @@ export function DuoLearnScreen() {
                 onClaimEasterEgg={handleClaimEasterEgg}
                 onSkipIntro={idx === 0 ? handleSkipIntro : undefined}
                 onJumpHere={
-                  idx >= 1 && completedModules.length === 0 && !hasActiveModule
+                  (idx >= 1 && completedModules.length === 0 && !hasActiveModule)
+                    // Investments fast-track (Yoav 8.7): the invitation shows on
+                    // chapter 4 for EVERYONE who hasn't unlocked it yet — not
+                    // just zero-progress users.
+                    || (idx === 4 && !isUnlocked)
                     ? handleJumpHere
                     : undefined
                 }
@@ -3456,7 +3478,8 @@ export function DuoLearnScreen() {
                   const prevNum2 = storeKey(prev.id).replace('ch-', '');
                   const prevPrefix2 = `mod-${prevNum2}-`;
                   const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix2) && m.status === 'completed').map((m) => m.moduleId) ?? [];
-                  chapterUnlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
+                  chapterUnlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
+                    || (idx === 4 && investJump); // investments fast-track (Yoav 8.7)
                 }
 
                 const colors = ARENA_COLORS[arena.id];

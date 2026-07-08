@@ -104,6 +104,11 @@ interface TutorialState {
    *  NotificationPermissionBanner only takes over AFTER this is true. Yoav
    *  2026-06-21 ("make sure users get a one-time prompt to allow notifications").*/
   notifPromptShown: boolean;
+  /** Investments fast-track (Yoav 2026-07-08): the user tapped "רוצה ללמוד
+   *  ישר השקעות?" / "נתחיל מכאן" — chapter 4 (צמיחה/השקעות) is unlocked for
+   *  them regardless of the sequential previous-chapter gate. Persisted so
+   *  the jump survives relaunches; earlier chapters stay exactly as they are. */
+  investChapterJumpUnlocked: boolean;
   /** Module-first first-run experiment (onboarding_module_first, Yoav 5.7.26).
    *  The arm is drawn ONCE at first boot (firstRunExperiment.ts) and persisted
    *  here so it can never flip mid-flow or on relaunch. `null` = not assigned
@@ -148,6 +153,8 @@ interface TutorialState {
   markRated: () => void;
   /** Called when the one-time notification-permission modal is shown (either CTA). */
   markNotifPromptShown: () => void;
+  /** Investments fast-track: unlock chapter 4 out of sequence (one-way). */
+  unlockInvestChapterJump: () => void;
   setFirstRunArm: (arm: 'control' | 'module_first' | null) => void;
   setFirstRunStage: (stage: 'hook' | 'module' | 'profiling' | 'done' | null) => void;
   markFreeSharkCallUsed: () => void;
@@ -190,6 +197,7 @@ export const useTutorialStore = create<TutorialState>()(
       lastRatePromptAt: null,
       ratePromptCount: 0,
       notifPromptShown: false,
+      investChapterJumpUnlocked: false,
       firstRunArm: null,
       firstRunStage: null,
       _hydrated: false,
@@ -223,6 +231,7 @@ export const useTutorialStore = create<TutorialState>()(
       markRatePromptShown: () => set((s) => ({ ratePromptCount: s.ratePromptCount + 1, lastRatePromptAt: Date.now() })),
       markRated: () => set({ ratePromptHandled: true }),
       markNotifPromptShown: () => set({ notifPromptShown: true }),
+      unlockInvestChapterJump: () => set({ investChapterJumpUnlocked: true }),
       setFirstRunArm: (arm) => set({ firstRunArm: arm }),
       setFirstRunStage: (stage) => set({ firstRunStage: stage }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false }),
