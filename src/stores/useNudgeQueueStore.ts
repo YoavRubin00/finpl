@@ -31,6 +31,18 @@ interface NudgeState {
   /** True once the daily streak popup has fired this session */
   streakShownThisSession: boolean;
 
+  // ── Global popup sequencer (Yoav 2026-07-08) ──────────────────────────────
+  /** Wall-clock ms until which NO new launch-time popup may show. Every
+   *  full-screen popup reserves a slot when it appears, so the next one waits
+   *  POPUP_GAP_MS — stops the "one on top of another" flood on return-to-game.
+   *  Session-only (not persisted); streak surfaces (priority 1) show
+   *  immediately AND reserve, pushing the promo popups behind them. */
+  popupBusyUntil: number;
+  /** True if a popup may take the stage right now (enough gap since the last). */
+  canTakePopupSlot: () => boolean;
+  /** Reserve the stage for POPUP_GAP_MS. Call the moment a popup becomes visible. */
+  takePopupSlot: () => void;
+
   /** Record dismissal and return whether this user is now "cooled-down" */
   recordDismiss: (type: NudgeType) => void;
   /** Record successful CTA tap — clears dismiss history */
@@ -59,6 +71,8 @@ interface NudgeState {
 
 const COOLDOWN_MS = 48 * 60 * 60 * 1000; // 48h per Duolingo A/B
 const DISMISS_THRESHOLD = 2; // 2 consecutive dismisses triggers cooldown
+/** Minimum gap between any two launch-time popups (Yoav 2026-07-08). */
+const POPUP_GAP_MS = 6000;
 
 function emptyMap<T>(defaultVal: T): Record<NudgeType, T> {
   return { bridge: defaultVal, referral: defaultVal, tools: defaultVal };
@@ -74,9 +88,16 @@ export const useNudgeQueueStore = create<NudgeState>()(
       sessionStartedAt: Date.now(),
       inLesson: false,
       streakShownThisSession: false,
+      popupBusyUntil: 0,
 
       setInLesson: (v) => set({ inLesson: v }),
-      markStreakShown: () => set({ streakShownThisSession: true }),
+      // The streak popup is PRIORITY 1 (Yoav 2026-07-08): it always shows, and
+      // reserves the popup stage the moment it does — so every promo popup
+      // (buy-asset splash, bridge/tools banners) waits behind it instead of
+      // stacking on top. All 3 streak show-sites call this right after setVisible.
+      markStreakShown: () => set({ streakShownThisSession: true, popupBusyUntil: Date.now() + POPUP_GAP_MS }),
+      canTakePopupSlot: () => Date.now() >= get().popupBusyUntil,
+      takePopupSlot: () => set({ popupBusyUntil: Date.now() + POPUP_GAP_MS }),
 
       recordDismiss: (type) => {
         set((state) => {
@@ -123,6 +144,7 @@ export const useNudgeQueueStore = create<NudgeState>()(
           sessionStartedAt: Date.now(),
           inLesson: false,
           streakShownThisSession: false,
+          popupBusyUntil: 0,
         });
       },
 
@@ -143,6 +165,7 @@ export const useNudgeQueueStore = create<NudgeState>()(
         sessionStartedAt: Date.now(),
         inLesson: false,
         streakShownThisSession: false,
+        popupBusyUntil: 0,
         lastBridgeNudgeDateISO: null,
         lastInviteNudgeDateISO: null,
         lastCrowdPopupDateISO: null,

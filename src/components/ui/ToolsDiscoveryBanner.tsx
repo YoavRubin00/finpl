@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { useNotificationStore } from "../../features/notifications/useNotificationStore";
 import { useBannerCooldownStore } from "../../features/notifications/useBannerCooldownStore";
+import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { useToolsDiscoveryStore } from "../../features/notifications/useToolsDiscoveryStore";
 import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useTutorialStore } from "../../stores/useTutorialStore";
@@ -78,13 +79,18 @@ export function ToolsDiscoveryBanner() {
     const presenceTimer = setTimeout(() => {
       // If the permission banner is still actively trying to show, let it go
       // first — it's a higher-priority CTA.
-      const slotDelay = permissionBannerActive
+      const bannerSlot = permissionBannerActive
         ? Math.max(PRESENCE_DELAY_MS, useBannerCooldownStore.getState().msUntilNextSlot())
         : useBannerCooldownStore.getState().msUntilNextSlot();
+      // Also wait out the GLOBAL popup stage (Yoav 2026-07-08) so this banner
+      // never stacks on the streak popup / buy-asset splash on return-to-game.
+      const seqDelay = Math.max(0, useNudgeQueueStore.getState().popupBusyUntil - Date.now());
+      const slotDelay = Math.max(bannerSlot, seqDelay);
 
       const slotTimer = setTimeout(() => {
         setVisible(true);
         useBannerCooldownStore.getState().markShown();
+        useNudgeQueueStore.getState().takePopupSlot();
         if (!trackedShownRef.current) {
           trackedShownRef.current = true;
           track({

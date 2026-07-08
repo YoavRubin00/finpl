@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { useBannerCooldownStore } from "../../features/notifications/useBannerCooldownStore";
 import { useBridgeBannerStore } from "../../features/notifications/useBridgeBannerStore";
+import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useCompletedModulesStore } from "../../features/economy/useCompletedModulesStore";
@@ -78,10 +79,15 @@ export function BridgeCTABanner() {
     // 2) Then wait for the shared banner-cooldown slot so we never overlap the
     //    notification / tools banners.
     const presenceTimer = setTimeout(() => {
-      const slotDelay = useBannerCooldownStore.getState().msUntilNextSlot();
+      const bannerSlot = useBannerCooldownStore.getState().msUntilNextSlot();
+      // Wait out the GLOBAL popup stage too (Yoav 2026-07-08) so the bridge
+      // banner never stacks on the streak popup / buy-asset splash on launch.
+      const seqDelay = Math.max(0, useNudgeQueueStore.getState().popupBusyUntil - Date.now());
+      const slotDelay = Math.max(bannerSlot, seqDelay);
       const slotTimer = setTimeout(() => {
         setVisible(true);
         useBannerCooldownStore.getState().markShown();
+        useNudgeQueueStore.getState().takePopupSlot();
         if (!trackedShownRef.current) {
           trackedShownRef.current = true;
           captureEvent("bridge_cta_banner_shown", { source: "home", variant_index: variantIndex });

@@ -12,6 +12,7 @@ import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRealAssetsStore } from "./useRealAssetsStore";
 import { useAuthStore } from "../auth/useAuthStore";
+import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { queryClient } from "../../lib/queryClient";
 import { economyQueryKey } from "../economy/useEconomy";
 import type { Economy } from "../../lib/api/economy";
@@ -49,8 +50,6 @@ export function PostStreakIncomeSplash() {
         await new Promise((r) => setTimeout(r, 3500));
         if (cancelled) return;
 
-        await AsyncStorage.setItem(SHOWN_KEY, today);
-
         // Read fresh state at show time (avoid stale closure)
         const store = useRealAssetsStore.getState();
         const currentPending = Math.floor(store.pendingIncome());
@@ -60,6 +59,22 @@ export function PostStreakIncomeSplash() {
         const eco = queryClient.getQueryData<Economy | null>(economyQueryKey);
         const userLevel = getLevelFromXP(eco?.xp ?? 0);
         if (!currentHasAssets && userLevel < 2) return;
+
+        // Global popup sequencer (Yoav 2026-07-08): never stack on the streak /
+        // other launch popups. Wait for a free slot (poll ≤12s); if still busy,
+        // skip today's splash rather than pile on — and DON'T stamp SHOWN_KEY so
+        // it can appear on the next cold start.
+        const nudge = useNudgeQueueStore.getState();
+        let waited = 0;
+        while (!useNudgeQueueStore.getState().canTakePopupSlot() && waited < 12000) {
+          await new Promise((r) => setTimeout(r, 2000));
+          if (cancelled) return;
+          waited += 2000;
+        }
+        if (!useNudgeQueueStore.getState().canTakePopupSlot()) return;
+
+        await AsyncStorage.setItem(SHOWN_KEY, today);
+        nudge.takePopupSlot();
 
         setHasAssetsAtShow(currentHasAssets);
 
