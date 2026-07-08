@@ -103,12 +103,27 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
     // behind or after this primer (both share the first-chest gate; the banner
     // is a LATER rung of the ask-ladder, not a same-session double-ask).
     useNotificationStore.getState().dismissBanner();
-    // Small breath after the chest/CTA chain clears so the map settles first.
-    const t = setTimeout(() => {
+    // Small breath after the chest/CTA chain clears so the map settles first —
+    // then wait for the GLOBAL popup stage (Yoav 8.7 sequencer) so the primer
+    // never stacks under/over the exit ritual or any launch popup. The primer
+    // is the highest-value ask we have, so it WAITS (up to ~12s) rather than
+    // skips.
+    let cancelled = false;
+    let t: ReturnType<typeof setTimeout>;
+    const tryShow = (waited: number) => {
+      if (cancelled) return;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { useNudgeQueueStore } = require('../../stores/useNudgeQueueStore') as typeof import('../../stores/useNudgeQueueStore');
+      if (!useNudgeQueueStore.getState().canTakePopupSlot() && waited < 12000) {
+        t = setTimeout(() => tryShow(waited + 2000), 2000);
+        return;
+      }
+      useNudgeQueueStore.getState().takePopupSlot();
       setVisible(true);
       try { track({ name: 'notification_banner_shown', props: { source: 'permission_modal' } }); } catch { /* non-fatal */ }
-    }, 1200);
-    return () => clearTimeout(t);
+    };
+    t = setTimeout(() => tryShow(0), 1200);
+    return () => { cancelled = true; clearTimeout(t); };
   }, [eligible, markNotifPromptShown]);
 
   const handleAllow = async () => {

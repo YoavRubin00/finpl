@@ -12,6 +12,7 @@ import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useNotificationStore } from '../notifications/useNotificationStore';
 import { queryClient } from '../../lib/queryClient';
 import { economyQueryKey } from '../economy/useEconomy';
+import { getIsraelDateISO } from '../../utils/israelTime';
 import type { Economy } from '../../lib/api/economy';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
 import { track } from '../../lib/analytics/events';
@@ -105,9 +106,20 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
   const firedRef = useRef(false);
   useEffect(() => {
     if (firedRef.current || !offerEligible) return;
-    // Let the chest celebration finish breathing before the ritual enters.
-    const t = setTimeout(() => {
-      if (firedRef.current) return;
+    let cancelled = false;
+    let retry: ReturnType<typeof setTimeout> | null = null;
+    const attempt = (waited: number) => {
+      if (cancelled || firedRef.current) return;
+      // Global popup stage (Yoav 8.7): if the permission primer (or any other
+      // launch popup) holds the stage, wait it out (≤18s) — the primer asks,
+      // then the ritual closes the session. Never two modals stacked.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { useNudgeQueueStore } = require('../../stores/useNudgeQueueStore') as typeof import('../../stores/useNudgeQueueStore');
+      if (!useNudgeQueueStore.getState().canTakePopupSlot()) {
+        if (waited < 18000) retry = setTimeout(() => attempt(waited + 3000), 3000);
+        return;
+      }
+      useNudgeQueueStore.getState().takePopupSlot();
       // מוני: balance < stake → the offer is never shown (and never
       // discounted). Checked at fire time, against the server-truth cache.
       const coins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
@@ -129,8 +141,14 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
       const streak = useEconomyUIStore.getState().activeDates.length;
       try { track({ name: 'day0_exit_ritual_shown', props: { streak } }); } catch { /* non-fatal */ }
       try { track({ name: 'streak_wager_offered', props: { stake: WAGER_STAKE, payout: WAGER_PAYOUT } }); } catch { /* non-fatal */ }
-    }, 1800);
-    return () => clearTimeout(t);
+    };
+    // Let the chest celebration finish breathing before the first attempt.
+    const t = setTimeout(() => attempt(0), 1800);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      if (retry) clearTimeout(retry);
+    };
   }, [offerEligible]);
 
   const handleAccept = () => {
@@ -153,6 +171,12 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
   };
 
   const appointmentHour = permissionGranted ? (preferredReminderHour ?? 20) : null;
+
+  // Overnight-interest preview (מוני 8.7, approved): 50% of TODAY's real
+  // learning earns (capped 200) — mirrors useTomorrowChestStore's open-time
+  // math exactly, so the promise shown here is the amount paid tomorrow.
+  const coinsEarnedByDay = useEconomyUIStore((s) => s.coinsEarnedByDay);
+  const overnightMatch = Math.min(200, Math.floor((coinsEarnedByDay[getIsraelDateISO()] ?? 0) * 0.5));
 
   // ── Resolution modal (won / lost) — shown once, then cleared. ──
   if (lastResolution) {
@@ -218,6 +242,12 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
                   <Text style={[styles.title, RTL_CENTER]} allowFontScaling={false}>
                     מחר: יומיים ברצף ותיבה חדשה
                   </Text>
+                  {overnightMatch > 0 && (
+                    <Text style={[styles.subtitle, RTL_CENTER]} allowFontScaling={false}>
+                      הכסף שלכם עובד בלילה: התיבה של מחר כוללת ‎+{overnightMatch}‎ מטבעות
+                      {'\n'}(50% ממה שהרווחתם היום)
+                    </Text>
+                  )}
                 </Animated.View>
 
                 <Animated.View entering={FadeIn.delay(240).duration(320)} style={styles.wagerCard}>
