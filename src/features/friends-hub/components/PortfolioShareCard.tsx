@@ -533,20 +533,21 @@ export function PortfolioShareCard(): React.ReactElement {
     if (rewardCoins > 0) showReward(rewardCoins, 'התיק שותף!');
   };
 
-  // Real feed ranked by engagement; falls back to example content ONLY while the
-  // real feed is empty (self-retires the instant a real portfolio exists).
-  // Example posts are merged with the user's OWN local engagement. Likes show
-  // the seed's baseline social-proof count (Yoav 2026-07-06) + this user's own
-  // like on top; ratings and comments still derive solely from what this user
-  // actually did. Real (server) posts are untouched by any of this.
+  // The 2 example portfolios are shown to EVERYONE, ALWAYS (Yoav 2026-07-08),
+  // but ALWAYS BELOW the real feed: real portfolios (engagement-ranked) come
+  // first, the two seeds (ranked among themselves) are appended last, so a seed
+  // never outranks a real post even though seeds carry baseline likes. They
+  // guarantee the feed never looks thin and give new sharers a format to model.
+  // Example posts carry the user's OWN local
+  // engagement: likes show the seed's baseline social-proof count (Yoav
+  // 2026-07-06) + this user's own like on top; ratings and comments derive
+  // solely from what THIS user did. Real (server) posts are untouched — engagement
+  // routing per card is by isSeedPortfolio(pf.id), so mixing them is safe.
   const likedSeeds = useSeedEngagementStore((s) => s.likedSeeds);
   const seedRatings = useSeedEngagementStore((s) => s.seedRatings);
   const seedComments = useSeedEngagementStore((s) => s.seedComments);
-  const showingSeeds = loaded && portfolios.length === 0;
   const feed = useMemo(() => {
-    if (portfolios.length > 0) return rankPortfoliosByEngagement(portfolios);
-    if (!showingSeeds) return [];
-    return SEED_PORTFOLIOS.map((pf) => {
+    const seedViews = SEED_PORTFOLIOS.map((pf) => {
       const liked = likedSeeds[pf.id] === true;
       const rating = seedRatings[pf.id];
       const comments = seedComments[pf.id] ?? [];
@@ -561,7 +562,11 @@ export function PortfolioShareCard(): React.ReactElement {
         commentCount: comments.length,
       };
     });
-  }, [portfolios, showingSeeds, likedSeeds, seedRatings, seedComments]);
+    return [
+      ...rankPortfoliosByEngagement(portfolios),
+      ...rankPortfoliosByEngagement(seedViews),
+    ];
+  }, [portfolios, likedSeeds, seedRatings, seedComments]);
 
   return (
     <View style={{ backgroundColor: '#fff' }}>
