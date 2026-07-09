@@ -9,10 +9,10 @@ import {
   buildD1EmailHtml,
   D1_EMAIL_VARIANT_ID,
   RETENTION_VARIANT_IDS,
+  retentionVariantForSeq,
   type RetentionVariantId,
 } from '../../src/features/email/emailTemplates';
 import { signEmailClick } from '../../src/features/email/emailClickSig';
-import { selectBestVariant } from '../../src/features/bandit/sampleBetaBandit';
 import { capturePostHog } from './posthogCapture';
 
 const EXPERIMENT_ID = 'daily_email_variant';
@@ -105,6 +105,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       currentStreak: userProfiles.currentStreak,
       longestStreak: userProfiles.longestStreak,
       createdAt: userProfiles.createdAt,
+      dailyEmailSeq: userProfiles.dailyEmailSeq,
     })
     .from(userProfiles)
     .where(
@@ -117,9 +118,8 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       ),
     );
 
-  // Load bandit state once for this batch — every user gets a freshly sampled
-  // variant (independent per-user, but all from the same posterior snapshot).
-  const banditStats = await loadBanditStats(db);
+  // (Selection is now SEQUENCED per user — no Thompson sampling. loadBanditStats
+  //  is kept only for the per-variant impression rows the dashboards read.)
 
   const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? 'https://finpl.vercel.app';
   const fromAddress = process.env.EMAIL_FROM ?? 'FinPlay <onboarding@resend.dev>';
@@ -172,10 +172,14 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       // them corrupts the posterior).
       const isD1NewUser = (user.createdAt ?? '').slice(0, 10) === yesterdayDate;
 
-      const picked = isD1NewUser ? null : selectBestVariant(banditStats);
-      const variantId = isD1NewUser
+      // SEQUENCED drip (Yoav 2026-07-09): pick by this user's send count, NOT
+      // the bandit — so "תזכורת מספר שלוש" arrives as their real 3rd email. The
+      // D1 curiosity template still owns the day-1 cohort (a brand-new lapsed
+      // user), and does not consume a sequence slot.
+      const seq = user.dailyEmailSeq ?? 0;
+      const variantId: RetentionVariantId | typeof D1_EMAIL_VARIANT_ID = isD1NewUser
         ? D1_EMAIL_VARIANT_ID
-        : ((picked?.variantId ?? RETENTION_VARIANT_IDS[0]) as RetentionVariantId);
+        : retentionVariantForSeq(seq, user.currentStreak ?? 0);
 
       const sig = trackingSecret ? signEmailClick(user.id, variantId, trackingSecret) : '';
       const clickUrl = trackingSecret
@@ -241,12 +245,20 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         html,
       });
 
+      // Stamp the send time AND advance the drip counter (Yoav 2026-07-09), so
+      // the NEXT retention email this user gets is the next sequence position.
+      // The D1 curiosity email doesn't consume a slot — a day-1 user's first
+      // ordinary retention email should still be sequence position 0.
       await db
         .update(userProfiles)
-        .set({ dailyEmailSentAt: now.toISOString() })
+        .set({
+          dailyEmailSentAt: now.toISOString(),
+          ...(isD1NewUser ? {} : { dailyEmailSeq: seq + 1 }),
+        })
         .where(eq(userProfiles.id, user.id));
 
-      // D1 sends stay out of the bandit posterior — different audience.
+      // Still record a per-variant impression (dashboards slice by variant_id)
+      // — even though selection is now sequenced, not Thompson-sampled.
       if (!isD1NewUser) {
         try {
           await db.execute(sql`
@@ -262,12 +274,13 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         }
       }
 
-      // PostHog SENT event — the top of the funnel. variant_id lets every
-      // downstream metric (opened/clicked/returned) be sliced per A/B arm;
+      // PostHog SENT event — the top of the funnel. variant_id + seq let every
+      // downstream metric (opened/clicked/returned) be sliced per drip step;
       // cohort splits day-1 new users from lapsed regulars.
       await capturePostHog('retention_email_sent', user.id, {
         variant_id: variantId,
         cohort: isD1NewUser ? 'd1_new_user' : 'daily_cron',
+        seq: isD1NewUser ? -1 : seq,
         streak: user.currentStreak ?? 0,
       });
 

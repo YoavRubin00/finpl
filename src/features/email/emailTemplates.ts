@@ -358,9 +358,12 @@ export function buildWelcomeEmailHtml(params: {
   return { subject, html, text };
 }
 
-// ─── Retention emails — A/B tested variants ──────────────────────────────────
-// 5 variants in Captain Shark's voice, designed for users who played
-// exactly yesterday but haven't returned today. Bandit picks one per send.
+// ─── Retention emails — SEQUENCED drip (Yoav 2026-07-09) ──────────────────────
+// Captain Shark's voice, for users who lapsed. NO LONGER bandit-randomised:
+// the emails are an ORDERED escalation ladder, selected by how many retention
+// emails THIS user has already received (userProfiles.daily_email_seq). So
+// "תזכורת מספר שלוש" genuinely lands as the user's 3rd email — not as a random
+// first one. Order + the seq→variant map live in RETENTION_SEQUENCE below.
 // Template: retentionEmail.html (loaded once, cached, params substituted).
 
 export type RetentionVariantId =
@@ -369,7 +372,12 @@ export type RetentionVariantId =
   | 'shark_streak_v1'
   | 'shark_minimal_v1'
   | 'shark_welcome_v1'
-  | 'shark_roast_v1';
+  | 'shark_roast_v1'
+  // New variations (Yoav 2026-07-09) — tied to what shipped this week.
+  | 'shark_social_v1'
+  | 'shark_invest_v1'
+  | 'shark_tomorrow_v1'
+  | 'shark_curiosity_v1';
 
 interface RetentionVariantCopy {
   subject: string;
@@ -462,6 +470,58 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     ctaText: 'יאללה, שיא חדש ←',
     cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-roast.png',
   },
+
+  // ── New variations (Yoav 2026-07-09), streak-independent so they render for
+  //    everyone, and anchored to features that went live this week. ──
+
+  // V7 — SOCIAL: the public portfolio feed is live for everyone.
+  shark_social_v1: {
+    subject: 'פרסומת | {{name}}, ראית מה הקהילה בנתה?',
+    headline: 'הקהילה משתפת תיקים — ואתה מפספס',
+    bodyHtml: `<p style="margin:0 0 14px;">פתחנו את הפיד: עכשיו רואים את התיקים שכל הקהילה בונה — לא רק חברים.</p>
+      <p style="margin:0 0 14px;">יש שם רעיונות, ויכוחים, ותיקים שווה ללמוד מהם.</p>
+      <p style="margin:0;font-weight:700;">בוא לראות מה בנו — ותבנה גם אחד משלך 💙</p>`,
+    sharkImg: SHARK_HAPPY,
+    sharkAlt: 'קפטן שארק שמח',
+    ctaText: 'לפיד הקהילה ←',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-welcome.png',
+  },
+
+  // V8 — INVESTMENTS: chapter 4 unlocked for everyone.
+  shark_invest_v1: {
+    subject: 'פרסומת | פתחנו לך את פרק ההשקעות, {{name}}',
+    headline: 'רוצה ללמוד ישר השקעות? עכשיו אפשר',
+    bodyHtml: `<p style="margin:0 0 14px;">לא צריך לחכות. פתחנו את כל פרק ההשקעות — מניות, ETF, בניית תיק — לכולם.</p>
+      <p style="margin:0;font-weight:700;">שיעור השקעות אחד היום, ואתה כבר מבין איך הכסף עובד בשבילך.</p>`,
+    sharkImg: SHARK_FIRE,
+    sharkAlt: 'קפטן שארק נחוש',
+    ctaText: 'ללמוד השקעות ←',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-minute.png',
+  },
+
+  // V9 — TOMORROW-CHEST: the day-2 appointment reward.
+  shark_tomorrow_v1: {
+    subject: 'פרסומת | יש לך תיבה שמחכה, {{name}}',
+    headline: 'התיבה של מחר לא נפתחת לבד',
+    bodyHtml: `<p style="margin:0 0 14px;">שיעור אחד היום = תיבה חתומה שנפתחת מחר, עם מטבעות שהכסף שלך "הרוויח בלילה".</p>
+      <p style="margin:0;font-weight:700;">3 דקות עכשיו, פרס מחכה מחר. ככה בונים רצף.</p>`,
+    sharkImg: SHARK_STANDARD,
+    sharkAlt: 'קפטן שארק רגוע',
+    ctaText: 'לפתוח את התיבה של מחר ←',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-streak.png',
+  },
+
+  // V10 — CURIOSITY GAP: a question that only resolves in-app.
+  shark_curiosity_v1: {
+    subject: 'פרסומת | 90% טועים בזה. ואתה, {{name}}?',
+    headline: 'שאלה קצרה — ורוב האנשים נופלים בה',
+    bodyHtml: `<p style="margin:0 0 14px;">₪1,000 בריבית 8% לשנה — כמה זה אחרי 30 שנה? רוב האנשים מנחשים נמוך בטירוף.</p>
+      <p style="margin:0;font-weight:700;">התשובה (והסיבה) מחכות לך בשיעור של היום. בוא נראה אם צדקת.</p>`,
+    sharkImg: SHARK_HAPPY,
+    sharkAlt: 'קפטן שארק שמח',
+    ctaText: 'לגלות את התשובה ←',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-welcome.png',
+  },
 };
 
 // shark_roast_v1 is fully defined, wired, and image-ready — but HELD OUT of the
@@ -474,6 +534,44 @@ const HELD_RETENTION_VARIANTS: readonly RetentionVariantId[] = ['shark_roast_v1'
 export const RETENTION_VARIANT_IDS: readonly RetentionVariantId[] = (
   Object.keys(RETENTION_VARIANTS) as RetentionVariantId[]
 ).filter((id) => !HELD_RETENTION_VARIANTS.includes(id));
+
+/**
+ * The ORDERED drip (Yoav 2026-07-09): the retention emails are sent in this
+ * exact escalation order, indexed by the user's per-user send count
+ * (userProfiles.daily_email_seq). Position 0 = the user's 1st email, and so on.
+ *
+ * NOTE the anchor: `shark_meta_v1` — whose subject literally reads
+ * "תזכורת מספר שלוש" — sits at INDEX 2, so it genuinely arrives as the user's
+ * THIRD email, never as a random first one (the bug this replaces).
+ *
+ * Soft → sad → "reminder #3" → minimal → feature nudges → curiosity → streak.
+ * Streak-dependent variants live LATE (a lapsed user's live streak is usually
+ * 0, so "0 ימים בסכנה" would read oddly early). Past the end we loop back to
+ * index 0 so the drip never runs dry. `shark_roast_v1` stays HELD-OUT until
+ * Yoav approves it, so it is intentionally NOT in this list yet.
+ */
+export const RETENTION_SEQUENCE: readonly RetentionVariantId[] = [
+  'shark_welcome_v1',   // 1st — soft welcome-back
+  'shark_sad_v1',       // 2nd — gentle miss-you
+  'shark_meta_v1',      // 3rd — "תזכורת מספר שלוש" ← the numbered one, in its real slot
+  'shark_minimal_v1',   // 4th — "3 דקות זה הכל"
+  'shark_social_v1',    // 5th — community feed
+  'shark_invest_v1',    // 6th — investments unlocked
+  'shark_tomorrow_v1',  // 7th — tomorrow-chest
+  'shark_curiosity_v1', // 8th — curiosity gap
+];
+
+/** The variant to send for a user's Nth retention email (0-based `seq`).
+ *  Loops the sequence once exhausted so a long-lapsed user keeps getting mail.
+ *  Streak-based variants render oddly at streak 0, so when the sequenced pick
+ *  needs a live streak but the user has none, fall back to the minimal ask. */
+export function retentionVariantForSeq(seq: number, currentStreak: number): RetentionVariantId {
+  const n = RETENTION_SEQUENCE.length;
+  const idx = ((Math.max(0, Math.floor(seq)) % n) + n) % n;
+  const pick = RETENTION_SEQUENCE[idx];
+  if (pick === 'shark_streak_v1' && currentStreak <= 0) return 'shark_minimal_v1';
+  return pick;
+}
 
 let _retentionTemplateCache: string | null = null;
 function loadRetentionTemplate(): string {

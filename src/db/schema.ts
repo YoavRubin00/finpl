@@ -22,6 +22,10 @@ export const userProfiles = pgTable("user_profiles", {
 	proExpiresAt: timestamp("pro_expires_at", { withTimezone: true, mode: 'string' }),
 	dailyEmailSentAt: timestamp("daily_email_sent_at", { withTimezone: true, mode: 'string' }),
 	dailyEmailEnabled: boolean("daily_email_enabled").default(true),
+	// Per-user retention-email counter (0014, Yoav 2026-07-09): drives the
+	// SEQUENCED drip so the Nth email a user receives is sequence position N
+	// ("תזכורת מספר שלוש" lands as the real 3rd email). Incremented per send.
+	dailyEmailSeq: integer("daily_email_seq").notNull().default(0),
 	syncToken: text("sync_token"),
 	preferences: jsonb("preferences"),
 	googleSub: text("google_sub"),
