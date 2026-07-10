@@ -4135,9 +4135,44 @@ export function LessonFlowScreen() {
     const ordered: TopicKind[] = resolveTopics(mod).map((t) => t.kind).filter((k) => k !== 'tutorial-video' && k !== 'chat');
     const i = ordered.indexOf(currentKind);
     const next = i >= 0 ? ordered[i + 1] : undefined;
-    if (!next) { setPhase('summary'); return; }
+    if (!next) {
+      // End of the module's content. mod-0-1's chest opens IN-LESSON here (Yoav
+      // 8.7). Do NOT route it through the legacy `summary` phase — `summary`
+      // renders NOTHING on returnTo=topic-tree (see the summary render gate), so
+      // any effect-timing miss left the user on a WHITE screen exactly where the
+      // chest should appear ("מסך לבן במקום פתיחת תיבה"). Handle it synchronously
+      // and deterministically right here, with zero dependence on effect races.
+      if (returnTo === 'topic-tree' && !isReplay && mod.id === 'mod-0-1') {
+        resolveTopics(mod).forEach((t) => {
+          if (t.kind !== 'chat') useTopicProgressStore.getState().markTopicCompleted(t, 'continuous');
+        });
+        const resolved =
+          Boolean(useAuthStore.getState().profile?.knowledgeLevel) ||
+          useTutorialStore.getState().mod01KnowledgeResolved;
+        const alreadyStamped = Boolean(useTopicProgressStore.getState().modulesPastThreshold['mod-0-1']);
+        // First honest completion → open the inline chest. grantHandoffChest is
+        // idempotent (stampModuleThreshold), so a stray re-entry can't double-fire.
+        if (resolved && !alreadyStamped && grantHandoffChest()) return;
+        // Replay / already earned / question not yet resolved → clean return to
+        // the live map (the accordion owns the chest there). NEVER a blank summary.
+        tt_exitFiredRef.current = true;
+        if (router.canGoBack()) {
+          useTopicTreeReturnStore.getState().signalReturn({
+            completedPhase: 'summary',
+            completedModuleId: mod.id,
+            expandedModule: mod.id,
+          });
+          router.back();
+        } else {
+          returnToMap('/(tabs)/index');
+        }
+        return;
+      }
+      setPhase('summary');
+      return;
+    }
     goToChipPhase(next);
-  }, [mod, goToChipPhase]);
+  }, [mod, goToChipPhase, returnTo, isReplay, router, returnToMap]);
 
   // Self-heal: if we entered sim-intro without simConcept data (gating drift),
   // skip to the next chip instead of crashing on the unguarded title access or
