@@ -178,9 +178,15 @@ export function chestThresholdFor(moduleId: string): number {
  *  recall before quiz, so no extra ordering code is needed. Rollback =
  *  restore 3 (criterion: daily lesson→chest < 60% for 3 days). */
 export const MODULE_CHIPS_TO_CHEST: Record<string, number> = {
-  // Back to 3 (Yoav 2026-07-10): 4 pushed the first chest one chip further out
-  // and activation slid 46% (30.6) → ~22%. 3 restores the lean 30.6 distance.
-  'mod-0-1': 3,
+  // 4 (Yoav 2026-07-10, reverting the short-lived 3): the first-lesson path MUST
+  // be intro → cards → **recall (בואו נתרגל) → quiz** → 🎁. The activation-distance
+  // rollback to 3 was wrong on two counts: maxQuizIdx=chipsToChest-1 dropped to 2,
+  // which splices the quiz BEFORE recall (cards→quiz, recall stranded), and the
+  // chest gate then landed on the quiz chip mid-way through the knowledgeLevel
+  // question race → a WHITE SCREEN instead of the chest. 4 restores the validated
+  // 2026-07-03 flow: recall comes before the quiz and the chest fires right after
+  // it (summary.completed 4 >= 4, once the inline knowledgeLevel question resolves).
+  'mod-0-1': 4,
 };
 
 /** Number of completed chips that opens the chest. Clamped to `total - 1` so the
