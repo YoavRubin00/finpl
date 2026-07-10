@@ -3233,6 +3233,36 @@ export function LessonFlowScreen() {
     return () => clearTimeout(t);
   }, [ttProgressActive, phase, returnToMap]);
 
+  // mod-0-1 inline-chest seam (Yoav 8.7, hardened 10.7). The auto-flow opens the
+  // mod-0-1 chest IN-LESSON right after the quiz + "איך הרגשת עם החומר?"
+  // (knowledgeLevel) question. It used to rely purely on the Effect-A phase-
+  // transition race (the seam above), which routes through the hidden `summary`
+  // phase — and `summary` renders NOTHING on returnTo=topic-tree (see the summary
+  // render gate). If that grant was ever missed, the user was stranded on a blank
+  // `summary` with no chest and no navigation → a WHITE SCREEN "instead of the
+  // chest". This fires the chest DECLARATIVELY from state whenever mod-0-1 reaches
+  // the terminal seam, independent of the transition timing. Idempotent: once
+  // stampModuleThreshold records it, the guard below short-circuits, so it can
+  // never double-fire (and the accordion's own chest stays suppressed).
+  useEffect(() => {
+    if (returnTo !== 'topic-tree' || isReplay) return;
+    if (id !== 'mod-0-1' || !mod) return;
+    if (phase !== 'summary') return;           // the terminal seam of the auto-flow
+    if (handoffChest) return;                  // chest already on screen
+    if (useTopicProgressStore.getState().modulesPastThreshold['mod-0-1']) return; // already granted
+    // We're at the end of mod-0-1's content — mark every content chip done so the
+    // threshold/reward records are consistent, then open the inline chest.
+    resolveTopics(mod).forEach((t) => {
+      if (t.kind !== 'chat') useTopicProgressStore.getState().markTopicCompleted(t, 'continuous');
+    });
+    if (mod01QuestionResolved && grantHandoffChest()) return; // chest now showing inline
+    // Question not yet resolved (or grant no-op) → bounce to the map so the
+    // accordion fires the canonical chest. Never leave the blank summary white.
+    if (tt_exitFiredRef.current) return;
+    tt_exitFiredRef.current = true;
+    returnToMap("/(tabs)/index");
+  }, [returnTo, isReplay, id, mod, phase, handoffChest, mod01QuestionResolved, returnToMap]);
+
   // Topic-tree safety net (Yoav 2026-06-27): under the chip auto-flow the chest
   // exits at the threshold (seam above) and the user never reaches the legacy
   // `summary`. But if a topic-tree module ever lands here anyway (count fell
@@ -3244,6 +3274,7 @@ export function LessonFlowScreen() {
   useEffect(() => {
     if (returnTo !== 'topic-tree' || isReplay) return;
     if (phase !== 'summary') return;
+    if (id === 'mod-0-1') return; // mod-0-1's summary seam is owned by the inline-chest effect above
     if (tt_exitFiredRef.current) return;
     tt_exitFiredRef.current = true;
     if (mod) {
@@ -3254,7 +3285,7 @@ export function LessonFlowScreen() {
       });
     }
     returnToMap("/(tabs)/index");
-  }, [returnTo, isReplay, phase, mod, returnToMap]);
+  }, [returnTo, isReplay, phase, mod, id, returnToMap]);
 
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed
