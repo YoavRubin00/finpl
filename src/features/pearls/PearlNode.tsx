@@ -86,17 +86,20 @@ export function PearlNode({
       haloOpacity.value = withTiming(0, { duration: 200 });
       haloScale.value = withTiming(0.85, { duration: 200 });
     } else {
+      // Stronger, breathier pulse (Yoav 10.7: the glow must make it OBVIOUS
+      // the pearl wants a tap) — peak opacity 0.55→0.75 and a wider sweep so
+      // the halo clearly radiates past the pearl instead of hugging it.
       haloOpacity.value = withRepeat(
         withSequence(
-          withTiming(0.55, { duration: 950 }),
-          withTiming(0.15, { duration: 950 }),
+          withTiming(0.75, { duration: 950 }),
+          withTiming(0.2, { duration: 950 }),
         ),
         -1,
         false,
       );
       haloScale.value = withRepeat(
         withSequence(
-          withTiming(1.25, { duration: 950 }),
+          withTiming(1.38, { duration: 950 }),
           withTiming(0.95, { duration: 950 }),
         ),
         -1,

@@ -1470,11 +1470,15 @@ const ChapterSection = React.memo(function ChapterSection({
                         state={pearlState}
                         offsetX={pearlOffsetX}
                         haloColor={colors.glow}
-                        // Free users: pulse a halo behind the just-unlocked
-                        // pearl so it's obvious which bonus is reachable.
-                        // Pro users see every pearl unlocked, so halos on
-                        // all of them would be noise — suppress them there.
-                        glow={!isPro && pearlState === 'unlocked'}
+                        // Pulse a halo behind the reachable-but-unplayed pearl
+                        // so it's obvious this bonus wants a tap (Yoav 10.7:
+                        // "שהפנינה תהיה זוהרת לאחר המודולה"). Pro users see
+                        // every pearl as unlocked, so for them the halo follows
+                        // REAL progress (source module completed) — the pearl
+                        // right after the module glows, the far-future ones
+                        // don't. Free users' unlocked already implies module
+                        // completion, so their behavior is unchanged.
+                        glow={pearlState === 'unlocked' && (!isPro || moduleCompleted)}
                         // Locked pearls share the locked-module tap target
                         // (the upgrade-to-Pro prompt) instead of being
                         // inert — same gesture, same outcome.
