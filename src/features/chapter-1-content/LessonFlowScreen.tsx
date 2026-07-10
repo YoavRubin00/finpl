@@ -4529,10 +4529,18 @@ export function LessonFlowScreen() {
   // including the legacy summary/chest screen. Suppress that flash by
   // rendering a blank screen until the navigation fires
   // ("הביא אותי למסך פתיחת תיבה הישן במקום להביא אותי למפת הלמידה").
+  // Yoav 2026-07-10: EXCEPT when the mod-0-1 inline chest is active. This guard
+  // sits ABOVE the chest render (ChestCelebrationModal below) — without the
+  // `!handoffChest` exception it painted a blank #f8fafc screen OVER the chest
+  // after the quiz+knowledgeLevel question (the phase advances quiz→shark-dilemma
+  // while the 50% chest fires from the auto-flow exit), producing a permanent
+  // WHITE SCREEN instead of the opening chest. The chest is not a bounce-nav, so
+  // it must be allowed to paint.
   if (
     returnTo === 'topic-tree'
     && tt_initialPhaseRef.current
     && phase !== tt_initialPhaseRef.current
+    && !handoffChest
   ) {
     return <View style={{ flex: 1, backgroundColor: '#f8fafc' }} />;
   }
