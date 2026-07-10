@@ -60,11 +60,13 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const notifPromptShown = useTutorialStore((s) => s.notifPromptShown);
   const markNotifPromptShown = useTutorialStore((s) => s.markNotifPromptShown);
-  // Value-first gate, same as the banner (2026-06-26): the welcome chest is
-  // the first guaranteed win EVERY new user reaches; mod-0-1 completion keeps
-  // pre-welcome-chest users eligible. Never ask before value — an early iOS
-  // denial is permanent.
-  const firstChestOpened = useTutorialStore((s) => s.firstChestOpened);
+  // AFTER-ACTIVATION gate (Yoav 2026-07-10): the ask fires only once the user
+  // has ACTIVATED — completed mod-0-1 (its chest) — same proxy as the exit
+  // ritual. The old gate also allowed the earlier welcome-chest
+  // (firstChestOpened), which let the primer interrupt BEFORE activation; that
+  // pre-activation ask is part of the day-0 friction pile that slid activation
+  // 46%→22%, so it's removed. (An early iOS denial is permanent, so asking
+  // only post-activation is also safer.)
   const hasCompletedFirstModule = useCompletedModulesStore((s) =>
     s.completedIds.includes('mod-0-1'),
   );
@@ -85,7 +87,7 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
     !notifPromptShown &&
     hasCompletedOnboarding &&
     hasSeenWalkthrough &&
-    (firstChestOpened || hasCompletedFirstModule) &&
+    hasCompletedFirstModule &&
     !pendingFirstChest &&
     !pendingProTeaser &&
     !pendingRegisterCTA;

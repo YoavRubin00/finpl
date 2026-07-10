@@ -178,7 +178,9 @@ export function chestThresholdFor(moduleId: string): number {
  *  recall before quiz, so no extra ordering code is needed. Rollback =
  *  restore 3 (criterion: daily lesson→chest < 60% for 3 days). */
 export const MODULE_CHIPS_TO_CHEST: Record<string, number> = {
-  'mod-0-1': 4,
+  // Back to 3 (Yoav 2026-07-10): 4 pushed the first chest one chip further out
+  // and activation slid 46% (30.6) → ~22%. 3 restores the lean 30.6 distance.
+  'mod-0-1': 3,
 };
 
 /** Number of completed chips that opens the chest. Clamped to `total - 1` so the

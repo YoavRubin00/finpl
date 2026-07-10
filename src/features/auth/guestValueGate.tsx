@@ -14,6 +14,18 @@ import { useAuthStore } from './useAuthStore';
 import { ModuleEndSignupGate } from './ModuleEndSignupGate';
 import { captureEvent } from '../../lib/posthog';
 
+/**
+ * DISABLED (Yoav 2026-07-10): the "gate after EVERY value action" wall (added
+ * 3.7) was too aggressive on day-0 — a fresh guest hit a signup modal after
+ * every vote / tool / news / prediction, and activation slid 46% (30.6) → 22%.
+ * We keep ONLY the two gates that existed on 30.6: the end-of-onboarding gate
+ * (SignupGateStep) and the module-chest gate (moduleEndGateShown /
+ * ModuleEndSignupGate) — both are SEPARATE paths, untouched. This kill leaves
+ * the machinery + call sites intact (they just no-op) so it can be re-enabled
+ * by flipping this flag if we ever want a gentler, post-activation version.
+ */
+const VALUE_ACTION_GATE_ENABLED = false;
+
 /** Don't show two value-gates within this window (rapid action streaks). */
 const COOLDOWN_MS = 2 * 60 * 1000;
 
@@ -39,6 +51,7 @@ export const useGuestValueGateStore = create<GuestValueGateState>()((set) => ({
  */
 export function requestGuestGate(trigger: string): boolean {
   try {
+    if (!VALUE_ACTION_GATE_ENABLED) return false; // Yoav 2026-07-10 — see note above
     if (!useAuthStore.getState().isGuest) return false;
     const { visibleTrigger, lastShownAt } = useGuestValueGateStore.getState();
     if (visibleTrigger !== null) return false;
