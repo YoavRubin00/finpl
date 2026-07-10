@@ -805,7 +805,7 @@ const DREAMS: { id: FinancialDream; emoji: string; label: string; sub: string }[
   { id: "freedom", emoji: "", label: "חופש כלכלי", sub: "הכל אפשרי" },
 ];
 
-function DreamStep({ onNext, onBack, initialValue }: { onNext: (v: FinancialDream) => void; onBack?: () => void; initialValue?: FinancialDream | null }) {
+function DreamStep({ onNext, onBack, initialValue, escapeEnabled = false }: { onNext: (v: FinancialDream | null) => void; onBack?: () => void; initialValue?: FinancialDream | null; escapeEnabled?: boolean }) {
   // Seed local selection from collected.financialDream so that a Back
   // navigation re-mounts the step with the previous choice already
   // highlighted (QA audit 2026-05-31).
@@ -815,11 +815,27 @@ function DreamStep({ onNext, onBack, initialValue }: { onNext: (v: FinancialDrea
   // Without this the auto-advance ref stays true and Tap is silently
   // ignored.
   useEffect(() => { advancedRef.current = false; }, []);
+  // Q1 exposure marker. onboarding_step_completed('dream') is partial (the
+  // first-sim path skips this step), so this per-mount event is the clean
+  // denominator for measuring the dream-question conversion + the A/B arm.
+  useEffect(() => {
+    try { captureEvent('dream_step_shown', { easy_exit_enabled: escapeEnabled }); } catch { /* non-fatal */ }
+  }, [escapeEnabled]);
   const tap = useCallback((id: FinancialDream) => {
     if (advancedRef.current) return;
     advancedRef.current = true;
     setSel(id);
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
+  }, [onNext]);
+  // Low-commitment exit (onboarding_dream_easy_exit treatment): a user with no
+  // specific financial dream advances recording null (already a handled state
+  // everywhere) instead of bailing. Shares the advance lock with `tap`.
+  const skip = useCallback(() => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
+    tapHaptic();
+    try { captureEvent('dream_easy_exit_tapped'); } catch { /* non-fatal */ }
+    onNext(null);
   }, [onNext]);
 
   return (
@@ -838,6 +854,19 @@ function DreamStep({ onNext, onBack, initialValue }: { onNext: (v: FinancialDrea
           />
         ))}
       </View>
+      {escapeEnabled && (
+        <Pressable
+          onPress={skip}
+          accessibilityRole="button"
+          accessibilityLabel="עדיין לא בטוח, קדימה נתחיל"
+          hitSlop={8}
+          style={{ alignSelf: 'center', marginTop: 18, paddingVertical: 8, paddingHorizontal: 12 }}
+        >
+          <Text style={{ writingDirection: 'rtl', textAlign: 'center', fontSize: 15, fontWeight: '700', color: '#64748b' }} allowFontScaling={false}>
+            עדיין לא בטוח? קדימה, נתחיל
+          </Text>
+        </Pressable>
+      )}
     </StepShell>
   );
 }
@@ -2691,6 +2720,15 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const displayName = useAuthStore((s) => s.displayName) ?? "You";
   const { playSound } = useSoundEffect();
 
+  // screen-1 dream-question easy-exit A/B (onboarding_dream_easy_exit). Selected
+  // at the parent level so the arm is STABLE across DreamStep re-mounts (Back
+  // from goal→dream) within one onboarding session — the parent doesn't unmount
+  // on step changes. useBandit sets the person property + fires
+  // bandit_variant_assigned once; new-user cohort filtering in the analytics
+  // read excludes the redo mounts this also covers.
+  const { payload: dreamEasyExit } = useBandit('onboarding_dream_easy_exit');
+  const dreamEasyExitEnabled = dreamEasyExit.variant === 'easy_exit';
+
   const isRedo = mode === "redo";
   // Skip intro if user already registered/signed-in or is guest (came back from register screen).
   // Post-OAuth-mid-signup recovery: when a user completes OAuth from the signup-gate, useGoogleAuth /
@@ -2981,6 +3019,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       <Animated.View style={[{ flex: 1 }, slideStyle]}>
         {step === "dream" && <DreamStep
           initialValue={collected.financialDream}
+          escapeEnabled={dreamEasyExitEnabled}
           onNext={(v) => {
             if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
             else { slide("goal", { financialDream: v }); }

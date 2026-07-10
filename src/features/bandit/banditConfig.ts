@@ -446,6 +446,36 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
       },
     ],
   },
+
+  // screen-1 dream-question easy-exit (RETENTION 2026-07-10). The chronic
+  // biggest onboarding leak is the early profiling stretch (intro→dream→goal):
+  // started→completed 55% vs 63% baseline, with age→completed=90% proving the
+  // drop is upstream of the last step, not a broken completion event. The
+  // dream question (DreamStep) is already one-tap but its 4 options are all
+  // heavy financial commitments and — unlike the goal question — it has NO
+  // low-commitment "don't know" exit. This experiment adds that exit for half
+  // the users. Fixed 50/50 allocation (not Thompson) for a fast, clean read;
+  // success = onboarding_completed by arm, guardrail = mod-0-1 chest by arm
+  // (don't win onboarding by producing tourists). Kill: v1→0 or pin v0.
+  onboarding_dream_easy_exit: {
+    goal: 'retention',
+    allocation: {
+      onboarding_dream_easy_exit_v0: 0.5,
+      onboarding_dream_easy_exit_v1: 0.5,
+    },
+    variants: [
+      {
+        id: 'onboarding_dream_easy_exit_v0',
+        label: 'control',
+        payload: { variant: 'control' },
+      },
+      {
+        id: 'onboarding_dream_easy_exit_v1',
+        label: 'easy_exit',
+        payload: { variant: 'easy_exit' },
+      },
+    ],
+  },
 };
 
 export function getVariantPayload<E extends ExperimentId>(

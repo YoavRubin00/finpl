@@ -12,7 +12,8 @@ export type ExperimentId =
   | 'daily_email_variant'
   | 'onboarding_welcome_hook'
   | 'day0_wager'
-  | 'onboarding_module_first';
+  | 'onboarding_module_first'
+  | 'onboarding_dream_easy_exit';
 
 export interface BanditVariant {
   id: string;
@@ -99,6 +100,15 @@ export type ExperimentPayloads = {
      *  The arm is selected ONCE at first boot and persisted in
      *  useTutorialStore.firstRunArm — see firstRunExperiment.ts. */
     variant: 'control' | 'module_first';
+  };
+  onboarding_dream_easy_exit: {
+    /** screen-1 dream question (DreamStep). 'control' = the 4 heavy dream
+     *  cards with no "don't know" exit; 'easy_exit' = same 4 cards PLUS a
+     *  low-commitment "עדיין לא יודע? קחו אותי פנימה" affordance that advances
+     *  recording financialDream=null. Targets the chronic screen-1 leak
+     *  (started→completed 55% vs 63% baseline) without the module-first
+     *  value-first inversion that failed. */
+    variant: 'control' | 'easy_exit';
   };
 };
 
