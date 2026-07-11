@@ -3,6 +3,7 @@
  * Called from useNotificationSetup. Runs once per day on app open.
  */
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useNotificationStore } from './useNotificationStore';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
@@ -174,6 +175,39 @@ export function useFinnNotificationScheduler() {
 
                 // Tool-of-the-day is now an IN-APP top banner (ToolsDiscoveryBanner
                 // on the home screen), not an OS push (Yoav 18/06: keep it in-app).
+
+                // Guest register nudge (Yoav 11.7): one push per day whose whole
+                // job is registration — an unregistered user's progress is one
+                // lost phone away from gone, and the guest is the majority of
+                // organic traffic with zero other touchpoints. Own channel
+                // ('registerNudge' data-key, Android channel upgradeNudge which
+                // already exists) — NOT in DAILY_CHANNELS, so the cap below
+                // never cuts it; cancelled+re-armed here daily, and dropped
+                // entirely once the user registers.
+                try {
+                  const all = await Notifications.getAllScheduledNotificationsAsync();
+                  await Promise.all(
+                    all
+                      .filter((n) => (n.content?.data as Record<string, unknown> | undefined)?.channel === 'registerNudge')
+                      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+                  );
+                  const { useAuthStore: authStore } = require('../auth/useAuthStore') as typeof import('../auth/useAuthStore');
+                  if (authStore.getState().isGuest) {
+                    const now = new Date();
+                    const fireAt = new Date(now);
+                    fireAt.setHours(19, 30, 0, 0);
+                    if (fireAt.getTime() <= now.getTime()) fireAt.setDate(fireAt.getDate() + 1);
+                    await Notifications.scheduleNotificationAsync({
+                      content: {
+                        title: 'ההתקדמות שלכם עדיין לא שמורה',
+                        body: 'המטבעות, הרצף והרמות — הכל על המכשיר הזה בלבד. 30 שניות להרשמה וזה שלכם לתמיד.',
+                        data: { channel: 'registerNudge', screen: '/(auth)/register' },
+                        ...(Platform.OS === 'android' ? { channelId: 'upgradeNudge' } : {}),
+                      },
+                      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireAt },
+                    });
+                  }
+                } catch { /* non-fatal */ }
 
                 // Safety net: never leave more than 2 notifications scheduled
                 await enforceNotificationCap(2);

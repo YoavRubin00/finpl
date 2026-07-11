@@ -21,6 +21,7 @@ import {
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
 import { useAuthStore } from "../auth/useAuthStore";
+import { tapHaptic } from "../../utils/haptics";
 import { useIsPro } from "../subscription/useSubscription";
 import { HeartsDisplay } from "../subscription/HeartsUI";
 import { getPyramidStatus } from "../../utils/progression";
@@ -121,6 +122,7 @@ function pickRecommendedBenefit(
 export function ProfileScreen() {
   const isFocused = useIsFocused();
   const router = useRouter();
+  const isGuestUser = useAuthStore((s) => s.isGuest);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [redoOnboardingVisible, setRedoOnboardingVisible] = useState(false);
   const [transitionTarget, setTransitionTarget] = useState<'referral' | null>(null);
@@ -205,6 +207,31 @@ export function ProfileScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, paddingTop: 8 }}
           showsVerticalScrollIndicator={false}
         >
+
+          {/* Guest register CTA (Yoav 11.7): an unregistered user's progress
+              lives on this device only — the profile is the natural place to
+              say it plainly and offer the fix. One tap → RegisterScreen. */}
+          {isGuestUser && (
+            <Pressable
+              onPress={() => { tapHaptic(); router.push('/(auth)/register' as never); }}
+              accessibilityRole="button"
+              accessibilityLabel="שמירת החשבון — הרשמה"
+              style={guestCtaStyles.card}
+            >
+              <Text style={guestCtaStyles.emoji} allowFontScaling={false}>🔓</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={guestCtaStyles.title} allowFontScaling={false}>
+                  ההתקדמות שלכם עדיין לא שמורה
+                </Text>
+                <Text style={guestCtaStyles.sub} allowFontScaling={false}>
+                  הרשמה של 30 שניות — והמטבעות, הרצף וההתקדמות נשמרים לתמיד
+                </Text>
+              </View>
+              <View style={guestCtaStyles.btn}>
+                <Text style={guestCtaStyles.btnText} allowFontScaling={false}>שמרו לי</Text>
+              </View>
+            </Pressable>
+          )}
 
           {/* Achievement pills row — streak (always) + pro (if active) + chapter (current layer). */}
           <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 12 }}>
@@ -700,6 +727,50 @@ const stagePopupStyles = StyleSheet.create({
   stageDotActive: {
     backgroundColor: "rgba(124,58,237,0.25)",
     borderColor: "#7c3aed",
+  },
+});
+
+// Guest register CTA (Yoav 11.7)
+const guestCtaStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 16,
+    backgroundColor: '#fffbeb',
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+  },
+  emoji: { fontSize: 24 },
+  title: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#92400e',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  sub: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#b45309',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  btn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#f59e0b',
+  },
+  btnText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#ffffff',
+    writingDirection: 'rtl',
   },
 });
 

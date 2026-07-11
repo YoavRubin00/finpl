@@ -108,9 +108,12 @@ function computeStats(
     avgDailyTime = m >= 1 ? `${m} דק׳` : `<1 דק׳`;
   }
 
-  // 7. Peak activity hour
+  // 7. Peak activity hour — honest-data rules (Yoav 11.7: a fresh account
+  // showed "14 פגישות אחרונות" — that sublabel was a HARDCODED string, not
+  // data). Require ≥3 real samples before showing a peak at all, and the
+  // sublabel reports the REAL sample count.
   let peakHour = "--";
-  if (recentActivityHours.length > 0) {
+  if (recentActivityHours.length >= 3) {
     const freq: Record<number, number> = {};
     for (const h of recentActivityHours) freq[h] = (freq[h] ?? 0) + 1;
     const peak = Number(
@@ -132,7 +135,7 @@ function computeStats(
     quizAccuracy:     { value: quizAccuracy,        sublabel: "כל הפרקים" },
     avgModuleTime:    { value: avgModuleTime,        sublabel: "ממוצע" },
     avgDailyTime:     { value: avgDailyTime,         sublabel: "ממוצע" },
-    peakHour:         { value: peakHour,             sublabel: "14 פגישות אחרונות" },
+    peakHour:         { value: peakHour,             sublabel: recentActivityHours.length >= 3 ? `${recentActivityHours.length} פעילויות אחרונות` : "עוד אין מספיק דאטה" },
     dilemmaAccuracy:  { value: dilemmaAccuracy,      sublabel: "דילמות יומיות" },
   };
 }
