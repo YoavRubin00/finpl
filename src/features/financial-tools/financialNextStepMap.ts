@@ -47,8 +47,10 @@ export const NEXT_STEPS: Record<FinancialToolKey, NextStepEntry> = {
     lessonId: 'mod-2-11',
     chapterId: 'chapter-2',
     lessonLabel: 'נקודות זיכוי — איך הן משפיעות',
-    actionLabel: 'בדוק אם מגיע לך החזר מס',
-    actionRoute: '/tax-refund-calculator',
+    // Dilution 11.7: tax-refund left the shelf — route the next step to a
+    // visible tool instead of advertising a hidden one.
+    actionLabel: 'תראה מה הנטו יכול לצמוח',
+    actionRoute: '/compound-calculator',
   },
   'tax-refund': {
     lessonId: 'mod-2-11',
@@ -82,8 +84,10 @@ export const NEXT_STEPS: Record<FinancialToolKey, NextStepEntry> = {
     lessonId: 'mod-5-25',
     chapterId: 'chapter-5',
     lessonLabel: 'תנועת FIRE — חופש כלכלי מוקדם',
-    actionLabel: 'תכנן את הנדל"ן',
-    actionRoute: '/mortgage-calculator',
+    // Dilution 11.7: mortgage left the shelf — close the loop back into
+    // compound (fire ↔ compound) instead of a hidden tool.
+    actionLabel: 'תראה איך ההון גדל בדרך',
+    actionRoute: '/compound-calculator',
   },
   payslip: {
     lessonId: 'mod-1-5',

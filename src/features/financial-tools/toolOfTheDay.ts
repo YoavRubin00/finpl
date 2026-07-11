@@ -13,7 +13,13 @@
  *
  * Copy follows BRAND.md: Captain Shark's voice, singular "you" (AI voice),
  * emoji-free push titles (CALM push-copy audit 2026-05-30).
+ *
+ * TOOL DILUTION (Yoav 11.7): the rotation is filtered against the registry's
+ * `hidden` flag, so CTAs never advertise a tool that is no longer on the
+ * shelf (pension-fees CTA on a hidden tool — Yoav bug report 11.7).
  */
+
+import { TOOLS_REGISTRY } from './toolsRegistry';
 
 export interface DailyTool {
   /** Stable analytics id (tool_key). Also the rotation identity. */
@@ -84,6 +90,16 @@ export const DAILY_TOOLS: readonly DailyTool[] = [
   },
 ] as const;
 
+/** Tools hidden from the hub (dilution 11.7) must never be advertised. */
+const HIDDEN_TOOL_KEYS = new Set<string>(
+  TOOLS_REGISTRY.filter((t) => t.hidden).map((t) => t.key),
+);
+
+/** The live rotation — only tools actually visible on the shelf. */
+export const VISIBLE_DAILY_TOOLS: readonly DailyTool[] = DAILY_TOOLS.filter(
+  (t) => !HIDDEN_TOOL_KEYS.has(t.toolKey),
+);
+
 /** Day-of-year (1-based-ish), matching the existing ToolsDiscoveryBanner
  *  computation so all surfaces rotate in lockstep. */
 export function dayOfYear(now: Date = new Date()): number {
@@ -94,5 +110,5 @@ export function dayOfYear(now: Date = new Date()): number {
 
 /** Today's tool — the same across every surface on a given calendar day. */
 export function toolOfTheDay(now: Date = new Date()): DailyTool {
-  return DAILY_TOOLS[dayOfYear(now) % DAILY_TOOLS.length]!;
+  return VISIBLE_DAILY_TOOLS[dayOfYear(now) % VISIBLE_DAILY_TOOLS.length]!;
 }

@@ -148,7 +148,15 @@ ${transcriptText}
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1024, temperature: 0.5 },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            // 2.5-flash is a thinking model — thought tokens count against
+            // maxOutputTokens, and a truncated JSON meant understandingScore
+            // parsed as NaN → 0 → pinned at the 70 display floor (Yoav 11.7).
+            maxOutputTokens: 2048,
+            temperature: 0.5,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
         }),
       },
     );
@@ -187,7 +195,18 @@ ${transcriptText}
     // (defensive) shows the raw read. Coefficients tunable.
     const toDisplay = (r: number): number =>
       completed ? clampPct(Math.max(70, Math.round(62 + clampPct(r) * 0.38))) : clampPct(r);
-    const understandingScore = toDisplay(parsed.understandingScore as number);
+
+    // Raw score guards (Yoav 11.7 — "always 70"): a missing/truncated AI score
+    // used to clamp to 0 and pin the display at the floor. Fall back to the
+    // quiz evidence; and when there was no voice call, the quiz IS the
+    // evidence — never grade below what the quiz proved.
+    const aiRaw = Number(parsed.understandingScore);
+    const evidenceRaw = quizRatio != null ? Math.round(quizRatio * 100) : null;
+    let rawScore = Number.isFinite(aiRaw) ? clampPct(aiRaw) : (evidenceRaw ?? 55);
+    if (!hasTranscript && evidenceRaw != null) {
+      rawScore = Math.max(rawScore, Math.max(0, evidenceRaw - 5));
+    }
+    const understandingScore = toDisplay(rawScore);
 
     // Never show an empty report. A finished module always gets at least one
     // proud strength and one inviting next-step, plus a per-concept recap — so
@@ -205,7 +224,12 @@ ${transcriptText}
     let perConcept: PerConcept[] = Array.isArray(parsed.perConcept)
       ? parsed.perConcept
           .filter((p): p is PerConcept => !!p && typeof p.concept === 'string')
-          .map((p) => ({ concept: p.concept.trim().slice(0, 80), graspPct: toDisplay(p.graspPct as number) }))
+          .map((p) => ({
+            concept: p.concept.trim().slice(0, 80),
+            // Same NaN guard — a missing per-concept pct inherits the module's
+            // raw read instead of collapsing to the 70 floor.
+            graspPct: toDisplay(Number.isFinite(Number(p.graspPct)) ? Number(p.graspPct) : rawScore),
+          }))
           .slice(0, 8)
       : [];
     if (perConcept.length === 0 && concepts.length > 0) {
