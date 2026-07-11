@@ -2513,19 +2513,23 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
   const finnOpacity = useSharedValue(0);
 
   useEffect(() => {
-    finnOpacity.value = withTiming(1, { duration: 400 });
+    // Snappier handoff (Yoav 11.7: "המעברים איטיים ומסורבלים מדי") — the
+    // build ceremony was ~4s (620ms/item + tails) between the last onboarding
+    // step and the welcome chest. 360ms/item + trimmed tails ≈ 2.2s: still a
+    // ceremony, no longer a wait.
+    finnOpacity.value = withTiming(1, { duration: 250 });
     progress.value = withTiming(1, {
-      duration: BUILD_ITEMS.length * 620,
+      duration: BUILD_ITEMS.length * 360,
       easing: Easing.out(Easing.quad),
     });
 
     BUILD_ITEMS.forEach((_, i) => {
-      const delay = 300 + i * 620;
+      const delay = 150 + i * 360;
       const timer = setTimeout(() => setVisibleCount(i + 1), delay);
       return timer;
     });
 
-    const doneTimer = setTimeout(onDone, 300 + BUILD_ITEMS.length * 620 + 500);
+    const doneTimer = setTimeout(onDone, 150 + BUILD_ITEMS.length * 360 + 300);
     return () => clearTimeout(doneTimer);
   }, []);
 

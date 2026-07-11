@@ -2211,8 +2211,21 @@ export function LessonFlowScreen() {
   /** Close the handoff chest → v1 pre-onboarding continues to profiling;
    *  everyone else (the INLINE mod-0-1 chest, panel item 4, Yoav 8.7) returns
    *  to the live map exactly like the premium chip-return path. */
+  /** When set, the inline chest's "המשך" resumes the auto-flow from this
+   *  chip (the post-chest chips: shark-dilemma → game → …) instead of
+   *  returning to the map (Yoav 11.7). */
+  const postChestResumeRef = useRef<TopicKind | null>(null);
+
   function closeHandoffChest() {
     try { track({ name: 'chest_closed', props: { module_id: 'mod-0-1', source: 'inline' } }); } catch { /* non-fatal */ }
+    // In-lesson continuation: resume straight into the next chip.
+    const resumeFrom = postChestResumeRef.current;
+    if (resumeFrom) {
+      postChestResumeRef.current = null;
+      setHandoffChest(null);
+      advanceFromChip(resumeFrom);
+      return;
+    }
     setHandoffChest(null);
     if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'profiling') {
       router.replace('/(auth)/onboarding' as never);
@@ -2966,7 +2979,14 @@ export function LessonFlowScreen() {
       // through to the legacy summary chest (part of the 2026-06-27 mod-0-2 bug).
       const reachedChest = summary.completed >= chipsToChest;
       const moduleComplete = summary.total > 0 && summary.completed >= summary.total;
-      const chestReady = reachedChest && mod01QuestionResolved;
+      // POST-CHEST CONTINUITY (Yoav 11.7: "שממשיכים ללמוד במודולה אחרי התיבה
+      // צריך ברצף עד סיום ולא אחד אחד"): once the threshold chest was ALREADY
+      // granted (stamped), later chips must keep auto-flowing — the old
+      // `>= threshold` exit re-fired on EVERY post-chest chip and bounced the
+      // user to the map after each one. The exit now belongs only to the
+      // un-stamped crossing (the chest moment itself) or to 100%.
+      const alreadyStamped = Boolean(useTopicProgressStore.getState().modulesPastThreshold[mod.id]);
+      const chestReady = reachedChest && mod01QuestionResolved && !alreadyStamped;
       const shouldExit = chestReady || moduleComplete;
       if (!shouldExit) {
         // Fire the "עוד X לתיבה" callout (pop+confetti) once per real chip — only
@@ -4144,6 +4164,33 @@ export function LessonFlowScreen() {
     if (currentKind === 'quiz') {
       if (mod.id && MODULE_INFOGRAPHIC_MAP[mod.id]) { setPhase('module-infographic'); return; }
       if (mod.id && MODULE_POST_VIDEO_MAP[mod.id]) { setPhase('post-infographic-video'); return; }
+    }
+    // mod-0-1 CHEST-FIRST seam (Yoav 11.7: "תעביר את ההתייעצות עם שארק להיות
+    // בצ'יפים שאחרי התיבה"): the quiz is the 4th and LAST pre-chest chip, so
+    // right after it (and the knowledgeLevel question, which already ran —
+    // advanceQuiz resumes into this call) the chest opens IMMEDIATELY, before
+    // the shark-dilemma/game. The chest's "המשך" CTA resumes the in-lesson
+    // flow into those post-chest chips (postChestResumeRef) instead of
+    // bouncing to the map.
+    if (
+      currentKind === 'quiz' &&
+      mod.id === 'mod-0-1' &&
+      returnTo === 'topic-tree' &&
+      !isReplay &&
+      !useTopicProgressStore.getState().modulesPastThreshold['mod-0-1']
+    ) {
+      const resolved =
+        Boolean(useAuthStore.getState().profile?.knowledgeLevel) ||
+        useTutorialStore.getState().mod01KnowledgeResolved;
+      if (resolved) {
+        // Mark the quiz done NOW (no phase transition happens, so Effect A
+        // won't) — the threshold math needs it counted before the grant.
+        const quizTopic = resolveTopics(mod).find((t) => t.kind === 'quiz');
+        if (quizTopic) useTopicProgressStore.getState().markTopicCompleted(quizTopic, 'continuous');
+        postChestResumeRef.current = 'quiz';
+        if (grantHandoffChest()) return; // chest renders over the quiz phase
+        postChestResumeRef.current = null; // grant no-op (raced) → normal flow
+      }
     }
     const ordered: TopicKind[] = resolveTopics(mod).map((t) => t.kind).filter((k) => k !== 'tutorial-video' && k !== 'chat');
     const i = ordered.indexOf(currentKind);
@@ -5963,8 +6010,8 @@ export function LessonFlowScreen() {
           thresholdPct={handoffChest.thresholdPct}
           isFinale={false}
           onContinueModule={closeHandoffChest}
-          onAdvanceToNextModule={closeHandoffChest}
-          onDismiss={closeHandoffChest}
+          onAdvanceToNextModule={() => { postChestResumeRef.current = null; closeHandoffChest(); }}
+          onDismiss={() => { postChestResumeRef.current = null; closeHandoffChest(); }}
           analyticsModuleId="mod-0-1"
           analyticsSource="inline"
           ahaLine={ahaLineFor('mod-0-1')}
