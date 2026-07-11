@@ -264,7 +264,10 @@ const styles = StyleSheet.create({
   // Aligned 1:1 with ChestCelebrationModal so the first chest feels like the
   // real end-of-lesson chest (Yoav 2026-06-23) — only the CTAs differ (single
   // המשך) plus the shark speech bubble.
-  backdrop: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.86)' },
+  // FULLY OPAQUE (Yoav 11.7: "הטעינה של מסך פתיחת התיבה קורה טיפה לאט") —
+  // the heavy learn-map mount now happens BEHIND this screen; at 0.86 alpha
+  // the half-mounted map shimmered through and read as "slow loading".
+  backdrop: { flex: 1, backgroundColor: '#0f172a' },
   safe: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 20 },
   headingWrap: { alignItems: 'center', gap: 8, marginTop: 8 },
   heading: { fontSize: 30, fontWeight: '900', color: '#fcd34d' },

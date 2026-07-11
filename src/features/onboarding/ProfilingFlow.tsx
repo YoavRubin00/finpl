@@ -2963,7 +2963,12 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       const tut = useTutorialStore.getState();
       if (tut.firstRunArm !== null) tut.setFirstRunStage('done');
     } catch { /* non-fatal */ }
-    router.replace("/(tabs)" as Href);
+    // PAINT-THEN-NAVIGATE (Yoav 11.7: the chest screen "loaded slow"): a
+    // synchronous replace made the user WAIT through the heavy (tabs)/learn-map
+    // mount before the chest gate could paint. The gate is armed above and
+    // renders on this route too — give React one frame to paint the (now
+    // fully-opaque) chest screen, then run the navigation invisibly BEHIND it.
+    setTimeout(() => { try { router.replace("/(tabs)" as Href); } catch { /* non-fatal */ } }, 80);
   }
 
   function editSummaryStep(target: EditableStep) {
