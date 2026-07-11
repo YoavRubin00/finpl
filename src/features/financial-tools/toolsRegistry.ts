@@ -166,6 +166,10 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     xpReward: 15,
     status: 'active',
     category: 'financial',
+    // MERGED into the payslip analyzer (Yoav 11.7): same salary-first pain,
+    // two shelf slots. The route stays live — reached via the CTA inside
+    // the payslip tool (and deep links).
+    hidden: true,
   },
   {
     key: 'tax-refund',

@@ -8,6 +8,7 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -362,7 +363,30 @@ export function PayslipAnalyzerScreen() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        {phase === "idle" ? <UploadDropzone /> : null}
+        {phase === "idle" ? (
+          <>
+            <UploadDropzone />
+            {/* Salary-net merge (Yoav 11.7): the standalone ברוטו↔נטו tool left
+                the hub shelf — its natural home is HERE, next to the payslip.
+                Same salary-first pain, one shelf slot. */}
+            <Pressable
+              onPress={() => { router.push('/salary-net-calculator' as never); }}
+              accessibilityRole="button"
+              accessibilityLabel="מחשבון ברוטו נטו"
+              style={styles.salaryNetCta}
+            >
+              <Text style={styles.salaryNetCtaEmoji} allowFontScaling={false}>💰</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.salaryNetCtaTitle, RTL]} allowFontScaling={false}>
+                  רק רוצים לדעת כמה נכנס לכיס?
+                </Text>
+                <Text style={[styles.salaryNetCtaSub, RTL]} allowFontScaling={false}>
+                  מחשבון ברוטו ↔ נטו מהיר — בלי להעלות תלוש
+                </Text>
+              </View>
+            </Pressable>
+          </>
+        ) : null}
 
         {phase === "file_chosen" && file ? (
           <FilePreview
@@ -467,6 +491,34 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 32,
+  },
+  // Salary-net merged CTA (Yoav 11.7)
+  salaryNetCta: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+  },
+  salaryNetCtaEmoji: {
+    fontSize: 22,
+  },
+  salaryNetCtaTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#14532d',
+  },
+  salaryNetCtaSub: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#166534',
+    marginTop: 1,
   },
   previewWrap: {
     paddingHorizontal: 16,

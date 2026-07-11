@@ -7,6 +7,8 @@ import {
   ScrollView,
   TextInput,
   Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +20,7 @@ import { PORTFOLIO_BUILDER_CATEGORIES } from '../fantasy-league/fantasyData';
 import { useLiveReturnsStore } from '../fantasy-league/useLiveReturnsStore';
 import { tapHaptic, successHaptic, mediumHaptic } from '../../utils/haptics';
 import type { SharedPick } from './portfolioShareTypes';
+import { importPortfolioFromScreenshot } from './importFromScreenshot';
 import {
   MIN_PICKS,
   MAX_PICKS,
@@ -141,6 +144,40 @@ export function PortfolioComposerModal({
     setCaption('');
     setAnonymous(false);
   }, []);
+
+  // ── Screenshot import (Yoav 11.7) ──
+  const [importing, setImporting] = useState(false);
+  const handleImportScreenshot = useCallback(async () => {
+    if (importing) return;
+    tapHaptic();
+    setImporting(true);
+    try {
+      const result = await importPortfolioFromScreenshot();
+      if (result.status === 'ok') {
+        // Cap to the composer max and re-normalize so the gauge lands on 100.
+        const sliced = result.picks.slice(0, MAX_PICKS);
+        const total = sliced.reduce((s, p) => s + p.allocationPct, 0);
+        const normalized = sliced.map((p, i) => {
+          const pct = Math.max(1, Math.round((p.allocationPct / Math.max(1, total)) * 100));
+          return { ticker: p.ticker, name: p.name, sector: p.sector, allocationPct: pct, __i: i };
+        });
+        const drift = 100 - normalized.reduce((s, p) => s + p.allocationPct, 0);
+        if (drift !== 0 && normalized.length > 0) {
+          const biggest = normalized.reduce((a, b) => (b.allocationPct > a.allocationPct ? b : a), normalized[0]);
+          biggest.allocationPct = Math.max(1, biggest.allocationPct + drift);
+        }
+        successHaptic();
+        setPicks(normalized.map(({ __i, ...p }) => p));
+        if (result.broker) setCaption((c) => c || `התיק האמיתי שלי (${result.broker}) 📈`);
+      } else if (result.status === 'empty') {
+        Alert.alert('לא זוהה תיק בצילום', 'ודאו שהצילום מציג את רשימת ההחזקות באפליקציית ההשקעות, ונסו שוב.');
+      } else if (result.status === 'error') {
+        Alert.alert('הייבוא נכשל', 'משהו השתבש בפענוח. נסו צילום חד יותר, או בנו את התיק ידנית.');
+      }
+    } finally {
+      setImporting(false);
+    }
+  }, [importing]);
 
   const handleClose = (): void => {
     reset();
@@ -273,6 +310,42 @@ export function PortfolioComposerModal({
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+          {/* Screenshot import (Yoav 11.7): pull the user's REAL portfolio from
+              a screenshot of their investing app. The picks land in the editor
+              below for mandatory review — nothing shares automatically. */}
+          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+            <Pressable
+              onPress={handleImportScreenshot}
+              disabled={importing}
+              accessibilityRole="button"
+              accessibilityLabel="ייבוא תיק מצילום מסך"
+              style={{
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                paddingVertical: 12,
+                borderRadius: 14,
+                backgroundColor: importing ? '#e0f2fe' : '#f0f9ff',
+                borderWidth: 1.5,
+                borderColor: '#7dd3fc',
+                borderStyle: 'dashed',
+              }}
+            >
+              {importing ? (
+                <ActivityIndicator size="small" color="#0284c7" />
+              ) : (
+                <Text style={{ fontSize: 16 }} allowFontScaling={false}>📸</Text>
+              )}
+              <Text style={{ fontSize: 14, fontWeight: '900', color: '#0369a1', ...RTL }} allowFontScaling={false}>
+                {importing ? 'שארק מפענח את הצילום…' : 'ייבאו את התיק האמיתי מצילום מסך'}
+              </Text>
+            </Pressable>
+            <Text style={{ fontSize: 10.5, color: TEXT_MUTED, marginTop: 5, ...RTL, textAlign: 'center' }} allowFontScaling={false}>
+              רק אחוזים וסימבולים נקראים — בלי סכומים ובלי פרטי חשבון
+            </Text>
+          </View>
+
           {/* Selected picks — allocation editing */}
           {picks.length > 0 && (
             <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 8 }}>

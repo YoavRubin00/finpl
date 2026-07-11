@@ -69,9 +69,15 @@ export type AppEvent =
   | { name: 'signup_gate_abandoned'; props: { source: string; time_open_ms?: number } }
 
   // ── Lesson / Module ────────────────────────────────────────────────────
-  | { name: 'lesson_started'; props: { lesson_id: string; chapter_id?: string; is_replay?: boolean; entry_source?: 'map_tap' | 'auto_advance' | 'deeplink' } }
+  // SCHEMA UNIFICATION (Yoav 11.7): the emitters historically sent module_id
+  // (raw captureEvent) while this registry declared lesson_id — dashboards
+  // built on either key missed the other's rows. Both events now carry BOTH
+  // keys with the same value, plus the props the emitters already send
+  // (module_variant / learning_mode), so every existing insight keeps working
+  // and new queries can standardize on module_id.
+  | { name: 'lesson_started'; props: { lesson_id?: string; module_id?: string; chapter_id?: string | null; is_replay?: boolean; entry_source?: 'map_tap' | 'auto_advance' | 'deeplink'; module_variant?: string } }
   | { name: 'lesson_quiz_question_answered'; props: { lesson_id: string; question_index: number; is_correct: boolean; attempt?: number; combo_at_answer?: number } }
-  | { name: 'lesson_completed'; props: { lesson_id: string; chapter_id?: string; duration_ms?: number; completed_at_phase?: string; correct_count?: number; total_questions?: number; is_first_lesson?: boolean; max_combo?: number; lesson_xp_multiplier?: number } }
+  | { name: 'lesson_completed'; props: { lesson_id?: string; module_id?: string; chapter_id?: string | null; duration_ms?: number; completed_at_phase?: string; correct_count?: number; total_questions?: number; is_first_lesson?: boolean; max_combo?: number; lesson_xp_multiplier?: number; learning_mode?: string; module_variant?: string } }
   | { name: 'lesson_exited_early'; props: { lesson_id: string; chapter_id?: string; reason: 'back_button' | 'navigation' | 'app_background'; phase?: string } }
   | { name: 'module_unlocked'; props: { module_id: string; chapter_id?: string; trigger?: 'completion' | 'pro_subscribe' | 'manual' } }
   | { name: 'chapter_completed'; props: { chapter_id: string; total_modules?: number } }
@@ -125,6 +131,11 @@ export type AppEvent =
   // read from chest_opened's shape so module/threshold changes never
   // silently redefine the funnel.
   | { name: 'activation_reached'; props: { module_id: string; via: 'inline_chest' | 'accordion_chest' } }
+  // Screenshot → portfolio import (Yoav 11.7): the user imports their REAL
+  // portfolio from an investing-app screenshot into the community composer.
+  | { name: 'portfolio_screenshot_import_started'; props: Record<string, never> }
+  | { name: 'portfolio_screenshot_import_succeeded'; props: { positions_count: number; broker?: string } }
+  | { name: 'portfolio_screenshot_import_failed'; props: Record<string, never> }
   // mod-0-1 walkthrough prompt — fires once. Lets us tie subsequent
   // retention to whether the user opted into the tour or skipped it.
   | { name: 'walkthrough_prompt_shown'; props: { module_id: string } }

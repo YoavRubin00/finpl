@@ -2304,6 +2304,9 @@ export function LessonFlowScreen() {
     if (mod) {
       captureEvent('lesson_started', {
         module_id: mod.id,
+        // Schema unification (11.7): registry declared lesson_id, emitters
+        // sent module_id — now both carry the same value everywhere.
+        lesson_id: mod.id,
         chapter_id: chapterId ?? null,
         is_replay: isReplay,
         // 2026-06-04: mod-0-1 was split into mod-0-1 (short, first half)
@@ -2499,6 +2502,8 @@ export function LessonFlowScreen() {
       .filter((m) => m.status === 'completed').length;
     captureEvent('lesson_completed', {
       module_id: moduleId,
+      // Schema unification (11.7): both keys, same value — see lesson_started.
+      lesson_id: moduleId,
       chapter_id: chapterId ?? '',
       is_first_lesson: totalCompletedBefore === 0,
       total_completed: totalCompletedBefore + 1,

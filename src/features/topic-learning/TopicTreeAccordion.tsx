@@ -440,6 +440,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         useCompletedModulesStore.getState().completedIds.length === 0;
       captureEvent('lesson_completed', {
         module_id: module.id,
+        // Schema unification (11.7): both keys, same value everywhere.
+        lesson_id: module.id,
         chapter_id: chapterIdFromModuleId(module.id),
         is_first_lesson: isFirstLesson,
         learning_mode: 'topic-tree',
