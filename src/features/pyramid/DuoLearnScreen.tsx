@@ -1495,14 +1495,18 @@ const ChapterSection = React.memo(function ChapterSection({
                           band without disturbing the path's connector flow, then
                           translated ~94px to the inner side of the pearl.
                           Always interactive (independent of Pro / pearl lock). */}
-                      {module.id === INVESTOR_QUIZ_ANCHOR_MODULE_ID && onInvestorQuizPress ? (
+                      {/* FRONT-DECLUTTER (Yoav 11.7): investor-quiz node OFF
+                          the learn map — 14 opens/14d for a permanent node on
+                          the critical path. Quiz stays reachable elsewhere. */}
+                      {false && module.id === INVESTOR_QUIZ_ANCHOR_MODULE_ID && onInvestorQuizPress ? (
                         <View
                           pointerEvents="box-none"
                           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 3 }}
                         >
                           <InvestorQuizNode
                             offsetX={pearlOffsetX + (pearlOffsetX >= 0 ? -94 : 94)}
-                            onPress={onInvestorQuizPress}
+                            // ?? no-op: the false-gate above kills TS narrowing
+                            onPress={onInvestorQuizPress ?? (() => {})}
                           />
                         </View>
                       ) : null}
@@ -2929,11 +2933,16 @@ export function DuoLearnScreen() {
 
   const activeNewsBadgeNode = useMemo(() => (
     <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
-      {mondialBadgeVisible ? (
+      {/* FRONT-DECLUTTER (Yoav 11.7, data 14d): Mondial badge (24 opens,
+          stale seasonal) + StreakClubEntryCard (27 opens) removed from the
+          learn header — attention thieves on the critical path. Code kept
+          behind the false-gate for a possible seasonal revival. */}
+      {false && mondialBadgeVisible ? (
         <MondialMailBadge isNew={!mondialOpenedAt} onPress={handleMondialBadgePress} />
       ) : null}
-      {/* יום-0 hook (ים 3.7): מופיע גם ל-streak=0 במצב טיזר-נעול. locked=streak<1 מטופל בכרטיס. */}
-      <StreakClubEntryCard streak={streak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
+      {false && (
+        <StreakClubEntryCard streak={streak} hasUnseenToday={clubHasUnseen} onPress={handleStreakClubPress} />
+      )}
     </View>
   ), [mondialBadgeVisible, mondialOpenedAt, handleMondialBadgePress, streak, clubHasUnseen, handleStreakClubPress]);
 
@@ -2953,14 +2962,19 @@ export function DuoLearnScreen() {
           (pendingPostWalkthroughCTA clears) so it lands after the register
           prompt; fires once after the mod-0-1 chest, on the map between 0-1
           and 0-1b, then recurs on the 14-day cooldown. */}
-      {!isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionBanner />}
+      {/* FRONT-DECLUTTER (Yoav 11.7, data 14d): the thin permission banner is
+          KILLED — 2,900 dismissals vs 3 actions in 14 days taught users to
+          swat banners; the appointment primer (post-activation) + day-2
+          ritual own the ask now. */}
+      {false && !isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionBanner />}
       {/* Tools discovery — only on this main learning screen (NOT in the
           lesson flow). Self-gated to 5s presence + cooldown + 1/day per
-          calendar day. Yields slot to NotificationPermissionBanner. */}
+          calendar day. */}
       {!isWalkthroughActive && !pendingPostWalkthroughCTA && <ToolsDiscoveryBanner />}
-      {/* Bridge "→ לגשר" nudge — rotating real-world-benefits copy, same banner
-          base + slot-cooldown as the others so it never overlaps them. */}
-      {!isWalkthroughActive && !pendingPostWalkthroughCTA && <BridgeCTABanner />}
+      {/* FRONT-DECLUTTER (Yoav 11.7): Bridge banner KILLED from the global
+          learn surface — 465 dismissers × 1,371 dismissals vs 3 taps (0.2%).
+          The bridge remains reachable from its own tab. */}
+      {false && !isWalkthroughActive && !pendingPostWalkthroughCTA && <BridgeCTABanner />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
@@ -3054,7 +3068,8 @@ export function DuoLearnScreen() {
         </View>
       </Modal>
       <PearlSheet visible={!!activePearl} pearl={activePearl} onClose={() => setActivePearl(null)} />
-      <MondialCarouselSheet visible={mondialVisible} onClose={() => setMondialVisible(false)} />
+      {/* FRONT-DECLUTTER (Yoav 11.7): mondial sheet retired with its badge. */}
+      <MondialCarouselSheet visible={false && mondialVisible} onClose={() => setMondialVisible(false)} />
 
       {/* Profile-question backstop before gated chapter-0/1 modules.
           Mapping lives in PROFILE_QUESTION_BACKSTOPS (top of file). */}

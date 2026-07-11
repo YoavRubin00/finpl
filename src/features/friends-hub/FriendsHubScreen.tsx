@@ -162,14 +162,18 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
-        {/* ─── ייעוץ אנונימי ─── */}
-        <StaggeredEntry index={5}>
-          <View style={{ backgroundColor: '#ffffff' }}>
-            <AnonAdviceHeroCard />
-          </View>
-        </StaggeredEntry>
-
-        <FeedDivider />
+        {/* ─── ייעוץ אנונימי ─── FRONT-DECLUTTER (Yoav 11.7): hidden — zero
+            anon-advice events in 14d; the routes stay live for deep links. */}
+        {false && (
+          <>
+            <StaggeredEntry index={5}>
+              <View style={{ backgroundColor: '#ffffff' }}>
+                <AnonAdviceHeroCard />
+              </View>
+            </StaggeredEntry>
+            <FeedDivider />
+          </>
+        )}
 
         {/* ─── אלופי המטבעות ─── */}
         <StaggeredEntry index={6}>
@@ -196,12 +200,15 @@ export function FriendsHubScreen(): React.ReactElement {
 
         <FeedDivider />
 
-        {/* ─── Trade rooms strip — placed at bottom for now ─── */}
-        <StaggeredEntry index={9}>
-          <View style={{ backgroundColor: '#ffffff' }}>
-            <TradeRoomsCard />
-          </View>
-        </StaggeredEntry>
+        {/* ─── Trade rooms strip ─── FRONT-DECLUTTER (Yoav 11.7): hidden —
+            zero trade-room events in 14d. */}
+        {false && (
+          <StaggeredEntry index={9}>
+            <View style={{ backgroundColor: '#ffffff' }}>
+              <TradeRoomsCard />
+            </View>
+          </StaggeredEntry>
+        )}
 
         <FeedDivider />
 

@@ -803,9 +803,16 @@ function RootLayoutInner() {
               {allowAutoPopups && <PostStreakIncomeSplash />}
               {allowAutoPopups && <WisdomPopupCard />}
               {allowAutoPopups && <GlobalQuestCompletionModal />}
-              <DailyBridgeNudgeModal />
+              {/* FRONT-DECLUTTER (Yoav 11.7, data 14d): the daily bridge nudge
+                  modal is part of the bridge-push family the data killed (465
+                  dismissers vs 3 taps on the banner sibling; RETENTION-PLAN
+                  already ruled bridge is an activated-user move, not a day-0
+                  push). The bridge lives in its own tab. */}
+              {false && <DailyBridgeNudgeModal />}
               <InviteFriendsNudgeModal />
-              {allowAutoPopups && <GlobalCrowdQuestionGate />}
+              {/* FRONT-DECLUTTER (Yoav 11.7): crowd-question popup KILLED —
+                  6 voters in 14 days for a global interrupt. */}
+              {false && allowAutoPopups && <GlobalCrowdQuestionGate />}
               {/* First-chest onboarding moment — shown to every new user before
                   the walkthrough. Tap to open → coins+XP → shark bubble →
                   continue starts the tour, which hands directly into mod-0-1. */}

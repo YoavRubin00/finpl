@@ -320,7 +320,9 @@ export function TradingHubScreen() {
                     {!isFirstEntry && (
                       <>
                         <SharkInlineTip />
-                        <MarketMissionCard />
+                        {/* FRONT-DECLUTTER (Yoav 11.7): market-mission card
+                            hidden — zero mission events in 14d. */}
+                        {false && <MarketMissionCard />}
                       </>
                     )}
 
