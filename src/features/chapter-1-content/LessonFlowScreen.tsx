@@ -14,6 +14,7 @@ import { useContinuousRunStore } from "../topic-learning/useContinuousRunStore";
 import { resolveTopics, SIM_FIRST_MODULE_IDS, lessonRouteFor } from "../topic-learning/topicResolver";
 import type { TopicKind } from "../topic-learning/types";
 import { chestThresholdFor, chipsToChestFor } from "../topic-learning/types";
+import { ahaLineFor } from "../topic-learning/moduleAhaLines";
 import { SharkChipCallout } from "../topic-learning/components/SharkChipCallout";
 import { pickContinueCompliment } from "../topic-learning/moduleCompliments";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
@@ -5961,6 +5962,7 @@ export function LessonFlowScreen() {
           onDismiss={closeHandoffChest}
           analyticsModuleId="mod-0-1"
           analyticsSource="inline"
+          ahaLine={ahaLineFor('mod-0-1')}
         />
       )}
 

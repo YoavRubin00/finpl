@@ -9,6 +9,7 @@ import { captureEvent } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
 import { useUpsertModuleProgress } from '../chapter-1-content/useProgress';
 import { ChestCelebrationModal } from './ChestCelebrationModal';
+import { ahaLineFor } from './moduleAhaLines';
 import { InModuleProfileQuestion, type ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion';
 import { ModuleEndSignupGate } from '../auth/ModuleEndSignupGate';
 import { RateAppPromptModal } from '../retention-loops/RateAppPromptModal';
@@ -812,6 +813,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           rarity={chestState?.rarity ?? 'common'}
           analyticsModuleId={module.id}
           analyticsSource="accordion"
+          ahaLine={ahaLineFor(module.id)}
           onContinueModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }
             try { track({ name: 'chest_closed', props: { module_id: module.id, source: 'accordion', cta: 'finish_module' } }); } catch { /* non-fatal */ }

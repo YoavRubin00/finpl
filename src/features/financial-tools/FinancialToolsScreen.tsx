@@ -12,7 +12,6 @@ import { tapHaptic } from '../../utils/haptics';
 import { useNetWorthStore } from '../net-worth-dashboard/useNetWorthStore';
 import { TOOLS_REGISTRY } from './toolsRegistry';
 import { ToolHubCard } from './components/ToolHubCard';
-import { AccordionSection } from './components/AccordionSection';
 import { FinTip } from './components/atoms/FinTip';
 import { CountUpNumber } from './components/atoms/CountUpNumber';
 import { useFinancialProfileStore, hasAnyFinancialData } from './useFinancialProfileStore';
@@ -30,17 +29,24 @@ export function FinancialToolsScreen(): React.ReactElement {
   // Screen renders inside (tabs), which already reserves the status-bar
   // safe-area above GlobalWealthHeader + BoostBanner. Only a small gap
   // below the banner is needed here.
-  const investorTools = useMemo(
-    () => TOOLS_REGISTRY.filter((t) => t.category === 'investor'),
+  // TOOL DILUTION + FLAT HUB (Yoav 11.7): hidden tools filtered out (9→5
+  // sharp tools), and the two collapsible accordions replaced by one always-
+  // open grid — every tool visible on the main screen, no tap-to-reveal.
+  const visibleTools = useMemo(
+    () => TOOLS_REGISTRY.filter((t) => !t.hidden),
     [],
+  );
+  const investorTools = useMemo(
+    () => visibleTools.filter((t) => t.category === 'investor'),
+    [visibleTools],
   );
   const financialTools = useMemo(
-    () => TOOLS_REGISTRY.filter((t) => t.category === 'financial'),
-    [],
+    () => visibleTools.filter((t) => t.category === 'financial'),
+    [visibleTools],
   );
   const activeCount = useMemo(
-    () => TOOLS_REGISTRY.filter((t) => t.status === 'active').length,
-    [],
+    () => visibleTools.filter((t) => t.status === 'active').length,
+    [visibleTools],
   );
 
   return (
@@ -72,29 +78,26 @@ export function FinancialToolsScreen(): React.ReactElement {
 
         <HeroStatStrip />
 
-        <AccordionSection
-          title="כלים למשקיעים"
-          count={investorTools.length}
-          accent="investor"
-        >
-          <View style={styles.grid}>
-            {investorTools.map((tool, i) => (
-              <ToolHubCard key={tool.key} tool={tool} index={i} />
-            ))}
-          </View>
-        </AccordionSection>
+        {/* Flat, always-open sections (Yoav 11.7): thin title rows instead of
+            the tap-to-open AccordionSection — every tool is visible the moment
+            the screen loads. */}
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          כלים למשקיעים
+        </Text>
+        <View style={styles.grid}>
+          {investorTools.map((tool, i) => (
+            <ToolHubCard key={tool.key} tool={tool} index={i} />
+          ))}
+        </View>
 
-        <AccordionSection
-          title="כלים פיננסיים"
-          count={financialTools.length}
-          accent="financial"
-        >
-          <View style={styles.grid}>
-            {financialTools.map((tool, i) => (
-              <ToolHubCard key={tool.key} tool={tool} index={i} />
-            ))}
-          </View>
-        </AccordionSection>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          כלים פיננסיים
+        </Text>
+        <View style={styles.grid}>
+          {financialTools.map((tool, i) => (
+            <ToolHubCard key={tool.key} tool={tool} index={i} />
+          ))}
+        </View>
 
         <FinTip
           kind="tip"
@@ -422,5 +425,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  // Flat section title (replaces the AccordionSection header)
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: TEXT_PRIMARY,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    marginTop: 4,
+    marginBottom: -4,
   },
 });

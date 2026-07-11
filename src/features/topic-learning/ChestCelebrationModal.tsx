@@ -100,6 +100,10 @@ interface ChestCelebrationModalProps {
    *  legacy callers render unchanged. */
   analyticsModuleId?: string;
   analyticsSource?: 'inline' | 'accordion';
+  /** One-sentence VALUE line ("עכשיו אתה יודע X") under the subheading —
+   *  anchors the win to the user's life, not only to the coins (Yoav 11.7:
+   *  "התיבה היא חיזוק; ה-aha הוא הסיבה לחזור"). */
+  ahaLine?: string;
 }
 
 /**
@@ -133,6 +137,7 @@ export function ChestCelebrationModal({
   onStartSummaryCall,
   analyticsModuleId,
   analyticsSource,
+  ahaLine,
 }: ChestCelebrationModalProps): React.ReactElement | null {
   const [opened, setOpened] = useState(false);
   const [showDoN, setShowDoN] = useState(false);
@@ -430,6 +435,13 @@ export function ChestCelebrationModal({
                 ? 'סיימת את כל הרכיבים. תיבת המאסטר נפתחת.'
                 : `סיימת ${thresholdPct}% מהשיעור. הגיע הזמן לפרס.`}
             </Text>
+            {/* The aha line — the VALUE the user just earned, above the loot.
+                (Yoav 11.7: the reason to come back is the progress, not the coins.) */}
+            {ahaLine ? (
+              <Text style={[styles.ahaLine, RTL_CENTER]} allowFontScaling={false}>
+                {ahaLine}
+              </Text>
+            ) : null}
             {/* Mystery reveal (Yoav 17/06): the rarity badge is now gated on
                 `opened` so rare/mythic is HIDDEN until the user taps — the chest
                 no longer spoils its own outcome before the pull. Common stays
@@ -699,6 +711,14 @@ const styles = StyleSheet.create({
     color: '#e0f2fe',
     maxWidth: 320,
     lineHeight: 22,
+  },
+  ahaLine: {
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#7dd3fc',
+    maxWidth: 320,
+    lineHeight: 20,
   },
   stage: {
     flex: 1,

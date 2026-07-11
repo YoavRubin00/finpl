@@ -69,6 +69,11 @@ export interface ToolMeta {
   xpReward: number;
   status: ToolStatus;
   category: ToolCategory;
+  /** TOOL DILUTION (Yoav 11.7, 30d data): true = removed from the hub grid
+   *  (route stays live for deep links). The shelf goes 9 → 5 sharp tools
+   *  aligned to the salary-first wedge; mortgage (3 users), tax-refund (3)
+   *  and pension-fees (2) are 30+-audience tools that only added clutter. */
+  hidden?: boolean;
 }
 
 export const TOOLS_REGISTRY: readonly ToolMeta[] = [
@@ -176,6 +181,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     xpReward: 20,
     status: 'active',
     category: 'financial',
+    hidden: true, // dilution 11.7 — 3 users/30d
   },
   {
     key: 'mortgage',
@@ -191,6 +197,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     xpReward: 25,
     status: 'active',
     category: 'financial',
+    hidden: true, // dilution 11.7 — 3 users/30d
   },
   {
     key: 'pension-fees',
@@ -206,6 +213,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     xpReward: 20,
     status: 'active',
     category: 'financial',
+    hidden: true, // dilution 11.7 — 2 users/30d
   },
   {
     key: 'breaking-news',
