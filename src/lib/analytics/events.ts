@@ -288,7 +288,7 @@ export type AppEvent =
   // `push_opened` fires when the user taps an OS notification. Until this
   // event existed push taps were completely dark — open-rate per channel and
   // D1-attribution to a specific reminder were unmeasurable.
-  | { name: 'push_opened'; props: { channel?: string; screen?: string } }
+  | { name: 'push_opened'; props: { channel?: string; screen?: string; entrypoint?: 'cold_start' | 'listener' } }
   // The permission primer's time-chip choice ("מתי להזכיר?") — the
   // appointment hour (0-23, local) picked BEFORE the OS dialog opened.
   | { name: 'reminder_time_selected'; props: { hour: number; source?: string } }

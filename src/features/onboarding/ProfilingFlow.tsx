@@ -2910,6 +2910,16 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   // celebration is dismissed (tap or auto-dismiss), so the sequence is:
   // profile-ready celebration → streak celebration → mod-0-1.
   function enterFirstModule() {
+    // Put a tangible reward ahead of the app tour. The profile is still complete
+    // before this point (unlike the retired module-first experiment), but the
+    // first screen after onboarding is now the welcome chest rather than a
+    // seven-step product tour. The chest's continue action starts the tour and
+    // the tour then hands directly into mod-0-1.
+    //
+    // This must happen before completeOnboarding(): the root redirect guard
+    // observes that flag synchronously and would otherwise route a fresh user
+    // into the lesson before the welcome-chest gate is armed.
+    try { useTutorialStore.getState().setPendingPostWalkthroughFirstChest(true); } catch { /* non-fatal */ }
     // CRITICAL: ensure user is at least a guest before marking onboarding done.
     // Otherwise `_layout`'s auth redirect bounces them back to /(auth)/onboarding
     // (because isAuthenticated=false → first branch always wins).
@@ -2937,13 +2947,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       avatarId: collected.avatarId ?? null,
       ownedAvatars: [],
     });
-    // New-user flow (Yoav 2026-06-25): land on the learn MAP and fire the
-    // walkthrough IMMEDIATELY (tour the tabs), instead of dropping into the lesson
-    // first. Skip/finish the tour → welcome chest → its "המשך" auto-starts mod-0-1
-    // in the continuous auto-flow. The tour tours the tabs, so it needs a tab
-    // route, not /lesson. (Replaces the old "after the first chip" trigger.)
+    // The welcome-chest gate owns the next step. Its continue action starts
+    // the tab tour, and the tour then auto-starts mod-0-1. The tour therefore
+    // still needs a tab route rather than a lesson route here.
     try { captureEvent('onboarding_enter_first_module', { target: 'mod-0-1', chapter_id: 'chapter-0' }); } catch { /* non-fatal */ }
-    try { useTutorialStore.getState().triggerWalkthrough(); } catch { /* non-fatal */ }
     // First-run experiment bookkeeping (both arms): the reordered flow is over.
     // NOTE: v1's conversion does NOT fire here — the variant's journey END is
     // the tour-end welcome chest (Yoav 5.7.26), recorded in

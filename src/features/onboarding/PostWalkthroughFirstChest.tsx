@@ -1,10 +1,9 @@
-// One-shot "first chest" onboarding moment, shown to EVERY new user the moment
-// the app walkthrough completes — BEFORE the register CTA / Pro teaser (their
-// gates wait on pendingPostWalkthroughFirstChest). The user taps the chest to
+// One-shot "first chest" onboarding moment, shown to every new user immediately
+// after profiling and before the app walkthrough. The user taps the chest to
 // open it (credits a starter coins + XP reward via the same economy pipe the
 // real module chests use, so it persists identically), then Captain Shark
-// explains — in a speech bubble — that chests arrive after every lesson / daily
-// challenge. A clear "המשך" hands off to the existing register→Pro chain.
+// explains the reward loop. A clear "המשך" starts the tour, which then hands
+// directly into the first learning module.
 // Copy follows BRAND.md: Captain Shark speaking personally → singular,
 // gender-neutral. Yoav 2026-06-23.
 
@@ -56,10 +55,15 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const addXP = useEconomyUIStore((s) => s.addXP);
   const clearFlag = useTutorialStore((s) => s.setPendingPostWalkthroughFirstChest);
+  const triggerWalkthrough = useTutorialStore((s) => s.triggerWalkthrough);
+  const firstChestOpened = useTutorialStore((s) => s.firstChestOpened);
   const router = useRouter();
 
-  const [opened, setOpened] = useState(false);
-  const grantedRef = useRef(false);
+  // A process kill can happen after the reward is persisted but before the
+  // learner taps continue. Resume in the claimed state so reopening the gate
+  // cannot grant a duplicate reward or make the flow feel like it reset.
+  const [opened, setOpened] = useState(firstChestOpened);
+  const grantedRef = useRef(firstChestOpened);
   const lottieRef = useRef<LottieView>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -135,6 +139,10 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
     tapHaptic();
     try { captureEvent('first_chest_continue', {}); } catch { /* non-fatal */ }
     clearFlag(false);
+    // The reward is the first thing a new learner sees. Only after it is
+    // claimed do we introduce the wider app; completing or skipping that tour
+    // then enters mod-0-1 from AppWalkthroughOverlay.
+    try { triggerWalkthrough(); } catch { /* non-fatal */ }
     // Module-first first-run (onboarding_module_first v1, Yoav 5.7.26): the v1
     // user already played mod-0-1 BEFORE profiling — their earned threshold
     // chest is waiting on the learn map (the accordion fires it on mount).
@@ -143,11 +151,9 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
       try { router.push('/(tabs)/index' as never); } catch { /* non-fatal */ }
       return;
     }
-    // Auto-start mod-0-1 in the continuous auto-flow (Yoav 2026-06-25): the welcome
-    // chest leads STRAIGHT into the first lesson (intro→…→chest), no map detour.
-    // Pro/register now fire AFTER the mod-0-1 chest, not here.
-    try { router.push('/lesson/mod-0-1?startPhase=intro&returnTo=topic-tree&chapterId=chapter-0' as never); } catch { /* non-fatal */ }
-  }, [clearFlag, router]);
+    // The walkthrough spans tabs, so remain on the map while its overlay starts.
+    try { router.replace('/(tabs)' as never); } catch { /* non-fatal */ }
+  }, [clearFlag, router, triggerWalkthrough]);
 
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => { /* block back — must open + continue */ }}>

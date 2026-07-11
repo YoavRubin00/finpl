@@ -162,11 +162,9 @@ export function AppWalkthroughOverlay() {
   const segments = useSegments();
   const [transitioning, setTransitioning] = useState(false);
   const reducedMotion = useReducedMotion();
-  // The walkthrough only starts once the user has explicitly opted in by
-  // tapping "המשך" on the mod-0-1 completion modal (which sets
-  // walkthroughTriggered=true). Without this gate, the overlay used to
-  // race the mod-0-1 modal close + tab transition and the user saw two
-  // "continue" prompts back-to-back.
+  // The walkthrough only starts once the user explicitly opts in by tapping
+  // continue on the welcome chest (which sets walkthroughTriggered=true).
+  // This keeps the reward and the tour as separate, non-competing moments.
   const walkthroughTriggered = useTutorialStore((s) => s.walkthroughTriggered);
   const [ready, setReady] = useState(step > 0);
   useEffect(() => {
@@ -186,6 +184,7 @@ export function AppWalkthroughOverlay() {
   const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
   const setPendingPostWalkthroughProTeaser = useTutorialStore((s) => s.setPendingPostWalkthroughProTeaser);
   const setPendingPostWalkthroughFirstChest = useTutorialStore((s) => s.setPendingPostWalkthroughFirstChest);
+  const firstChestOpened = useTutorialStore((s) => s.firstChestOpened);
 
   // Filter out Bridge step for minors (legal protection, no real-money features)
   const activeSteps = isMinor ? STEPS.filter((s) => s.screenSignal !== "bridge") : STEPS;
@@ -242,10 +241,12 @@ export function AppWalkthroughOverlay() {
   const routePostWalkthrough = useCallback((via: 'completed' | 'skipped') => {
     setActiveScreen(null);
 
-    // First-chest onboarding moment — shown to EVERY new user. Its gate
-    // (PostWalkthroughFirstChestGate) suppresses the register / Pro CTAs until
-    // the user taps המשך, so the chest is always the first thing they see.
-    try { setPendingPostWalkthroughFirstChest(true); } catch { /* non-fatal */ }
+    // Older/in-flight users can still reach this method before claiming the
+    // welcome chest. Preserve that path, but never re-arm a chest after the
+    // new chest → tour sequence.
+    if (!firstChestOpened) {
+      try { setPendingPostWalkthroughFirstChest(true); } catch { /* non-fatal */ }
+    }
 
     // Pro teaser + register CTA MOVED to AFTER the mod-0-1 chest (Yoav 2026-06-25):
     // they no longer fire here at walkthrough completion. The Pro teaser is armed
@@ -262,11 +263,15 @@ export function AppWalkthroughOverlay() {
       // restoring the post_walkthrough monetization moment without blocking the
       // path to the first module.
       void via;
-      router.replace("/(tabs)" as never);
+      if (firstChestOpened) {
+        router.replace('/lesson/mod-0-1?startPhase=intro&returnTo=topic-tree&chapterId=chapter-0' as never);
+      } else {
+        router.replace("/(tabs)" as never);
+      }
     } catch {
       // No-op — already on a safe route.
     }
-  }, [isGuest, isPro, router, setActiveScreen, setPendingPostWalkthroughCTA, setPendingPostWalkthroughProTeaser, setPendingPostWalkthroughFirstChest]);
+  }, [firstChestOpened, isGuest, isPro, router, setActiveScreen, setPendingPostWalkthroughCTA, setPendingPostWalkthroughProTeaser, setPendingPostWalkthroughFirstChest]);
 
   const handleNext = useCallback(() => {
     try {

@@ -22,6 +22,7 @@ import {
     buildInactivityEscalation,
     pickFinnCopy,
 } from './finnNotificationCopy';
+import { getIsraelDateISO } from '../../utils/israelTime';
 
 
 /** US-007: personalized send hour from recent activity pattern.
@@ -43,10 +44,6 @@ function computePersonalizedHour(recentHours: number[]): number {
     return Math.max(8, Math.min(22, target));
 }
 
-function todayISO(): string {
-    return new Date().toISOString().slice(0, 10);
-}
-
 /** Hard cap: cancel any OS-scheduled notifications beyond `maxAllowed`. */
 async function enforceNotificationCap(maxAllowed: number): Promise<void> {
     const all = await Notifications.getAllScheduledNotificationsAsync();
@@ -66,14 +63,14 @@ export function useFinnNotificationScheduler() {
     const lastDailyTaskDate = useEconomyUIStore((s) => s.lastDailyTaskDate);
     useEffect(() => {
         if (!permissionGranted) return;
-        if (lastDailyTaskDate !== todayISO()) return;
+        if (lastDailyTaskDate !== getIsraelDateISO()) return;
         useNotificationStore.getState().cancelChannel('streakFallback').catch(() => { /* non-fatal */ });
     }, [permissionGranted, lastDailyTaskDate]);
 
     useEffect(() => {
         if (!permissionGranted) return;
 
-        const today = todayISO();
+        const today = getIsraelDateISO();
         if (lastScheduledDate === today) return; // already scheduled today
 
         // Mark scheduled immediately to prevent re-entry if deps change mid-run

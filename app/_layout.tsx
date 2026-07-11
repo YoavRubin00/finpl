@@ -500,9 +500,10 @@ function RootLayoutInner() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  const pendingPostWalkthroughFirstChest = useTutorialStore((s) => s.pendingPostWalkthroughFirstChest);
   // Interrupt cadence (updated 2026-05-27 redesign):
-  //   mod-0-1, clean. Only celebration. No tour, no popups (gated in LessonFlowScreen).
-  //   After mod-0-1 lands on tabs → 1s delay → walkthrough fires.
+  //   A welcome chest lands before the tour; the tour then enters mod-0-1.
+  //   Mod-0-1 remains clean: no extra popup competes with first learning.
   //   After walkthrough → notification permission banner.
   //   mod-0-2 onwards: engagement content (SharkLove/DoN/Netflix prompt/videos) allowed,
   //                    plus profile questions and (for guests) register CTAs.
@@ -731,12 +732,10 @@ function RootLayoutInner() {
         // נפתח לו מפת הלמידה של המודולה, שכרטיסיות הלמידה זוהרות").
         // Returning user that already finished mod-0-1 → land on the
         // learn map as before.
-        // Yoav 2026-06-25: in the new flow ProfilingFlow.enterFirstModule already
-        // navigates to /(tabs) AND fires the walkthrough. Do NOT redirect into the
-        // lesson here when a walkthrough is pending — otherwise mod-0-1's intro
-        // mounts + plays its audio BEHIND the tour. Land on the map; the welcome
-        // chest auto-starts the lesson later.
-        const target = (isMod01Complete || walkthroughTriggered)
+        // Keep either first-run ceremony on the map. Redirecting into a lesson
+        // while the welcome chest or tour is pending would mount mod-0-1 behind
+        // an overlay and bypass its intended sequence.
+        const target = (isMod01Complete || walkthroughTriggered || pendingPostWalkthroughFirstChest)
           ? "/(tabs)"
           : "/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree";
         router.replace(target as never);
@@ -744,7 +743,7 @@ function RootLayoutInner() {
         router.replace("/(tabs)");
       }
     }
-  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete, walkthroughTriggered, firstRunArm, firstRunStage]);
+  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete, walkthroughTriggered, pendingPostWalkthroughFirstChest, firstRunArm, firstRunStage]);
 
   // Fallback walkthrough re-arm (Yoav 2026-06-26, D1 lever). Diagnosed: ~38% of
   // users who commit (onboarding_enter_first_module) never fire walkthrough_started
@@ -756,10 +755,10 @@ function RootLayoutInner() {
   // lesson. Fires once: triggerWalkthrough flips walkthroughTriggered → guard goes false.
   useEffect(() => {
     if (!hydrated || !isAuthenticated || !hasCompletedOnboarding) return;
-    if (hasSeenWalkthrough || walkthroughTriggered || isMod01Complete) return;
+    if (hasSeenWalkthrough || walkthroughTriggered || isMod01Complete || pendingPostWalkthroughFirstChest) return;
     if (segments[0] !== "(tabs)") return;
     try { useTutorialStore.getState().triggerWalkthrough(); } catch { /* non-fatal */ }
-  }, [hydrated, isAuthenticated, hasCompletedOnboarding, hasSeenWalkthrough, walkthroughTriggered, isMod01Complete, segments]);
+  }, [hydrated, isAuthenticated, hasCompletedOnboarding, hasSeenWalkthrough, walkthroughTriggered, isMod01Complete, pendingPostWalkthroughFirstChest, segments]);
 
   if (!hydrated || !bootComplete || !navState?.key || !fontsLoaded) {
     return <LoadingWisdom />;
@@ -807,10 +806,9 @@ function RootLayoutInner() {
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
               {allowAutoPopups && <GlobalCrowdQuestionGate />}
-              {/* First-chest onboarding moment — shown to EVERY new user the
-                  moment the walkthrough completes, BEFORE the register/Pro CTAs
-                  (their gates wait on pendingPostWalkthroughFirstChest). Tap to
-                  open → coins+XP → shark bubble → המשך hands off to register/Pro. */}
+              {/* First-chest onboarding moment — shown to every new user before
+                  the walkthrough. Tap to open → coins+XP → shark bubble →
+                  continue starts the tour, which hands directly into mod-0-1. */}
               <PostWalkthroughFirstChestGate />
               {/* Post-walkthrough register CTA for Guests. The gate handles
                   all conditions internally: pendingPostWalkthroughCTA flag
@@ -822,14 +820,9 @@ function RootLayoutInner() {
                   register CTA (never stacks) + learn-map pathname. Restores the
                   paywall_viewed{post_walkthrough} moment without blocking. */}
               <PostWalkthroughProTeaserGate />
-              {/* Appointment-setting notification-permission primer
-                  (RETENTION-PLAN 2026-07-02, approved by Yoav 2.7): revived
-                  from dormancy — full-screen ask at the first-chest value
-                  moment with time chips ("מתי להזכיר?"); OS dialog only after
-                  a slot is picked. Self-gated: onboarding + walkthrough +
-                  first chest, and waits for the chest→Pro→register chain to
-                  clear so it never stacks on the monetization moment. The
-                  thin learn-screen banner remains the recurring fallback. */}
+              {/* Appointment-setting notification-permission primer. It is
+                  self-gated until the learner completes mod-0-1, so the OS ask
+                  never competes with the new reward → tour → lesson sequence. */}
               <NotificationPermissionPrompt />
               {/* Day-0 exit ritual "נתראה מחר" + shark wager (RETENTION-PLAN
                   2026-07-02, מוני 50→150 escrow / אודרי GO-with-conditions).
