@@ -16,9 +16,12 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import type { GatedFeature } from './subscriptionConstants';
 import { BASIC_LIMITS, PRO_LIMITS } from './subscriptionConstants';
+import { israelDayKey } from '../../utils/dateUtils';
 
+// IL-day gate (time-contract sweep, Yoav 11.7): daily usage limits reset at
+// Israel midnight, matching every other user-facing daily loop.
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return israelDayKey();
 }
 
 // ISO-8601 week key, e.g. "2026-W22". Same calendar week → identical string.

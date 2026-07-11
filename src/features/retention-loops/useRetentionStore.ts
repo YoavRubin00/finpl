@@ -5,6 +5,7 @@ import { registerLocalStore } from '../../lib/stores/registry';
 import type { Chest, ChestRarity, DailySpin } from "./types";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useNotificationStore } from "../notifications/useNotificationStore";
+import { israelDayKey } from "../../utils/dateUtils";
 
 const MAX_CHEST_SLOTS = 4;
 
@@ -49,8 +50,10 @@ const MOCK_CHEST_SLOTS: (Chest | null)[] = [
   null,
 ];
 
+// IL-day gate (time-contract sweep, Yoav 11.7): retention nudges reset at
+// Israel midnight — a 00:30 IL open must count as the new day's touchpoint.
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return israelDayKey();
 }
 
 export const useRetentionStore = create<RetentionState>()(

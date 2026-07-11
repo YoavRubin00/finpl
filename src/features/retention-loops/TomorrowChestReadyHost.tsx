@@ -22,6 +22,7 @@ import { DAILY_STREAK_NUDGE_KEY } from '../../hooks/useStreakCelebration';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { heavyHaptic, mediumHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
 import { track } from '../../lib/analytics/events';
+import { israelDayKey } from '../../utils/dateUtils';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -114,9 +115,9 @@ export function TomorrowChestReadyHost(): React.ReactElement | null {
     setRewards(null);
     setVisible(true);
     // One landing ritual: suppress today's 5s streak daily-nudge (same
-    // UTC-date key format useStreakCelebration writes). The earned streak
-    // celebration (post-activity) is untouched.
-    try { AsyncStorage.setItem(DAILY_STREAK_NUDGE_KEY, new Date().toISOString().slice(0, 10)).catch(() => {}); } catch { /* non-fatal */ }
+    // IL-date key useStreakCelebration writes — time-contract sweep 11.7).
+    // The earned streak celebration (post-activity) is untouched.
+    try { AsyncStorage.setItem(DAILY_STREAK_NUDGE_KEY, israelDayKey()).catch(() => {}); } catch { /* non-fatal */ }
     try { track({ name: 'tomorrow_chest_ready_shown', props: { trigger, day_gap: dayGapNow } }); } catch { /* non-fatal */ }
   }, [dayGapNow]);
 

@@ -122,6 +122,7 @@ import { getModuleTool } from "../topic-learning/moduleToolMap";
 import type { Topic, TopicKind } from "../topic-learning/types";
 
 import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { israelDayKey } from "../../utils/dateUtils";
 import { getIsraelDateISO, israelDatePlusDays } from "../../utils/israelTime";
 import { MindMapViewer } from "../../components/ui/MindMapViewer";
 import { useTutorialStore } from "../../stores/useTutorialStore";
@@ -1623,8 +1624,11 @@ export function DuoLearnScreen() {
   // syncCompletions would otherwise miss them). Idempotent per day.
   const finishSwipeQuest = useCallback(() => {
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      useDailyChallengesStore.getState().playSwipeGame(today, 0);
+      // IL-day (time-contract sweep, Yoav 11.7): the daily-challenges store
+      // keys its day on israelDayKey — passing the UTC day here meant a
+      // 00:00-03:00 IL completion wrote YESTERDAY's key and the quest never
+      // registered as done today.
+      useDailyChallengesStore.getState().playSwipeGame(israelDayKey(), 0);
     } catch { /* non-fatal */ }
     // Power-station: a finished swipe round tops up energy (+2, capped 10/day).
     try {

@@ -30,6 +30,7 @@ import { ParticleBurst } from '../../components/ui/ParticleBurst';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 import type { ChestRarity } from './types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
@@ -91,6 +92,14 @@ interface ChestCelebrationModalProps {
   summaryCallAvailable?: boolean;
   summaryCallEligible?: boolean;
   onStartSummaryCall?: () => void;
+  /** Chest-lifecycle attribution (Yoav 11.7). When set, the modal fires
+   *  `chest_presented` the first time it actually RENDERS visible — from
+   *  inside the modal, not the caller, so a render-layer regression that
+   *  paints over the chest (the 8-10.7 white-screen class) shows up as
+   *  earned>0 / presented=0 instead of staying invisible. Optional so
+   *  legacy callers render unchanged. */
+  analyticsModuleId?: string;
+  analyticsSource?: 'inline' | 'accordion';
 }
 
 /**
@@ -122,9 +131,25 @@ export function ChestCelebrationModal({
   summaryCallAvailable = false,
   summaryCallEligible = false,
   onStartSummaryCall,
+  analyticsModuleId,
+  analyticsSource,
 }: ChestCelebrationModalProps): React.ReactElement | null {
   const [opened, setOpened] = useState(false);
   const [showDoN, setShowDoN] = useState(false);
+
+  // chest_presented — once per modal lifetime, on the first VISIBLE render.
+  // Fired here (not by the caller) so it certifies actual presentation.
+  const presentedFiredRef = useRef(false);
+  useEffect(() => {
+    if (!visible || presentedFiredRef.current || !analyticsModuleId) return;
+    presentedFiredRef.current = true;
+    try {
+      track({
+        name: 'chest_presented',
+        props: { module_id: analyticsModuleId, source: analyticsSource ?? 'accordion' },
+      });
+    } catch { /* non-fatal */ }
+  }, [visible, analyticsModuleId, analyticsSource]);
   const [donResolved, setDonResolved] = useState(false);
   const [donMultiplier, setDonMultiplier] = useState(1);
   // R8 J3 — flying coins + XP burst, fires once when chest opens.

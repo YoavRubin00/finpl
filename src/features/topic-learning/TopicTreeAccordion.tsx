@@ -420,6 +420,15 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     const newlyStamped = useTopicProgressStore.getState().stampModuleThreshold(module.id);
     if (!newlyStamped) return;
 
+    // Chest lifecycle (Yoav 11.7): grant DECIDED on the accordion path.
+    // chest_presented fires from inside ChestCelebrationModal on actual
+    // render; activation_reached = the stable once-per-user activation marker
+    // (atomic stamp above guarantees single fire across both chest paths).
+    try { track({ name: 'chest_earned', props: { module_id: module.id, source: 'accordion' } }); } catch { /* non-fatal */ }
+    if (module.id === 'mod-0-1') {
+      try { track({ name: 'activation_reached', props: { module_id: 'mod-0-1', via: 'accordion_chest' } }); } catch { /* non-fatal */ }
+    }
+
     // Module-completion analytics. The topic-tree method previously fired
     // NO `lesson_completed`, so every module learned this way was invisible
     // to the NSM / WoW-retention / streak / daily-lessons insights. Mirror
@@ -801,8 +810,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           // gate (carries the mod-0-1 3-chip override), not the raw threshold.
           thresholdPct={Math.round((chipsToChestFor(module.id, Math.max(1, summary.total)) / Math.max(1, summary.total)) * 100)}
           rarity={chestState?.rarity ?? 'common'}
+          analyticsModuleId={module.id}
+          analyticsSource="accordion"
           onContinueModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }
+            try { track({ name: 'chest_closed', props: { module_id: module.id, source: 'accordion', cta: 'finish_module' } }); } catch { /* non-fatal */ }
             setChestState(null);
             // Post-chest CTAs after the mod-0-1 chest CLOSES (Yoav 2026-06-25):
             // GUESTS → register CTA DIRECTLY (the Pro-teaser→register chain was
@@ -838,6 +850,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           // wiring this to onContinueModule made every Android back press
           // count as a fake 'finish_module' CTA in the conversion funnel.
           onDismiss={() => {
+            try { track({ name: 'chest_closed', props: { module_id: module.id, source: 'accordion', cta: 'dismiss' } }); } catch { /* non-fatal */ }
             setChestState(null);
             // Same post-chest CTAs as the continue path (mod-0-1): guests →
             // register CTA, registered non-Pro → Pro teaser. Armed only after close.
@@ -860,6 +873,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           }}
           onAdvanceToNextModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'continue' } }); } catch { /* non-fatal */ }
+            try { track({ name: 'chest_closed', props: { module_id: module.id, source: 'accordion', cta: 'continue' } }); } catch { /* non-fatal */ }
             setChestState(null);
             // 2026-07-03 (root cause of "no gate + no shark wager after the
             // mod-0-1 chest"): this PRIMARY "המשך" CTA was the ONLY chest-close

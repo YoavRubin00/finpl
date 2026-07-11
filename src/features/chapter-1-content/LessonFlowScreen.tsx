@@ -2160,6 +2160,12 @@ export function LessonFlowScreen() {
     if (!mod) return false;
     const progress = useTopicProgressStore.getState();
     if (!progress.stampModuleThreshold('mod-0-1')) return false;
+    // Chest lifecycle (Yoav 11.7): the grant DECIDED. chest_presented fires
+    // from inside ChestCelebrationModal on actual render — earned>0 with
+    // presented=0 is the white-screen-class alarm. activation_reached is the
+    // stable one-per-user activation marker (stamp is atomic → single fire).
+    try { track({ name: 'chest_earned', props: { module_id: 'mod-0-1', source: 'inline' } }); } catch { /* non-fatal */ }
+    try { track({ name: 'activation_reached', props: { module_id: 'mod-0-1', via: 'inline_chest' } }); } catch { /* non-fatal */ }
     // Full completion record — dedupe, lesson_completed, streak, server sync.
     completeModule('mod-0-1');
     const { multiplier, rarity } = progress.recordChestOpen();
@@ -2205,6 +2211,7 @@ export function LessonFlowScreen() {
    *  everyone else (the INLINE mod-0-1 chest, panel item 4, Yoav 8.7) returns
    *  to the live map exactly like the premium chip-return path. */
   function closeHandoffChest() {
+    try { track({ name: 'chest_closed', props: { module_id: 'mod-0-1', source: 'inline' } }); } catch { /* non-fatal */ }
     setHandoffChest(null);
     if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'profiling') {
       router.replace('/(auth)/onboarding' as never);
@@ -5952,6 +5959,8 @@ export function LessonFlowScreen() {
           onContinueModule={closeHandoffChest}
           onAdvanceToNextModule={closeHandoffChest}
           onDismiss={closeHandoffChest}
+          analyticsModuleId="mod-0-1"
+          analyticsSource="inline"
         />
       )}
 

@@ -109,6 +109,22 @@ export type AppEvent =
   | { name: 'chest_opened'; props: { module_id: string; chapter_id?: string; rarity: 'common' | 'rare' | 'epic' | 'mythic'; xp: number; coins: number; offered_don: boolean; offered_quit: boolean; reveal_variant?: 'mystery' | 'legacy' } }
   | { name: 'chest_cta_tapped'; props: { module_id: string; chapter_id?: string; cta: 'continue' | 'finish_module' | 'quit'; quit_label?: string } }
   | { name: 'chest_don_resolved'; props: { module_id: string; chapter_id?: string; outcome: 'kept' | 'doubled' | 'lost'; base_coins: number } }
+  // Chest LIFECYCLE trio (ChatGPT P0 audit, Yoav 11.7) — makes the first-win
+  // observable end-to-end. `chest_earned` = the grant DECIDED (threshold
+  // stamped, rewards granted); `chest_presented` = the celebration modal
+  // ACTUALLY RENDERED (fired from inside ChestCelebrationModal — the event
+  // that would have caught the 8-10.7 white-screen bug in an hour: earned
+  // high + presented zero = the reward is painted over); `chest_closed` =
+  // the user dismissed/continued out. chest_opened (above) stays the NSM
+  // completion metric — unchanged.
+  | { name: 'chest_earned'; props: { module_id: string; source: 'inline' | 'accordion' } }
+  | { name: 'chest_presented'; props: { module_id: string; source: 'inline' | 'accordion' } }
+  | { name: 'chest_closed'; props: { module_id: string; source: 'inline' | 'accordion'; cta?: string } }
+  // Stable activation marker — fires exactly once per user, the moment the
+  // mod-0-1 threshold stamps (either chest path). Decouples the activation
+  // read from chest_opened's shape so module/threshold changes never
+  // silently redefine the funnel.
+  | { name: 'activation_reached'; props: { module_id: string; via: 'inline_chest' | 'accordion_chest' } }
   // mod-0-1 walkthrough prompt — fires once. Lets us tie subsequent
   // retention to whether the user opted into the tour or skipped it.
   | { name: 'walkthrough_prompt_shown'; props: { module_id: string } }

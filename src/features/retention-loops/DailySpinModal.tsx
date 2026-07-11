@@ -19,6 +19,7 @@ import {
   SPRING_BOUNCY,
 } from "../../utils/animations";
 import { successHaptic, heavyHaptic } from "../../utils/haptics";
+import { israelDayKey } from "../../utils/dateUtils";
 
 interface DailySpinModalProps {
   visible: boolean;
@@ -75,8 +76,9 @@ export function DailySpinModal({ visible, onDismiss }: DailySpinModalProps) {
   const rotation = useSharedValue(0);
   const resultScale = useSharedValue(0);
 
-  const alreadySpun =
-    lastSpinDate === new Date().toISOString().slice(0, 10);
+  // IL-day gate (time-contract sweep, Yoav 11.7): the spin resets at Israel
+  // midnight, not 03:00 IL — matches the streak/daily-task day key.
+  const alreadySpun = lastSpinDate === israelDayKey();
 
   const wheelStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],

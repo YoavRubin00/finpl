@@ -13,6 +13,7 @@ import type { StreakState } from "../lib/api/streak";
 import { StreakCelebrationScreen } from "../features/streak/StreakCelebrationScreen";
 import { useNudgeQueueStore } from "../stores/useNudgeQueueStore";
 import { useTutorialStore } from "../stores/useTutorialStore";
+import { israelDayKey } from "../utils/dateUtils";
 
 /** Exported so same-day landing rituals (TomorrowChestReadyHost) can stamp
  *  today and suppress this nudge — one landing popup, not two. Value format
@@ -105,7 +106,9 @@ export function StreakCelebrationProvider({
       const streak = streakState?.currentStreak ?? 0;
       const lastDailyTaskDate = useEconomyUIStore.getState().lastDailyTaskDate;
       if (streak <= 0) return;
-      const today = new Date().toISOString().slice(0, 10);
+      // IL-day (time-contract sweep, Yoav 11.7) — same key the daily-task
+      // ledger writes, so the nudge never mis-fires in the 00:00-03:00 IL gap.
+      const today = israelDayKey();
       if (lastDailyTaskDate === today) return; // already completed today
       if (!useTutorialStore.getState().hasSeenAppWalkthrough) return;
       const lastShown = await AsyncStorage.getItem(DAILY_STREAK_NUDGE_KEY);

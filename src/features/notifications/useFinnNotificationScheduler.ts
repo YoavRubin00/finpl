@@ -44,11 +44,27 @@ function computePersonalizedHour(recentHours: number[]): number {
     return Math.max(8, Math.min(22, target));
 }
 
-/** Hard cap: cancel any OS-scheduled notifications beyond `maxAllowed`. */
+/** The channels THIS daily scheduler owns and may cancel/re-arm. Anything
+ *  outside this set — the day-2 appointment push scheduled at permission
+ *  grant, tomorrow-chest reminders, fantasy weekly, breaking news — was
+ *  scheduled by another owner and MUST survive the daily re-arm. The old
+ *  cancelAllScheduledNotificationsAsync() wiped those silently (ChatGPT P0
+ *  audit, Yoav 11.7): a user who granted permission on day 0 and reopened
+ *  the app later the same day lost their day-2 appointment push. */
+const DAILY_CHANNELS = ['inactivity', 'streak', 'streakFallback', 'morning'];
+
+/** Hard cap — scoped to the scheduler-owned daily channels only. Counting
+ *  ALL scheduled notifications made the cap cancel other owners' pushes
+ *  (day-2 appointment / fantasy / tomorrow-chest) whenever the total went
+ *  over 2 — same bug class as the cancelAll above. */
 async function enforceNotificationCap(maxAllowed: number): Promise<void> {
     const all = await Notifications.getAllScheduledNotificationsAsync();
-    if (all.length <= maxAllowed) return;
-    const excess = all.slice(maxAllowed);
+    const daily = all.filter((n) => {
+        const channel = (n.content?.data as Record<string, unknown> | undefined)?.channel;
+        return typeof channel === 'string' && DAILY_CHANNELS.includes(channel);
+    });
+    if (daily.length <= maxAllowed) return;
+    const excess = daily.slice(maxAllowed);
     await Promise.all(excess.map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
 }
 
@@ -101,8 +117,17 @@ export function useFinnNotificationScheduler() {
                 const goalMinutes = useAuthStore.getState().profile?.dailyGoalMinutes;
                 const tone = getToneFromGoal(typeof goalMinutes === 'number' ? goalMinutes : null);
 
-                // ── Await cancel before scheduling anything, prevents race condition ──
-                await Notifications.cancelAllScheduledNotificationsAsync();
+                // ── Channel-owned cancel (Yoav 11.7, replaces cancelAll) ──
+                // Clear ONLY the daily channels this scheduler owns, so
+                // yesterday's un-fired daily pushes never stack — while the
+                // day-2 appointment push, tomorrow-chest reminder, fantasy
+                // weekly and breaking-news pushes (other owners) survive.
+                // Each schedule* below also self-cancels its channel, so this
+                // covers the branch-switch case (e.g. yesterday scheduled
+                // streak, today the inactivity branch runs instead).
+                await Promise.all(
+                    DAILY_CHANNELS.map((c) => store.cancelChannel(c).catch(() => { /* non-fatal */ })),
+                );
 
                 // ── At most 2 notifications per day, scheduled sequentially ──
                 // Priority: inactivity (urgent) > streak at-risk > morning motivation

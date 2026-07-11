@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
+import { israelDayKey } from '../../utils/dateUtils';
 
 // Energy units (formerly "hearts"). The store file keeps the `hearts`/`useHeart`
 // names in v1 to avoid churning ~6 call-sites; the full rename to
@@ -38,8 +39,11 @@ export function isEnergyEnabledForModule(moduleId: string | null | undefined): b
 // would otherwise miss the second). One store instance → module scope is fine.
 let energyDeltaNonce = 0;
 
+// IL-day gate (time-contract sweep, Yoav 11.7): daily energy grants/caps reset
+// at Israel midnight, not 03:00 IL (midnight UTC) — the old UTC key let a
+// 00:30 IL session double-dip yesterday's caps.
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return israelDayKey();
 }
 
 function calcHeartRefills(lastLostAt: string | null, currentHearts: number): number {
