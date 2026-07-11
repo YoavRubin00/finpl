@@ -4,7 +4,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Lock, Gift } from 'lucide-react-native';
 import { useTomorrowChestStore, tomorrowChestStatus } from './useTomorrowChestStore';
 import { getNextLessonTarget } from './nextLessonTarget';
-import { getIsraelDateISO } from '../../utils/israelTime';
+import { getIsraelDateISO, israelDatePlusDays, msUntilNextIsraelMidnight } from '../../utils/israelTime';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
@@ -24,20 +24,28 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 export function TomorrowChestCard(): React.ReactElement | null {
   const opensOnDate = useTomorrowChestStore((s) => s.opensOnDate);
   const requestOpen = useTomorrowChestStore((s) => s.requestOpen);
+  const consecutiveOpenDays = useTomorrowChestStore((s) => s.consecutiveOpenDays);
+  const lastOpenedOnDate = useTomorrowChestStore((s) => s.lastOpenedOnDate);
 
-  // Re-derive status when the app foregrounds (sealed→ready at IL midnight).
+  // Re-derive status when the app foregrounds (sealed→ready at IL midnight),
+  // and tick every minute while SEALED so the countdown stays honest.
   const [ilToday, setIlToday] = useState<string>(() => getIsraelDateISO());
+  const [, setMinuteTick] = useState(0);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') setIlToday(getIsraelDateISO());
     });
-    return () => sub.remove();
+    const interval = setInterval(() => setMinuteTick((t) => t + 1), 60_000);
+    return () => { sub.remove(); clearInterval(interval); };
   }, []);
 
   const status = tomorrowChestStatus(opensOnDate, ilToday);
   if (status === 'none') return null;
 
   if (status === 'ready') {
+    // Chain framing (Yoav 11.7): opening today CONTINUES the day-after-day
+    // chain when yesterday was opened too — name the stake, gently.
+    const continuesChain = lastOpenedOnDate === israelDatePlusDays(ilToday, -1) && consecutiveOpenDays > 0;
     return (
       <Animated.View entering={FadeInDown.duration(400)}>
         <Pressable
@@ -54,22 +62,33 @@ export function TomorrowChestCard(): React.ReactElement | null {
               התיבה של היום מוכנה
             </Text>
             <Text style={[styles.subReady, RTL]} allowFontScaling={false}>
-              חזרתם — כמו שקבענו. הקישו לפתיחה.
+              {continuesChain
+                ? `יום ${consecutiveOpenDays + 1} ברצף-התיבות — פתיחה שומרת עליו`
+                : 'חזרתם — כמו שקבענו. הקישו לפתיחה.'}
             </Text>
           </View>
+          {continuesChain && (
+            <View style={styles.chainBadge}>
+              <Text style={styles.chainBadgeText} allowFontScaling={false}>{`×${consecutiveOpenDays + 1}`}</Text>
+            </View>
+          )}
         </Pressable>
       </Animated.View>
     );
   }
 
-  // Sealed — tomorrow's promise, with the next lesson's own hook as the
-  // curiosity gap ("what's in it for me tomorrow").
+  // Sealed — tomorrow's promise: live countdown to IL midnight (the honest
+  // "when"), the next lesson's hook (the "why"), and the chain stake.
   const nextTarget = getNextLessonTarget();
+  const msLeft = msUntilNextIsraelMidnight();
+  const hoursLeft = Math.floor(msLeft / 3_600_000);
+  const minutesLeft = Math.floor((msLeft % 3_600_000) / 60_000);
+  const countdown = hoursLeft > 0 ? `${hoursLeft} שע׳ ו-${minutesLeft} דק׳` : `${minutesLeft} דק׳`;
   return (
     <Animated.View entering={FadeInDown.duration(400)}>
       <View
         accessible
-        accessibilityLabel="תיבה חתומה — נפתחת מחר"
+        accessibilityLabel={`תיבה חתומה — נפתחת בעוד ${countdown}`}
         style={[styles.card, styles.cardSealed]}
       >
         <View style={styles.iconWrapSealed}>
@@ -77,13 +96,17 @@ export function TomorrowChestCard(): React.ReactElement | null {
         </View>
         <View style={styles.textCol}>
           <Text style={[styles.titleSealed, RTL]} allowFontScaling={false}>
-            נצרבה תיבה — נפתחת מחר
+            {`תיבה חתומה — נפתחת בעוד ${countdown}`}
           </Text>
-          {nextTarget && (
+          {consecutiveOpenDays > 1 && lastOpenedOnDate === ilToday ? (
+            <Text style={[styles.subSealed, RTL]} allowFontScaling={false} numberOfLines={2}>
+              {`רצף-תיבות של ${consecutiveOpenDays} ימים — מחר ממשיכים אותו`}
+            </Text>
+          ) : nextTarget ? (
             <Text style={[styles.subSealed, RTL]} allowFontScaling={false} numberOfLines={2}>
               {`ומחר בשיעור: ${nextTarget.hook}`}
             </Text>
-          )}
+          ) : null}
         </View>
       </View>
     </Animated.View>
@@ -156,5 +179,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#b45309',
+  },
+  chainBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#f59e0b',
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  chainBadgeText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#ffffff',
   },
 });

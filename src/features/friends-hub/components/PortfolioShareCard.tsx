@@ -217,7 +217,7 @@ function PortfolioPost({
 
   const onRate = useCallback(
     (stars: number) => {
-      if (isGuest) { requestGuestGate('portfolio_rate'); return; }
+      if (isGuest) { requestGuestGate('portfolio_rate', { force: true }); return; }
       successHaptic();
       if (isSeed) { rateSeed(pf.id, stars); return; }
       void (async () => {
@@ -230,7 +230,7 @@ function PortfolioPost({
   );
 
   const onLikePress = (): void => {
-    if (isGuest) { requestGuestGate('portfolio_like'); return; }
+    if (isGuest) { requestGuestGate('portfolio_like', { force: true }); return; }
     const willLike = !pf.likedByYou;
     tapHaptic();
     if (isSeed) toggleSeedLike(pf.id);
@@ -246,7 +246,7 @@ function PortfolioPost({
   const submitComment = (): void => {
     const text = draft.trim();
     if (!text) return;
-    if (isGuest) { requestGuestGate('portfolio_comment'); return; }
+    if (isGuest) { requestGuestGate('portfolio_comment', { force: true }); return; }
     tapHaptic();
     setDraft('');
     setExpanded(true);
@@ -264,7 +264,7 @@ function PortfolioPost({
   // can't be linked) can be REPORTED but not blocked — there is no real id to
   // block against, and report + auto-hide covers the moderation requirement.
   const onMorePress = (): void => {
-    if (isGuest) { requestGuestGate('portfolio_comment'); return; }
+    if (isGuest) { requestGuestGate('portfolio_comment', { force: true }); return; }
     tapHaptic();
     const canBlock = pf.authorUserId !== 'anon';
     Alert.alert(
@@ -296,7 +296,7 @@ function PortfolioPost({
   };
 
   const onReportComment = (c: RatedComment): void => {
-    if (isGuest) { requestGuestGate('portfolio_comment'); return; }
+    if (isGuest) { requestGuestGate('portfolio_comment', { force: true }); return; }
     tapHaptic();
     Alert.alert('דיווח על תגובה', 'לדווח על התגובה הזו כתוכן פוגעני?', [
       {
@@ -508,7 +508,7 @@ export function PortfolioShareCard(): React.ReactElement {
   }, []);
 
   const handleShare = async (picks: SharedPick[], caption: string, isAnonymous: boolean): Promise<void> => {
-    if (isGuest) { requestGuestGate('portfolio_share'); return; }
+    if (isGuest) { requestGuestGate('portfolio_share', { force: true }); return; }
     if (caption.trim().length > 0) {
       const verdict = await moderateWithSharkBot(caption);
       if (!verdict.ok) {

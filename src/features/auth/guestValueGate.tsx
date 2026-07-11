@@ -49,13 +49,21 @@ export const useGuestValueGateStore = create<GuestValueGateState>()((set) => ({
  * false) for registered users, while a gate is already up, or inside the
  * cooldown window — callers never need their own guards.
  */
-export function requestGuestGate(trigger: string): boolean {
+export function requestGuestGate(trigger: string, opts?: { force?: boolean }): boolean {
   try {
-    if (!VALUE_ACTION_GATE_ENABLED) return false; // Yoav 2026-07-10 — see note above
+    // `force` (Yoav 11.7): actions that GENUINELY REQUIRE an account (server
+    // writes — rating / liking / commenting / sharing a portfolio) must still
+    // surface the register gate even while the aggressive after-every-value
+    // wall is disabled. Without it, killing the wall turned those buttons
+    // into silent no-ops for guests ("הדירוגים לא עובד לי"). force bypasses
+    // the kill-flag AND the cooldown (a required-auth ask must never dead-end),
+    // but never double-stacks over an open gate.
+    const force = opts?.force === true;
+    if (!VALUE_ACTION_GATE_ENABLED && !force) return false; // Yoav 2026-07-10 — see note above
     if (!useAuthStore.getState().isGuest) return false;
     const { visibleTrigger, lastShownAt } = useGuestValueGateStore.getState();
     if (visibleTrigger !== null) return false;
-    if (lastShownAt !== null && Date.now() - lastShownAt < COOLDOWN_MS) return false;
+    if (!force && lastShownAt !== null && Date.now() - lastShownAt < COOLDOWN_MS) return false;
     useGuestValueGateStore.setState({ visibleTrigger: trigger, lastShownAt: Date.now() });
     try { captureEvent('guest_gate_shown', { trigger }); } catch { /* non-fatal */ }
     return true;

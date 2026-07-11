@@ -340,7 +340,7 @@ export type AppEvent =
   // module-completion dashboards with return-ritual opens.
   | { name: 'tomorrow_chest_armed'; props: { source: string; opens_on: string } }
   | { name: 'tomorrow_chest_ready_shown'; props: { trigger: 'auto' | 'card_tap'; day_gap: number } }
-  | { name: 'tomorrow_chest_opened'; props: { day_gap: number; coins: number; match_coins?: number; xp: number; rarity: string; armed_source?: string } }
+  | { name: 'tomorrow_chest_opened'; props: { day_gap: number; coins: number; match_coins?: number; xp: number; rarity: string; armed_source?: string; chain_day?: number } }
   | { name: 'tomorrow_chest_cta_tapped'; props: { cta: 'continue_lesson' | 'later'; next_module_id?: string } }
   // Burned unclaimed after the 48h ready-window (overnight-interest economics,
   // מוני 8.7) — measures how many day-2 appointments are missed entirely.

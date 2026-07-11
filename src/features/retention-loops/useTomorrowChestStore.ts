@@ -68,6 +68,19 @@ export type TomorrowChestStatus = 'none' | 'sealed' | 'ready';
 const CHEST_COINS_FLOOR = 100;
 const OVERNIGHT_MATCH_RATE = 0.5;
 const OVERNIGHT_MATCH_CAP = 200;
+/** Day-after-day CHAIN (Yoav 11.7: "לשפר את החוויה בתיבת חזרה יום אחרי יום").
+ *  Every consecutive-day open grows a visible chain and pays a small
+ *  escalating bonus on top of the floor: +25 coins per chain day, capped at
+ *  +150 (day 7). Miss a day → the chain resets to 1 (the chest itself never
+ *  punishes — only the bonus resets). */
+const CHAIN_BONUS_PER_DAY = 25;
+const CHAIN_BONUS_CAP = 150;
+/** armedSource used by the automatic post-open re-arm. A 'chain' arm pays
+ *  floor+chain only — the overnight MATCH stays learning-earned: completing
+ *  a real lesson chest the same day UPGRADES the arm (armForTomorrow swaps
+ *  the source), unlocking the match. Login-alone keeps the appointment;
+ *  learning makes it pay. */
+export const CHAIN_ARM_SOURCE = 'chain';
 /** Ready window in days: opens-day + this many extra days, then it EXPIRES
  *  ("לא נאסף — נשרף", מוני 8.7): urgency without a streak punishment. An
  *  expired chest never blocks re-arming — the next real chest re-arms fresh. */
@@ -98,6 +111,9 @@ interface TomorrowChestState {
   /** IL-ISO date of the last open (analytics / debugging). */
   lastOpenedOnDate: string | null;
   totalOpens: number;
+  /** Day-after-day chain: how many CONSECUTIVE IL days the chest was opened.
+   *  1 on the first open, +1 per next-day open, reset to 1 after a gap. */
+  consecutiveOpenDays: number;
   /** Transient nonce — the map card requests the ceremony via bump;
    *  TomorrowChestReadyHost subscribes. NOT persisted. */
   openRequestNonce: number;
@@ -121,6 +137,7 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
       armedSource: null,
       lastOpenedOnDate: null,
       totalOpens: 0,
+      consecutiveOpenDays: 0,
       openRequestNonce: 0,
 
       armForTomorrow: (source: string): boolean => {
@@ -140,8 +157,18 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
             // Ready-but-unopened (inside the window) — never steal it by
             // re-arming; they open first, the next chest re-arms.
             if (opensOnDate <= today) return false;
-            // Already armed for tomorrow — idempotent.
-            if (opensOnDate === tomorrow) return false;
+            // Already armed for tomorrow — idempotent, EXCEPT the learning
+            // upgrade: a 'chain' auto-arm (post-open) is floor-only; a real
+            // chest the same day swaps the source so tomorrow's chest also
+            // pays the overnight match on today's learning coins.
+            if (opensOnDate === tomorrow) {
+              const { armedSource: currentSource } = get();
+              if (currentSource === CHAIN_ARM_SOURCE && source !== CHAIN_ARM_SOURCE) {
+                set({ armedSource: source });
+                try { track({ name: 'tomorrow_chest_armed', props: { source: `upgrade:${source}`, opens_on: tomorrow } }); } catch { /* non-fatal */ }
+              }
+              return false;
+            }
           }
         }
         set({ opensOnDate: tomorrow, armedOnDate: today, armedSource: source });
@@ -152,7 +179,7 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
       requestOpen: () => set({ openRequestNonce: get().openRequestNonce + 1 }),
 
       openReadyChest: (): TomorrowChestRewards | null => {
-        const { opensOnDate, armedOnDate, armedSource, totalOpens } = get();
+        const { opensOnDate, armedOnDate, armedSource, totalOpens, lastOpenedOnDate, consecutiveOpenDays } = get();
         const today = getIsraelDateISO();
         if (tomorrowChestStatus(opensOnDate, today) !== 'ready') return null;
 
@@ -163,13 +190,24 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
         // Overnight interest (מוני 8.7): floor 100 + 50% match on the ARMING
         // day's learning coins (capped 200). The match reads the real per-day
         // ledger — never an invented number; no learning yesterday = no match.
-        const earnedOnArmDay = armedOnDate ? (eco.coinsEarnedByDay[armedOnDate] ?? 0) : 0;
+        // CHAIN arms (post-open auto re-arm) are match-INELIGIBLE — otherwise
+        // yesterday's chest coins would compound into today's match forever.
+        // A same-day lesson chest upgrades the source (see armForTomorrow) and
+        // restores eligibility — the interest stays a LEARNING reward.
+        const matchEligible = armedSource !== CHAIN_ARM_SOURCE;
+        const earnedOnArmDay = matchEligible && armedOnDate ? (eco.coinsEarnedByDay[armedOnDate] ?? 0) : 0;
         const matchCoins = Math.min(OVERNIGHT_MATCH_CAP, Math.floor(earnedOnArmDay * OVERNIGHT_MATCH_RATE));
+        // Day-after-day chain (Yoav 11.7): opened yesterday too → chain grows;
+        // any gap → chain restarts at 1. Escalating bonus, capped.
+        const chainDay = lastOpenedOnDate === israelDatePlusDays(today, -1)
+          ? Math.max(1, consecutiveOpenDays) + 1
+          : 1;
+        const chainBonus = Math.min(CHAIN_BONUS_CAP, (chainDay - 1) * CHAIN_BONUS_PER_DAY);
         // First-ever open: guarantee a rare-or-better FEEL (raise the floor,
         // never the ceiling — one-shot, no inflation).
         const rarity = totalOpens === 0 && drop.rarity === 'common' ? 'rare' : drop.rarity;
         const rewards: TomorrowChestRewards = {
-          coins: Math.max(CHEST_COINS_FLOOR, drop.rewards.coins) + matchCoins,
+          coins: Math.max(CHEST_COINS_FLOOR, drop.rewards.coins) + matchCoins + chainBonus,
           xp: drop.rewards.xp,
           energy: TOMORROW_CHEST_ENERGY,
           rarity,
@@ -182,6 +220,7 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
           armedSource: null,
           lastOpenedOnDate: today,
           totalOpens: totalOpens + 1,
+          consecutiveOpenDays: chainDay,
         });
 
         eco.addCoins(rewards.coins, 'lesson');
@@ -198,9 +237,16 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
               xp: rewards.xp,
               rarity: rewards.rarity,
               armed_source: armedSource ?? 'unknown',
+              chain_day: chainDay,
             },
           });
         } catch { /* non-fatal */ }
+
+        // Day-after-day auto re-arm (Yoav 11.7): opening TODAY seals tomorrow's
+        // chest immediately — the appointment loop never breaks silently. This
+        // 'chain' arm pays floor+chain only; a real lesson chest later today
+        // upgrades it to full overnight interest (armForTomorrow source swap).
+        get().armForTomorrow(CHAIN_ARM_SOURCE);
 
         return rewards;
       },
@@ -211,6 +257,7 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
         armedSource: null,
         lastOpenedOnDate: null,
         totalOpens: 0,
+        consecutiveOpenDays: 0,
         openRequestNonce: 0,
       }),
     }),
@@ -223,6 +270,7 @@ export const useTomorrowChestStore = create<TomorrowChestState>()(
         armedSource: s.armedSource,
         lastOpenedOnDate: s.lastOpenedOnDate,
         totalOpens: s.totalOpens,
+        consecutiveOpenDays: s.consecutiveOpenDays,
         // openRequestNonce deliberately NOT persisted — transient UI signal.
       }),
     },
