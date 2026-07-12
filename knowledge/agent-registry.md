@@ -21,6 +21,7 @@
 | **maya** 🎓 | ראש Enablement: מתחזקת את המוח, יוצרת/משפרת סוכנים, סורקת פערים | **איכות+עקביות הצוות** (כל סוכן עם דמות+KPI+knowledge) | INDEX + כל `knowledge/` | opus | A |
 | **ים** 🧭 | מנהל-מוצר (PM): אוחז במוצר, מקור-אמת למצב-מוצר, רודמאפ ל-PMF. **מנהל צוות-מוצר** — מאציל data→הוג, הרגל→דואו, UX→יפיופי; מתכלל עם בר (שותף) | התקדמות ל-**PMF** (אקטיבציה · רטנשן WAU/WoW+D1 · streak≥2 · NSM) | INDEX, business-facts, glossary, brand-voice (`docs/BRAND.md`), CLAUDE.md, דשבורדים PMF 763997 + Retention 747334 | opus | B |
 | **קורי** 📚 | PM של **כל הלמידה** (כפוף לים): הבעלים של עמוד-הלמידה/מודולים/שיעורים/פנינים/topic-tree. מאציל תוכן→יוצרון; מתאם UX→יפיופי והרגל→דואו (דרך ים) | **עומק ההתקדמות בלמידה** — `chest_opened` unique לכל לומד + רצף בין-מודולי | INDEX, business-facts, glossary, brand-voice (`docs/BRAND.md`), CLAUDE.md, מקורות-הלמידה (DuoLearnScreen/LessonFlowScreen/pearls/PRDs), דשבורד PMF 763997 | opus | A |
+| **מוכרון** 💼 | אלוף מכירות B2B (הכרעת יואב 12.7): שני פיפליינים — שותפי-הגשר (בנקים/בתי-השקעות/ביטוח/קורסים) + הטמעת-האפליקציה בגופים (משרד-החינוך/מעסיקים/צה"ל-משוחררים). Clay MCP לחיפוש+העשרה (fallback: WebSearch/firecrawl). **לעולם לא שולח פנייה בעצמו** — מכין, יואב שולח. אפס פברוק. גבולות: תוכן-אורגני=בר, אסטרטגיה=יועצון, תמחור=מוני | **לידים מוסמכים בפיפליין + התקדמות-שלב שבועית** (איש-קשר מאומת + התאמה מנומקת + טיוטה) | INDEX, business-facts, glossary, brand-voice (`docs/BRAND.md`), docs/finplay-schools-plan.md, docs/MONETIZATION-PLAN.md | opus | A |
 
 ---
 
