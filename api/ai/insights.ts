@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { HEBREW_STYLE_RULES } from '../_shared/hebrewStyle';
 
 interface InsightsRequestBody {
   name: string;
@@ -157,7 +158,7 @@ ${CURRICULUM_KNOWLEDGE}
 - הצעד הבא (next) חייב לנקוב בשם ספציפי של נושא מהתוכנית הלימודית
 - הטיפ הפיננסי (tip) חייב להיות מיישם ומעשי, לא כללי
 - השתמש בנתוני פרופיל הלמידה מהמנוע הפנימי כשהם קיימים
-- תמיד תחזיר JSON תקין בלבד, ללא שום טקסט נוסף לפני או אחרי`;
+- תמיד תחזיר JSON תקין בלבד, ללא שום טקסט נוסף לפני או אחרי${HEBREW_STYLE_RULES}`;
 
     const userMessage = `## נתוני המשתמש
 שם: ${name} | XP: ${xp.toLocaleString()} | רמה ${level} | רצף: ${streak} ימים | מטרה: ${financialGoal}

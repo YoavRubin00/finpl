@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions, AppState } from "react-native";
+import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions, AppState, InteractionManager } from "react-native";
 // Gesture-handler ScrollView + RootView — used ONLY inside the swipe/dilemma
 // Modals below. RN's Modal mounts in a separate native window so the
 // app-level GestureHandlerRootView doesn't extend into it, and RN's
@@ -276,7 +276,7 @@ function storeKey(chapterId: string): string {
 // challenge while it's pending, congratulates once any one is done (Yoav
 // 2026-06-27). Singular, gender-neutral, Captain-Shark voice (BRAND.md).
 const FINN_PHRASE_CHALLENGE_PENDING = "יש לך אתגר יומי — קדימה!";
-const FINN_PHRASE_CHALLENGE_DONE = "אתגר היום הושלם! נתראה מחר";
+const FINN_PHRASE_CHALLENGE_DONE = "סגרת את האתגר של היום! נתראה מחר";
 
 // Time-based Hebrew greeting
 function getGreeting(): string {
@@ -1014,7 +1014,7 @@ function LockedModuleModal({ visible, onClose }: { visible: boolean; onClose: ()
         </View>
         <Text style={styles.modalTitle}>מודול נעול 🔒</Text>
         <Text style={styles.modalBody}>
-          השלם את המודולים הקודמים כדי לפתוח את הבא בתור, או שדרג ל-PRO לגישה מיידית.
+          השלימו את המודולים הקודמים כדי לפתוח את הבא בתור, או שדרגו ל-PRO לגישה מיידית.
         </Text>
         <AnimatedPressable
           onPress={() => {
@@ -1043,7 +1043,7 @@ function LockedModuleModal({ visible, onClose }: { visible: boolean; onClose: ()
           </LinearGradient>
         </AnimatedPressable>
         <Pressable onPress={onClose} style={{ paddingVertical: 10 }} accessibilityRole="button" accessibilityLabel="חזרה">
-          <Text style={{ color: "#71717a", fontSize: 14 }}>החלק מטה או הקש כאן</Text>
+          <Text style={{ color: "#71717a", fontSize: 14 }}>החליקו מטה או הקישו כאן</Text>
         </Pressable>
       </Pressable>
     </SwipeableModal>
@@ -1576,6 +1576,18 @@ export function DuoLearnScreen() {
   // Pushes them to /(auth)/register with returnTo=/lesson/mod-1-1 so they land in
   // chapter 1 as a registered user with all skip-intro progress preserved.
   const [showSkipIntroRegisterCTA, setShowSkipIntroRegisterCTA] = useState(false);
+
+  // PERF two-phase mount (user review 14.7: sluggish navigation): the 6
+  // ChapterSections are the heaviest tree in the app (dozens of SVG
+  // connectors + nodes each). Mounting all of them synchronously froze the
+  // first frame of every entry to this tab. Chapters up to (and one past)
+  // the active one mount immediately; deeper below-the-fold chapters mount
+  // one frame later, after interactions settle.
+  const [belowFoldReady, setBelowFoldReady] = useState(false);
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => setBelowFoldReady(true));
+    return () => task.cancel();
+  }, []);
 
   // Daily News Challenge — hero card at the TOP of the learn screen + full-sheet
   // modal. State + store reads live at screen-level so the card can render at
@@ -3239,6 +3251,19 @@ export function DuoLearnScreen() {
             // Active marker (cursor / quest widget / news badge) belongs to the
             // GLOBAL first-incomplete chapter only — never two at once.
             const hasActiveModule = idx === globalActiveIdx;
+
+            // PERF two-phase mount: chapters deeper than one past the active
+            // chapter render a same-height placeholder on the first frame and
+            // mount for real right after interactions settle (belowFoldReady).
+            // They sit below the fold, so the swap is invisible; the expanded
+            // topic-tree chapter is exempt (deep links land straight in it).
+            if (
+              !belowFoldReady &&
+              idx > globalActiveIdx + 1 &&
+              topicTreeModule?.module.id?.startsWith(`mod-${chNum}-`) !== true
+            ) {
+              return <View key={arena.id} style={{ height: 1100 }} />;
+            }
 
             const chapterView = (
               <ChapterSection

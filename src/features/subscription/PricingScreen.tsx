@@ -345,7 +345,7 @@ export function PricingScreen() {
       return;
     }
     if (!displayName) {
-      Alert.alert("שגיאה", "יש להתחבר כדי להירשם.");
+      Alert.alert("שגיאה", "צריך חשבון כדי להפעיל מנוי — ההרשמה לוקחת שנייה.");
       return;
     }
     // Hard-gate fallback (after a previous revoke): the parent must click
@@ -355,7 +355,7 @@ export function PricingScreen() {
     if (useHardGateFallback && !hasParentalConsent) {
       Alert.alert(
         "נדרש אישור הורה",
-        "רכישת מנוי לגיל 16–17 דורשת אישור הורה. השלם/השלימי את האישור בלוח הירוק למטה.",
+        "רכישת מנוי לגיל 16–17 דורשת אישור הורה. משלימים את אישור ההורה בכרטיס הירוק שלמטה.",
         [{ text: "הבנתי" }],
       );
       return;
@@ -496,7 +496,7 @@ export function PricingScreen() {
         Alert.alert("לא נמצא", "לא נמצא מנוי פעיל לשחזור.");
       }
     } catch {
-      Alert.alert("שגיאה", "לא הצלחנו לשחזר רכישות. נסה שוב.");
+      Alert.alert("שגיאה", "לא הצלחנו לשחזר רכישות. נסו שוב.");
     } finally {
       setIsLoading(false);
     }
@@ -650,7 +650,7 @@ export function PricingScreen() {
                     onPress={isGuest ? handleUpgrade : (offerState === 'unavailable' ? loadOffering : handleUpgrade)}
                     disabled={isLoading || (!isGuest && offerState === 'loading')}
                     accessibilityRole="button"
-                    accessibilityLabel={isGuest ? 'להירשם עכשיו' : (offerState === 'unavailable' ? 'נסה שוב' : 'שדרג עכשיו ל-PRO')}
+                    accessibilityLabel={isGuest ? 'להירשם עכשיו' : (offerState === 'unavailable' ? 'נסו שוב' : 'שדרג עכשיו ל-PRO')}
                     accessibilityState={{ disabled: isLoading || (!isGuest && offerState === 'loading') }}
                     style={({ pressed }) => [
                       styles.ctaButtonBase,
@@ -683,7 +683,7 @@ export function PricingScreen() {
                           <Text style={styles.ctaText}>להירשם עכשיו</Text>
                         </View>
                       ) : offerState === 'unavailable' ? (
-                        <Text style={styles.ctaText}>נסה שוב</Text>
+                        <Text style={styles.ctaText}>נסו שוב</Text>
                       ) : (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
                           <View accessible={false}>

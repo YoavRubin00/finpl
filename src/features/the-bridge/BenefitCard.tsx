@@ -216,7 +216,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
                 {isRedeemed ? (
                   <>
                     <Check size={12} color="#0369a1" />
-                    <Text style={styles.costTextRedeemed}>הומר</Text>
+                    <Text style={styles.costTextRedeemed}>מומש</Text>
                   </>
                 ) : (
                   <>

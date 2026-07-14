@@ -607,7 +607,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                         <Text style={styles.statValue}>{redeemedCount}</Text>
                         <Info size={12} color="#64748b" />
                       </View>
-                      <Text style={styles.statLabel}>הטבות הומרו</Text>
+                      <Text style={styles.statLabel}>הטבות מומשו</Text>
                     </Pressable>
 
                     <View style={styles.statDivider} />
@@ -654,7 +654,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
           {showConfetti && successTitle !== '' && (
             <Animated.View entering={FadeInDown.duration(300)} style={styles.successToast}>
               <Text style={styles.successToastText}>
-                הצלחת! &ldquo;{successTitle}&rdquo; הומרה בהצלחה!
+                יש! &ldquo;{successTitle}&rdquo; אצלכם!
               </Text>
             </Animated.View>
           )}
@@ -842,7 +842,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     contentFit="contain"
                     accessible={false}
                   />
-                  <Text style={styles.statModalTitle}>הטבות שהמרת</Text>
+                  <Text style={styles.statModalTitle}>הטבות שמימשתם</Text>
                   {redeemed.length > 0 ? (
                     <ScrollView
                       style={styles.statModalScroll}
@@ -867,9 +867,9 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     </ScrollView>
                   ) : (
                     <Text style={styles.statModalEmpty}>
-                      עוד לא המרת הטבות.{'\n'}
-                      צבור עוד מטבעות והפוך אותן להטבות אמיתיות מהשותפים שלנו —
-                      כל המרה היא צעד אמיתי קדימה בכיס שלך.
+                      עוד לא מימשתם הטבות.{'\n'}
+                      צברו עוד מטבעות והפכו אותם להטבות אמיתיות מהשותפים שלנו —
+                      כל מימוש הוא צעד אמיתי קדימה בכיס שלכם.
                     </Text>
                   )}
                 </>
@@ -888,8 +888,8 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                 <Text style={styles.statModalBigValue}>{savedValue}</Text>
                 <Text style={styles.statModalBody}>
                   {redeemedCount > 0
-                    ? `המרת ${redeemedCount} ${redeemedCount === 1 ? 'הטבה' : 'הטבות'} — וזה הערך הכספי המוערך שגרפת מההטבות.\n\nכל הטבה כאן היא כסף אמיתי שחסכת או הרווחת מהשותפים שלנו, רק כי בנית הרגלים פיננסיים נכונים.`
-                    : 'עוד לא המרת הטבות, אז החיסכון שלך עומד על ₪0 — אבל אתה במרחק כמה מטבעות מההטבה הראשונה שלך.\n\nכל הטבה תוסיף לחיסכון שלך כאן.'}
+                    ? `מימשתם ${redeemedCount} ${redeemedCount === 1 ? 'הטבה' : 'הטבות'} — וזה הערך הכספי המוערך שגרפתם מההטבות.\n\nכל הטבה כאן היא כסף אמיתי שחסכתם או הרווחתם מהשותפים שלנו, רק כי בניתם הרגלים פיננסיים נכונים.`
+                    : 'עוד לא מימשתם הטבות, אז החיסכון שלכם עומד על ₪0. אבל עוד כמה מטבעות ואתם שם — ההטבה הראשונה שלכם מחכה.\n\nכל הטבה תוסיף לחיסכון שלכם כאן.'}
                 </Text>
                 <Text style={styles.statModalDisclaimer}>
                   הערכה בלבד. הערך בפועל תלוי בתנאי השותף ובשימוש שלך.

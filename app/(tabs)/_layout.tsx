@@ -24,6 +24,13 @@ export default function TabsLayout() {
           initialRouteName="investments"
           screenOptions={{
             headerShown: false,
+            // PERF (user review 14.7: "תגובה איטית בניווט בין ממשקים"): freeze
+            // blurred tabs. 11 screens stay registered here; without freeze,
+            // every global store write (economy, tomorrow-chest minute tick,
+            // likes...) re-rendered ALL mounted tabs on every change — the JS
+            // thread paid for 5+ hidden screens on each tap. Frozen screens
+            // skip re-render entirely until refocused (react-native-screens).
+            freezeOnBlur: true,
           }}
           tabBar={(props) => <AnimatedTabBar {...props} />}
         >

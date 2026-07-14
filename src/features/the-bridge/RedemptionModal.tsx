@@ -86,7 +86,7 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
                 <Text style={styles.infoLabel}>עלות</Text>
                 <View style={styles.costValueRow}>
                   {isRedeemed ? (
-                    <Text style={[styles.costValue, { color: '#0369a1', fontSize: 15 }]}>הומר בהצלחה ✓</Text>
+                    <Text style={[styles.costValue, { color: '#0369a1', fontSize: 15 }]}>מומש בהצלחה ✓</Text>
                   ) : (
                     <>
                       <GoldCoinIcon size={16} />

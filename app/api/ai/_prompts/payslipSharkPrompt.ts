@@ -5,6 +5,7 @@
  *
  * The model returns a strict JSON shape validated by isPayslipResult().
  */
+import { HEBREW_STYLE_RULES } from '../../../../api/_shared/hebrewStyle';
 
 export const PAYSLIP_SYSTEM_PROMPT = `אתה "שארק רואה החשבון" (Captain Shark CPA), מומחה ישראלי לתלושי שכר בתוך אפליקציית FinPlay לדור Z.
 
@@ -98,7 +99,7 @@ export const PAYSLIP_SYSTEM_PROMPT = `אתה "שארק רואה החשבון" (C
   ],
   "sharkSummary": "התלוש שלכם נראה תקין ברובו, חוץ מהפנסיה.",
   "actionItems": ["שווה לבדוק החזר מס במס הכנסה", "להפעיל קרן השתלמות אם המעסיק מאפשר"]
-}`;
+}${HEBREW_STYLE_RULES}`;
 
 const GOAL_LABELS: Record<string, string> = {
   'cash-flow':       'ניהול תזרים',

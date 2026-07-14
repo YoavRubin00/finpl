@@ -109,7 +109,7 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
             )}
 
             <Text style={s.nudgeTitle}>
-              {coverMode ? 'רוצה לראות את כל החסכונות\nוהביטוחים שלך במקום אחד?' : v.title}
+              {coverMode ? 'רוצים לראות את כל החסכונות\nוהביטוחים שלכם במקום אחד?' : v.title}
             </Text>
             {!coverMode && <Text style={s.nudgeBody}>{v.body}</Text>}
 
@@ -117,10 +117,10 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
               onPress={handleAct}
               style={s.ctaBtn}
               accessibilityRole="button"
-              accessibilityLabel={coverMode ? 'בואו לגשר' : v.cta}
+              accessibilityLabel={coverMode ? 'אל הגשר' : v.cta}
             >
               <ArrowLeft size={18} color="#ffffff" />
-              <Text style={s.ctaBtnText}>{coverMode ? 'בואו לגשר 🛡️' : v.cta}</Text>
+              <Text style={s.ctaBtnText}>{coverMode ? 'אל הגשר 🛡️' : v.cta}</Text>
             </Pressable>
           </View>
 

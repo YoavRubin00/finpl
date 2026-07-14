@@ -540,8 +540,8 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
   const knowledgeLabel = collected.knowledgeLevel ? KNOWLEDGE_LABELS[collected.knowledgeLevel] : null;
 
   const rows = [
-    dreamLabel ? { icon: '🎯', label: 'החלום שלכם', value: dreamLabel, step: 'dream' as EditableStep } : null,
-    goalLabel ? { icon: '📌', label: 'המטרה שלכם', value: goalLabel, step: 'goal' as EditableStep } : null,
+    dreamLabel ? { icon: '🎯', label: 'החלום שלך', value: dreamLabel, step: 'dream' as EditableStep } : null,
+    goalLabel ? { icon: '📌', label: 'המטרה שלך', value: goalLabel, step: 'goal' as EditableStep } : null,
     knowledgeLabel ? { icon: '🧠', label: 'רמת ידע', value: knowledgeLabel, step: 'knowledge' as EditableStep } : null,
     collected.dailyGoalMinutes ? { icon: '⏰', label: 'יעד יומי', value: `${collected.dailyGoalMinutes} דקות`, step: 'daily-goal' as EditableStep } : null,
   ].filter((r): r is { icon: string; label: string; value: string; step: EditableStep } => r !== null);
@@ -553,10 +553,10 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
       </Animated.View>
       <Animated.View entering={FadeInDown.duration(350).delay(100)} style={{ marginBottom: 20, alignItems: 'center' }}>
         <Text style={{ fontSize: 22, fontWeight: '900', color: '#0f172a', writingDirection: 'rtl', textAlign: 'center', marginBottom: 6 }}>
-          הנה מה שאני אכין עבורך
+          הנה מה שאני אכין בשבילך
         </Text>
         <Text style={{ fontSize: 14, color: '#6b7280', writingDirection: 'rtl', textAlign: 'center' }}>
-          לחצו על כל שורה לעריכה
+          הקשה על שורה — עריכה
         </Text>
       </Animated.View>
       <Animated.View entering={FadeInUp.duration(350).delay(200)} style={{ width: '100%', gap: 10, marginBottom: 32 }}>
@@ -752,7 +752,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
 
         {/* Optional invite code entry */}
         {codeSaved ? (
-          <Text style={styles.codeSavedText}>✓ קוד ישמר ויחובר לחשבון שלך</Text>
+          <Text style={styles.codeSavedText}>✓ הקוד נשמר — יחובר לחשבון שלך</Text>
         ) : showCodeField ? (
           <Animated.View style={[styles.codeRow, codeAreaStyle]}>
             <TextInput
@@ -801,7 +801,7 @@ const DREAM_LOTTIES: Record<FinancialDream, number> = {
 const DREAMS: { id: FinancialDream; emoji: string; label: string; sub: string }[] = [
   { id: "trip", emoji: "", label: "טיול גדול", sub: "30,000 ₪" },
   { id: "car", emoji: "", label: "רכב ראשון", sub: "50,000 ₪" },
-  { id: "apartment", emoji: "", label: "משכנתא לדירה", sub: "300,000 ₪" },
+  { id: "apartment", emoji: "", label: "דירה משלך", sub: "300,000 ₪" },
   { id: "freedom", emoji: "", label: "חופש כלכלי", sub: "הכל אפשרי" },
 ];
 
@@ -924,7 +924,7 @@ const GOALS: { id: FinancialGoal; label: string; sub: string }[] = [
   { id: "investing", label: "אני רוצה שהכסף יעבוד", sub: "השקעות" },
   { id: "army-release", label: "שחרור מהצבא", sub: "התחלה חדשה" },
   { id: "expand-horizons", label: "הרחבת אופקים", sub: "להבין את העולם" },
-  { id: "unsure", label: "עדיין לא בטוח", sub: "סתם מציץ" },
+  { id: "unsure", label: "עדיין לא ברור לי", sub: "רק הצצה" },
 ];
 
 const DREAM_REACTIONS: Record<FinancialDream, string> = {
@@ -964,18 +964,18 @@ function GoalStep({ dream, onNext, onBack, initialValue }: { dream: FinancialDre
 
 const LEVELS: { id: KnowledgeLevel; label: string; sub: string }[] = [
   { id: "none", label: "כלום ושום דבר", sub: "מאפס מוחלט" },
-  { id: "beginner", label: "יודע/ת קצת", sub: "שמעתי על זה" },
+  { id: "beginner", label: "יש לי בסיס", sub: "שמעתי על זה" },
   { id: "some", label: "ממוצע", sub: "הבסיס מוכר לי" },
-  { id: "experienced", label: "מתקדם/ת", sub: "יודע, אבל עדיין יש מה ללמוד" },
+  { id: "experienced", label: "רמה מתקדמת", sub: "יש ידע, אבל עדיין יש מה ללמוד" },
   { id: "expert", label: "כריש מוול סטריט", sub: "שוחה בעולם הפיננסי" },
 ];
 
 const GOAL_REACTIONS: Record<FinancialGoal, string> = {
-  "cash-flow": "כדי לסדר תזרים לא צריך להיות פרופסור. כמה אתם יודעים עכשיו?",
-  "investing": "השקעות דורשות ידע. כמה אתם מבינים בזה היום?",
-  "army-release": "שחרור מהצבא זה שלב גדול! כמה אתם מכירים את עולם הכסף?",
+  "cash-flow": "כדי לסדר תזרים לא צריך להיות פרופסור. מה הידע שלך היום?",
+  "investing": "השקעות דורשות ידע. כמה יש לך הבנה בזה היום?",
+  "army-release": "שחרור מהצבא זה שלב גדול! כמה מוכר לך עולם הכסף?",
   "expand-horizons": "להרחיב אופקים זה תמיד רעיון טוב. מאיפה מתחילים?",
-  "unsure": "תהיו כנים, נתחיל בדיוק מהמקום הנכון לכם.",
+  "unsure": "בכנות מוחלטת — נתחיל בדיוק מהמקום הנכון.",
 };
 
 function KnowledgeStep({ goal, onNext, onBack, initialValue }: { goal: FinancialGoal | null; onNext: (v: KnowledgeLevel) => void; onBack?: () => void; initialValue?: KnowledgeLevel | null }) {
@@ -996,10 +996,10 @@ function KnowledgeStep({ goal, onNext, onBack, initialValue }: { goal: Financial
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
 
-  const dynamicHint = goal ? GOAL_REACTIONS[goal] : "תהיה כנה, נתחיל בדיוק מהמקום הנכון";
+  const dynamicHint = goal ? GOAL_REACTIONS[goal] : "בכנות מוחלטת — נתחיל בדיוק מהמקום הנכון";
 
   return (
-    <StepShell stepIndex={3} question="כמה אתם מבינים בכסף?" hint={dynamicHint} finnState={sel ? (sel === "none" ? "empathy" : "tablet") : "thinking"} compact onBack={onBack}>
+    <StepShell stepIndex={3} question="כמה יש לך הבנה בכסף?" hint={dynamicHint} finnState={sel ? (sel === "none" ? "empathy" : "tablet") : "thinking"} compact onBack={onBack}>
       {LEVELS.map((l, i) => (
         <AnimatedCard key={l.id} index={i} label={l.label} sublabel={l.sub}
           selected={sel === l.id} onPress={() => tap(l.id)}
@@ -1028,8 +1028,8 @@ const KNOWLEDGE_REACTIONS: Record<string, string> = {
   none: "מתחילים מאפס זה יתרון - אין הרגלים רעים לשנות!",
   beginner: "שמעת על קצת מושגים, עכשיו ניתן להם סדר.",
   some: "בסיס חזק זה חשוב. בואו ניקח אתכם לשלב הבא.",
-  experienced: "משקיעים פעילים! נאגר פה ידע להעצים אתכם.",
-  expert: "זאב מוול סטריט אה? מצוין, נראה כמה אתם באמת יודעים.",
+  experienced: "יש ניסיון? מעולה. גם לכרישים יש עוד מה לגלות.",
+  expert: "כריש מוול סטריט? מצוין. נראה כמה ידע יש לך באמת.",
 };
 
 function AgeStep({ knowledge, onNext, onBack, initialAgeGroup }: { knowledge: KnowledgeLevel | null; onNext: (ag: AgeGroup, by: number) => void; onBack?: () => void; initialAgeGroup?: AgeGroup | null }) {
@@ -1063,8 +1063,8 @@ function AgeStep({ knowledge, onNext, onBack, initialAgeGroup }: { knowledge: Kn
 // ─── Step: Q4 Learning time ───────────────────────────────────────────────────
 
 const TIMES: { id: LearningTime; label: string; sub: string }[] = [
-  { id: "morning", label: "בוקר עם הקפה", sub: "מתחיל/ה את היום חכם/ה" },
-  { id: "evening", label: "לפני השינה", sub: "מסיים/ת ב-level up" },
+  { id: "morning", label: "בוקר עם הקפה", sub: "התחלת יום חכמה" },
+  { id: "evening", label: "לפני השינה", sub: "סיום היום ב-level up" },
   { id: "during-day", label: "כשיש זמן", sub: "5 דקות בכל מקום" },
 ];
 
@@ -1080,7 +1080,7 @@ function LearningTimeStep({ onNext }: { onNext: (v: LearningTime) => void }) {
   }, [onNext]);
 
   return (
-    <StepShell stepIndex={5} question="מתי אתם לומדים הכי טוב?" finnState={sel ? "tablet" : "thinking"}>
+    <StepShell stepIndex={5} question="מתי הכי טוב לך ללמוד?" finnState={sel ? "tablet" : "thinking"}>
       {TIMES.map((t, i) => (
         <AnimatedCard key={t.id} index={i} label={t.label} sublabel={t.sub}
           selected={sel === t.id} onPress={() => tap(t.id)}
@@ -1121,11 +1121,11 @@ function LearningStyleStep({ ageGroup, birthYear, onNext }: { ageGroup: AgeGroup
   const dynamicHint = ageGroup === "minor"
     ? "בגילכם לקלוט חומר חדש זה משחק ילדים. איך אתם מעדיפים ללמוד?"
     : age !== null && age >= 30
-      ? "אף פעם לא מאוחר ללמוד טריקים חדשים! אז איך את/ה מעדיף/ה ללמוד?"
+      ? "אף פעם לא מאוחר ללמוד טריקים חדשים! איך הכי נוח לך ללמוד?"
       : undefined;
 
   return (
-    <StepShell stepIndex={6} question="איך אתם אוהבים ללמוד?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
+    <StepShell stepIndex={6} question="איך הכי כיף לך ללמוד?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
       {LEARN_STYLES.map((s, i) => (
         <AnimatedCard key={s.id} index={i} label={s.label} sublabel={s.sub}
           selected={sel === s.id} onPress={() => tap(s.id)}
@@ -1167,7 +1167,7 @@ function DeadlineStep({ onNext }: { onNext: (v: DeadlineStress) => void }) {
   }
 
   return (
-    <StepShell stepIndex={7} question="דדליינים גורמים לכם ללחץ?" hint="משפיע על ה-Streak שלכם" finnState={sel ? (sel === "high-stress" ? "empathy" : "tablet") : "thinking"}>
+    <StepShell stepIndex={7} question="דדליינים = לחץ?" hint="משפיע על ה-Streak שלך" finnState={sel ? (sel === "high-stress" ? "empathy" : "tablet") : "thinking"}>
       <Animated.View style={[styles.pollRow, wrapStyle]}>
         {DEADLINE_OPTS.map((d) => (
           <Pressable
@@ -1224,8 +1224,8 @@ function DailyGoalStep({ onNext, onBack, initialValue, skipCommitOverlay }: { on
   return (
     <StepShell
       stepIndex={7}
-      question="כמה תרצה/י ללמוד ביום?"
-      hint="יעד שאפשר לעמוד בו יעזור לכם לבנות יציבות פיננסית. יצרנו עבורכם רצף (Streak) פיננסי. 🔥"
+      question="כמה זמן ביום?"
+      hint="יעד ריאלי שומר על הרצף שלך 🔥"
       finnState={sel ? "tablet" : "thinking"}
       onBack={onBack}>
       <View style={styles.grid}>
@@ -1263,7 +1263,7 @@ function DailyGoalStep({ onNext, onBack, initialValue, skipCommitOverlay }: { on
               marginTop: 12, lineHeight: 32, writingDirection: 'rtl',
               textShadowColor: 'rgba(14,165,233,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8,
             }}>
-              {"וואו, זו התחייבות רצינית.\nמתחילים פה דרך!"}
+              {"וואו, זו התחייבות רצינית.\nיוצאים לדרך!"}
             </Text>
           </Animated.View>
         </Animated.View>
@@ -1313,11 +1313,11 @@ function CompanionStep({ dream, knowledge, onNext }: { dream: FinancialDream | n
   const dreamLabel = dream ? DREAM_LABELS[dream] : null;
   const knowledgeLabel = knowledge ? KNOWLEDGE_LABELS[knowledge] : null;
   const dynamicHint = dreamLabel && knowledgeLabel
-    ? `אוקיי, הבנתי. אתה רוצה ${dreamLabel} ויש לך ${knowledgeLabel}. בוא נראה מי הכי מתאים ללוות אותך...`
+    ? `אוקיי, קלטתי. היעד: ${dreamLabel}. נראה מי הכי מתאים ללוות אותך...`
     : "הדמות תאמן ותעודד אתכם";
 
   return (
-    <StepShell stepIndex={9} question="מי ילווה אתכם?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
+    <StepShell stepIndex={9} question="מי ילווה אותך?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
       <View style={styles.grid}>
         {COMPANIONS.map((c, i) => (
           <AnimatedGridCard
@@ -1360,7 +1360,7 @@ function AvatarPickerStep({ onNext }: { onNext: (avatarId: string) => void }) {
   }));
 
   return (
-    <StepShell stepIndex={0} question="בחרו את האווטאר שלכם" hint="הדמות שתלווה אתכם באפליקציה">
+    <StepShell stepIndex={0} question="האווטאר שלך" hint="הדמות שתלווה אותך באפליקציה">
       <View style={styles.avatarGrid}>
         {FREE_AVATARS.map((avatar: AvatarDefinition, i: number) => (
           <AvatarGridItem
@@ -2157,7 +2157,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
 
         <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
           <Text style={[introStyles.subtitle, { fontSize: 16, lineHeight: 25 }]}>
-            {"צרו חשבון כדי לשמור את ההתקדמות שלכם בין מכשירים."}
+            {"יצירת חשבון שומרת את ההתקדמות שלך בכל מכשיר."}
           </Text>
         </Animated.View>
 
@@ -2167,7 +2167,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
             <Pressable
               onPress={() => { setTermsAccepted(true); promptAppleSignIn().then(onLoginSuccess); }}
               accessibilityRole="button"
-              accessibilityLabel="הירשם עם Apple"
+              accessibilityLabel="הרשמה עם Apple"
               style={{
                 width: "100%",
                 flexDirection: "row",
@@ -2182,7 +2182,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
               }}
             >
               <Text style={{ fontSize: 18, color: "#ffffff" }}></Text>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff" }}>הירשם עם Apple</Text>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff" }}>הרשמה עם Apple</Text>
             </Pressable>
           )}
 
@@ -2191,16 +2191,16 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
             onPress={() => {
               setTermsAccepted(true);
               if (!googleReady || !promptGoogleSignIn) {
-                useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
+                useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסו שוב בעוד רגע.");
                 return;
               }
               promptGoogleSignIn();
             }}
             accessibilityRole="button"
-            accessibilityLabel="הירשם עם Google"
+            accessibilityLabel="הרשמה עם Google"
             style={[introStyles.googleBtn, { paddingVertical: 15 }, !googleReady && { opacity: 0.6 }]}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b" }}>הירשם עם Google</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b" }}>הרשמה עם Google</Text>
             <GoogleLogo size={20} />
           </Pressable>
 
@@ -2230,10 +2230,10 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
               backgroundColor: "#ecfeff",
             }}
             accessibilityRole="button"
-            accessibilityLabel="התחל ללא חשבון"
+            accessibilityLabel="המשך בלי חשבון"
           >
             <Text style={{ color: "#0891b2", fontSize: 15, fontWeight: "800", writingDirection: "rtl" }}>
-              התחל ללא חשבון
+              המשך בלי חשבון
             </Text>
           </Pressable>
 
@@ -2339,7 +2339,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
           <Pressable
             onPress={() => {
               if (!googleReady || !promptGoogleSignIn) {
-                useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
+                useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסו שוב בעוד רגע.");
                 return;
               }
               // Signal the post-verify routing inside useGoogleAuth that this
@@ -2472,8 +2472,8 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
 // ─── BuildItem ────────────────────────────────────────────────────────────────
 
 const BUILD_ITEMS = [
-  { text: "מנתח את הפרופיל שלכם...", icon: "🧠" },
-  { text: "מתאים תכנים לרמת הידע שלכם...", icon: "📚" },
+  { text: "מנתח את הפרופיל שלך...", icon: "🧠" },
+  { text: "מתאים תכנים לרמת הידע שלך...", icon: "📚" },
   { text: "בונה מסלול למידה מותאם...", icon: "🗺️" },
   { text: "מגדיר יעדים כלכליים...", icon: "🎯" },
   { text: "הכל מוכן! 🎉", icon: "✅" },
@@ -2546,7 +2546,7 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
           <ExpoImage source={FINN_STANDARD} style={{ width: 110, height: 110 }} contentFit="contain" />
         </Animated.View>
 
-        <Text style={buildStyles.title}>בונים את הפרופיל שלכם...</Text>
+        <Text style={buildStyles.title}>בונים את הפרופיל שלך...</Text>
 
         <View style={buildStyles.progressBg}>
           <Animated.View style={[buildStyles.progressFill, progressStyle]}>

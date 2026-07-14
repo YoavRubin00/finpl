@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { HEBREW_STYLE_RULES } from '../_shared/hebrewStyle';
 
 interface ChatRequestBody {
   systemPrompt: string;
@@ -65,7 +66,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
+          // The client owns the persona prompt; the server appends the shared
+          // Hebrew-style guard so every chat reply obeys it without an OTA.
+          system_instruction: { parts: [{ text: systemPrompt + HEBREW_STYLE_RULES }] },
           contents: messages,
           generationConfig: { maxOutputTokens: maxTokens },
         }),

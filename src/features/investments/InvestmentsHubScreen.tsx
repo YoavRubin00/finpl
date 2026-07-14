@@ -173,7 +173,7 @@ export function InvestmentsHubScreen() {
         <Animated.View style={summaryStyle}>
           <View style={s.portfolioCard}>
             <View style={s.portfolioTextCol}>
-              <Text style={s.portfolioTitle}>הפורטפוליו שלך</Text>
+              <Text style={s.portfolioTitle}>תיק ההשקעות שלך</Text>
               <View style={s.portfolioRow}>
                 <GoldCoinIcon size={22} />
                 <Text style={s.portfolioValue}>{coins.toLocaleString()}</Text>

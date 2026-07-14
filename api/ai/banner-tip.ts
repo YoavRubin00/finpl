@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { HEBREW_STYLE_RULES } from '../_shared/hebrewStyle';
 
 interface BannerTipRequestBody {
   name: string;
@@ -62,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 - להרגיש שנכתבה ספציפית עבור המשתמש (השתמש בנתון אמיתי שלהם)
 - להיות חמה, מוטיבציונית, קצת "כריש" אבל לא מוגזמת
 - לא להתחיל ב"היי" או "שלום"
-- להחזיר רק את ההודעה עצמה, ללא כותרת, ללא ציטוטים`;
+- להחזיר רק את ההודעה עצמה, ללא כותרת, ללא ציטוטים${HEBREW_STYLE_RULES}`;
 
     const userMessage = `שם: ${name}
 XP: ${xp.toLocaleString()}

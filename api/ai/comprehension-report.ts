@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { HEBREW_STYLE_RULES } from '../_shared/hebrewStyle';
 
 // POST /api/ai/comprehension-report
 //
@@ -123,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 - עברית, קול שארק, בלי אימוג'ים, בלי המילה "ז'רגון", בלי אנגלית מיותרת, גוף שני יחיד.
 החזר JSON תקין בלבד בסכמה:
 {"understandingScore": <0-100>, "verdictHe": "<משפט אחד חם שמסכם את כל השיעור + מושך להמשך>", "strengthsHe": ["<מה תפסת טוב, ספציפי וגאה>", ...], "improvementsHe": ["<צעד-הבא אחד קטן ומזמין>", ...], "perConcept": [{"concept": "<שם המושג>", "graspPct": <0-100>}, ...]}
-strengthsHe: 1-3 פריטים גאים וספציפיים. improvementsHe: 1-2 פריטים, כל אחד צעד-הבא מזמין (לא טעות). perConcept: שורה לכל מושג מהרשימה.`;
+strengthsHe: 1-3 פריטים גאים וספציפיים. improvementsHe: 1-2 פריטים, כל אחד צעד-הבא מזמין (לא טעות). perConcept: שורה לכל מושג מהרשימה.${HEBREW_STYLE_RULES}`;
 
     const userPrompt = `המושגים שהמודולה לימדה:
 ${concepts.map((c) => `- ${c}`).join('\n') || '- (לא סופקו)'}

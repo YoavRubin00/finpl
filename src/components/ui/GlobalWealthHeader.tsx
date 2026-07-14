@@ -656,7 +656,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
 // Layer names in Hebrew for the popup
 // ---------------------------------------------------------------------------
 const LAYER_NAMES_HE: Record<number, string> = {
-  1: "שרידות ושליטה",
+  1: "הישרדות ושליטה",
   2: "ביטחון והגנה",
   3: "יציבות והרגלים",
   4: "צמיחה",

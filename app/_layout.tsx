@@ -5,6 +5,14 @@ import { initSentry } from "../src/lib/sentry";
 import { initPostHog, getPostHogClient, captureScreen, captureLaunchAttribution } from "../src/lib/posthog";
 import { PostHogProvider } from "posthog-react-native";
 import { I18nManager } from "react-native";
+import { enableFreeze } from "react-native-screens";
+
+// PERF (user review 14.7: "תגובה איטית בניווט"): freeze screens that are not
+// on top of the stack. Biggest win — during a lesson, every XP/coin store
+// write used to re-render the whole learn map sitting beneath it. All the
+// always-on hooks (push scheduler, streak tick, tomorrow-chest host) live in
+// THIS root layout, outside any freezable screen, so they are unaffected.
+enableFreeze(true);
 
 // Undo forceRTL that was set by build 30, it caused layout crashes
 // because the app uses manual row-reverse throughout. This explicitly

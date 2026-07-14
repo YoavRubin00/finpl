@@ -14,46 +14,46 @@ import { BASIC_LIMITS, PRO_LIMITS, type GatedFeature } from "./subscriptionConst
 const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
   simulator: {
     title: "הסימולטור, PRO בלבד",
-    body: `משתמשי FREE מקבלים ${BASIC_LIMITS.simulator} הרצות יומיות.\nשדרג ל-PRO לגישה בלתי מוגבלת לכל הסימולציות.`,
+    body: `משתמשי FREE מקבלים ${BASIC_LIMITS.simulator} הרצות יומיות.\nשדרגו ל-PRO לגישה בלתי מוגבלת לכל הסימולציות.`,
   },
   arena: {
     title: "משחקי פיד, PRO בלבד",
-    body: `משתמשי FREE מקבלים ${BASIC_LIMITS.arena} משחקים ברצף.\nשדרג ל-PRO למשחקי פיד בלתי מוגבלים + פרסים מוגדלים.`,
+    body: `משתמשי FREE מקבלים ${BASIC_LIMITS.arena} משחקים ברצף.\nשדרגו ל-PRO למשחקי פיד בלתי מוגבלים + פרסים מוגדלים.`,
   },
   chat: {
-    title: "צ'אט AI, הגעת למכסה",
-    body: `משתמשי FREE מקבלים ${BASIC_LIMITS.chat} הודעות בצ'אט.\nשדרג ל-PRO לשיחות AI ללא הגבלה עם פינן.`,
+    title: "צ'אט AI, הגעתם למכסה",
+    body: `משתמשי FREE מקבלים ${BASIC_LIMITS.chat} הודעות בצ'אט.\nשדרגו ל-PRO לשיחות AI ללא הגבלה עם קפטן שארק.`,
   },
   aiInsights: {
-    title: "תובנות AI, הגעת למכסה החודשית",
+    title: "תובנות AI, הגעתם למכסה החודשית",
     body: `ב‑Free יש לכם ${BASIC_LIMITS.aiInsights} תובנה אמיתית בחודש.\nב‑PRO תובנות מותאמות אישית ללא הגבלה — חדשות כל שבוע.`,
   },
   saved_items: {
     title: "פריטים שמורים, PRO בלבד",
-    body: "שמירת שיעורים ותכנים לגישה מהירה זמינה לחברי PRO בלבד.\nשדרג כדי לשמור תכנים ללא הגבלה.",
+    body: "שמירת שיעורים ותכנים לגישה מהירה זמינה לחברי PRO בלבד.\nשדרגו כדי לשמור תכנים ללא הגבלה.",
   },
   "breaking-news": {
     title: "תיבת הבונוס של ה‑Pro",
-    body: "הצפת האקטואליה הפיננסית פתוחה לכולם. תיבת הבונוס היומית עם XP ומטבעות נוספים שמורה לחברי PRO.\nשדרג כדי לפתוח אותה כל יום.",
+    body: "הצפת האקטואליה הפיננסית פתוחה לכולם. תיבת הבונוס היומית עם XP ומטבעות נוספים שמורה לחברי PRO.\nשדרגו כדי לפתוח אותה כל יום.",
   },
   "shark-voice": {
     title: "שיחת קול עם קפטן שארק, PRO בלבד",
-    body: "ב‑Free יש לכם דקה אחת ניסיון. ב‑PRO מקבלים עד 10 דקות שיחה ביום עם קפטן שארק על כל דבר פיננסי.",
+    body: "ב‑Free יש לכם דקת ניסיון אחת. ב‑PRO מקבלים עד 10 דקות שיחה ביום עם קפטן שארק על כל דבר פיננסי.",
   },
   "analyst-quick": {
-    title: "אנליסט מניות מהיר, הגעת למכסה היומית",
+    title: "אנליסט מניות מהיר, הגעתם למכסה היומית",
     body: `ב‑Free מקבלים ${BASIC_LIMITS["analyst-quick"]} ניתוחים מהירים ביום.\nב‑PRO ניתוחים ללא הגבלה — כל מניה, כל שאלה.`,
   },
   "analyst-deep": {
-    title: "ניתוח עומק AI, הגעת למכסה השבועית",
+    title: "ניתוח עומק AI, הגעתם למכסה השבועית",
     body: `ב‑Free מקבלים ${BASIC_LIMITS["analyst-deep"]} ניתוח עומק בשבוע, כולל follow-up, מצגי תזרים ובדיקות שווי.\nב‑PRO מקבלים ${PRO_LIMITS["analyst-deep"]} בשבוע — פי 5.`,
   },
   payslip: {
-    title: "ניתוח תלוש שכר, הגעת למכסה החודשית",
+    title: "ניתוח תלוש שכר, הגעתם למכסה החודשית",
     body: `ב‑Free מקבלים ${BASIC_LIMITS.payslip} ניתוח תלוש בחודש.\nב‑PRO תוכלו לנתח תלוש בכל פעם שתרצו — כל חודש, כל בונוס, כל שינוי במשרה.`,
   },
   "lesson-report": {
-    title: "דוח סיכום שיעור, הגעת למכסה השבועית",
+    title: "דוח סיכום שיעור, הגעתם למכסה השבועית",
     body: `ב‑Free מקבלים ${BASIC_LIMITS["lesson-report"]} דוח סיכום שיעור בשבוע.\nב‑PRO מקבלים דוח הבנה איכותי אחרי כל שיעור — עם נקודות לשיפור ושיחה עם קפטן שארק על הדוח.`,
   },
 };
@@ -181,10 +181,10 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
             onPress={handleUpgrade}
             style={styles.cta}
             accessibilityRole="button"
-            accessibilityLabel="שדרג ל-PRO"
+            accessibilityLabel="שדרגו ל-PRO"
           >
             <View style={styles.ctaInner}>
-              <Text style={styles.ctaText} allowFontScaling={false}>שדרג ל-PRO</Text>
+              <Text style={styles.ctaText} allowFontScaling={false}>שדרגו ל-PRO</Text>
               <ChevronLeft size={18} color="#ffffff" />
             </View>
           </AnimatedPressable>

@@ -6,6 +6,7 @@
  * with FinPlay-specific legal guardrails and gen-Z educational framing layered on
  * top.
  */
+import { HEBREW_STYLE_RULES } from './hebrewStyle';
 
 const SHARK_PERSONALITY = `אתה קפטן שארק (פין) — מנטור ההשקעות החינוכי של אפליקציית FinPlay לבני דור Z בישראל.
 
@@ -48,7 +49,7 @@ export const STOCK_ANALYST_QUICK_PROMPT = `${SHARK_PERSONALITY}
 
 ${LEGAL_GUARDRAILS}
 
-החזר JSON שתואם לסכמה המסופקת. בלי טקסט נוסף סביב.`;
+החזר JSON שתואם לסכמה המסופקת. בלי טקסט נוסף סביב.${HEBREW_STYLE_RULES}`;
 
 const HORIZON_GUIDANCE: Record<StockHorizon, string> = {
   swing: 'טווח: סווינג טריידינג (ימים עד שבועות). תן משקל גבוה לסנטימנט, נפח, מומנטום וקטליסטים קצרי טווח. פונדמנטלים פחות חשובים.',
@@ -125,5 +126,5 @@ ${HORIZON_GUIDANCE[horizon]}
 
 ${LEGAL_GUARDRAILS}
 
-החזר JSON שתואם בדיוק לסכמה. וודא עקביות בין conviction, verdict, ranking וציוני המשנה.`;
+החזר JSON שתואם בדיוק לסכמה. וודא עקביות בין conviction, verdict, ranking וציוני המשנה.${HEBREW_STYLE_RULES}`;
 }
