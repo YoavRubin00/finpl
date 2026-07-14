@@ -1204,7 +1204,11 @@ const ChapterSection = React.memo(function ChapterSection({
 
   return (
     <Animated.View entering={FadeInDown.delay(sectionIndex * 80).duration(350)}>
-      <ArenaHeaderBanner arena={arena} sectionIndex={sectionIndex} isLocked={!isUnlocked} onPress={onChapterPress} onMindMap={onMindMap ? () => onMindMap(sectionIndex) : undefined} />
+      {/* Investments fast-track (Yoav 14.7): the locked צמיחה/השקעות banner IS
+          the unlock button — zero invest_fast_track_unlocked events since the
+          8.7 release proved the blue pill alone is missed ("אין לחצן שפותח את
+          ההשקעות"). Tapping the banner runs the same free unlock as the pill. */}
+      <ArenaHeaderBanner arena={arena} sectionIndex={sectionIndex} isLocked={!isUnlocked} onPress={sectionIndex === 4 && !isUnlocked && onJumpHere ? () => onJumpHere(chapter, sectionIndex) : onChapterPress} onMindMap={onMindMap ? () => onMindMap(sectionIndex) : undefined} />
 
       {sectionIndex === 0 && completedModules.length < chapter.modules.length && !completedModules.some((id) => id.startsWith('mod-1-')) && onSkipIntro && (
         <AnimatedPressable
@@ -1266,7 +1270,7 @@ const ChapterSection = React.memo(function ChapterSection({
           accessibilityLabel={sectionIndex === 4 ? 'רוצים ללמוד ישר השקעות? פתיחת פרק ההשקעות' : `נתחיל מפה? קפיצה לפרק ${sectionIndex}`}
         >
           <Text style={{ fontFamily: 'Heebo_700Bold', color: '#ffffff', fontSize: 13 }}>
-            {sectionIndex === 4 ? 'רוצים ללמוד ישר השקעות?' : 'נתחיל מפה?'}
+            {sectionIndex === 4 ? 'רוצים ללמוד ישר השקעות? פתיחה בחינם' : 'נתחיל מפה?'}
           </Text>
           <FastForward size={14} color="#ffffff" />
         </AnimatedPressable>
