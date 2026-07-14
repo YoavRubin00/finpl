@@ -72,6 +72,41 @@ function daysBetween(dateA: string, dateB: string): number {
 }
 
 /**
+ * Fold the SERVER's streak calendar into the local one before any gap math
+ * (Yoav 14.7: "קפטן שארק הציל לך את הרצף" fired mid-unbroken-run). The header
+ * streak counts every app-open day (daily tick + /api/users/ping), while this
+ * local calendar only records activity days — so a browse-only yesterday read
+ * here as a 2-day gap and burned a freeze for nothing. The server's
+ * lastActiveDate (mirrored into the React Query cache) is the missing day.
+ */
+function reconcileWithServerCalendar(
+  activeDates: string[],
+  localLast: string | null,
+  today: string,
+): { dates: string[]; last: string | null } {
+  let dates = activeDates;
+  let last = localLast;
+  try {
+    const server = queryClient.getQueryData<StreakState | null>(STREAK_QUERY_KEY);
+    const serverLast = server?.lastActiveDate ?? null;
+    if (serverLast && /^\d{4}-\d{2}-\d{2}$/.test(serverLast)) {
+      if (serverLast < today) {
+        // A server-counted day before today plugs the hole directly.
+        if (!dates.includes(serverLast)) dates = trimDates([...dates, serverLast]);
+        if (!last || serverLast > last) last = serverLast;
+      } else if (serverLast === today && (server?.currentStreak ?? 0) >= 2) {
+        // Server already counted today with a live streak → yesterday was
+        // active too, even though the local calendar never saw it.
+        const yest = yesterdayISO();
+        if (!dates.includes(yest)) dates = trimDates([...dates, yest]);
+        if (!last || yest > last) last = yest;
+      }
+    }
+  } catch { /* non-fatal — fall back to the local calendar alone */ }
+  return { dates, last };
+}
+
+/**
  * Walks back day-by-day from today (or yesterday, if today isn't yet marked)
  * over the union of activeDates + frozenDates, counting consecutive days. This
  * is the local "source of truth" for current streak — used by completeDailyTask
@@ -416,15 +451,18 @@ export const useEconomyUIStore = create<EconomyUIState>()(
 
       completeDailyTask: () => {
         const { lastDailyTaskDate, streakFreezes, activeDates, frozenDates, weeklyShieldUntil, monthlyShieldUntil } = get();
-        // Local activeDates is the source of truth for the UI streak.
-        const derivedStreak = deriveStreakFromDates(activeDates, frozenDates);
-
         const today = todayISO();
         if (lastDailyTaskDate === today) return;
 
-        const isConsecutiveDay = lastDailyTaskDate === yesterdayISO();
-        const gap = lastDailyTaskDate ? daysBetween(lastDailyTaskDate, today) : 999;
-        const bridge = isShabbatBridge(lastDailyTaskDate, today); // Shabbat auto-counts
+        // Local activeDates + the server's calendar are the source of truth
+        // for the UI streak — the server also counts open-only days this
+        // calendar never sees (Yoav 14.7 false freeze-save).
+        const { dates: calDates, last: lastSeen } = reconcileWithServerCalendar(activeDates, lastDailyTaskDate, today);
+        const derivedStreak = deriveStreakFromDates(calDates, frozenDates);
+
+        const isConsecutiveDay = lastSeen === yesterdayISO();
+        const gap = lastSeen ? daysBetween(lastSeen, today) : 999;
+        const bridge = isShabbatBridge(lastSeen, today); // Shabbat auto-counts
         const canFreeze = !bridge && gap === 2 && streakFreezes > 0;
         const now = Date.now();
         const weeklyShieldActive = weeklyShieldUntil != null && weeklyShieldUntil > now;
@@ -454,7 +492,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         if (newStreak > 0 && newStreak % 30 === 0) milestoneBonus = STREAK_30_BONUS_XP;
         const grantFreeze = newStreak === 7;
 
-        const updatedActiveDates = trimDates([...activeDates, today]);
+        const updatedActiveDates = trimDates([...calDates, today]);
         const updatedFrozenDates = freezeConsumed
           ? trimDates([...frozenDates, yesterdayISO()])
           : trimDates(frozenDates);
@@ -527,13 +565,15 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         const today = todayISO();
         if (lastLoginBonusDate === today) return;
 
-        // Reuse the shared helper so the date math here can't drift away
+        // Reuse the shared helpers so the date math here can't drift away
         // from completeDailyTask / onRehydrateStorage (the inline copy
         // that used to live here had the same IL-vs-UTC walk bug fixed
-        // in deriveStreakFromDates).
-        const derivedStreak = deriveStreakFromDates(activeDates, frozenDates);
+        // in deriveStreakFromDates). Server-calendar reconcile included —
+        // same false-freeze protection as completeDailyTask (Yoav 14.7).
+        const localLast = lastDailyTaskDate ?? lastLoginBonusDate;
+        const { dates: calDates, last: lastActive } = reconcileWithServerCalendar(activeDates, localLast, today);
+        const derivedStreak = deriveStreakFromDates(calDates, frozenDates);
 
-        const lastActive = lastDailyTaskDate ?? lastLoginBonusDate;
         const isConsecutiveDay = lastActive === yesterdayISO();
         const gap = lastActive ? daysBetween(lastActive, today) : 999;
         const bridge = isShabbatBridge(lastActive, today); // Shabbat auto-counts
@@ -563,7 +603,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         }
 
         const grantFreeze = newStreak === 7 && derivedStreak !== 7;
-        const updatedActiveDates = trimDates([...activeDates, today]);
+        const updatedActiveDates = trimDates([...calDates, today]);
         const updatedFrozenDates = freezeConsumed
           ? trimDates([...frozenDates, yesterdayISO()])
           : trimDates(frozenDates);
