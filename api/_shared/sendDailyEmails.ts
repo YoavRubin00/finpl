@@ -82,6 +82,17 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
   const weekNumber = getWeekNumber(now);
 
   const todayDate = now.toISOString().slice(0, 10);
+  // Re-engagement threshold: last active TWO+ days ago — the user missed at
+  // least one FULL day. The old `<= yesterday` filter flagged everyone who
+  // played yesterday but hadn't opened the app by the 09:00-IL cron as
+  // "inactive" (Yoav 15.7: got "לא הצטרפת ללמידה" the morning after an
+  // evening session).
+  const twoDaysAgo = new Date(now);
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  const inactiveCutoffDate = twoDaysAgo.toISOString().slice(0, 10);
+  // Still needed for the D1 path: users who SIGNED UP yesterday get the
+  // day-2 appointment email this morning even though they were active
+  // yesterday — that's an invitation, not a churn nudge.
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayDate = yesterday.toISOString().slice(0, 10);
@@ -94,7 +105,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
   // Fetch users who:
   //   1. Have an email address
   //   2. Haven't opted out
-  //   3. Were last active on or before yesterday (i.e. NOT active today)
+  //   3. Missed at least one full day (last active two+ days ago)
   //   4. Have played at least once (lastActiveDate is set)
   //   5. Haven't received an email in the last EMAIL_COOLDOWN_DAYS days
   const users = await db
@@ -113,7 +124,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         isNotNull(userProfiles.email),
         eq(userProfiles.dailyEmailEnabled, true),
         isNotNull(userProfiles.lastActiveDate),
-        sql`${userProfiles.lastActiveDate} <= ${yesterdayDate}`,
+        sql`(${userProfiles.lastActiveDate} <= ${inactiveCutoffDate} OR (left(${userProfiles.createdAt}, 10) = ${yesterdayDate} AND ${userProfiles.lastActiveDate} <= ${yesterdayDate}))`,
         sql`(${userProfiles.dailyEmailSentAt} IS NULL OR ${userProfiles.dailyEmailSentAt} < ${cooldownCutoffIso})`,
       ),
     );
@@ -296,7 +307,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
     failed,
     total: users.length,
     date: todayDate,
-    targeting: `inactive since ${yesterdayDate}, cooldown=${EMAIL_COOLDOWN_DAYS}d`,
+    targeting: `inactive since ${inactiveCutoffDate} (D1 signups: ${yesterdayDate}), cooldown=${EMAIL_COOLDOWN_DAYS}d`,
   };
 }
 
