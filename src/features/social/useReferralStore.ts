@@ -115,7 +115,17 @@ export const useReferralStore = create<ReferralState>()(
         for (let attempt = 0; attempt < 3; attempt++) {
           const result = await registerReferralCode(authId, get().referralCode);
           if (result.ok) {
-            set({ isRegisteredOnServer: true });
+            // Adopt the server's CANONICAL code when it differs from ours.
+            // The guarded UPDATE keeps whatever is already in the DB, so a
+            // device holding a stale local code (e.g. restored persist after
+            // the DB was seeded with another code) was rendering a QR that
+            // resolves to CODE_NOT_FOUND forever ("dead code"). Aligning to
+            // the returned value self-heals the QR on the next open.
+            if (result.canonicalCode && result.canonicalCode !== get().referralCode) {
+              set({ referralCode: result.canonicalCode, isRegisteredOnServer: true });
+            } else {
+              set({ isRegisteredOnServer: true });
+            }
             return;
           }
           if (result.reason !== 'collision') {
@@ -148,6 +158,13 @@ export const useReferralStore = create<ReferralState>()(
             } catch { /* non-fatal — user will see them on next refresh sync */ }
           }
           const friends = snapshot.friends.map(mapServerFriend);
+          // Adoption fallback: /me returns the code registered in the DB. If
+          // it differs from the local one, the DB value wins (same self-heal
+          // as registerCodeWithServer — covers devices that never re-register).
+          const serverCode = snapshot.referralCode;
+          const adoptCode = serverCode !== null && serverCode !== get().referralCode
+            ? { referralCode: serverCode, isRegisteredOnServer: true }
+            : {};
           set({
             referredFriends: friends,
             dividendAvailable: snapshot.dividendAvailable,
@@ -155,6 +172,7 @@ export const useReferralStore = create<ReferralState>()(
             totalYesterdayLearningCoins: snapshot.totalYesterdayLearningCoins,
             lastSyncedAt: Date.now(),
             isLoading: false,
+            ...adoptCode,
           });
         } catch {
           set({ isLoading: false });

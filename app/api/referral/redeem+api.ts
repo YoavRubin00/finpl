@@ -4,6 +4,8 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString } from '../_shared/validate';
+import { json } from '../_shared/json';
+import { capturePostHog } from '../../../api/_shared/posthogCapture';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -55,10 +57,10 @@ export async function POST(request: Request): Promise<Response> {
     const refereeAuthId = sanitizeString(body.refereeAuthId, 128);
 
     if (!inviteCode || !CODE_PATTERN.test(inviteCode)) {
-      return Response.json({ error: 'Invalid invite code' }, { status: 400 });
+      return json({ error: 'Invalid invite code' }, { status: 400 });
     }
     if (!refereeAuthId) {
-      return Response.json({ error: 'Missing refereeAuthId' }, { status: 400 });
+      return json({ error: 'Missing refereeAuthId' }, { status: 400 });
     }
 
     const db = getDb();
@@ -73,7 +75,14 @@ export async function POST(request: Request): Promise<Response> {
     const referrerUserId = referrerRow?.id;
     const referrerAuthId = referrerRow?.auth_id;
     if (!referrerUserId || !referrerAuthId) {
-      return Response.json({ error: 'Unknown invite code', code: 'CODE_NOT_FOUND' }, { status: 404 });
+      // distinct_id fallback: the referee's uuid isn't resolved yet on this
+      // path, so we capture against their auth_id (marked via distinct_kind).
+      await capturePostHog('referral_redeem_server', refereeAuthId, {
+        result: 'code_not_found',
+        invite_code: inviteCode,
+        distinct_kind: 'auth_id',
+      });
+      return json({ error: 'Unknown invite code', code: 'CODE_NOT_FOUND' }, { status: 404 });
     }
 
     // Resolve the referee's uuid from their auth_id (they're a registered user).
@@ -83,11 +92,19 @@ export async function POST(request: Request): Promise<Response> {
     const refereeUserId = ((refereeLookup as unknown as { rows?: { id: string }[] }).rows
       ?? (refereeLookup as unknown as { id: string }[]))[0]?.id;
     if (!refereeUserId) {
-      // eslint-disable-next-line -- undici Response vs global Response (baseline pattern)
-      return Response.json({ error: 'Referee not registered', code: 'REFEREE_NOT_FOUND' }, { status: 400 }) as unknown as Response;
+      await capturePostHog('referral_redeem_server', refereeAuthId, {
+        result: 'referee_not_found',
+        invite_code: inviteCode,
+        distinct_kind: 'auth_id',
+      });
+      return json({ error: 'Referee not registered', code: 'REFEREE_NOT_FOUND' }, { status: 400 });
     }
     if (referrerUserId === refereeUserId) {
-      return Response.json({ error: 'Cannot self-refer', code: 'SELF_REFERRAL' }, { status: 400 });
+      await capturePostHog('referral_redeem_server', refereeUserId, {
+        result: 'self_referral',
+        invite_code: inviteCode,
+      });
+      return json({ error: 'Cannot self-refer', code: 'SELF_REFERRAL' }, { status: 400 });
     }
 
     // 2. Atomic insert + bonuses. The PK on referee_auth_id is the dedupe gate —
@@ -114,7 +131,11 @@ export async function POST(request: Request): Promise<Response> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.toLowerCase().includes('unique') || msg.toLowerCase().includes('duplicate')) {
-        return Response.json(
+        await capturePostHog('referral_redeem_server', refereeUserId, {
+          result: 'already_redeemed',
+          invite_code: inviteCode,
+        });
+        return json(
           { error: 'Already redeemed an invite code', code: 'ALREADY_REDEEMED' },
           { status: 409 },
         );
@@ -140,12 +161,19 @@ export async function POST(request: Request): Promise<Response> {
       `);
     } catch { /* non-fatal — bonuses already granted; friendship can be added manually */ }
 
+    await capturePostHog('referral_redeem_server', refereeUserId, {
+      result: 'success',
+      invite_code: inviteCode,
+      referrer_user_id: referrerUserId,
+      bonus_granted: SIGNUP_BONUS_COINS,
+    });
+
     const body_out: RedeemSuccess = {
       ok: true,
       referrerAuthId,
       bonusGranted: SIGNUP_BONUS_COINS,
     };
-    return Response.json(body_out);
+    return json(body_out);
   } catch (err: unknown) {
     return safeErrorResponse(err, 'referral/redeem POST');
   }

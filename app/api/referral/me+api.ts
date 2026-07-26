@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString } from '../_shared/validate';
+import { json } from '../_shared/json';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -34,6 +35,11 @@ interface MeResponse {
    *  credited to local balance. Server atomically flips the flag in the same
    *  call — client MUST call addCoins(pendingSignupBonus) immediately. */
   pendingSignupBonus: number;
+  /** The user's CANONICAL invite code as registered in the DB (null if none
+   *  registered yet). Adoption fallback for stale local codes — the client
+   *  must adopt this when it differs from its locally-stored code, otherwise
+   *  it keeps rendering a QR the server can't resolve. */
+  referralCode: string | null;
 }
 
 /**
@@ -57,7 +63,7 @@ export async function GET(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const authId = sanitizeString(url.searchParams.get('authId'), 128);
     if (!authId) {
-      return Response.json({ error: 'Missing authId' }, { status: 400 });
+      return json({ error: 'Missing authId' }, { status: 400 });
     }
 
     const db = getDb();
@@ -66,11 +72,12 @@ export async function GET(request: Request): Promise<Response> {
     // (uuid FK), NOT auth_id, since the identity rekey (migration 0004). The
     // old *_auth_id column references errored ("column does not exist") → 500.
     const meRows = await db.execute(sql`
-      SELECT id FROM user_profiles WHERE auth_id = ${authId} LIMIT 1
+      SELECT id, referral_code FROM user_profiles WHERE auth_id = ${authId} LIMIT 1
     `);
-    const meRow = ((meRows as unknown as { rows?: { id: string }[] }).rows
-      ?? (meRows as unknown as { id: string }[]))[0];
+    const meRow = ((meRows as unknown as { rows?: { id: string; referral_code: string | null }[] }).rows
+      ?? (meRows as unknown as { id: string; referral_code: string | null }[]))[0];
     const callerUserId = meRow?.id;
+    const registeredReferralCode = meRow?.referral_code ?? null;
     if (!callerUserId) {
       const empty: MeResponse = {
         ok: true,
@@ -80,9 +87,9 @@ export async function GET(request: Request): Promise<Response> {
         alreadyCollectedToday: false,
         todayDateUTC: new Date().toISOString().slice(0, 10),
         pendingSignupBonus: 0,
+        referralCode: null,
       };
-      // eslint-disable-next-line -- undici Response vs global Response (baseline pattern)
-      return Response.json(empty) as unknown as Response;
+      return json(empty);
     }
 
     // Fetch each referred friend + sum of their yesterday learning coins, joined
@@ -180,8 +187,9 @@ export async function GET(request: Request): Promise<Response> {
       alreadyCollectedToday,
       todayDateUTC,
       pendingSignupBonus,
+      referralCode: registeredReferralCode,
     };
-    return Response.json(responseBody);
+    return json(responseBody);
   } catch (err: unknown) {
     return safeErrorResponse(err, 'referral/me GET');
   }

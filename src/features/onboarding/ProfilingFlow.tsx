@@ -50,7 +50,7 @@ import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
 import { captureEvent } from "../../lib/posthog";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PENDING_REFERRAL_STORAGE_KEY } from '../social/InviteRedemptionScreen';
+import { PENDING_REFERRAL_STORAGE_KEY, PENDING_REFERRAL_ATTEMPTS_STORAGE_KEY } from '../social/InviteRedemptionScreen';
 import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
 import { FREE_AVATARS } from "../avatars/avatarData";
 import type { AvatarDefinition } from "../avatars/avatarData";
@@ -666,6 +666,12 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     const trimmed = inviteCode.trim().toUpperCase();
     if (!/^[A-Z0-9-]{4,12}$/.test(trimmed)) return;
     await AsyncStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, trimmed);
+    // Fresh code → fresh retry budget for the _layout pending-redemption hook.
+    try { await AsyncStorage.removeItem(PENDING_REFERRAL_ATTEMPTS_STORAGE_KEY); } catch { /* non-fatal */ }
+    // The actual redeem is deferred to the post-signup hook in _layout.tsx
+    // (it emits referral_redeem_succeeded/failed with source 'pending_hook');
+    // here we only record that a manual code entered the pipeline.
+    try { captureEvent('referral_redeem_attempted', { source: 'profiling_manual', invite_code: trimmed, deferred: true }); } catch { /* non-fatal */ }
     setCodeSaved(true);
   };
 

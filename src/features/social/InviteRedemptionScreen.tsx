@@ -28,8 +28,12 @@ import { redeemReferralCode } from '../../db/sync/syncReferral';
 import { REFERRAL_SIGNUP_BONUS_COINS } from './referralConstants';
 import { SignupBonusHeadline } from './SignupBonusHeadline';
 import { successHaptic, heavyHaptic } from '../../utils/haptics';
+import { captureEvent } from '../../lib/posthog';
 
 const PENDING_REFERRAL_KEY = 'pending_referral_code_v1';
+/** Retry counter for the _layout pending-redemption hook. Reset whenever a
+ *  fresh code is saved so a new invite gets a full retry budget. */
+const PENDING_REFERRAL_ATTEMPTS_KEY = 'pending_referral_attempts_v1';
 const CODE_PATTERN = /^[A-Z0-9-]{4,12}$/;
 
 export function InviteRedemptionScreen() {
@@ -61,45 +65,49 @@ export function InviteRedemptionScreen() {
     }
 
     (async () => {
-      // 1. Always save the pending code locally first, so post-signup hook can pick it up.
+      // 1. Always save the pending code locally first, so post-signup hook can
+      //    pick it up. A fresh code also resets the hook's retry counter.
       try {
         await AsyncStorage.setItem(PENDING_REFERRAL_KEY, code);
+        await AsyncStorage.removeItem(PENDING_REFERRAL_ATTEMPTS_KEY);
       } catch { /* non-fatal */ }
 
       // 2. If user is already onboarded, attempt immediate redeem.
       if (isAuthenticated && hasCompletedOnboarding && email) {
-        try {
-          const result = await redeemReferralCode(code, email);
-          if (result) {
-            // Server granted 500 to both. Reflect locally for instant UX.
-            try { addCoins(result.bonusGranted); } catch { /* non-fatal */ }
-            // Clear pending marker — already redeemed.
-            try { await AsyncStorage.removeItem(PENDING_REFERRAL_KEY); } catch { /* ignore */ }
-            successHaptic();
-            setBonus(result.bonusGranted);
-            setStatus('redeemed');
-            setTimeout(() => {
-              try { router.replace('/(tabs)' as never); } catch { /* ignore */ }
-            }, 2200);
-            return;
-          }
-          // Server rejected (already redeemed / unknown / self-referral).
-          setStatus('already');
-          try { await AsyncStorage.removeItem(PENDING_REFERRAL_KEY); } catch { /* ignore */ }
+        try { captureEvent('referral_redeem_attempted', { source: 'invite_link_screen', invite_code: code }); } catch { /* non-fatal */ }
+        const result = await redeemReferralCode(code, email);
+        if (result.ok) {
+          // Server granted 500 to both. Reflect locally for instant UX.
+          try { addCoins(result.bonusGranted); } catch { /* non-fatal */ }
+          // Clear pending marker — already redeemed.
+          try { await AsyncStorage.multiRemove([PENDING_REFERRAL_KEY, PENDING_REFERRAL_ATTEMPTS_KEY]); } catch { /* ignore */ }
+          try { captureEvent('referral_redeem_succeeded', { source: 'invite_link_screen', invite_code: code, bonus_granted: result.bonusGranted }); } catch { /* non-fatal */ }
+          successHaptic();
+          setBonus(result.bonusGranted);
+          setStatus('redeemed');
           setTimeout(() => {
             try { router.replace('/(tabs)' as never); } catch { /* ignore */ }
-          }, 1800);
+          }, 2200);
           return;
-        } catch {
-          // Network/server threw — never strand the user on an infinite
-          // spinner. The code is already saved (step 1), so the next-launch
-          // hook will redeem it; show the honest "saved" state and move on.
-          setStatus('saved');
+        }
+        try { captureEvent('referral_redeem_failed', { source: 'invite_link_screen', invite_code: code, reason: result.reason, final: result.final }); } catch { /* non-fatal */ }
+        if (result.final) {
+          // Permanent rejection (already redeemed / unknown code / self-referral).
+          setStatus('already');
+          try { await AsyncStorage.multiRemove([PENDING_REFERRAL_KEY, PENDING_REFERRAL_ATTEMPTS_KEY]); } catch { /* ignore */ }
           setTimeout(() => {
             try { router.replace('/(tabs)' as never); } catch { /* ignore */ }
           }, 1800);
           return;
         }
+        // Transient failure (network / 5xx / signup race) — never strand the
+        // user on an infinite spinner. The code is already saved (step 1), so
+        // the next-launch hook retries; show the honest "saved" state and move on.
+        setStatus('saved');
+        setTimeout(() => {
+          try { router.replace('/(tabs)' as never); } catch { /* ignore */ }
+        }, 1800);
+        return;
       }
 
       // 3. Not yet onboarded. The post-signup hook will redeem after signup.
@@ -196,3 +204,5 @@ const styles = StyleSheet.create({
 
 /** AsyncStorage key — exported so `_layout.tsx` post-signup hook can read it. */
 export const PENDING_REFERRAL_STORAGE_KEY = PENDING_REFERRAL_KEY;
+/** Retry-counter key — exported for the `_layout.tsx` hook + ProfilingFlow. */
+export const PENDING_REFERRAL_ATTEMPTS_STORAGE_KEY = PENDING_REFERRAL_ATTEMPTS_KEY;

@@ -2,7 +2,7 @@ import "../global.css";
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../src/lib/queryClient';
 import { initSentry } from "../src/lib/sentry";
-import { initPostHog, getPostHogClient, captureScreen, captureLaunchAttribution } from "../src/lib/posthog";
+import { initPostHog, getPostHogClient, captureScreen, captureEvent, captureLaunchAttribution } from "../src/lib/posthog";
 import { PostHogProvider } from "posthog-react-native";
 import { I18nManager } from "react-native";
 import { enableFreeze } from "react-native-screens";
@@ -563,8 +563,11 @@ function RootLayoutInner() {
   // ── Post-signup referral redemption ──
   // If a deep link from finplay.me/invite/[code] saved a code in AsyncStorage
   // BEFORE the user signed up, redeem it now that they're authenticated +
-  // onboarded. Single attempt — clears the pending key on success or
-  // failure so we don't loop.
+  // onboarded. The pending key is cleared ONLY on a FINAL outcome (success /
+  // ALREADY_REDEEMED / SELF_REFERRAL / CODE_NOT_FOUND / invalid) — a transient
+  // failure (network, 5xx, or the REFEREE_NOT_FOUND race against user-row
+  // creation) keeps the key so the next launch retries, capped by an attempt
+  // counter so a permanently-stuck code doesn't retry forever.
   useEffect(() => {
     if (!userEmail || !hasCompletedOnboarding) return;
     let cancelled = false;
@@ -584,15 +587,37 @@ function RootLayoutInner() {
           const { useReferralStore } = await import('../src/features/social/useReferralStore');
           void useReferralStore.getState().registerCodeWithServer(userEmail);
         } catch { /* non-fatal */ }
-        const pending = await AsyncStorage.getItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
+        const PENDING_KEY = screenMod.PENDING_REFERRAL_STORAGE_KEY;
+        const ATTEMPTS_KEY = screenMod.PENDING_REFERRAL_ATTEMPTS_STORAGE_KEY;
+        const MAX_ATTEMPTS = 5;
+        const pending = await AsyncStorage.getItem(PENDING_KEY);
         if (!pending) return;
-        const result = await syncRef.redeemReferralCode(pending, userEmail);
-        await AsyncStorage.removeItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
-        if (cancelled) return;
-        if (result) {
-          try { useEconomyUIStore.getState().addCoins(result.bonusGranted, 'referral-signup-bonus'); } catch { /* non-fatal */ }
+        const attempts = Number(await AsyncStorage.getItem(ATTEMPTS_KEY)) || 0;
+        if (attempts >= MAX_ATTEMPTS) {
+          // Transient failures never resolved across MAX_ATTEMPTS launches —
+          // give up so we don't hit the server on every open forever.
+          await AsyncStorage.multiRemove([PENDING_KEY, ATTEMPTS_KEY]);
+          try { captureEvent('referral_redeem_failed', { source: 'pending_hook', reason: 'MAX_ATTEMPTS', invite_code: pending, attempt: attempts }); } catch { /* non-fatal */ }
+          return;
         }
-      } catch { /* non-fatal — deep link redeem will be retried next launch if user re-enters via link */ }
+        try { captureEvent('referral_redeem_attempted', { source: 'pending_hook', invite_code: pending, attempt: attempts + 1 }); } catch { /* non-fatal */ }
+        const result = await syncRef.redeemReferralCode(pending, userEmail);
+        if (result.ok) {
+          await AsyncStorage.multiRemove([PENDING_KEY, ATTEMPTS_KEY]);
+          try { captureEvent('referral_redeem_succeeded', { source: 'pending_hook', invite_code: pending, bonus_granted: result.bonusGranted }); } catch { /* non-fatal */ }
+          if (!cancelled) {
+            try { useEconomyUIStore.getState().addCoins(result.bonusGranted, 'referral-signup-bonus'); } catch { /* non-fatal */ }
+          }
+        } else if (result.final) {
+          // Permanent rejection — retrying can never succeed. Clear and stop.
+          await AsyncStorage.multiRemove([PENDING_KEY, ATTEMPTS_KEY]);
+          try { captureEvent('referral_redeem_failed', { source: 'pending_hook', reason: result.reason, final: true, invite_code: pending }); } catch { /* non-fatal */ }
+        } else {
+          // Transient — keep the pending code, bump the counter, retry next launch.
+          await AsyncStorage.setItem(ATTEMPTS_KEY, String(attempts + 1));
+          try { captureEvent('referral_redeem_failed', { source: 'pending_hook', reason: result.reason, final: false, invite_code: pending, attempt: attempts + 1 }); } catch { /* non-fatal */ }
+        }
+      } catch { /* non-fatal — pending key survives, redeem retries next launch */ }
     })();
     return () => { cancelled = true; };
   }, [userEmail, hasCompletedOnboarding]);
