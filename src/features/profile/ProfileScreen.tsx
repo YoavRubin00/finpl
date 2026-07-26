@@ -134,6 +134,7 @@ export function ProfileScreen() {
   const coins = economyData?.coins ?? 0;
   const streak = streakData?.currentStreak ?? 0;
   const displayName = useAuthStore((s) => s.displayName);
+  const accountEmail = useAuthStore((s) => s.email);
   const profile = useAuthStore((s) => s.profile);
   const isPro = useIsPro();
   const isMinor = profile?.ageGroup === "minor";
@@ -332,6 +333,23 @@ export function ProfileScreen() {
               </Pressable>
               <HeartsDisplay />
             </View>
+            {/* Account email — the user's repeated complaint (19.7.26): "לא
+                רואים עם איזה מייל נרשמתי". The email has always lived in
+                useAuthStore (set by signInWithProfile/bootFromToken from the
+                server profile row) but was never rendered anywhere in the app.
+                Display-only. Hidden when null (guest, or an Apple sign-in that
+                never shared an email) — an empty row would just be noise. */}
+            {!isGuestUser && !!accountEmail && (
+              <Text
+                style={[styles.accountEmail, { color: theme.textMuted }]}
+                numberOfLines={1}
+                ellipsizeMode="middle"
+                allowFontScaling={false}
+                accessibilityLabel={`מחוברים עם ${accountEmail}`}
+              >
+                מחוברים עם {accountEmail}
+              </Text>
+            )}
           </Animated.View>
 
           {/* Streak strip, compact, tap to show celebration */}
@@ -966,6 +984,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginTop: 8,
+  },
+  // Account email line under the identity row (display-only, muted).
+  accountEmail: {
+    marginTop: 8,
+    fontSize: 12.5,
+    fontWeight: "600",
+    writingDirection: "rtl",
+    textAlign: "center",
+    maxWidth: "92%",
+    zIndex: 1,
   },
   levelPill: {
     flexDirection: "row",

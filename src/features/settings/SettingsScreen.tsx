@@ -122,6 +122,7 @@ export function SettingsScreen() {
 
   // Auth store
   const displayName = useAuthStore((s) => s.displayName);
+  const accountEmail = useAuthStore((s) => s.email);
   const profile = useAuthStore((s) => s.profile);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
@@ -722,8 +723,24 @@ export function SettingsScreen() {
           <Animated.View entering={FadeInUp.delay(400).duration(400)}>
             <GlowCard chapterGlow={STITCH_BLUE.glow} style={styles.cardGlow} pressable={false}>
               <View style={styles.cardInner}>
+                {/* Registered email — display-only identity row. Hidden when
+                    there's no email on the account (guest / Apple sign-in that
+                    withheld the address). The `right` spacer suppresses the
+                    chevron so the row doesn't read as pressable. */}
+                {!!accountEmail && (
+                  <>
+                    <SettingsRow
+                      isFirst
+                      icon={<Text style={{ fontSize: 20 }}>✉️</Text>}
+                      label="מחוברים עם"
+                      subtitle={accountEmail}
+                      right={<View style={{ width: 20 }} />}
+                    />
+                    <Divider />
+                  </>
+                )}
                 <SettingsRow
-                  isFirst
+                  isFirst={!accountEmail}
                   icon={
                     <LottieView
                       source={require("../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json")}
