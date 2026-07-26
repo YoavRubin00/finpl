@@ -909,10 +909,38 @@ function RootLayoutInner() {
           </EnergyAnimationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>
-      {splashVisible && <AppIntroSplash onDismiss={() => setSplashVisible(false)} />}
+      {splashVisible && (
+        // The splash renders a native expo-video (<VideoView>). On a fresh iOS
+        // first-open the OTA-delivered mp4 can lose the asset-resolve race and
+        // throw in render — and since this sits OUTSIDE the main
+        // GlobalErrorBoundary above (and prod swallows fatal errors), that throw
+        // unmounted the tree into a frozen dark screen: the iOS first-open freeze
+        // Yoav caught 2026-07-16 (recovered only after a force-quit → 2nd-launch
+        // cache hit). Its own boundary now catches that and just dismisses the
+        // splash, so the user drops straight to welcome. Video is cosmetic —
+        // never let it block the first session.
+        <GlobalErrorBoundary
+          fallback={() => (
+            <SplashDismissOnMount onDismiss={() => setSplashVisible(false)} />
+          )}
+        >
+          <AppIntroSplash onDismiss={() => setSplashVisible(false)} />
+        </GlobalErrorBoundary>
+      )}
       </KeyboardProvider>
     </GestureHandlerRootView>
   );
+}
+
+/** Failsafe rendered when the cold-start splash's native video throws in
+ *  render. Dismisses the splash on mount (one-shot — the whole subtree unmounts
+ *  once splashVisible flips false), dropping the user to the welcome screen
+ *  instead of a frozen dark screen. See the splash boundary in RootLayout. */
+function SplashDismissOnMount({ onDismiss }: { onDismiss: () => void }) {
+  useEffect(() => {
+    onDismiss();
+  }, [onDismiss]);
+  return null;
 }
 
 /**
