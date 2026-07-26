@@ -20,6 +20,10 @@ export const userProfiles = pgTable("user_profiles", {
 	welcomeEmailSent: boolean("welcome_email_sent").default(false),
 	tipEmailSent: boolean("tip_email_sent").default(false),
 	proExpiresAt: timestamp("pro_expires_at", { withTimezone: true, mode: 'string' }),
+	// How Pro was granted (0015, Yoav 2026-07-26): 'promotional' = manual RC
+	// promotional entitlement, 'store' = paid purchase. Set by the RC webhook,
+	// surfaced via /api/sync/subscription for the promo-grant modal + expiry banner.
+	proSource: text("pro_source"),
 	dailyEmailSentAt: timestamp("daily_email_sent_at", { withTimezone: true, mode: 'string' }),
 	dailyEmailEnabled: boolean("daily_email_enabled").default(true),
 	// Per-user retention-email counter (0014, Yoav 2026-07-09): drives the

@@ -141,11 +141,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       event.type === 'TRANSFER'
     ) {
       if (isProEvent) {
+        // Promo-grant visibility (Yoav 2026-07-26): record HOW Pro was granted.
+        // RC sends period_type 'PROMOTIONAL' for manual promotional
+        // entitlements; the client uses this (via /api/sync/subscription) to
+        // show the one-time "קיבלתם Pro במתנה" modal + the expiry banner.
+        const proSource = event.period_type === 'PROMOTIONAL' ? 'promotional' : 'store';
         await db
           .update(userProfiles)
-          .set({ isPro: true, proExpiresAt: expiresAt, updatedAt: new Date().toISOString() })
+          .set({ isPro: true, proExpiresAt: expiresAt, proSource, updatedAt: new Date().toISOString() })
           .where(matchClause);
-        console.log(`[RevenueCat Webhook] Granted PRO`);
+        console.log(`[RevenueCat Webhook] Granted PRO (${proSource})`);
 
         // Each RC type → a distinct PostHog event so the funnel can split
         // "trial converted to paid" (RENEWAL after a TRIAL) from "fresh

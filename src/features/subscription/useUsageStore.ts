@@ -72,6 +72,12 @@ interface UsageState {
   // One-time post-mod-0-1b paywall gate (shown once between mod-0-1b and mod-0-2).
   // Replaced the old post-walkthrough paywall (2026-06-11) — see LessonFlowScreen.
   hasSeenMod01bPaywall: boolean;
+  // Promo-grant visibility (Yoav 2026-07-26): the "קיבלתם Pro במתנה" modal is
+  // keyed by the grant's expiry (pro_expires_at, or 'no-expiry'), so the SAME
+  // grant never re-shows but a NEW promo grant (different expiry) shows again.
+  promoWelcomeSeenForExpiry: string | null;
+  // IL calendar-day the promo-expiry banner last showed — max once per day.
+  promoExpiryBannerLastShownDate: string | null;
 }
 
 interface UsageActions {
@@ -87,6 +93,10 @@ interface UsageActions {
   markProWelcomeSeen: () => void;
   markMod04PaywallSeen: () => void;
   markMod01bPaywallSeen: () => void;
+  /** Mark the promo-granted modal as seen for a specific grant (expiry key). */
+  markPromoWelcomeSeen: (expiryKey: string) => void;
+  /** Mark the promo-expiry banner as shown today (once-per-day cap). */
+  markPromoExpiryBannerShown: () => void;
   reset: () => void;
 }
 
@@ -105,6 +115,8 @@ const initialState: UsageState = {
   hasSeenProWelcome: false,
   hasSeenMod04Paywall: false,
   hasSeenMod01bPaywall: false,
+  promoWelcomeSeenForExpiry: null,
+  promoExpiryBannerLastShownDate: null,
 };
 
 export const useUsageStore = create<UsageState & UsageActions>()(
@@ -284,6 +296,14 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         set({ hasSeenMod01bPaywall: true });
       },
 
+      markPromoWelcomeSeen: (expiryKey: string) => {
+        set({ promoWelcomeSeenForExpiry: expiryKey });
+      },
+
+      markPromoExpiryBannerShown: () => {
+        set({ promoExpiryBannerLastShownDate: todayISO() });
+      },
+
       reset: () => set(initialState),
     }),
     {
@@ -304,6 +324,8 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         hasSeenProWelcome: state.hasSeenProWelcome,
         hasSeenMod04Paywall: state.hasSeenMod04Paywall,
         hasSeenMod01bPaywall: state.hasSeenMod01bPaywall,
+        promoWelcomeSeenForExpiry: state.promoWelcomeSeenForExpiry,
+        promoExpiryBannerLastShownDate: state.promoExpiryBannerLastShownDate,
       }),
     },
   ),

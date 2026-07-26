@@ -21,7 +21,7 @@ export function useSubscription() {
   return useQuery({
     queryKey: subscriptionQueryKey,
     queryFn: async () => {
-      if (devWebPro) return { isPro: true, proExpiresAt: null } as SubscriptionState;
+      if (devWebPro) return { isPro: true, proExpiresAt: null, proSource: null } as SubscriptionState;
       return (await getSubscription()).subscription;
     },
     staleTime: 30_000,

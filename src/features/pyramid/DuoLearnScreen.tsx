@@ -84,6 +84,8 @@ import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
 import { ToolsDiscoveryBanner } from "../../components/ui/ToolsDiscoveryBanner";
 import { BridgeCTABanner } from "../../components/ui/BridgeCTABanner";
+import { ProPromoGrantedModal } from "../subscription/ProPromoGrantedModal";
+import { ProPromoExpiringBanner } from "../subscription/ProPromoExpiringBanner";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
@@ -2993,6 +2995,12 @@ export function DuoLearnScreen() {
       {false && !isWalkthroughActive && !pendingPostWalkthroughCTA && <BridgeCTABanner />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
+      {/* Promo-grant visibility (Yoav 2026-07-26): one-time "קיבלתם Pro
+          במתנה" modal + the ≤3-days expiry nudge for manual RC promotional
+          entitlements. Both self-gate on proSource==='promotional' from
+          /api/sync/subscription and coordinate with the popup/banner slots. */}
+      {!isWalkthroughActive && <ProPromoGrantedModal />}
+      {!isWalkthroughActive && <ProPromoExpiringBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
       <InvestorsJournalSheet visible={journalVisible} onClose={() => setJournalVisible(false)} />
       <DailyNewsChallengeSheet

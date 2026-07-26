@@ -4,6 +4,9 @@ import { api } from './client';
 export interface SubscriptionState {
   isPro: boolean | null;
   proExpiresAt: string | null;
+  /** How Pro was granted — 'promotional' (manual RC gift) | 'store' | null.
+   *  Drives the promo-grant modal + expiry banner (Yoav 2026-07-26). */
+  proSource: string | null;
 }
 
 export function getSubscription() {
