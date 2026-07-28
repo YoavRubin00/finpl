@@ -95,6 +95,34 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     isPartnerAd: true,
   },
 
+  // ★ REAL PARTNER: הגשמה פיננסית (boutique pension agency) ★
+  // TODO(Yoav 2026-07-28): partnerUrl still missing — Yoav is sending the
+  // partner link separately. Until it lands this stays isAvailable:false so
+  // nobody can spend coins on a redemption that opens nothing. To go live:
+  // fill partnerUrl + flip isAvailable to true (and confirm costCoins with Moni).
+  {
+    id: 'bridge-insurance-hagshama',
+    title: 'ליווי פנסיוני אישי, הגשמה פיננסית',
+    description:
+      'הגשמה פיננסית — סוכנות פנסיונית בוטיקית, שבה אדם אחד מלווה אתכם לאורך זמן ' +
+      'ומכיר אתכם, את המשפחה ואת הצרכים שמשתנים.\n' +
+      '• שתי פגישות עומק ותוכנית מסודרת בכתב, לא תמונת מצב חד-פעמית.\n' +
+      '• ערוץ וואטסאפ וטלפון אישי, מענה תוך יום עסקים.\n' +
+      '• סקירה שנתית יזומה, לא תזכורת אוטומטית.\n' +
+      '• הליווי גדל אתכם: נישואין, ילד, שינוי בהכנסה.\n\n' +
+      'פנסיה · ביטוח · פיננסים — מישהו שאחראי שהם נכונים בשבילכם, היום ובעוד עשור.',
+    partnerName: 'הגשמה פיננסית',
+    partnerLogo: '🏡',
+    partnerLogoImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/bridge-logos/hagshama.jpeg' },
+    // Premium tier like the other high-touch partners (2500) — a human
+    // advisory lead is worth more than the free tracking service at 500.
+    costCoins: 2500,
+    category: 'insurance',
+    isAvailable: false,
+    reward: 'ליווי פנסיוני אישי לאורך זמן, סוכן אחד שמכיר אתכם',
+    isPartnerAd: true,
+  },
+
   // ── 💳 כרטיסי אשראי, placeholder ──
   {
     id: 'bridge-cc-partner-slot',
