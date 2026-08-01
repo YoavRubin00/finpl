@@ -42,7 +42,14 @@ export type FlashcardVisual =
       caption?: string;
     }
   /** Horizontal timeline with milestone dots revealing in order */
-  | { kind: "timeline"; milestones: Array<{ label: string; sublabel?: string }>; caption?: string };
+  | { kind: "timeline"; milestones: Array<{ label: string; sublabel?: string }>; caption?: string }
+  /**
+   * A TEXT-FREE illustration from the retired infographic set (Yoav 1.8:
+   * only image-only art rides inside the living lesson — PNGs with baked-in
+   * text stay out; their text lives in the segments). Resolved through
+   * INFOGRAPHIC_MAP by the original card id, so proxying/caching still apply.
+   */
+  | { kind: "image"; infographicCardId: string; caption?: string };
 
 export interface FlashcardSegment {
   /** Segment body. Supports [[glossary-term]] and **emphasis** markup. */

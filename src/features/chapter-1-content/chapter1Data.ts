@@ -392,6 +392,7 @@ export const chapter1Data: Chapter = {
           segments: [
             {
               text: 'במינוס, [[ריבית דריבית]] עובדת **נגדכם**: ריבית שלא שולמה מצטרפת לקרן החוב.',
+              visual: { kind: 'image', infographicCardId: 'fc-1-2-5' },
               finnLine: 'ריבית דריבית היא כלי קסום כשהכסף שלכם בתוך חיסכון, אבל סיוט מוחלט במינוס.',
             },
             {
@@ -1338,6 +1339,7 @@ export const chapter1Data: Chapter = {
             },
             {
               text: 'בהתחלה רוב התשלום הוא **ריבית** ורק מעט קרן; עם הזמן היחס מתהפך.',
+              visual: { kind: 'image', infographicCardId: 'fc-1-6-3' },
               finnLine: 'ההחזר החודשי קבוע, אבל בחודשים הראשונים בקושי מורידים את הקרן!',
             },
             {
@@ -1390,6 +1392,7 @@ export const chapter1Data: Chapter = {
           segments: [
             {
               text: 'יחס החזר מהכנסה: כמה מהנטו שלכם הולך **להחזרי חובות**. המדד המרכזי של הבנק ליציבות ול[[דירוג אשראי|דירוג האשראי]].',
+              visual: { kind: 'image', infographicCardId: 'fc-1-6-5' },
               finnLine: 'בנקים תמיד בודקים איזה אחוז מההכנסה שלכם הולך להלוואות.',
             },
             {

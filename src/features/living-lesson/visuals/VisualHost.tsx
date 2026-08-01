@@ -9,6 +9,7 @@ import { CoinStackVisual } from "./CoinStackVisual";
 import { SplitFlowVisual } from "./SplitFlowVisual";
 import { TimelineVisual } from "./TimelineVisual";
 import { LottieVisual } from "./LottieVisual";
+import { ImageVisual } from "./ImageVisual";
 
 interface VisualHostProps {
   visual: FlashcardVisual;
@@ -63,6 +64,8 @@ function renderPrimitive(visual: FlashcardVisual, animate: boolean, startDelayMs
       return <SplitFlowVisual visual={visual} animate={animate} startDelayMs={startDelayMs} />;
     case "timeline":
       return <TimelineVisual visual={visual} animate={animate} startDelayMs={startDelayMs} />;
+    case "image":
+      return <ImageVisual visual={visual} animate={animate} />;
     default: {
       const exhaustiveCheck: never = visual;
       return exhaustiveCheck;

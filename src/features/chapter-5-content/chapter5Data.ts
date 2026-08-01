@@ -23,6 +23,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'עצמאות כלכלית (FI) היא הנקודה שבה ה[[תשואה]] מהנכסים שלכם — [[נדל"ן]], [[מניה|מניות]], [[אג"ח]] — מכסה **את כל** הוצאות המחיה.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-25-1' },
             },
             {
               text: 'מהרגע הזה העבודה היא **בחירה**, לא כורח קיומי. המשכורת כבר לא מחזיקה אתכם.',
@@ -36,6 +37,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'כלל ה-4% נולד ממחקר אקדמי מפורסם (מחקר טריניטי): מושכים **4%** מהתיק בשנה הראשונה, ומעדכנים כל שנה לפי ה[[אינפלציה]].',
+              visual: { kind: 'image', infographicCardId: 'fc-5-25-2' },
             },
             {
               text: 'בתרחישים ההיסטוריים שנבדקו, הכסף החזיק מעמד 30 שנה לפחות ביותר מ-**95%** מהמקרים.',
@@ -100,6 +102,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'לא משנה רק כמה נכנס — משנה כמה **נשאר**. כמו כדור שלג שמתגלגל ומתגבר.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-25-4' },
             },
           ],
         },
@@ -112,6 +115,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'ההגנה: "[[קרן חירום|כרית מזומן]]" לשנתיים-שלוש — כסף נזיל שמאפשר **לא למכור** [[מניה|מניות]] כשהשוק בשפל.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-25-5' },
               finnLine: 'בים סוער לא קופצים מהסירה — מחכים שהגלים יירגעו.',
             },
           ],
@@ -125,6 +129,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'זו האפשרות לעסוק במה שמשמעותי לכם — ליצור, להתנדב, לבנות — **בלי הלחץ** של "משכורת בסוף החודש".',
+              visual: { kind: 'image', infographicCardId: 'fc-5-25-6' },
             },
           ],
         },
@@ -238,6 +243,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: '[[משכנתא]] היא **מינוף**: הבנק משלים את מה שחסר, ואתם קונים נכס גדול בהרבה מההון העצמי.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-26-1' },
             },
             {
               text: 'לפי הוראות בנק ישראל, תקרת המימון **תלויה במטרה** של הרכישה:',
@@ -265,6 +271,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'אבל בפנים המשחק שונה: בשנים הראשונות רוב התשלום הולך ל[[ריבית]], ורק חלק קטן מקטין את **הקרן**. עם הזמן היחס מתהפך.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-26-2' },
               finnLine: 'בהתחלה אתם בעיקר משלמים לבנק על הזכות לחוב. סבלנות — היחס מתהפך.',
             },
           ],
@@ -282,6 +289,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'תמהיל [[משכנתא]] = פיצול ההלוואה לכמה **מסלולים** במקביל, כל אחד עם כללים משלו.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-26-3' },
             },
             {
               text: 'קבוע לא צמוד נותן **ודאות**; פריים זול יותר בטווח הקצר אבל חשוף לשינויי ריבית; צמוד [[מדד]] מושפע מה[[אינפלציה]].',
@@ -297,6 +305,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'המחיר על המחירון הוא רק ההתחלה. דירה ב-2 מיליון ש"ח עם [[משכנתא]] של 1.5 מיליון?',
+              visual: { kind: 'image', infographicCardId: 'fc-5-26-4' },
             },
             {
               text: 'לאורך 30 שנה, בריבית ממוצעת של 4%-5%, תחזירו לבנק **כ-2.4-2.9 מיליון** ש"ח — הרבה מעבר לקרן שלקחתם.',
@@ -317,6 +326,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'דירה להשקעה בישראל מניבה משכירות [[תשואה]] ברוטו של **3%-4%** מערכה בשנה, בממוצע.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-26-5' },
             },
             {
               text: 'זה נמוך יחסית לשוק ההון — אבל מגיע עם מינוף. ומנגד: **נזילות נמוכה**, תחזוקה, ושוכרים.',
@@ -329,6 +339,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'לגור בשכירות ולשים את ההון העצמי בבורסה? במדינות עם שוק שכירות בריא, מחקרים מראים תשואה כוללת **דומה** לקנייה.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-26-6' },
             },
             {
               text: 'היתרון הגדול: **נזילות**. הכסף עובד בשוק במקום להיות קבור בקירות.',
@@ -446,6 +457,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: '‏[[REIT]] ‏(Real Estate Investment Trust) היא חברה שקונה [[נדל"ן]] מניב: מרכזי קניות, מגדלי משרדים, מחסנים לוגיסטיים.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-27-1' },
             },
             {
               text: 'החוק מחייב אותה לחלק **90% מהרווחים** כ[[דיבידנד]] למשקיעים — כלומר, אליכם.',
@@ -469,6 +481,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'רוצים את הכסף חזרה? לוחצים "מכור" — וזהו. **נזילות מלאה**, יתרון ענק על [[נדל"ן]] פיזי.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-27-2' },
             },
           ],
         },
@@ -485,6 +498,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'אפשר לבחור [[REIT]] **מתמחה**: מגורים, משרדים, לוגיסטיקה, בריאות, מלונות.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-27-3' },
             },
             {
               text: 'כל סקטור מגיב **אחרת** לתנאי השוק: לוגיסטיקה פרחה עם הקניות אונליין; משרדים נפגעו מהעבודה מהבית.',
@@ -500,6 +514,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'זה הופך אותן למגנט למי שמחפש **הכנסה שוטפת** שמגיעה מהתיק בלי למכור כלום.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-27-4' },
             },
           ],
         },
@@ -509,6 +524,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: '[[REIT]] היא "נכס **רגיש לריבית**": כשה[[ריבית]] עולה, [[אג"ח]] הופכות לאלטרנטיבה מפתה יותר.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-27-5' },
             },
             {
               text: 'התוצאה: בתקופות של ריבית עולה, מחירי ה-REIT נוטים **לרדת**. סיכון ייחודי שכדאי להכיר מראש.',
@@ -640,6 +656,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'קיבוע זכויות = הודעה רשמית ל[[מס הכנסה]] **איך בדיוק** אתם רוצים לנצל את הפטור ממס על ה[[פנסיה]].',
+              visual: { kind: 'image', infographicCardId: 'fc-5-28-1' },
             },
             {
               text: 'בלי קיבוע, משיכה ספונטנית עלולה לשרוף פטורים ולגרור **מס מיותר**. עם תכנון — חיסכון של מאות אלפי שקלים.',
@@ -655,6 +672,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'משיכה חד-פעמית (הונית) של כספי הפנסיה גוררת לרוב מס כבד של **35%**.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-28-2' },
             },
             {
               text: 'משיכה כקצבה חודשית, עם פטורים ונקודות זיכוי לגיל 60+, יכולה להוריד את המס **עד 0%**.',
@@ -685,6 +703,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'בעת המשיכה, החלק הזה **פטור** ממס הכנסה. ההיגיון פשוט: לא ממסים את אותו שקל פעמיים.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-28-3' },
             },
           ],
         },
@@ -694,6 +713,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'עוזבים עבודה? הפיתוי למשוך את הפיצויים גדול — אבל המחיר **כפול**.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-28-4' },
             },
             {
               text: 'מעבר לאובדן ה[[ריבית דריבית]], "נוסחת השילוב" קובעת: פיצויים שנמשכו בפטור היום **מקטינים** את הפטור ממס על ה[[פנסיה]] ביום הפרישה.',
@@ -707,6 +727,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'שני אתרים ממשלתיים ששווה לשמור: **"הר הכסף"** מרכז את כל חסכונות ה[[פנסיה]], [[גמל|הגמל]] ו[[קרן השתלמות|ההשתלמות]] שלכם.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-28-5' },
             },
             {
               text: '**"הר הביטוח"** מרכז את כל הביטוחים על שמכם. בדיקה כל כמה שנים מאתרת כספים "שכוחים" שאיבדתם בדרך.',
@@ -719,6 +740,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'החלטות שמתקבלות שנה-שנתיים לפני הפרישה יכולות לשנות את ההכנסה החודשית ב-**20%-40%** — לכל שנות הפרישה.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-28-6' },
             },
             {
               text: 'לכל צעד יש חלון זמן משלו:',
@@ -846,6 +868,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'בקרן [[פנסיה]] וב[[ביטוח]] חיים אתם רושמים **מוטבים** — והם גוברים גם על הצוואה.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-29-1' },
             },
             {
               text: 'התחתנתם? התגרשתם? נולד ילד? **עדכנו מוטבים** אחרי כל שינוי משפחתי — אחרת הכסף עלול להגיע בדיוק למי שלא התכוונתם.',
@@ -858,6 +881,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'צוואה קובעת איך יחולק הרכוש אחרי המוות. בישראל מוכרים **4 סוגים**: בכתב יד, בפני עדים, בפני רשות, ובעל פה (שכיב מרע).',
+              visual: { kind: 'image', infographicCardId: 'fc-5-29-2' },
             },
             {
               text: 'הנפוצות: בכתב יד (כולה בכתב ידכם, מתוארכת וחתומה) ובפני **שני עדים** שאינם נהנים מהצוואה.',
@@ -877,6 +901,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'ייפוי כוח מתמשך קובע מראש **מי יחליט** על הכסף והבריאות שלכם, אם חלילה לא תהיו צלולים.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-29-3' },
             },
             {
               text: 'הוא נרשם אצל הרשם המוסמך — ומונע מצב שבו **המדינה** (האפוטרופוס הכללי) מנהלת לכם את החיים.',
@@ -892,6 +917,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'המבנה הזה מגן על הנכסים מפני בזבוז, חובות ו**סכסוכי משפחה**.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-29-4' },
             },
           ],
         },
@@ -916,6 +942,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'נכסים מניבים ([[מניה|מניות]], [[נדל"ן]]) + ידע איך לנהל אותם = הון ש**נשמר לדורות**.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-29-6' },
             },
           ],
         },
@@ -1029,6 +1056,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'בלוקצ\'יין הוא "ספר חשבונות" דיגיטלי **מבוזר**: כל בלוק מכיל עסקאות ומקושר לקודמו — ואי אפשר לשנות או למחוק רשומות.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-30-1' },
             },
             {
               text: 'היתרון הגדול: אימות עסקאות **בלי גוף מרכזי** כמו בנק.',
@@ -1086,6 +1114,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'בגלל זה קריפטו לא מתאים כמרכיב מרכזי בתיק. המלצת רוב המומחים: **עד 5%** מהתיק, לא יותר.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-30-4' },
             },
           ],
         },
@@ -1095,6 +1124,7 @@ export const chapter5Data: Chapter = {
           segments: [
             {
               text: 'רשות המיסים רואה בקריפטו **נכס**, לא מטבע: רווח ממכירה חייב ב-25% מס רווחי הון — וחובה לדווח.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-30-5' },
             },
             {
               text: 'ובורסות קריפטו לא מפוקחות כמו בנקים. כשבורסה קורסת (כמו FTX) — הכסף **עלול להיעלם**.',
@@ -1114,6 +1144,7 @@ export const chapter5Data: Chapter = {
             },
             {
               text: 'כלל הברזל: "Not your keys, not your coins" — קריפטו שנשאר בבורסה **לא באמת שלכם**.',
+              visual: { kind: 'image', infographicCardId: 'fc-5-30-6' },
             },
           ],
         },
