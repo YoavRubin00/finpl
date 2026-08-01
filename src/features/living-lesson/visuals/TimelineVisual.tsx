@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     right: 8,
     top: 42,
     height: 2,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(12,74,110,0.12)",
   },
   node: {
     alignItems: "center",
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: "rgba(12,74,110,0.25)",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: LL_COLORS.bgPanel,

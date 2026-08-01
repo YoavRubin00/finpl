@@ -97,12 +97,47 @@ export function LivingFlashcard({ segments, onAllRevealed, cardId, revealTrigger
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [revealTrigger, segments.length]);
 
+  // Auto-scroll on reveal: a newly revealed segment (and its visual, which
+  // mounts a beat later) can land BELOW the fold on small screens — invisible
+  // content the user doesn't know exists. Scroll only right after a reveal
+  // (pendingScrollRef), via onContentSizeChange so the visual's late mount is
+  // included; never fight the user's own upward scrolling outside that window.
+  const scrollRef = useRef<ScrollView>(null);
+  const pendingScrollRef = useRef(false);
+  const prevRevealedRef = useRef(revealedCount);
+  useEffect(() => {
+    if (revealedCount > prevRevealedRef.current) pendingScrollRef.current = true;
+    prevRevealedRef.current = revealedCount;
+  }, [revealedCount]);
+  const handleContentSizeChange = useCallback(() => {
+    if (!pendingScrollRef.current) return;
+    scrollRef.current?.scrollToEnd({ animated: animate });
+    // Consumed on a short delay — the segment's text and its visual resize
+    // the content in separate frames and both should land in view.
+    setTimeout(() => { pendingScrollRef.current = false; }, 600);
+  }, [animate]);
+
   return (
     <View style={styles.root}>
+      {/* Segment progress dots — where am I inside this card (RTL: first dot
+          on the right). Hidden for single-segment cards, it'd be noise. */}
+      {segments.length > 1 ? (
+        <View style={styles.dotsRow} accessibilityLabel={`חלק ${revealedCount} מתוך ${segments.length}`}>
+          {segments.map((_, i) => (
+            <View
+              key={i}
+              style={[styles.dot, i < revealedCount ? styles.dotActive : null]}
+            />
+          ))}
+        </View>
+      ) : null}
+
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={handleContentSizeChange}
       >
         <Pressable
           onPress={handleTap}
@@ -272,5 +307,24 @@ const styles = StyleSheet.create({
     color: LL_COLORS.textSecondary,
     fontSize: 12.5,
     fontWeight: "700",
+  },
+  // Segment progress dots — RTL: row-reverse puts dot #1 on the right.
+  dotsRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 12,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(12,74,110,0.18)",
+  },
+  dotActive: {
+    backgroundColor: LL_COLORS.brandCyan,
+    width: 16,
+    borderRadius: 3,
   },
 });

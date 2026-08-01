@@ -9,24 +9,28 @@ import type { WithSpringConfig, WithTimingConfig } from "react-native-reanimated
 import { Easing } from "react-native-reanimated";
 
 export const LL_COLORS = {
-  /** Deepest background — the living-flashcard's own canvas. */
-  bgDeep: "#0c1426",
-  /** Panel / visual-host background, one step up from bgDeep. */
-  bgPanel: "#101b33",
-  /** Slightly lighter card surface (visual chrome, chips). */
-  bgCard: "rgba(255,255,255,0.06)",
-  border: "rgba(255,255,255,0.10)",
-  borderStrong: "rgba(56,189,248,0.35)",
-  textPrimary: "#f1f5f9",
-  textSecondary: "rgba(226,232,240,0.68)",
-  textMuted: "rgba(226,232,240,0.45)",
+  // Light theme (Yoav 2026-08-01 post-review: "תעביר את הרקע לבהיר יותר") —
+  // sky-tinted light canvas matching the app's white flashcards, dark text,
+  // and DARKER accent shades: the dark-theme gold/cyan brights fail contrast
+  // on a light surface.
+  /** Canvas — the living-flashcard's own background (soft sky-tinted white). */
+  bgDeep: "#f4f9ff",
+  /** Panel / visual-host background — clean white, lifts off the canvas. */
+  bgPanel: "#ffffff",
+  /** Subtle tinted surface (visual chrome, chips). */
+  bgCard: "rgba(2,132,199,0.06)",
+  border: "rgba(12,74,110,0.12)",
+  borderStrong: "rgba(2,132,199,0.35)",
+  textPrimary: "#0f172a",
+  textSecondary: "rgba(15,23,42,0.66)",
+  textMuted: "rgba(15,23,42,0.42)",
   /** Brand cyan — glossary links, primary bars/lines (matches renderBoldText's [[term]] color). */
   brandCyan: "#0ea5e9",
-  brandCyanBright: "#38bdf8",
-  /** Amber/gold — **emphasis** words. Matches the dark-mode glossary pill accent. */
-  emphasis: "#facc15",
-  emphasisDeep: "#eab308",
-  success: "#22c55e",
+  brandCyanBright: "#0284c7",
+  /** Amber — **emphasis** words. Amber-600/700: readable gold on light. */
+  emphasis: "#d97706",
+  emphasisDeep: "#b45309",
+  success: "#16a34a",
 } as const;
 
 export const RTL_STYLE = {

@@ -14,7 +14,7 @@ interface Props {
   startDelayMs: number;
 }
 
-const PALETTE = [LL_COLORS.brandCyan, LL_COLORS.emphasis, LL_COLORS.success, LL_COLORS.brandCyanBright, "#a78bfa"];
+const PALETTE = [LL_COLORS.brandCyan, LL_COLORS.emphasis, LL_COLORS.success, LL_COLORS.brandCyanBright, "#7c3aed"];
 
 /** One amount splitting into labeled parts — budgets, salary breakdown. Static widths (real layout, not animated width), staggered "stamp-in" entrance per part. */
 export function SplitFlowVisual({ visual, animate, startDelayMs }: Props) {
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(12,74,110,0.06)",
   },
   segment: {
     height: "100%",
