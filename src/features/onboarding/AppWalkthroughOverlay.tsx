@@ -193,6 +193,16 @@ export function AppWalkthroughOverlay() {
 
   const stepConfig = step >= 0 && step < stepsWithLast.length ? stepsWithLast[step] : null;
 
+  // Persisted-step out-of-range self-heal: the minor filter shortens the step
+  // array, so a persisted appWalkthroughStep can point past its end — then
+  // stepConfig is null, this overlay renders null, and hasSeenAppWalkthrough
+  // never flips: the map stays in walkthrough mode with NO visible card and no
+  // way out (stuck-map report 2026-07-31). Treat it as a completed tour.
+  useEffect(() => {
+    if (hasSeenWalkthrough) return;
+    if (step >= stepsWithLast.length) completeWalkthrough();
+  }, [hasSeenWalkthrough, step, stepsWithLast.length, completeWalkthrough]);
+
   const setActiveScreen = useTutorialStore((s) => s.setWalkthroughActiveScreen);
 
   // Audio Playback, narrow deps to audioUrl only so stepConfig reference

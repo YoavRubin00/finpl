@@ -2484,16 +2484,21 @@ export function DuoLearnScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Open roadmap modal during walkthrough lesson-preview step
+  // Open roadmap modal during walkthrough lesson-preview step.
+  // Guarded on isWalkthroughActive: walkthroughActiveScreen is PERSISTED, so a
+  // user killed mid-walkthrough used to rehydrate with 'lesson-preview' and get
+  // the roadmap auto-opened over the map on every launch (stuck-map report
+  // 2026-07-31). The store now clears stale transients on rehydrate too — this
+  // guard is the render-side belt to those suspenders.
   useEffect(() => {
-    if (walkthroughScreen === 'lesson-preview') {
+    if (isWalkthroughActive && walkthroughScreen === 'lesson-preview') {
       setRoadmapVisible(true);
     }
-  }, [walkthroughScreen]);
+  }, [isWalkthroughActive, walkthroughScreen]);
 
   // Slow auto-scroll during walkthrough learn step so user sees there's more content
   useEffect(() => {
-    if (walkthroughScreen !== 'learn') return;
+    if (!isWalkthroughActive || walkthroughScreen !== 'learn') return;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     let y = 0;
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -2508,7 +2513,7 @@ export function DuoLearnScreen() {
       clearTimeout(delay);
       if (interval) clearInterval(interval);
     };
-  }, [walkthroughScreen]);
+  }, [isWalkthroughActive, walkthroughScreen]);
 
   const handleModulePress = useCallback(
     (moduleId: string, chapterId: string, moduleIndex: number) => {

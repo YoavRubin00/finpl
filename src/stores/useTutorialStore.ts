@@ -57,6 +57,12 @@ interface TutorialState {
    *  not required path content. Per user decision 2026-06-02 + exp-002. */
   hasSeenPearlTooltip: boolean;
   appWalkthroughStep: number;
+  /** Self-heal counter: app launches while the walkthrough is triggered but
+   *  never resolved (completed/skipped). Reaching 3 auto-completes the tour on
+   *  rehydrate — frees users stuck behind an unreachable overlay (map visible
+   *  but every tap dead; user report 2026-07-31, ~29% of starters unresolved).
+   *  A healthy user finishes the tour on launch #1 and never hits this. */
+  walkthroughLaunchCount: number;
   walkthroughGlowTab: string | null;
   walkthroughActiveScreen: WalkthroughScreen;
   /** Set when the walkthrough completes for a Guest user. The gate in
@@ -185,6 +191,7 @@ export const useTutorialStore = create<TutorialState>()(
       hasAcceptedSharkVoicePrivacy: false,
       hasSeenPearlTooltip: false,
       appWalkthroughStep: 0,
+      walkthroughLaunchCount: 0,
       walkthroughGlowTab: null,
       walkthroughActiveScreen: null,
       pendingPostWalkthroughCTA: false,
@@ -203,7 +210,7 @@ export const useTutorialStore = create<TutorialState>()(
       _hydrated: false,
       completeTradingHubIntro: () => set({ hasSeenTradingHubIntro: true }),
       markTradingHubFirstEntryDone: () => set({ tradingHubFirstEntryDone: true }),
-      completeAppWalkthrough: () => set({ hasSeenAppWalkthrough: true, appWalkthroughStep: -1, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: false }),
+      completeAppWalkthrough: () => set({ hasSeenAppWalkthrough: true, appWalkthroughStep: -1, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: false, walkthroughLaunchCount: 0 }),
       triggerWalkthrough: () => set({ walkthroughTriggered: true }),
       completeChatStyleChoice: () => set({ hasChosenChatStyle: true }),
       markPizzaIndexSeen: () => set({ hasSeenPizzaIndexModal: true }),
@@ -234,14 +241,53 @@ export const useTutorialStore = create<TutorialState>()(
       unlockInvestChapterJump: () => set({ investChapterJumpUnlocked: true }),
       setFirstRunArm: (arm) => set({ firstRunArm: arm }),
       setFirstRunStage: (stage) => set({ firstRunStage: stage }),
-      resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenFriendsHubIntro: false, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, firstRunArm: null, firstRunStage: null, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, _hydrated: false }),
+      resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughLaunchCount: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenFriendsHubIntro: false, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, firstRunArm: null, firstRunStage: null, appWalkthroughStep: 0, walkthroughLaunchCount: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",
       storage: createJSONStorage(() => zustandStorage),
       onRehydrateStorage: () => () => {
-        useTutorialStore.setState({ _hydrated: true });
+        // Self-heal for the stuck-walkthrough trap (user report 2026-07-31:
+        // learn map fully visible but every tap dead, for days). Two persisted
+        // vectors, both reconciled here on every launch:
+        //  (a) Tour already seen but transient fields survived a kill — e.g.
+        //      walkthroughActiveScreen stuck on 'lesson-preview' auto-opened
+        //      the roadmap overlay over the map on every launch. Clear them.
+        //  (b) Tour triggered but never resolved (overlay unreachable, or a
+        //      persisted step past the minor-filtered array ⇒ overlay renders
+        //      null forever while hasSeenAppWalkthrough stays false). Count
+        //      launches in this state; on the 3rd, auto-complete the tour so
+        //      the user is freed. A healthy user resolves on launch #1.
+        const s = useTutorialStore.getState();
+        const patch: Partial<TutorialState> = { _hydrated: true };
+        if (s.hasSeenAppWalkthrough) {
+          if (s.walkthroughActiveScreen !== null || s.walkthroughGlowTab !== null || s.appWalkthroughStep !== -1 || s.walkthroughTriggered) {
+            patch.appWalkthroughStep = -1;
+            patch.walkthroughActiveScreen = null;
+            patch.walkthroughGlowTab = null;
+            patch.walkthroughTriggered = false;
+          }
+          if (s.walkthroughLaunchCount) patch.walkthroughLaunchCount = 0;
+        } else if (s.walkthroughTriggered) {
+          const launches = (s.walkthroughLaunchCount ?? 0) + 1;
+          if (launches >= 3) {
+            patch.hasSeenAppWalkthrough = true;
+            patch.appWalkthroughStep = -1;
+            patch.walkthroughActiveScreen = null;
+            patch.walkthroughGlowTab = null;
+            patch.walkthroughTriggered = false;
+            patch.walkthroughLaunchCount = 0;
+            try {
+              // Lazy require — avoids a stores↔lib import cycle at module eval.
+              const posthogMod = require('../lib/posthog') as { captureEvent: (name: string, props?: Record<string, unknown>) => void };
+              posthogMod.captureEvent('walkthrough_healed', { at_step: s.appWalkthroughStep, launches });
+            } catch { /* non-fatal */ }
+          } else {
+            patch.walkthroughLaunchCount = launches;
+          }
+        }
+        useTutorialStore.setState(patch);
       },
     }
   )
