@@ -42,6 +42,8 @@ import { ModuleReportCard } from './components/ModuleReportCard';
 import { ModuleSharkCallCard } from './components/ModuleSharkCallCard';
 import { useModuleSharkCall } from './components/useModuleSharkCall';
 import { useModuleComprehensionStore } from '../shark-voice-chat/useModuleComprehensionStore';
+import { useCardCollectionStore } from '../card-collection/useCardCollectionStore';
+import { DeckCollectMoment } from '../card-collection/DeckCollectMoment';
 
 // MODULE_TT_XP / MODULE_TT_COINS / CHEST_ENERGY_REWARD moved to ./types.ts —
 // the module-first first-run grants the same chest from LessonFlowScreen, so
@@ -264,6 +266,24 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // initial pct/completed catch-up doesn't fire it.
   const prevCompletedRef = useRef<number | null>(null);
   const [calloutSeq, setCalloutSeq] = useState(0);
+  // Deck-collect (Yoav 2026-08-01): completing a module awards its retired
+  // infographic deck to the profile collection. The FIRST collect plays the
+  // cards-fly-to-profile moment; the completion callback is deferred to the
+  // moment's end so the accordion doesn't collapse mid-flight. Re-completions
+  // (collectDeck === false) skip the ceremony entirely.
+  const [collectMomentId, setCollectMomentId] = useState<string | null>(null);
+  const collectMomentDoneRef = useRef<(() => void) | null>(null);
+  const completeWithDeckMoment = useCallback((afterDone: () => void) => {
+    let firstCollect = false;
+    try { firstCollect = useCardCollectionStore.getState().collectDeck(module.id); } catch { /* non-fatal */ }
+    if (firstCollect) {
+      collectMomentDoneRef.current = afterDone;
+      setCollectMomentId(module.id);
+    } else {
+      afterDone();
+    }
+  }, [module.id]);
+
   // Chest display state — driven from either the 70% or 100% useEffects
   // so the same ChestCelebrationModal can host both reveals. null = not
   // showing.
@@ -801,6 +821,21 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           moduleId={module.id}
         />
 
+        {/* Cards-fly-to-profile moment on the FIRST deck collect. Transient,
+            pointerEvents:none overlay — completion continues in onDone. */}
+        {collectMomentId !== null && (
+          <DeckCollectMoment
+            moduleId={collectMomentId}
+            onDone={() => {
+              setCollectMomentId(null);
+              try { useCardCollectionStore.getState().clearLastCollected(); } catch { /* non-fatal */ }
+              const after = collectMomentDoneRef.current;
+              collectMomentDoneRef.current = null;
+              after?.();
+            }}
+          />
+        )}
+
         {/* Single chest celebration at 70% (Yoav 2026-06-12). The 100%
             master chest was retired per user request. */}
         <ChestCelebrationModal
@@ -845,7 +880,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             // there's nothing left to finish; collapse via onModuleCompleted
             // instead of stranding an open accordion (code-review 2026-06-12).
             if (summary.pct >= 100) {
-              onModuleCompleted?.();
+              completeWithDeckMoment(() => onModuleCompleted?.());
             } else {
               onContinueAfterChest?.();
             }
@@ -870,7 +905,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             }
             if (isGuest) { maybeShowSignupGate(); } else if (!maybeShowProfileQuestion() && !maybeShowToolNudge()) { maybeShowRatePrompt(); }
             if (summary.pct >= 100) {
-              onModuleCompleted?.();
+              completeWithDeckMoment(() => onModuleCompleted?.());
             } else {
               onContinueAfterChest?.();
             }
@@ -894,9 +929,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
               // Arm the end-of-module register gate and KEEP the accordion
               // mounted — onModuleCompleted unmounts it, which clears the gate's
               // 450ms timer (cleanup above) and the modal host with it.
+              // Deck: collect SILENTLY (no flight moment) — the signup gate is
+              // a conversion surface and nothing should animate over it.
+              try { useCardCollectionStore.getState().collectDeck(module.id); } catch { /* non-fatal */ }
               maybeShowSignupGate();
             } else {
-              onModuleCompleted?.();
+              completeWithDeckMoment(() => onModuleCompleted?.());
             }
           }}
           // Yoav 2026-06-12: DoN gated on the 25% roll captured in chestState.

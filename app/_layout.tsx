@@ -698,6 +698,9 @@ function RootLayoutInner() {
       // back to the lesson); plus the daily-challenge deep link, the support
       // screen, and the live shark-voice screen.
       "quest", "pro-welcome", "daily-challenge", "support", "shark-voice",
+      // אוסף הכרטיסיות (Yoav 1.8) — opened from the profile card; same
+      // guard-bounce reasoning as investors-journal above.
+      "card-collection",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

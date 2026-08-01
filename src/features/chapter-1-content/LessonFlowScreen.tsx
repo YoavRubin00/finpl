@@ -179,6 +179,7 @@ function FallbackToPhaseEffect({ run }: { run: () => void }) {
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
 import { FlashcardInfographic, FINN_MAP, INFOGRAPHIC_MAP } from "./FlashcardInfographic";
+import { LivingFlashcard } from "../living-lesson";
 import { useModulePrefetch, getCachedVideoPath, prefetchModuleAudio } from "../../hooks/useModulePrefetch";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
@@ -751,7 +752,16 @@ function FlashcardCard({
 
   // Dive mode state
   const [diveStep, setDiveStep] = useState(0);
-  const isDiveMode = card.diveMode && card.zoomRegions && card.zoomRegions.length > 0;
+  // Living-lesson (Yoav 2026-08-01): cards with `segments` render the new
+  // animated text experience and IGNORE the legacy dive/infographic fields.
+  const hasSegments = !!card.segments && card.segments.length > 0;
+  const [segTrigger, setSegTrigger] = useState(0);
+  const [allSegmentsRevealed, setAllSegmentsRevealed] = useState(false);
+  useEffect(() => {
+    setSegTrigger(0);
+    setAllSegmentsRevealed(false);
+  }, [card.id]);
+  const isDiveMode = !hasSegments && card.diveMode && card.zoomRegions && card.zoomRegions.length > 0;
   const totalDiveSteps = isDiveMode ? (card.finnExplanations?.length ?? card.zoomRegions?.length ?? 1) : 1;
 
   const comicZoomStyle = useAnimatedStyle(() => {
@@ -773,14 +783,18 @@ function FlashcardCard({
     // tap makes the press feel registered even when the visual lag is high.
     tapHaptic();
     playSound('btn_click_soft_2');
-    if (isDiveMode && diveStep < totalDiveSteps - 1) {
+    if (hasSegments && !allSegmentsRevealed) {
+      // Living-lesson: המשך reveals the next segment (same as tapping the
+      // card) until everything is on screen, then advances to the next card.
+      setSegTrigger((t) => t + 1);
+    } else if (isDiveMode && diveStep < totalDiveSteps - 1) {
       setDiveStep(d => d + 1);
     } else {
       // onPress של React Native אינו worklet — runOnJS היה כפילות שלפעמים
       // עיכבה את ה-callback אחרי סגירת modal של הצ׳אט (ChatScreen).
       onNext();
     }
-  }, [isDiveMode, diveStep, totalDiveSteps, playSound, onNext]);
+  }, [hasSegments, allSegmentsRevealed, isDiveMode, diveStep, totalDiveSteps, playSound, onNext]);
 
   const handlePrevBtn = useCallback(() => {
     tapHaptic();
@@ -930,6 +944,45 @@ function FlashcardCard({
               </AnimatedPressable>
               <AnimatedPressable onPress={handleNextBtn} style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: unitColors.bg, borderRadius: 16, paddingVertical: 14, borderBottomWidth: 3, borderBottomColor: unitColors.bottom ?? unitColors.bg }} accessibilityRole="button" accessibilityLabel="המשך">
                 <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>{"המשך"}</Text>
+                <ChevronLeft size={18} color="#fff" />
+              </AnimatedPressable>
+            </View>
+          </View>
+        </View>
+      ) : hasSegments ? (
+        /* ── Living lesson (Yoav 2026-08-01): animated text + motion visuals,
+              replaces the PNG-infographic fly-through. Dark premium canvas. ── */
+        <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}>
+            <LivingFlashcard
+              segments={card.segments!}
+              cardId={card.id}
+              revealTrigger={segTrigger}
+              onAllRevealed={() => setAllSegmentsRevealed(true)}
+            />
+          </View>
+
+          {/* Bottom navigation bar. RTL: back chevron on right side. */}
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, paddingBottom: 16, marginTop: 10 }}>
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+              <AnimatedPressable
+                onPress={handlePrevBtn}
+                disabled={index === 0}
+                style={{ padding: 8, opacity: index === 0 ? 0.3 : 1 }}
+                accessibilityRole="button"
+                accessibilityLabel="הקודם"
+              >
+                <ChevronRight size={28} color={unitColors.bg} />
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={handleNextBtn}
+                style={{ flex: 1, backgroundColor: unitColors.bg, borderRadius: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row-reverse", gap: 6, borderBottomWidth: 3, borderBottomColor: unitColors.bottom }}
+                accessibilityRole="button"
+                accessibilityLabel={allSegmentsRevealed ? (index === total - 1 ? "יאללה לקוויז" : "הבא") : "המשך"}
+              >
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>
+                  {allSegmentsRevealed ? (index === total - 1 ? "יאללה לקוויז!" : "המשך") : "המשך"}
+                </Text>
                 <ChevronLeft size={18} color="#fff" />
               </AnimatedPressable>
             </View>

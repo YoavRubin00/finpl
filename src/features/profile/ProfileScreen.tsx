@@ -16,7 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   Zap, Star, Target, ChevronRight,
-  Crown, Pencil, X,
+  Crown, Pencil, X, Layers,
 } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
@@ -56,6 +56,8 @@ import { BRIDGE_BENEFITS } from "../the-bridge/bridgeData";
 import { captureEvent } from "../../lib/posthog";
 import { Image as ExpoImage } from "expo-image";
 import { FINN_DANCING } from "../retention-loops/finnMascotConfig";
+import { useCardCollectionStore } from "../card-collection/useCardCollectionStore";
+import { useCollectionBackfill } from "../card-collection/useCollectionBackfill";
 
 const GOAL_LABELS: Record<string, string> = {
   "cash-flow": "💸 תזרים מזומנים",
@@ -147,6 +149,12 @@ export function ProfileScreen() {
   const hasGoldFrame = referredFriends.length >= 3;
   const hasWhaleBadge = referredFriends.length >= 5;
   const { level, layer, xpToNextLevel, progressToNextLevel } = getPyramidStatus(xp);
+  // Zustand v5: primitive selector (no fresh object per call — see
+  // zustand_v5_selector_crash). Counts collected card decks for the badge.
+  const collectedDecksCount = useCardCollectionStore((s) => Object.keys(s.collected).length);
+  // Retro-grant decks for modules completed before the collection shipped —
+  // without this, veterans see every deck "locked" despite having finished.
+  useCollectionBackfill();
   const [showStagePopup, setShowStagePopup] = useState(false);
   const [showChampionPopup, setShowChampionPopup] = useState(false);
   const avatarDef = getAvatarById(profile?.avatarId ?? null);
@@ -532,6 +540,31 @@ export function ProfileScreen() {
                 </View>
               </Animated.View>
             )}
+
+            {/* אוסף הכרטיסיות (Yoav 1.8.26) — the collectible card decks
+                sector. Sits right after the profile card; navigates to the
+                /card-collection route. Counter shows collected decks. */}
+            <AnimatedPressable
+              onPress={() => { tapHaptic(); router.push("/card-collection" as never); }}
+              style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              accessibilityRole="button"
+              accessibilityLabel={`אוסף הכרטיסיות, ${collectedDecksCount} חפיסות נאספו`}
+            >
+              <View style={styles.actionCardInner}>
+                <ChevronRight size={20} color={theme.textMuted} style={{ transform: [{ scaleX: -1 }] }} />
+                <View style={{ alignItems: "flex-end", flex: 1 }}>
+                  <Text style={[styles.actionCardSubtitle, { color: theme.textMuted }]}>אוסף הכרטיסיות</Text>
+                  <Text style={[styles.actionCardTitle, { color: theme.text }]}>
+                    {collectedDecksCount > 0
+                      ? `${collectedDecksCount} חפיסות באוסף שלכם`
+                      : "החפיסות מהמודולים שסגרתם"}
+                  </Text>
+                </View>
+                <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(8,145,178,0.15)" : "rgba(8,145,178,0.08)", borderColor: isDark ? "rgba(8,145,178,0.3)" : "#a5f3fc" }]} accessible={false}>
+                  <Layers size={26} color="#0891b2" />
+                </View>
+              </View>
+            </AnimatedPressable>
 
             {/* AI Insights CTA — moved here from the "עוד" tab so the
                 personalized read-out lives next to the user's own profile. */}

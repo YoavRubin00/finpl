@@ -1,6 +1,64 @@
 import type { ImageSourcePropType } from "react-native";
 
+/**
+ * ── Living-lesson content (Yoav 2026-08-01) ──
+ * Replaces the PNG-infographic fly-through inside lessons. A flashcard that
+ * defines `segments` renders as the new animated text experience: segments
+ * reveal one-by-one (tap to advance), **word** marks an emphasized keyword,
+ * [[term]] keeps linking to the glossary, and each segment may carry ONE
+ * visual primitive that ILLUSTRATES the point with motion instead of a
+ * static infographic. The retired PNG infographics live on as the module's
+ * collectible summary deck (see card-collection feature).
+ */
+export type FlashcardVisual =
+  /** Bundled Lottie icon-animation (assets/lottie), the lightweight default */
+  | { kind: "lottie"; source: number; caption?: string }
+  /** Animated number counting from→to (e.g. 100K → 761K) */
+  | {
+      kind: "counter";
+      from: number;
+      to: number;
+      prefix?: string;
+      suffix?: string;
+      caption?: string;
+      /** Format with thousands separators (default true) */
+      grouping?: boolean;
+    }
+  /** Bars racing to their values — comparisons (5% vs 7%, bank vs market) */
+  | {
+      kind: "compare-bars";
+      items: Array<{ label: string; value: number; color?: string; valueLabel?: string }>;
+      caption?: string;
+    }
+  /** A line that draws itself — growth curves, exponential take-off */
+  | { kind: "grow-line"; points: number[]; caption?: string; highlightLastPoint?: boolean }
+  /** Coins/blocks stacking up step by step — accumulation, savings */
+  | { kind: "coin-stack"; steps: number[]; caption?: string }
+  /** One amount splitting into labeled parts — budgets, salary breakdown */
+  | {
+      kind: "split-flow";
+      total?: number;
+      parts: Array<{ label: string; pct: number; color?: string }>;
+      caption?: string;
+    }
+  /** Horizontal timeline with milestone dots revealing in order */
+  | { kind: "timeline"; milestones: Array<{ label: string; sublabel?: string }>; caption?: string };
+
+export interface FlashcardSegment {
+  /** Segment body. Supports [[glossary-term]] and **emphasis** markup. */
+  text: string;
+  /** Optional single visual that animates in with this segment */
+  visual?: FlashcardVisual;
+  /** Optional Finn line shown with this segment (replaces dive finnExplanations) */
+  finnLine?: string;
+}
+
 export interface Flashcard {
+  /**
+   * When present, the card renders as the living-lesson experience and the
+   * legacy infographic/diveMode fields below are ignored for display.
+   */
+  segments?: FlashcardSegment[];
   id: string;
   text: string;
   imageUrl?: ImageSourcePropType; // e.g. require('../../assets/comics/mod1.png') or string URI
