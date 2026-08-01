@@ -32,6 +32,9 @@ const styles = StyleSheet.create({
     borderColor: LL_COLORS.border,
     paddingVertical: 16,
     paddingHorizontal: 16,
+    // Clip everything to the panel — no animated child (bar tip labels,
+    // overshooting springs) may ever poke outside the visual's chrome.
+    overflow: "hidden",
   },
   stage: {
     width: "100%",

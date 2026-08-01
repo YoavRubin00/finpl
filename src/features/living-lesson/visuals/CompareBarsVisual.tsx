@@ -80,10 +80,19 @@ function BarRow({
     backgroundColor: color,
   }));
 
-  const tipLabelStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: -trackWidth * progress.value }],
-    opacity: interpolate(progress.value, [0, 0.12, 1], [0, 1, 1], Extrapolation.CLAMP),
-  }));
+  // The tip label must never leave the track (Yoav 1.8: labels poked out the
+  // LEFT edge of the card on max-value bars). Travel is capped so the label's
+  // far edge stops exactly at the track's end — and the spring's overshoot is
+  // clamped for the label only; the fill's bounce stays (clipped by the
+  // track's overflow:hidden).
+  const [labelWidth, setLabelWidth] = useState(0);
+  const tipLabelStyle = useAnimatedStyle(() => {
+    const travel = Math.max(0, trackWidth - labelWidth);
+    return {
+      transform: [{ translateX: -Math.min(progress.value, 1) * travel }],
+      opacity: interpolate(progress.value, [0, 0.12, 1], [0, 1, 1], Extrapolation.CLAMP),
+    };
+  });
 
   return (
     <View style={styles.row}>
@@ -97,7 +106,11 @@ function BarRow({
           <Animated.View style={[styles.fill, fillStyle]} />
         </View>
         {valueLabel && trackWidth > 0 ? (
-          <Animated.View pointerEvents="none" style={[styles.tipLabelWrap, tipLabelStyle]}>
+          <Animated.View
+            pointerEvents="none"
+            onLayout={(e: LayoutChangeEvent) => setLabelWidth(e.nativeEvent.layout.width)}
+            style={[styles.tipLabelWrap, tipLabelStyle]}
+          >
             <Text style={styles.tipLabelText} numberOfLines={1}>
               {valueLabel}
             </Text>
