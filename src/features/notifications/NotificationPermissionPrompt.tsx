@@ -3,6 +3,7 @@ import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
+import * as Notifications from 'expo-notifications';
 import { Bell } from 'lucide-react-native';
 import { useNotificationStore } from './useNotificationStore';
 import { useAuthStore } from '../auth/useAuthStore';
@@ -79,7 +80,23 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
   // Reconcile the cached flag with the real OS state so a stale
   // permissionGranted=true doesn't suppress the prompt forever.
   useEffect(() => {
-    void useNotificationStore.getState().syncPermissionStatus();
+    void (async () => {
+      await useNotificationStore.getState().syncPermissionStatus();
+      // AMNESTY for falsely-burned one-shots (self-cancel bug, 2.7→3.8): the
+      // fire effect used to burn notifPromptShown BEFORE displaying, then
+      // cancel its own show timer (see the fix in tryShow below) — so every
+      // activated user since 2.7 carries notifPromptShown=true without ever
+      // seeing the primer OR the OS dialog. The OS itself is the proof: status
+      // 'undetermined' means the dialog was never opened, so the burn was
+      // false. Un-burn exactly that case; users who really answered the OS dialog
+      // are 'granted'/'denied' and stay untouched.
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status === 'undetermined' && useTutorialStore.getState().notifPromptShown) {
+          useTutorialStore.setState({ notifPromptShown: false });
+        }
+      } catch { /* non-fatal */ }
+    })();
   }, []);
 
   const eligible =
@@ -94,17 +111,10 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
 
   const [visible, setVisible] = useState(false);
   const [selectedChip, setSelectedChip] = useState<(typeof TIME_CHIPS)[number]['key']>(defaultChipForNow);
-  // Fire exactly once per lifetime: mark shown immediately so a cold close
-  // before acting doesn't re-pop it (the banner becomes the fallback).
   const firedRef = useRef(false);
   useEffect(() => {
     if (firedRef.current || !eligible) return;
     firedRef.current = true;
-    markNotifPromptShown();
-    // Suppress the thin fallback banner for this session so it can't stack
-    // behind or after this primer (both share the first-chest gate; the banner
-    // is a LATER rung of the ask-ladder, not a same-session double-ask).
-    useNotificationStore.getState().dismissBanner();
     // Small breath after the chest/CTA chain clears so the map settles first —
     // then wait for the GLOBAL popup stage (Yoav 8.7 sequencer) so the primer
     // never stacks under/over the exit ritual or any launch popup. The primer
@@ -121,6 +131,19 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
         return;
       }
       useNudgeQueueStore.getState().takePopupSlot();
+      // Burn the one-shot + suppress the thin banner ONLY now, at actual
+      // display. Marking at effect-start was the self-cancel bug that kept the
+      // permission ask 100% dark since 2.7 (0 primer views, 1 permission
+      // result / 14d): notifPromptShown is part of `eligible`, so the early
+      // mark flipped eligible false on the very next render and the effect
+      // re-run's CLEANUP cancelled this timer — flag burned, primer never
+      // rendered, no fallback. Mark-at-display keeps the one-shot guarantee (a
+      // cold close mid-display stays burned → the banner rung takes over)
+      // without ever burning an unshown primer. The eligible flip this mark
+      // causes is harmless here: setVisible(true) already ran, and the
+      // re-run's cleanup only clears an already-fired timer.
+      markNotifPromptShown();
+      useNotificationStore.getState().dismissBanner();
       setVisible(true);
       try { track({ name: 'notification_banner_shown', props: { source: 'permission_modal' } }); } catch { /* non-fatal */ }
     };
