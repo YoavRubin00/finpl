@@ -86,6 +86,7 @@ import { ToolsDiscoveryBanner } from "../../components/ui/ToolsDiscoveryBanner";
 import { BridgeCTABanner } from "../../components/ui/BridgeCTABanner";
 import { ProPromoGrantedModal } from "../subscription/ProPromoGrantedModal";
 import { ProPromoExpiringBanner } from "../subscription/ProPromoExpiringBanner";
+import { MarketUnlockGate } from "../market-unlock";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
@@ -3006,6 +3007,15 @@ export function DuoLearnScreen() {
           /api/sync/subscription and coordinate with the popup/banner slots. */}
       {!isWalkthroughActive && <ProPromoGrantedModal />}
       {!isWalkthroughActive && <ProPromoExpiringBanner />}
+      {/* שוק ההון נפתח לכולם (Yoav 3.8): auto-unlocks chapter 4 + one-time
+          takeover that jumps straight to mod-4-19. Reuses the exact fast-track
+          jump path (unlock flag + analytics + topic-tree routing). */}
+      {!isWalkthroughActive && !pendingPostWalkthroughCTA && (
+        <MarketUnlockGate
+          eligible={!isWalkthroughActive}
+          onEnter={() => handleJumpHere(ALL_CHAPTERS[4], 4)}
+        />
+      )}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
       <InvestorsJournalSheet visible={journalVisible} onClose={() => setJournalVisible(false)} />
       <DailyNewsChallengeSheet
