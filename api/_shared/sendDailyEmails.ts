@@ -124,7 +124,13 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         isNotNull(userProfiles.email),
         eq(userProfiles.dailyEmailEnabled, true),
         isNotNull(userProfiles.lastActiveDate),
-        sql`(${userProfiles.lastActiveDate} <= ${inactiveCutoffDate} OR (left(${userProfiles.createdAt}, 10) = ${yesterdayDate} AND ${userProfiles.lastActiveDate} <= ${yesterdayDate}))`,
+        // ::date, NOT left(...,10): createdAt is timestamptz and Postgres has
+        // no left(timestamptz,int) — the 15.7 commit's left() threw on every
+        // run and killed the ENTIRE daily batch for 18 days straight
+        // (retention_email_sent flat zero 16.7→3.8, found in the acquisition
+        // post-mortem). Casting compares the same UTC calendar day the old
+        // string-slice intended.
+        sql`(${userProfiles.lastActiveDate} <= ${inactiveCutoffDate} OR ((${userProfiles.createdAt})::date = ${yesterdayDate}::date AND ${userProfiles.lastActiveDate} <= ${yesterdayDate}))`,
         sql`(${userProfiles.dailyEmailSentAt} IS NULL OR ${userProfiles.dailyEmailSentAt} < ${cooldownCutoffIso})`,
       ),
     );
