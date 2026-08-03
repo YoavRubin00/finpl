@@ -126,6 +126,7 @@ import { PostWalkthroughFirstChestGate } from "../src/features/onboarding/PostWa
 import { NotificationPermissionPrompt } from "../src/features/notifications/NotificationPermissionPrompt";
 import { Day0ExitRitualHost } from "../src/features/retention-loops/Day0ExitRitualHost";
 import { TomorrowChestReadyHost } from "../src/features/retention-loops/TomorrowChestReadyHost";
+import { StarterCapitalGrantHost } from "../src/features/retention-loops/StarterCapitalGrantHost";
 import { PredictionResultsHost } from "../src/features/crowd-wisdom/PredictionResultsHost";
 import { GuestValueGateHost } from "../src/features/auth/guestValueGate";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
@@ -882,6 +883,13 @@ function RootLayoutInner() {
                   post-walkthrough chain; suppresses the same-day streak
                   daily-nudge so day-2 has ONE landing ritual. */}
               <TomorrowChestReadyHost />
+              {/* Starter capital "הכריש פותח לך תיק" (MONETIZATION-PLAN §2.1):
+                  one-time 2,500 grant on the SECOND distinct active day, never
+                  day-0. Self-gated to fire AFTER the wager resolution, the
+                  tomorrow-chest ceremony and the streak milestone (popup
+                  slot), with a single bridge CTA. Idempotent via the economy
+                  store's starterCapitalGranted flag. */}
+              <StarterCapitalGrantHost />
               {/* Credits + announces predictions that settled while away
                   ("צדקתם בזמן שהייתם בחוץ"). Claims once on open; server dedupes. */}
               <PredictionResultsHost />

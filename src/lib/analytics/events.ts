@@ -331,6 +331,18 @@ export type AppEvent =
   | { name: 'streak_wager_declined'; props: { stake: number; payout: number } }
   | { name: 'streak_wager_resolved'; props: { outcome: 'won' | 'lost'; stake: number; payout: number } }
 
+  // ── Starter capital — day-2 opening-portfolio grant (MONETIZATION-PLAN §2.1) ──
+  // The one-time 2,500-coin grant fires on the user's SECOND distinct active
+  // day (habit-day-2 ritual, or the day-4+ comeback fallback), always AFTER
+  // the shark-wager resolution. `day` = calendar day-of-life at grant (first
+  // active day = 1); `source` splits the ritual path from the comeback edge.
+  // NEVER chest_opened (that's the learning NSM — chest_completion_metric).
+  | { name: 'starter_capital_granted'; props: { day: number; source: 'habit_day_2' | 'second_active_day' } }
+  | { name: 'starter_capital_bridge_cta_tapped'; props?: Record<string, never> }
+  // Bridge "חסרים X" completion paths (the dead-end fix, MONETIZATION-PLAN
+  // OTA-1): which earn path the user took from an unaffordable benefit card.
+  | { name: 'bridge_earn_path_tapped'; props: { benefit_id: string; path: 'learn' | 'rewarded_ad' } }
+
   // ── Tomorrow chest (RETENTION-SPRINT 2026-07-06) ─────────────────────────
   // The day-2 appointment mechanic: a module/welcome chest today arms a
   // sealed chest that opens the next Israel day (map card + landing ceremony

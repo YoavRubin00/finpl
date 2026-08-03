@@ -1,5 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Image, Pressable, Linking, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,7 +11,7 @@ import Animated, {
   withTiming,
   cancelAnimation,
 } from 'react-native-reanimated';
-import { Lock, Check, ExternalLink } from 'lucide-react-native';
+import { Lock, Check, ExternalLink, GraduationCap } from 'lucide-react-native';
 import { SparkleOverlay } from '../../components/ui/SparkleOverlay';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
@@ -17,8 +19,21 @@ import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import type { Benefit } from './types';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
 import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
+import { useRewardedAd } from '../../hooks/useRewardedAd';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { getIsraelDateISO } from '../../utils/israelTime';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
+
+/** Rewarded-ad completion path on unaffordable cards (MONETIZATION-PLAN OTA-1
+ *  earn paths). Half the post-chest bonus (AD_BONUS_COINS=500) because this
+ *  one is reachable on demand — and gated to ONE claim per IL-day so the
+ *  bridge can't be ground with ad views. Granted via the same
+ *  addCoins(..., 'lesson') pipe as the chest bonus, so it persists
+ *  server-side identically. */
+const BRIDGE_AD_BONUS_COINS = 250;
+const BRIDGE_AD_BONUS_DATE_KEY = '@finplay/bridge-ad-bonus-date';
 
 interface BenefitCardProps {
   benefit: Benefit;
@@ -35,6 +50,7 @@ interface BenefitCardProps {
 }
 
 export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurchase, isHighlighted = false }: BenefitCardProps) {
+  const router = useRouter();
   const canAfford   = coins >= benefit.costCoins;
   const lockedByPro = benefit.proOnly && !isPro;
   const isAdSlot    = benefit.partnerAdSlot === true;
@@ -101,6 +117,47 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
       </View>
     );
   }
+
+  // ── Earn paths on the "חסרים X" state (dead-end fix, MONETIZATION-PLAN
+  //    OTA-1): earned only — never a cash/shop link (אודרי: completion is
+  //    EARNED, not bought; we profit from the redemption, selling coins toward
+  //    it would smell). Primary path: learning. Secondary: the existing
+  //    rewarded-ad infra (useRewardedAd singleton), once per IL-day. ──
+  const { showAd, isLoaded: adReady } = useRewardedAd();
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
+  // Pessimistic until the daily-claim gate is read, so the ad row never
+  // flashes for a user who already claimed today.
+  const [adClaimedToday, setAdClaimedToday] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(BRIDGE_AD_BONUS_DATE_KEY)
+      .then((d) => { if (!cancelled) setAdClaimedToday(d === getIsraelDateISO()); })
+      .catch(() => { if (!cancelled) setAdClaimedToday(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleLearnPath = () => {
+    try { track({ name: 'bridge_earn_path_tapped', props: { benefit_id: benefit.id, path: 'learn' } }); } catch { /* non-fatal */ }
+    router.push('/(tabs)/learn' as never);
+  };
+
+  const handleAdPath = () => {
+    try { track({ name: 'bridge_earn_path_tapped', props: { benefit_id: benefit.id, path: 'rewarded_ad' } }); } catch { /* non-fatal */ }
+    // Re-check the gate at tap time — a sibling card may have claimed today's
+    // bonus after this card's mount read.
+    AsyncStorage.getItem(BRIDGE_AD_BONUS_DATE_KEY)
+      .then((d) => {
+        const today = getIsraelDateISO();
+        if (d === today) { setAdClaimedToday(true); return; }
+        showAd(() => {
+          addCoins(BRIDGE_AD_BONUS_COINS, 'lesson');
+          setAdClaimedToday(true);
+          AsyncStorage.setItem(BRIDGE_AD_BONUS_DATE_KEY, today).catch(() => {});
+          try { captureEvent('rewarded_ad_completed', { source: 'bridge_earn_path', coins: BRIDGE_AD_BONUS_COINS }); } catch { /* non-fatal */ }
+        });
+      })
+      .catch(() => { /* non-fatal */ });
+  };
 
   const handleOpenPartnerUrl = () => {
     if (benefit.partnerUrl) {
@@ -264,15 +321,36 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
         {!canAfford && !isRedeemed && benefit.isAvailable && !lockedByPro && (
           <>
             <Text style={styles.coinsNeededText}>חסרים {coinsNeeded.toLocaleString()} מטבעות</Text>
-            {/* Completion paths (MONETIZATION-PLAN 2026-07-02): "חסרים X" was a
-                dead-end — no next step. Earn paths only, never a cash/shop
-                link (אודרי: completion is EARNED, not bought — we profit from
-                the redemption, selling coins toward it would smell). Amounts
-                verified in code: daily quests base 300, post-chest ad bonus
-                AD_BONUS_COINS=500. */}
-            <Text style={styles.coinsPathText}>
-              משלימים עם: המשימות היומיות (+300) · תיבות שיעור · בונוס צפייה אחרי תיבה (+500)
-            </Text>
+            {/* Completion paths — the "חסרים X" dead-end fix. The static hint
+                became a real door: tapping goes straight to the learn map. */}
+            <Pressable
+              onPress={handleLearnPath}
+              accessibilityRole="button"
+              accessibilityLabel="איך משיגים עוד מטבעות — ללמידה"
+              hitSlop={6}
+              style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+            >
+              {/* Android Pressable: bg lives on the inner View */}
+              <View style={styles.earnPathBtn}>
+                <GraduationCap size={14} color="#0369a1" />
+                <Text style={styles.earnPathText}>איך משיגים עוד? כל שיעור = מטבעות</Text>
+              </View>
+            </Pressable>
+            {!isPro && adReady && !adClaimedToday && (
+              <Pressable
+                onPress={handleAdPath}
+                accessibilityRole="button"
+                accessibilityLabel={`צפייה בפרסומת וקבלת ${BRIDGE_AD_BONUS_COINS} מטבעות`}
+                hitSlop={6}
+                style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+              >
+                <View style={[styles.earnPathBtn, styles.earnPathBtnAd]}>
+                  <Text style={[styles.earnPathText, styles.earnPathTextAd]}>
+                    🎬 צפייה קצרה = +{BRIDGE_AD_BONUS_COINS} מטבעות
+                  </Text>
+                </View>
+              </Pressable>
+            )}
           </>
         )}
       </View>
@@ -540,10 +618,31 @@ const styles = StyleSheet.create({
     color: '#64748b',
     ...RTL,
   },
-  coinsPathText: {
-    fontSize: 10,
-    color: '#94a3b8',
-    marginTop: 3,
-    ...RTL,
+  earnPathBtn: {
+    marginTop: 8,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#e0f2fe',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  earnPathBtnAd: {
+    backgroundColor: '#fef9c3',
+    borderColor: '#fde047',
+  },
+  earnPathText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0369a1',
+    writingDirection: 'rtl' as const,
+    textAlign: 'center' as const,
+  },
+  earnPathTextAd: {
+    color: '#a16207',
   },
 });
