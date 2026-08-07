@@ -1294,11 +1294,21 @@ const ChapterSection = React.memo(function ChapterSection({
           // State is determined by POSITION, not stored data alone.
           // This prevents stale completions from coloring modules out of order.
           // PRO users see all modules as "active" (unlocked), not locked visually.
+          // Fast-track reach (bug: Yoav 7.8 — "שוק ההון נפתח" then the nodes
+          // still demanded Pro): a free user's nodes only ever went active in
+          // the GLOBAL active chapter, so the fast-track-unlocked chapter 4
+          // looked open at the banner but every node inside stayed locked →
+          // onLockedPress → Pro wall, breaking the unlock promise. The
+          // chapter's own first incomplete module is now tappable for free
+          // users too. Character/cursor still renders only via isActive
+          // (global chapter) — no second shark on the map.
+          const isFastTrackReach =
+            sectionIndex === 4 && isUnlocked && !isPro && i === activeIndex;
           const state: "completed" | "active" | "locked" =
             isModuleComingSoon ? "locked" :
               isActive ? "active" :
                 (isUnlocked && i < activeIndex && completedModules.includes(module.id)) ? "completed" :
-                  (isPro && isUnlocked) ? "active" :
+                  ((isPro || isFastTrackReach) && isUnlocked) ? "active" :
                     "locked";
 
           // Interaction: PRO can access all modules in unlocked chapters
