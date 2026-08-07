@@ -71,6 +71,32 @@ function daysBetween(dateA: string, dateB: string): number {
   );
 }
 
+/** Latest (max) of several nullable ISO dates — null when none exist. */
+function latestOf(...dates: Array<string | null | undefined>): string | null {
+  let max: string | null = null;
+  for (const d of dates) {
+    if (d && (!max || d > max)) max = d;
+  }
+  return max;
+}
+
+/**
+ * Freeze consumption was completely DARK in PostHog — the Aug-2026 false-burn
+ * bug (open-only days never recorded → fake gap=2 → freeze burned, plus the
+ * awardLoginBonus/completeDailyTask same-day double-burn) was invisible for
+ * weeks. Every REAL consumption now emits `streak_freeze_consumed`.
+ * Lazy require — events.ts imports useStreak, which imports THIS file; a
+ * static import would create a require cycle (same reason STREAK_QUERY_KEY
+ * above is a literal instead of an import).
+ */
+function trackFreezeConsumed(source: 'login_bonus' | 'daily_task', gap: number, freezesLeft: number): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { track } = require('../../lib/analytics/events') as typeof import('../../lib/analytics/events');
+    track({ name: 'streak_freeze_consumed', props: { source, gap, freezes_left: freezesLeft } });
+  } catch { /* analytics must never break economy state */ }
+}
+
 /**
  * Fold the SERVER's streak calendar into the local one before any gap math
  * (Yoav 14.7: "קפטן שארק הציל לך את הרצף" fired mid-unbroken-run). The header
@@ -196,6 +222,11 @@ interface EconomyUIState {
   // so the reward can't double-fire if the celebration re-mounts the same day.
   lastStreakDayRewardDate: string | null;
   pendingFreezeSaveAck: boolean; // true when freeze was consumed, cleared on modal dismiss
+  // One-time client migration (OTA 2026-08): refund freezes burned by the
+  // false-consumption bug. Flag persisted so the refund runs exactly once.
+  freezeRefund2026_08Done: boolean;
+  // Session-only: refund count awaiting its acknowledgement modal (null = none).
+  pendingFreezeRefund: number | null;
   // Streak Repair (US-004), offered ONCE per break if prev streak >= 3
   pendingRepairOffer: boolean;
   previousStreakBeforeBreak: number; // snapshot of streak immediately before it reset to 1
@@ -244,6 +275,9 @@ interface EconomyUIState {
   /** Board 2026-06-18: small day-2 / day-3 habit reward (coins), idempotent per day. Returns coins granted (0 if none). */
   awardStreakDayReward: (streak: number) => number;
   dismissFreezeSaveAck: () => void;
+  /** One-time refund of falsely-burned freezes (Aug-2026 bug). Returns the refund count. */
+  runFreezeRefundMigration: () => number;
+  dismissFreezeRefund: () => void;
   repairStreak: (source: "gems" | "ad") => boolean;
   dismissRepairOffer: () => void;
   reset: () => void;
@@ -265,6 +299,8 @@ const INITIAL_STATE = {
   onboardingFreezesGranted: false,
   lastStreakDayRewardDate: null as string | null,
   pendingFreezeSaveAck: false,
+  freezeRefund2026_08Done: false,
+  pendingFreezeRefund: null as number | null,
   pendingRepairOffer: false,
   previousStreakBeforeBreak: 0,
   lastRepairOfferedAt: null as string | null,
@@ -450,20 +486,35 @@ export const useEconomyUIStore = create<EconomyUIState>()(
       },
 
       completeDailyTask: () => {
-        const { lastDailyTaskDate, streakFreezes, activeDates, frozenDates, weeklyShieldUntil, monthlyShieldUntil } = get();
+        const { lastDailyTaskDate, lastLoginBonusDate, streakFreezes, activeDates, frozenDates, weeklyShieldUntil, monthlyShieldUntil } = get();
         const today = todayISO();
         if (lastDailyTaskDate === today) return;
 
-        // Local activeDates + the server's calendar are the source of truth
+        // The gap is measured from the FULL local calendar — the latest of the
+        // last daily-task day, the last login-bonus day AND the newest
+        // activeDates entry. lastDailyTaskDate alone misses open-only days
+        // (opened / learned-without-finishing), reading a live run as a fake
+        // 2-day hole and burning a freeze for nothing (ליאור 3-4.8: 8
+        // lesson_started with zero completions → double-burn next morning).
+        const localLast = latestOf(lastDailyTaskDate, lastLoginBonusDate, ...activeDates);
+        // Local calendar + the server's calendar are the source of truth
         // for the UI streak — the server also counts open-only days this
         // calendar never sees (Yoav 14.7 false freeze-save).
-        const { dates: calDates, last: lastSeen } = reconcileWithServerCalendar(activeDates, lastDailyTaskDate, today);
+        const { dates: calDates, last: lastSeen } = reconcileWithServerCalendar(activeDates, localLast, today);
         const derivedStreak = deriveStreakFromDates(calDates, frozenDates);
 
-        const isConsecutiveDay = lastSeen === yesterdayISO();
+        const yest = yesterdayISO();
+        // awardLoginBonus (or an earlier open today) already marked today in
+        // the calendar — the day is covered; never re-run the gap/freeze math.
+        const alreadyCountedToday = lastSeen === today;
+        const isConsecutiveDay = lastSeen === yest;
         const gap = lastSeen ? daysBetween(lastSeen, today) : 999;
         const bridge = isShabbatBridge(lastSeen, today); // Shabbat auto-counts
-        const canFreeze = !bridge && gap === 2 && streakFreezes > 0;
+        // One freeze per covered calendar day: if yesterday is already in
+        // frozenDates (the other consumption site plugged the hole earlier
+        // today), continue the streak WITHOUT burning a second freeze.
+        const yesterdayAlreadyFrozen = frozenDates.includes(yest);
+        const canFreeze = !bridge && gap === 2 && !yesterdayAlreadyFrozen && streakFreezes > 0;
         const now = Date.now();
         const weeklyShieldActive = weeklyShieldUntil != null && weeklyShieldUntil > now;
         const monthlyShieldActive = monthlyShieldUntil != null && monthlyShieldUntil > now;
@@ -474,8 +525,12 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         let newStreak: number;
         let freezeConsumed = false;
         let streakBroke = false;
-        if (isConsecutiveDay || bridge) {
+        if (alreadyCountedToday) {
+          newStreak = derivedStreak; // derived already includes today
+        } else if (isConsecutiveDay || bridge) {
           newStreak = derivedStreak + 1;
+        } else if (gap === 2 && yesterdayAlreadyFrozen) {
+          newStreak = derivedStreak + 1; // hole already covered — no new burn
         } else if (canFreeze) {
           newStreak = derivedStreak + 1;
           freezeConsumed = true;
@@ -486,15 +541,21 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           streakBroke = derivedStreak >= 3;
         }
 
-        const streakBonus = (isConsecutiveDay || bridge || freezeConsumed) ? STREAK_BONUS_BASE_XP * newStreak : 0;
+        // alreadyCountedToday keeps the bonus: pre-fix, this exact scenario
+        // (login bonus ran first) read lastSeen=yesterday → consecutive → bonus.
+        const streakContinued = alreadyCountedToday || isConsecutiveDay || bridge || freezeConsumed || (gap === 2 && yesterdayAlreadyFrozen);
+        const streakBonus = streakContinued ? STREAK_BONUS_BASE_XP * newStreak : 0;
         let milestoneBonus = 0;
         if (newStreak === 7) milestoneBonus = STREAK_7_BONUS_XP;
         if (newStreak > 0 && newStreak % 30 === 0) milestoneBonus = STREAK_30_BONUS_XP;
-        const grantFreeze = newStreak === 7;
+        // `newStreak > derivedStreak` mirrors awardLoginBonus's guard — when the
+        // login-bonus path already advanced the streak to 7 today (and granted
+        // there), the alreadyCountedToday pass must not grant a second freeze.
+        const grantFreeze = newStreak === 7 && newStreak > derivedStreak;
 
-        const updatedActiveDates = trimDates([...calDates, today]);
+        const updatedActiveDates = trimDates(calDates.includes(today) ? calDates : [...calDates, today]);
         const updatedFrozenDates = freezeConsumed
-          ? trimDates([...frozenDates, yesterdayISO()])
+          ? trimDates([...frozenDates, yest])
           : trimDates(frozenDates);
 
         const netFreezeDelta = (grantFreeze ? 1 : 0) - (freezeConsumed ? 1 : 0);
@@ -510,6 +571,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
             : {}),
           recentActivityHours: [...state.recentActivityHours.slice(-13), new Date().getHours()],
         }));
+
+        if (freezeConsumed) trackFreezeConsumed('daily_task', gap, get().streakFreezes);
 
         // Mirror the new streak into the React Query cache so GlobalWealthHeader
         // (which reads via useStreak()) reflects the bump immediately, even when
@@ -570,14 +633,20 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         // that used to live here had the same IL-vs-UTC walk bug fixed
         // in deriveStreakFromDates). Server-calendar reconcile included —
         // same false-freeze protection as completeDailyTask (Yoav 14.7).
-        const localLast = lastDailyTaskDate ?? lastLoginBonusDate;
+        // Like completeDailyTask, the gap reads the FULL local calendar
+        // (both last-dates + newest activeDates entry) so an open-only day
+        // can never masquerade as a hole and burn a freeze.
+        const localLast = latestOf(lastDailyTaskDate, lastLoginBonusDate, ...activeDates);
         const { dates: calDates, last: lastActive } = reconcileWithServerCalendar(activeDates, localLast, today);
         const derivedStreak = deriveStreakFromDates(calDates, frozenDates);
 
-        const isConsecutiveDay = lastActive === yesterdayISO();
+        const yest = yesterdayISO();
+        const isConsecutiveDay = lastActive === yest;
         const gap = lastActive ? daysBetween(lastActive, today) : 999;
         const bridge = isShabbatBridge(lastActive, today); // Shabbat auto-counts
-        const canFreeze = !bridge && gap === 2 && streakFreezes > 0;
+        // One freeze per covered calendar day (see completeDailyTask).
+        const yesterdayAlreadyFrozen = frozenDates.includes(yest);
+        const canFreeze = !bridge && gap === 2 && !yesterdayAlreadyFrozen && streakFreezes > 0;
         const now = Date.now();
         const weeklyShieldActive = weeklyShieldUntil != null && weeklyShieldUntil > now;
         const monthlyShieldActive = monthlyShieldUntil != null && monthlyShieldUntil > now;
@@ -592,6 +661,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           newStreak = derivedStreak + 1;
         } else if (lastActive === today) {
           newStreak = derivedStreak;
+        } else if (gap === 2 && yesterdayAlreadyFrozen) {
+          newStreak = derivedStreak + 1; // hole already covered — no new burn
         } else if (canFreeze) {
           newStreak = derivedStreak + 1;
           freezeConsumed = true;
@@ -603,9 +674,9 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         }
 
         const grantFreeze = newStreak === 7 && derivedStreak !== 7;
-        const updatedActiveDates = trimDates([...calDates, today]);
+        const updatedActiveDates = trimDates(calDates.includes(today) ? calDates : [...calDates, today]);
         const updatedFrozenDates = freezeConsumed
-          ? trimDates([...frozenDates, yesterdayISO()])
+          ? trimDates([...frozenDates, yest])
           : trimDates(frozenDates);
 
         const netFreezeDelta = (grantFreeze ? 1 : 0) - (freezeConsumed ? 1 : 0);
@@ -625,6 +696,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
             : {}),
           recentActivityHours: [...state.recentActivityHours.slice(-13), new Date().getHours()],
         }));
+
+        if (freezeConsumed) trackFreezeConsumed('login_bonus', gap, get().streakFreezes);
 
         fireEconomyDelta({ xpDelta: LOGIN_BONUS_XP });
 
@@ -671,6 +744,54 @@ export const useEconomyUIStore = create<EconomyUIState>()(
       },
 
       dismissFreezeSaveAck: () => set({ pendingFreezeSaveAck: false }),
+
+      // ── One-time freeze refund (client migration, OTA 2026-08) ────────────
+      // The false-burn bug left two forensic signatures in the persisted
+      // calendar:
+      //   1. DUPLICATE dates in frozenDates — two consumptions covering the
+      //      same day (the awardLoginBonus + completeDailyTask double-burn);
+      //   2. frozenDates entries that ALSO appear in activeDates — a freeze
+      //      burned for a day the user was actually active (the open-day-
+      //      never-recorded fake gap).
+      // Refund one freeze per signature, exactly once ever (persisted flag),
+      // and clean the calendar so nothing can re-count the signatures. Streak
+      // math is untouched: duplicates don't change the date-SET, and overlap
+      // days stay covered via activeDates.
+      runFreezeRefundMigration: (): number => {
+        if (get().freezeRefund2026_08Done) return 0;
+        const { frozenDates, activeDates } = get();
+        const seen = new Set<string>();
+        let duplicates = 0;
+        for (const d of frozenDates) {
+          if (seen.has(d)) duplicates++;
+          else seen.add(d);
+        }
+        const activeSet = new Set(activeDates);
+        let overlaps = 0;
+        const cleaned: string[] = [];
+        for (const d of seen) {
+          if (activeSet.has(d)) overlaps++;
+          else cleaned.push(d);
+        }
+        const refund = duplicates + overlaps;
+        set({
+          freezeRefund2026_08Done: true,
+          frozenDates: cleaned.sort(),
+          ...(refund > 0 ? { pendingFreezeRefund: refund } : {}),
+        });
+        if (refund > 0) {
+          get().addStreakFreezes(refund);
+          try {
+            // Lazy require — see trackFreezeConsumed for the cycle rationale.
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { track } = require('../../lib/analytics/events') as typeof import('../../lib/analytics/events');
+            track({ name: 'streak_freeze_refunded', props: { count: refund } });
+          } catch { /* non-fatal */ }
+        }
+        return refund;
+      },
+
+      dismissFreezeRefund: () => set({ pendingFreezeRefund: null }),
 
       repairStreak: (source: "gems" | "ad") => {
         const { pendingRepairOffer, previousStreakBeforeBreak } = get();
@@ -814,6 +935,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         onboardingFreezesGranted: state.onboardingFreezesGranted,
         lastStreakDayRewardDate: state.lastStreakDayRewardDate,
         pendingFreezeSaveAck: state.pendingFreezeSaveAck,
+        freezeRefund2026_08Done: state.freezeRefund2026_08Done,
         pendingRepairOffer: state.pendingRepairOffer,
         previousStreakBeforeBreak: state.previousStreakBeforeBreak,
         lastRepairOfferedAt: state.lastRepairOfferedAt,
@@ -835,6 +957,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         if (typeof state.onboardingFreezesGranted !== "boolean") state.onboardingFreezesGranted = false;
         if (typeof state.lastStreakDayRewardDate !== "string" && state.lastStreakDayRewardDate !== null) state.lastStreakDayRewardDate = null;
         if (typeof state.pendingFreezeSaveAck !== "boolean") state.pendingFreezeSaveAck = false;
+        if (typeof state.freezeRefund2026_08Done !== "boolean") state.freezeRefund2026_08Done = false;
         if (typeof state.pendingRepairOffer !== "boolean") state.pendingRepairOffer = false;
         if (typeof state.previousStreakBeforeBreak !== "number") state.previousStreakBeforeBreak = 0;
         if (typeof state.lastRepairOfferedAt !== "string" && state.lastRepairOfferedAt !== null) state.lastRepairOfferedAt = null;

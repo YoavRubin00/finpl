@@ -260,6 +260,15 @@ export type AppEvent =
   // is the user's first-ever transition to a streak ≥ 2 — drives the
   // "holding a streak (≥ 2)" cohort the rest of the metric stack reads.
   | { name: 'streak_extended'; props: { prev_streak: number; new_streak: number; longest_streak: number; is_milestone: boolean; reached_two: boolean } }
+  // Streak-freeze consumption — fired from BOTH client consumption sites in
+  // useEconomyUIStore (`awardLoginBonus` on app open, `completeDailyTask` on
+  // activity). The Aug-2026 false-burn bug was invisible in PostHog precisely
+  // because consumption emitted nothing; `gap` is the computed day-hole that
+  // justified the burn (a legit burn is always gap=2).
+  | { name: 'streak_freeze_consumed'; props: { source: 'login_bonus' | 'daily_task'; gap: number; freezes_left: number } }
+  // One-time client migration (OTA 2026-08) refunding freezes burned by the
+  // false-consumption bug — `count` = duplicates-in-frozenDates + frozen∩active.
+  | { name: 'streak_freeze_refunded'; props: { count: number } }
   // Fires when energy hits 0 and the out-of-energy modal opens (false→true
   // transition only, not on every blocked action while already at 0). Powers
   // the weekly "ran out of energy" user count on the YOAVS dashboard. The

@@ -135,6 +135,7 @@ import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
+import { FreezeRefundModalGate } from "../src/features/streak/StreakFreezeRefundModal";
 import {
   ComebackRewardModal,
   COMEBACK_COINS,
@@ -279,6 +280,14 @@ function RootLayoutInner() {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         foregroundEnteredAt.current = Date.now();
+        // Mark the open-day in the local streak calendar on EVERY foreground,
+        // not only on cold start (false freeze-burn fix, Aug 2026): a day the
+        // user only foregrounded the app never reached lastLoginBonusDate /
+        // activeDates, so the next completion read a fake 2-day gap and burned
+        // a freeze. awardLoginBonus is idempotent per IL-day
+        // (lastLoginBonusDate guard), so this is a no-op after the first
+        // 'active' of each Israeli calendar day.
+        try { useEconomyUIStore.getState().awardLoginBonus(); } catch { /* non-fatal */ }
         // Foreground crossing midnight Israel-time: re-run the lazy day-key
         // check inside the quests store so the 4 stars + chest reset
         // immediately on resume, not on the next time the user navigates to
@@ -419,7 +428,24 @@ function RootLayoutInner() {
 
   const userEmail = useAuthStore((s) => s.email);
 
-  // Award daily login XP on app open
+  // One-time freeze-refund migration (false-burn bug, Aug 2026). MUST wait
+  // for the store's async rehydration — running against INITIAL_STATE would
+  // see an empty calendar, refund 0 and permanently stamp the done-flag.
+  useEffect(() => {
+    const run = () => {
+      try { useEconomyUIStore.getState().runFreezeRefundMigration(); } catch { /* non-fatal */ }
+    };
+    try {
+      if (useEconomyUIStore.persist.hasHydrated()) {
+        run();
+        return;
+      }
+      return useEconomyUIStore.persist.onFinishHydration(run);
+    } catch { /* non-fatal */ }
+  }, []);
+
+  // Award daily login XP on app open (cold start; every subsequent foreground
+  // is covered by the AppState 'active' branch above — same idempotent call)
   useEffect(() => {
     useEconomyUIStore.getState().awardLoginBonus();
     // Stacking session bonus — coins for repeat returns within the same day.
@@ -937,6 +963,9 @@ function RootLayoutInner() {
                 </>
               )}
               <FreezeSaveModalGate />
+              {/* One-time refund ack for falsely-burned freezes (Aug 2026).
+                  Self-gated on pendingFreezeRefund + the global popup slot. */}
+              <FreezeRefundModalGate />
               <StreakRepairModalGate />
               <ComebackRewardGate />
               <SharkSkinsGate />
