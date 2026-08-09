@@ -95,6 +95,9 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keep class org.webrtc.** { *; }\n-keep class io.livekit.** { *; }\n-keep class livekit.** { *; }\n-keep class com.facebook.jni.** { *; }",
             "extractNativeLibs": false,
             "packagingOptions": {
               "pickFirst": [
