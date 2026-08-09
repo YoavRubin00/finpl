@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -51,6 +51,17 @@ export function TickerPickerSheet({
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  // The input is deliberately UNCONTROLLED (no `value` prop). A controlled
+  // value + the heavy per-keystroke re-render (catalog search + 30 animated
+  // rows) makes Android reset the native text to the stale JS value — users
+  // saw every character they typed get "auto-cancelled" (report 9.8.2026).
+  // State only drives filtering; clearing goes through the ref.
+  const inputRef = useRef<TextInput>(null);
+
+  const clearInput = () => {
+    inputRef.current?.clear();
+    setQuery('');
+  };
 
   const matches = useMemo(() => searchCatalog(query, 30), [query]);
   const trimmed = query.trim();
@@ -62,14 +73,14 @@ export function TickerPickerSheet({
   if (!visible) return null;
 
   const handleClose = () => {
-    setQuery('');
+    clearInput();
     setSearchFocused(false);
     onClose();
   };
 
   const handlePick = (ticker: string) => {
     // No haptic here — this screen is intentionally vibration-free.
-    setQuery('');
+    clearInput();
     setSearchFocused(false);
     onPick(ticker);
   };
@@ -137,18 +148,25 @@ export function TickerPickerSheet({
               strokeWidth={2.4}
             />
             <TextInput
+              ref={inputRef}
               style={styles.input}
-              value={query}
+              defaultValue=""
               onChangeText={setQuery}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
               placeholder="חיפוש לפי שם / סימול (NVDA, אנבידיה)"
               placeholderTextColor="#94a3b8"
               accessibilityLabel="חיפוש מניה"
+              autoCorrect={false}
+              autoCapitalize="none"
+              autoComplete="off"
+              importantForAutofill="no"
+              disableFullscreenUI
+              underlineColorAndroid="transparent"
             />
             {query.length > 0 ? (
               <Pressable
-                onPress={() => setQuery('')}
+                onPress={clearInput}
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel="נקה חיפוש"
@@ -180,11 +198,18 @@ export function TickerPickerSheet({
               </View>
             ) : null}
 
+            {matches.length > 0 ? (
+              <Text style={styles.listHint} allowFontScaling={false}>
+                לחיצה על מניה מהרשימה מוסיפה אותה למעקב
+              </Text>
+            ) : null}
+
             {matches.map((entry, i) => (
               <CatalogRow
                 key={entry.ticker}
                 entry={entry}
                 index={i}
+                animateIn={trimmed.length === 0}
                 disabled={alreadyTracked.includes(entry.ticker)}
                 onPick={() => handlePick(entry.ticker)}
               />
@@ -203,11 +228,16 @@ export function TickerPickerSheet({
 function CatalogRow({
   entry,
   index,
+  animateIn,
   disabled,
   onPick,
 }: {
   entry: CatalogEntry;
   index: number;
+  /** Entering cascade only on the initial (empty-query) list. While the user
+   *  is typing, rows mount with NO entering animation — the per-keystroke
+   *  animation load was part of the Android text-reset jank. */
+  animateIn: boolean;
   disabled: boolean;
   onPick: () => void;
 }): React.ReactElement {
@@ -232,7 +262,7 @@ function CatalogRow({
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(200).delay(delay)}
+      entering={animateIn ? FadeInDown.duration(200).delay(delay) : undefined}
       style={animatedStyle}
     >
       <Pressable
@@ -274,8 +304,11 @@ function CatalogRow({
             <Text style={styles.alreadyText} allowFontScaling={false}>במעקב</Text>
           </View>
         ) : (
+          // Explicit labeled chip — the bare icon read as decoration and users
+          // didn't realize rows are tappable (report 9.8.2026).
           <View style={styles.addChip}>
-            <TrendingUp size={13} color={ACCENT_RED} strokeWidth={2.6} />
+            <TrendingUp size={12} color="#ffffff" strokeWidth={2.8} />
+            <Text style={styles.addChipText} allowFontScaling={false}>הוסף</Text>
           </View>
         )}
       </Pressable>
@@ -589,12 +622,28 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   addChip: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#fee2e2',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: ACCENT_RED,
+  },
+  addChipText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#ffffff',
+    writingDirection: 'rtl',
+  },
+  listHint: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: STITCH.onSurfaceVariant,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    paddingHorizontal: 4,
+    paddingBottom: 2,
   },
 
   /* Raw add (free-text) row */
