@@ -94,7 +94,7 @@
           },
           "android": {
             "compileSdkVersion": 36,
-            "targetSdkVersion": 35,
+            "targetSdkVersion": 36,
             "extractNativeLibs": false,
             "packagingOptions": {
               "pickFirst": [
