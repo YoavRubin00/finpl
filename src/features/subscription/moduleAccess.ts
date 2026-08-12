@@ -1,4 +1,5 @@
 import { PRO_LOCKED_SIMS } from "../../constants/proGates";
+import { useTutorialStore } from "../../stores/useTutorialStore";
 import type { Module } from "../chapter-1-content/types";
 import { lessonRouteFor } from "../topic-learning/topicResolver";
 import { getCompletedModulesSync } from "../chapter-1-content/useProgress";
@@ -41,15 +42,23 @@ export function isModuleAccessible(moduleId: string, chapterId: string): boolean
   if (isPro) return true;
   const chapterIdx = ALL_CHAPTERS_ORDERED.findIndex((c) => c.id === chapterId);
   if (chapterIdx < 0) return true;
-  for (let ci = 0; ci < chapterIdx; ci++) {
-    const prev = ALL_CHAPTERS_ORDERED[ci];
-    const prevCompleted = getCompletedModulesSync(chapterStoreKey(prev.id));
-    if (
-      !prev.modules.every(
-        (m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id),
-      )
-    ) {
-      return false;
+  // Investments fast-track (Yoav 8.7): once the market-unlock moment fired,
+  // chapter 4 is open for everyone — skip the prior-chapters walk (the
+  // in-chapter sequence check below still applies). Keep in sync with
+  // DuoLearnScreen (`idx === 4 && investJump`) and LessonFlowScreen's gate.
+  const investFastTrack =
+    chapterIdx === 4 && useTutorialStore.getState().investChapterJumpUnlocked;
+  if (!investFastTrack) {
+    for (let ci = 0; ci < chapterIdx; ci++) {
+      const prev = ALL_CHAPTERS_ORDERED[ci];
+      const prevCompleted = getCompletedModulesSync(chapterStoreKey(prev.id));
+      if (
+        !prev.modules.every(
+          (m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id),
+        )
+      ) {
+        return false;
+      }
     }
   }
   const chapter = ALL_CHAPTERS_ORDERED[chapterIdx];

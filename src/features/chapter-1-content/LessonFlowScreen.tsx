@@ -2658,15 +2658,25 @@ export function LessonFlowScreen() {
   // Subscribe to the durable local completion store so the gate re-evaluates the
   // instant a module is marked complete (getCompletedModulesSync unions it in).
   const localCompletedIds = useCompletedModulesStore((s) => s.completedIds);
+  const investJump = useTutorialStore((s) => s.investChapterJumpUnlocked);
   const isModuleAccessible = useMemo(() => {
     if (isPro) return true;
     if (!chapterId) return true; // no chapter context, allow
     const chapterIdx = ALL_CHAPTERS_ORDERED.findIndex((c) => c.id === chapterId);
     if (chapterIdx < 0) return true;
-    for (let ci = 0; ci < chapterIdx; ci++) {
-      const prev = ALL_CHAPTERS_ORDERED[ci];
-      const prevCompleted = getCompletedModulesSync(chapterStoreKey(prev.id));
-      if (!prev.modules.every((m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id))) return false;
+    // Investments fast-track (Yoav 8.7): once the market-unlock moment fired,
+    // chapter 4 is open for everyone regardless of chapters 1-3. DuoLearnScreen
+    // already unlocks the map node (`idx === 4 && investJump`), but this gate
+    // walked ALL previous chapters and re-locked the lesson itself ("המודול
+    // הזה עדיין לא נפתח" — Yoav 9.8). Skip the prior-chapters walk for the
+    // fast-tracked chapter; the in-chapter sequence check below still applies.
+    const investFastTrack = chapterIdx === 4 && investJump;
+    if (!investFastTrack) {
+      for (let ci = 0; ci < chapterIdx; ci++) {
+        const prev = ALL_CHAPTERS_ORDERED[ci];
+        const prevCompleted = getCompletedModulesSync(chapterStoreKey(prev.id));
+        if (!prev.modules.every((m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id))) return false;
+      }
     }
     const chapter = ALL_CHAPTERS_ORDERED[chapterIdx];
     const modIdx = chapter.modules.findIndex((m) => m.id === id);
@@ -2678,7 +2688,7 @@ export function LessonFlowScreen() {
       if (!completed.includes(chapter.modules[mi].id)) return false;
     }
     return true;
-  }, [isPro, chapterId, id, progressData, localCompletedIds]);
+  }, [isPro, chapterId, id, progressData, localCompletedIds, investJump]);
 
   const [showProGate, setShowProGate] = useState(false);
 
