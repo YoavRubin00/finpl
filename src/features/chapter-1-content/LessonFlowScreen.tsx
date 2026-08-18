@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, SafeAreaView, ScrollView, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator, Keyboard, Platform } from "react-native";
+import { View, Text, SafeAreaView, ScrollView, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator, Keyboard, Platform, BackHandler } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
@@ -67,6 +67,8 @@ import { LiquidButton } from "../../components/ui/LiquidButton";
 import { RewardPopup } from "../../components/ui/RewardPopup";
 import { successHaptic, errorHaptic, heavyHaptic, tapHaptic, mediumHaptic, doubleHeavyHaptic } from "../../utils/haptics";
 import { InteractiveIntroCard } from "./InteractiveIntroCard";
+import { LessonExitConfirmSheet } from "./LessonExitConfirmSheet";
+import { IntroStepStrip } from "./IntroStepStrip";
 import { QuizStartPopup } from "./QuizStartPopup";
 import { SimulatorLoader } from "./SimulatorLoader";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
@@ -2350,6 +2352,21 @@ export function LessonFlowScreen() {
     if (router.canGoBack()) router.back();
     else returnToMap("/(tabs)/index");
   }
+
+  /** "לצאת" from the exit-safe quit sheet (intro / hero / video / quizzes).
+   *  Same navigation as forceExit, but deliberately WITHOUT the legacy
+   *  `completeModule('mod-0-1')` — that quirk fired `lesson_completed` + marked
+   *  the whole module done on ANY exit, which for an intro-phase bail would
+   *  both lie on the map and pollute the exact intro→cards funnel we're trying
+   *  to fix. Progress is safe anyway: chip completions live in the topic store
+   *  and the resume checkpoint restores the phase ("ההתקדמות נשמרת"). */
+  function leaveLessonFromSheet() {
+    try { captureEvent('lesson_exited_early', { lesson_id: id ?? null, chapter_id: chapterId ?? null, reason: 'back_button', phase }); } catch { /* non-fatal */ }
+    setShowExitConfirm(false);
+    if (maybeHandoffToProfiling('force_exit')) return;
+    if (router.canGoBack()) router.back();
+    else returnToMap("/(tabs)/index");
+  }
   const safeInsets = useSafeAreaInsets();
   const [activeGlossaryTerm, setActiveGlossaryTerm] = useState<string | null>(null);
   const [showChatOverlay, setShowChatOverlay] = useState(false);
@@ -3660,6 +3677,59 @@ export function LessonFlowScreen() {
   const [showChapterComplete, setShowChapterComplete] = useState(false);
   const [showFinnBridgeNudge, setShowFinnBridgeNudge] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  // Exit-safe lesson (Yoav 18.8.26). PostHog 27.7–9.8: the biggest leak is
+  // DURING the mod-0-1 intro (65 start → 50 finish; Android 65% vs iOS 90%),
+  // secondary leak = the quiz on iOS. Android hardware back used to POP the
+  // lesson instantly in every phase (no BackHandler here at all), and the header
+  // chevron left the intro/hero/video with no confirm either. Now: intro / hero
+  // / video / quizzes → ONE Duolingo-style bottom sheet (LessonExitConfirmSheet)
+  // for BOTH hardware back and the chevron. Cards / recall / sim keep their own
+  // existing flow (legacy centered confirm in linear/auto-flow, per-chip skip in
+  // chip mode — 2026-06-11 decision) — hardware back now routes through the
+  // same safeGoBack() so it can never bypass that flow either.
+  const [showQuitSheet, setShowQuitSheet] = useState(false);
+  const requestExit = useCallback(() => {
+    if (phase === "intro" || phase === "hero" || phase === "video" || phase === "quizzes") {
+      setShowQuitSheet(true);
+      return;
+    }
+    safeGoBack();
+  // safeGoBack is a hoisted function declaration reading live state/refs.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+  const quitSheetStay = useCallback(() => {
+    tapHaptic();
+    setShowQuitSheet(false);
+    try { captureEvent('lesson_exit_prompt', { lesson_id: id ?? null, phase, choice: 'stay' }); } catch { /* non-fatal */ }
+  }, [id, phase]);
+  const quitSheetLeave = useCallback(() => {
+    setShowQuitSheet(false);
+    try { captureEvent('lesson_exit_prompt', { lesson_id: id ?? null, phase, choice: 'leave' }); } catch { /* non-fatal */ }
+    leaveLessonFromSheet();
+  // leaveLessonFromSheet is a hoisted function declaration reading live state/refs.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, phase]);
+  // The sheet belongs to the phase it was opened on — a phase change (video
+  // finished, intro auto-advanced) closes it so it never floats over the wrong
+  // screen.
+  useEffect(() => { setShowQuitSheet(false); }, [phase]);
+  // Android hardware back → same path as the header chevron. Native <Modal>s
+  // (the sheet itself, legacy confirm, pro gate, chat overlay) own the back
+  // press while they're open via onRequestClose, so this only fires when the
+  // lesson body is what's on screen.
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !isFocused) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      requestExit();
+      return true;
+    });
+    return () => sub.remove();
+  }, [isFocused, requestExit]);
+  // Intro momentum strip: the module's chip order minus chat (always last).
+  const introStripKinds = useMemo<TopicKind[]>(
+    () => (mod ? resolveTopics(mod).map((t) => t.kind).filter((k) => k !== 'chat') : []),
+    [mod],
+  );
   // Auto-flow "עוד X לתיבה" chip-callout (pop+confetti, preserved). Driven by the
   // seam: bumped once per chip completion (NOT the chest-crossing one).
   const [calloutSeq, setCalloutSeq] = useState(0);
@@ -4675,12 +4745,22 @@ export function LessonFlowScreen() {
   // Video hook phase, full-screen video with hook text overlay
   if (phase === "video" && mod?.videoHookAsset) {
     return (
-      <VideoHookPlayer
-        videoUri={getCachedVideoPath((mod.videoHookAsset as { uri: string }).uri)}
-        hookText={mod.videoHook ?? ""}
-        onFinish={advanceFromVideo}
-        unitColors={unitColors}
-      />
+      <>
+        <VideoHookPlayer
+          videoUri={getCachedVideoPath((mod.videoHookAsset as { uri: string }).uri)}
+          hookText={mod.videoHook ?? ""}
+          onFinish={advanceFromVideo}
+          unitColors={unitColors}
+        />
+        <LessonExitConfirmSheet
+          visible={showQuitSheet}
+          onStay={quitSheetStay}
+          onLeave={quitSheetLeave}
+          accentColor={unitColors.bg}
+          accentBottom={unitColors.bottom}
+          bottomInset={safeInsets.bottom}
+        />
+      </>
     );
   }
   if (phase === "video") {
@@ -4854,7 +4934,7 @@ export function LessonFlowScreen() {
               {mod.title}
             </Text>
             <AnimatedPressable
-              onPress={safeGoBack}
+              onPress={requestExit}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -5099,6 +5179,14 @@ export function LessonFlowScreen() {
         {/* ── Intro phase ── */}
         {phase === "intro" && (
           <Animated.View style={[contentStyle, { flex: 1 }]}>
+            {/* Momentum strip — the intro is step 1 of a short visible path
+                (intro → cards → quiz), not a dead end (Yoav 18.8.26). Kinds
+                come from resolveTopics so the order always matches the map. */}
+            <IntroStepStrip
+              kinds={introStripKinds}
+              currentKind="intro"
+              accentColor={unitColors.bg}
+            />
             {mod.introVariant === 'short' && mod.id === 'mod-1-1' ? (
               <CompoundInterestIntro
                 onStart={handleIntroStart}
@@ -5132,6 +5220,43 @@ export function LessonFlowScreen() {
                 onStart={handleIntroStart}
                 unitColors={unitColors}
               />
+            )}
+            {/* Pinned start CTA (Yoav 18.8.26). The 'short' intros
+                (ModuleIntroShort — mod-0-1 — and CompoundInterestIntro) had NO
+                visible start button: only a 13px grey "דלג ›" and, after ~9s
+                of timed captions, a drag-the-coin gesture. That's the phase
+                where new users sat 10–30s and left. A real, always-visible,
+                thumb-reachable button; the coin drag stays as the playful
+                alternative. InteractiveIntroCard already ships its own big
+                "בואו נתחיל!" CTA, so it's excluded. */}
+            {mod.introVariant === 'short' && (
+              <Pressable
+                onPress={() => { heavyHaptic(); handleIntroStart(); }}
+                accessibilityRole="button"
+                accessibilityLabel="מתחילים"
+                style={({ pressed }) => ({ width: '100%', marginBottom: 8, opacity: pressed ? 0.9 : 1 })}
+              >
+                {/* bg on an inner View — function-style Pressable drops it on Android */}
+                <View style={{
+                  minHeight: 52,
+                  borderRadius: 16,
+                  backgroundColor: unitColors.bg,
+                  borderBottomWidth: 4,
+                  borderBottomColor: unitColors.bottom,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 14,
+                  shadowColor: unitColors.glow,
+                  shadowOpacity: 0.4,
+                  shadowRadius: 12,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 8,
+                }}>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>
+                    מתחילים ←
+                  </Text>
+                </View>
+              </Pressable>
             )}
           </Animated.View>
         )}
@@ -6785,6 +6910,17 @@ export function LessonFlowScreen() {
           <ChatScreen lessonContext={chatLessonContext} />
         </SafeAreaView>
       </Modal>
+
+      {/* Exit-safe quit confirm — intro / hero / quizzes (the video phase
+          renders its own copy in the early-return branch above). */}
+      <LessonExitConfirmSheet
+        visible={showQuitSheet}
+        onStay={quitSheetStay}
+        onLeave={quitSheetLeave}
+        accentColor={unitColors.bg}
+        accentBottom={unitColors.bottom}
+        bottomInset={safeInsets.bottom}
+      />
 
       {/* Glossary tooltip */}
       <GlossaryTooltip

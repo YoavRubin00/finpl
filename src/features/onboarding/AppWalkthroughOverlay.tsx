@@ -273,11 +273,16 @@ export function AppWalkthroughOverlay() {
       // restoring the post_walkthrough monetization moment without blocking the
       // path to the first module.
       void via;
+      // 18.8 (Yoav): no more auto-launch of mod-0-1 the second the tour ends.
+      // The funnel showed 7/15 new-user intro-droppers had lesson_started fire
+      // in the same second as walkthrough end, still on /bridge or /friends —
+      // they never chose to start, so they backed straight out. Now everyone
+      // lands on the learn map, where FirstLessonCTA offers "בואו נתחיל"
+      // explicitly (same route, user-initiated).
       if (firstChestOpened) {
-        router.replace('/lesson/mod-0-1?startPhase=intro&returnTo=topic-tree&chapterId=chapter-0' as never);
-      } else {
-        router.replace("/(tabs)" as never);
+        try { useTutorialStore.getState().setPendingFirstLessonCTA(true); } catch { /* non-fatal */ }
       }
+      router.replace("/(tabs)" as never);
     } catch {
       // No-op — already on a safe route.
     }

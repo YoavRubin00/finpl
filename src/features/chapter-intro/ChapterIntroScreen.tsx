@@ -3,8 +3,8 @@
  * starts learning. Displays the chapter's interactive mind map (with per-node
  * completion state) and the modules list, plus a "המשך" CTA.
  */
-import { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import { useMemo, useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowRight, Check, Lock, Play } from 'lucide-react-native';
@@ -16,6 +16,8 @@ import {
   nextAccessibleModule,
 } from '../subscription/moduleAccess';
 import { tapHaptic, heavyHaptic } from '../../utils/haptics';
+import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
+import { FINN_EMPATHIC } from '../retention-loops/finnMascotConfig';
 import { CHAPTER_CTA_COLORS } from '../finfeed/types';
 import { useChapterMindMap } from './useChapterMindMap';
 import { lessonRouteFor } from '../topic-learning/topicResolver';
@@ -24,10 +26,18 @@ function chapterStoreKey(chapterId: string): string {
   return `ch-${chapterId.split('-')[1]}`;
 }
 
+// In-app "module locked" feedback (replaces the native Alert.alert). Voice:
+// system speaks → plural (docs/BRAND.md).
+const LOCKED_TOAST = {
+  title: 'המודול הזה עדיין נעול',
+  body: 'סיימו את הקודמים ותגיעו אליו.',
+} as const;
+
 export function ChapterIntroScreen() {
   const params = useLocalSearchParams<{ chapterId?: string }>();
   const chapterId = params.chapterId ?? 'chapter-0';
   const router = useRouter();
+  const [lockedToastVisible, setLockedToastVisible] = useState(false);
 
   const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
@@ -64,7 +74,7 @@ export function ChapterIntroScreen() {
     (moduleId: string) => {
       if (lockedModuleIds.has(moduleId)) {
         heavyHaptic();
-        Alert.alert('מודול נעול', 'יש להשלים את המודולות הקודמות לפני שניגשים לזה.');
+        setLockedToastVisible(true);
         return;
       }
       goToModule(moduleId);
@@ -77,7 +87,7 @@ export function ChapterIntroScreen() {
       if (!chapter) return;
       if (!isModuleAccessible(moduleId, chapter.id)) {
         heavyHaptic();
-        Alert.alert('מודול נעול', 'יש להשלים את המודולות הקודמות לפני שניגשים לזה.');
+        setLockedToastVisible(true);
         return;
       }
       goToModule(moduleId);
@@ -246,6 +256,16 @@ export function ChapterIntroScreen() {
           </AnimatedPressable>
         </View>
       ) : null}
+      {/* Locked-module toast (was a native Alert). */}
+      <SharkInsightToast
+        visible={lockedToastVisible}
+        shark={FINN_EMPATHIC}
+        title={LOCKED_TOAST.title}
+        body={LOCKED_TOAST.body}
+        accentColor="#f59e0b"
+        autoDismissMs={4000}
+        onDismiss={() => setLockedToastVisible(false)}
+      />
     </SafeAreaView>
   );
 }

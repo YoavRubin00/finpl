@@ -89,6 +89,7 @@ import { ProPromoExpiringBanner } from "../subscription/ProPromoExpiringBanner";
 import { MarketUnlockGate } from "../market-unlock";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
+import { FirstLessonCTA } from "../onboarding/FirstLessonCTA";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
 import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
 import { DailyNewsChallengeCard } from "../daily-news-challenge/DailyNewsChallengeCard";
@@ -908,8 +909,9 @@ function ModuleNode({
 
         {/* Coming soon badge */}
         {isComingSoon && (
-          <View style={styles.comingSoonBadge}>
-            <Text style={styles.comingSoonText}>בפיתוח 🔧</Text>
+          <View style={styles.comingSoonBadge} accessible={true} accessibilityLabel="בקרוב">
+            <Lock size={9} color="#ffffff" strokeWidth={2.5} />
+            <Text style={styles.comingSoonText} allowFontScaling={false}>בקרוב</Text>
           </View>
         )}
 
@@ -1280,7 +1282,11 @@ const ChapterSection = React.memo(function ChapterSection({
       )}
 
       <View style={{ marginTop: 4, marginBottom: 28, position: "relative" }}>
-        {/* Path decorations disabled temporarily */}
+        {/* No PathDecorations here (daily-quests/PathDecorations.tsx): it was
+            never wired in this repo's history — 2 always-looping Lotties per
+            chapter at 14% opacity, positioned by a fixed ROW_HEIGHT that the
+            per-module topic accordion breaks. Perf cost on the primary
+            screen with ~zero visual payoff; intentionally kept off. */}
 
         {chapter.modules.map((module, i) => {
           // Only the global active chapter hosts the Finn mascot + active
@@ -2329,7 +2335,7 @@ export function DuoLearnScreen() {
   // uses animated:false to land instantly).
   useFocusEffect(
     useCallback(() => {
-      // refreshQuests(); syncQuestCompletions();, disabled temporarily
+      // (quest refresh/sync live in their own mount + focus effects above)
       if (isFirstMount.current) {
         isFirstMount.current = false;
         return;
@@ -3009,6 +3015,11 @@ export function DuoLearnScreen() {
           learn surface — 465 dismissers × 1,371 dismissals vs 3 taps (0.2%).
           The bridge remains reachable from its own tab. */}
       {false && !isWalkthroughActive && !pendingPostWalkthroughCTA && <BridgeCTABanner />}
+      {/* Explicit first-lesson invitation (Yoav 18.8) — replaces the
+          walkthrough's auto-launch of mod-0-1. Self-gates on
+          pendingFirstLessonCTA; sits above the streak banners so it's the
+          first thing a fresh user sees on the map. */}
+      {!isWalkthroughActive && <FirstLessonCTA />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       {/* Promo-grant visibility (Yoav 2026-07-26): one-time "קיבלתם Pro
@@ -3886,6 +3897,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -8,
     alignSelf: "center",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 3,
     backgroundColor: "#6b7280",
     borderRadius: 8,
     paddingHorizontal: 8,

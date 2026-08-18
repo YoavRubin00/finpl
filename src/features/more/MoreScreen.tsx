@@ -27,6 +27,35 @@ import { useFunStore } from "../../stores/useFunStore";
 import { FinnMailModal } from "../fun/FinnMailModal";
 import { track } from "../../lib/analytics/events";
 import { WHATSAPP_COMMUNITY_URL, WHATSAPP_SVG } from "../social/whatsappCommunity";
+import { SharkInsightToast } from "../../components/ui/SharkInsightToast";
+import { FINN_EMPATHIC, FINN_HAPPY } from "../retention-loops/finnMascotConfig";
+import { resetAllLocalStores, getLocalStorageKeys } from "../../lib/stores/registry";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SIGN_OUT_DIALOG } from "../settings/SettingsScreen";
+import type { ImageSource } from "expo-image";
+
+// In-app feedback toasts (replace the bare native Alert.alert("שגיאה") etc.).
+// Voice (docs/BRAND.md): system speaks → plural.
+interface MoreToast {
+  title: string;
+  body: string;
+  shark: ImageSource;
+  accentColor: string;
+}
+const MORE_TOASTS = {
+  linkFailed: {
+    title: "הקישור לא נפתח",
+    body: "לא הצלחנו לפתוח את הקישור. בדקו את החיבור ונסו שוב.",
+    shark: FINN_EMPATHIC,
+    accentColor: "#ef4444",
+  },
+  progressReset: {
+    title: "ההתקדמות אופסה",
+    body: "מתחילים מהתחלה — נקי לגמרי. בהצלחה!",
+    shark: FINN_HAPPY,
+    accentColor: "#22c55e",
+  },
+} as const satisfies Record<string, MoreToast>;
 
 const INSTAGRAM_URL = "https://www.instagram.com/finplay_?igsh=bjRtdHlrYWl5dG41&utm_source=qr";
 // Official Instagram camera glyph with the brand gradient (warm bottom-left →
@@ -129,6 +158,20 @@ export function MoreScreen() {
   const devResetProgress = useAuthStore((s) => s.devResetProgress);
   const hasUnreadMail = useFunStore((s) => s.hasUnreadMail);
   const [showMailModal, setShowMailModal] = useState(false);
+  const [toast, setToast] = useState<MoreToast | null>(null);
+
+  // Progress reset that completes IN-APP (no "restart the app" step): every
+  // registered zustand store resets its in-memory state via the registry (the
+  // same helper sign-out uses), then its persisted key is dropped. Auth stays.
+  function performProgressReset() {
+    if (__DEV__) devResetProgress?.();
+    resetAllLocalStores();
+    const keys = getLocalStorageKeys();
+    if (keys.length > 0) {
+      AsyncStorage.multiRemove(keys).catch(() => { /* swallow */ });
+    }
+    setToast(MORE_TOASTS.progressReset);
+  }
 
   function handleSignOut() {
     if (Platform.OS === "web") {
@@ -137,12 +180,12 @@ export function MoreScreen() {
       return;
     }
     Alert.alert(
-      "יציאה מהחשבון",
-      "בטוחים שאתם רוצים לצאת?",
+      SIGN_OUT_DIALOG.title,
+      SIGN_OUT_DIALOG.message,
       [
-        { text: "ביטול", style: "cancel" },
+        { text: SIGN_OUT_DIALOG.cancel, style: "cancel" },
         {
-          text: "יציאה",
+          text: SIGN_OUT_DIALOG.confirm,
           style: "destructive",
           onPress: async () => {
             await lifecycleSignOut();
@@ -223,15 +266,10 @@ export function MoreScreen() {
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="פנו אלינו לתמיכה"
                   onPress={() => {
-                    // Open the device's default mail composer pre-addressed
-                    // to FinPlay support so users can describe the issue in
-                    // their own words. If no mail client is installed
-                    // (rare; happens on stripped-down Android builds), fall
-                    // back to copy-paste guidance via Alert.
-                    const mailto = "mailto:support@finplay.me?subject=" + encodeURIComponent("תמיכה ב-FinPlay");
-                    Linking.openURL(mailto).catch(() => {
-                      Alert.alert("תמיכה", "כתבו לנו ל-support@finplay.me");
-                    });
+                    // In-app support chat (SupportChatScreen) instead of
+                    // bouncing to the mail composer / an email-address Alert.
+                    tapHaptic();
+                    router.push("/support" as never);
                   }}
                 />
                 <MoreRow
@@ -239,7 +277,7 @@ export function MoreScreen() {
                   label="קהילת WhatsApp"
                   onPress={() => {
                     try { track({ name: 'whatsapp_cta_tapped', props: { source: 'more_screen' } }); } catch { /* non-fatal */ }
-                    Linking.openURL(WHATSAPP_COMMUNITY_URL).catch(() => Alert.alert("שגיאה"));
+                    Linking.openURL(WHATSAPP_COMMUNITY_URL).catch(() => setToast(MORE_TOASTS.linkFailed));
                   }}
                 />
                 <MoreRow
@@ -247,7 +285,7 @@ export function MoreScreen() {
                   label="עקבו אחרינו באינסטגרם"
                   onPress={() => {
                     try { track({ name: 'instagram_cta_tapped', props: { source: 'more_screen' } }); } catch { /* non-fatal */ }
-                    Linking.openURL(INSTAGRAM_URL).catch(() => Alert.alert("שגיאה"));
+                    Linking.openURL(INSTAGRAM_URL).catch(() => setToast(MORE_TOASTS.linkFailed));
                   }}
                 />
                 <MoreRow
@@ -270,28 +308,33 @@ export function MoreScreen() {
           <Animated.View entering={FadeInUp.delay(400).duration(400)}>
             <GlowCard chapterGlow="rgba(239, 68, 68, 0.4)" style={styles.cardGlow} pressable={false}>
               <View style={styles.cardInner}>
-                <MoreRow
-                  isFirst
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-1432-erase-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="איפוס התקדמות"
-                  onPress={() => {
-                    Alert.alert("איפוס", "כל ההתקדמות תימחק. בטוח?", [
-                      { text: "ביטול", style: "cancel" },
-                      {
-                        text: "אפס",
-                        style: "destructive",
-                        onPress: () => {
-                          if (__DEV__) {
-                            devResetProgress?.();
-                          }
-                          Alert.alert("בוצע", "הפעל מחדש את האפליקציה כדי להשלים את האיפוס.");
+                {/* DEV-ONLY (18.8): in production this row was a silent no-op
+                    (devResetProgress exists only in __DEV__) that asked users
+                    to restart the app. Wiping local stores while the server
+                    still holds their progress would leave the two out of sync
+                    (server resync would resurrect the "reset" state), so the
+                    row is hidden for real users until a server-side reset
+                    exists. */}
+                {__DEV__ && (
+                  <MoreRow
+                    isFirst
+                    icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-1432-erase-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                    label="איפוס התקדמות (dev)"
+                    onPress={() => {
+                      Alert.alert("איפוס", "כל ההתקדמות תימחק. בטוח?", [
+                        { text: "ביטול", style: "cancel" },
+                        {
+                          text: "אפס",
+                          style: "destructive",
+                          onPress: performProgressReset,
                         },
-                      },
-                    ]);
-                  }}
-                  danger
-                />
+                      ]);
+                    }}
+                    danger
+                  />
+                )}
                 <MoreRow
+                  isFirst={!__DEV__}
                   isLast
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-3335-door-sign-hover-attempt.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="יציאה מהחשבון"
@@ -308,6 +351,16 @@ export function MoreScreen() {
         {/* Fun Mail Modal */}
         <FinnMailModal visible={showMailModal} onClose={() => setShowMailModal(false)} />
       </SafeAreaView>
+      {/* In-app feedback toast (link failures / progress reset) — was Alert.alert. */}
+      <SharkInsightToast
+        visible={toast !== null}
+        shark={toast?.shark ?? FINN_HAPPY}
+        title={toast?.title ?? ""}
+        body={toast?.body ?? ""}
+        accentColor={toast?.accentColor}
+        autoDismissMs={5000}
+        onDismiss={() => setToast(null)}
+      />
     </View>
   );
 }

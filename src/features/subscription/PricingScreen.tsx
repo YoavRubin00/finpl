@@ -1,18 +1,19 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Image as ExpoImage } from "expo-image";
+import { Image as ExpoImage, type ImageSource } from "expo-image";
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
-  Alert,
   Dimensions,
   ActivityIndicator,
   Platform,
   Linking,
 } from "react-native";
 import LottieView from "lottie-react-native";
-import { FINN_DANCING } from "../retention-loops/finnMascotConfig";
+import { FINN_DANCING, FINN_EMPATHIC, FINN_HAPPY, FINN_TALKING } from "../retention-loops/finnMascotConfig";
+import { SharkInsightToast } from "../../components/ui/SharkInsightToast";
+import { PopModal } from "../../components/ui/PopModal";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -50,6 +51,51 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 // Apple's standard EULA URL — required for App Store auto-renewable subscriptions
 // (guideline 3.1.2(c)). Must also be set in App Store Connect → App Description.
 const APPLE_STD_EULA = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+
+// In-app feedback toast (replaces the native Alert.alert product messaging —
+// same SharkInsightToast the Bridge/Shop use). One at a time; a new toast
+// simply swaps content. Voice (docs/BRAND.md): system speaks → plural.
+interface PricingToast {
+  title: string;
+  body: string;
+  shark: ImageSource;
+  accentColor: string;
+}
+const TOAST_OK = "#22c55e";
+const TOAST_INFO = "#f59e0b";
+const TOAST_ERROR = "#ef4444";
+const PRICING_TOASTS = {
+  needAccount: {
+    title: "צריך חשבון כדי להפעיל מנוי",
+    body: "ההרשמה חינמית ולוקחת שנייה — ואז חוזרים לכאן.",
+    shark: FINN_TALKING,
+    accentColor: TOAST_INFO,
+  },
+  parentalConsent: {
+    title: "נדרש אישור הורה",
+    body: "רכישת מנוי לגיל 16–17 דורשת אישור הורה. משלימים את האישור בכרטיס הירוק שלמטה.",
+    shark: FINN_TALKING,
+    accentColor: TOAST_INFO,
+  },
+  restored: {
+    title: "המנוי שוחזר",
+    body: "Pro חזר לחשבון שלכם. גישה מלאה פתוחה.",
+    shark: FINN_HAPPY,
+    accentColor: TOAST_OK,
+  },
+  notFound: {
+    title: "לא נמצא מנוי לשחזור",
+    body: "לא מצאנו מנוי פעיל בחשבון הזה. אם רכשתם ממכשיר אחר, התחברו לאותו חשבון.",
+    shark: FINN_EMPATHIC,
+    accentColor: TOAST_INFO,
+  },
+  restoreFailed: {
+    title: "השחזור לא הצליח",
+    body: "לא הצלחנו לשחזר רכישות. נסו שוב בעוד רגע.",
+    shark: FINN_EMPATHIC,
+    accentColor: TOAST_ERROR,
+  },
+} as const satisfies Record<string, PricingToast>;
 
 // ── Duolingo-inspired palette ────────────────────────────────────────────
 const DUO = {
@@ -233,6 +279,9 @@ export function PricingScreen() {
   // Soft, non-blocking notice for a genuine (non-cancel) purchase failure —
   // replaces the old Alert("שגיאת תשלום", rawSdkString).
   const [purchaseNotice, setPurchaseNotice] = useState<string | null>(null);
+  const [toast, setToast] = useState<PricingToast | null>(null);
+  // Guest → register in-app sheet (replaces the native "רגע לפני Pro" Alert).
+  const [guestSheetVisible, setGuestSheetVisible] = useState(false);
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -344,25 +393,11 @@ export function PricingScreen() {
     // to THIS paywall as a real user to complete the purchase.
     if (isGuest) {
       captureEvent('register_cta_shown', { source: 'pro_purchase' });
-      Alert.alert(
-        'רגע לפני Pro',
-        'כדי לפתוח את Pro צריך חשבון — ההרשמה חינמית ולוקחת שנייה. נרשמים, וחוזרים בדיוק לכאן.',
-        [
-          { text: 'אולי אחר כך', style: 'cancel', onPress: () => captureEvent('register_cta_dismissed', { source: 'pro_purchase' }) },
-          {
-            text: 'הרשמה והמשך',
-            onPress: () => {
-              captureEvent('register_cta_accepted', { source: 'pro_purchase' });
-              const back = `/pricing?source=${encodeURIComponent(source)}`;
-              router.replace(`/(auth)/register?returnTo=${encodeURIComponent(back)}` as never);
-            },
-          },
-        ],
-      );
+      setGuestSheetVisible(true);
       return;
     }
     if (!displayName) {
-      Alert.alert("שגיאה", "צריך חשבון כדי להפעיל מנוי — ההרשמה לוקחת שנייה.");
+      setToast(PRICING_TOASTS.needAccount);
       return;
     }
     // Hard-gate fallback (after a previous revoke): the parent must click
@@ -370,11 +405,7 @@ export function PricingScreen() {
     // The CTA is replaced by ParentalConsentGate in this case, but we
     // guard the action too in case a future call-site bypasses the UI.
     if (useHardGateFallback && !hasParentalConsent) {
-      Alert.alert(
-        "נדרש אישור הורה",
-        "רכישת מנוי לגיל 16–17 דורשת אישור הורה. משלימים את אישור ההורה בכרטיס הירוק שלמטה.",
-        [{ text: "הבנתי" }],
-      );
+      setToast(PRICING_TOASTS.parentalConsent);
       return;
     }
     // Hybrid flow: minor without an active consent row → first collect
@@ -468,12 +499,13 @@ export function PricingScreen() {
           return;
         }
         // Already saw pro-welcome: continue the flow directly if we have a
-        // returnTo, otherwise just confirm.
+        // returnTo, otherwise celebrate on the existing pro-welcome screen
+        // (in-app moment instead of a native "ברוכים הבאים" Alert).
         if (returnTo) {
           router.replace(returnTo as never);
           return;
         }
-        Alert.alert("ברוכים הבאים ל-Pro! 🎉", "גישה מלאה פתוחה. תהנו!");
+        router.replace("/pro-welcome" as never);
       }
     } catch (err: unknown) {
       // Cancellation detection is centralized in isPurchaseCancelledError —
@@ -508,16 +540,21 @@ export function PricingScreen() {
       const restored = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined;
       if (restored) {
         await syncFromRC(customerInfo);
-        Alert.alert("שוחזר!", "מנוי PRO שוחזר בהצלחה.");
-      } else {
-        Alert.alert("לא נמצא", "לא נמצא מנוי פעיל לשחזור.");
+        if (mountedRef.current) setToast(PRICING_TOASTS.restored);
+      } else if (mountedRef.current) {
+        setToast(PRICING_TOASTS.notFound);
       }
     } catch {
-      Alert.alert("שגיאה", "לא הצלחנו לשחזר רכישות. נסו שוב.");
+      if (mountedRef.current) setToast(PRICING_TOASTS.restoreFailed);
     } finally {
       setIsLoading(false);
     }
   }, [syncFromRC]);
+
+  const dismissGuestSheet = useCallback(() => {
+    setGuestSheetVisible(false);
+    captureEvent('register_cta_dismissed', { source: 'pro_purchase' });
+  }, []);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.bg }]}>
@@ -829,6 +866,52 @@ export function PricingScreen() {
           }
         }}
       />
+      {/* Guest → register sheet: one primary CTA, in-app (was a native Alert). */}
+      <PopModal
+        visible={guestSheetVisible}
+        onRequestClose={dismissGuestSheet}
+        onBackdropPress={dismissGuestSheet}
+      >
+        <View style={styles.guestSheetCard}>
+          <ExpoImage source={FINN_TALKING} accessible={false} style={styles.guestSheetShark} contentFit="contain" />
+          <Text style={styles.guestSheetTitle} accessibilityRole="header">רגע לפני Pro</Text>
+          <Text style={styles.guestSheetBody}>
+            כדי לפתוח את Pro צריך חשבון — ההרשמה חינמית ולוקחת שנייה. נרשמים, וחוזרים בדיוק לכאן.
+          </Text>
+          <Pressable
+            onPress={() => {
+              setGuestSheetVisible(false);
+              captureEvent('register_cta_accepted', { source: 'pro_purchase' });
+              const back = `/pricing?source=${encodeURIComponent(source)}`;
+              router.replace(`/(auth)/register?returnTo=${encodeURIComponent(back)}` as never);
+            }}
+            style={styles.guestSheetCta}
+            accessibilityRole="button"
+            accessibilityLabel="הרשמה והמשך"
+          >
+            <Text style={styles.guestSheetCtaText}>הרשמה והמשך</Text>
+          </Pressable>
+          <Pressable
+            onPress={dismissGuestSheet}
+            style={styles.guestSheetSecondary}
+            accessibilityRole="button"
+            accessibilityLabel="אולי אחר כך"
+            hitSlop={8}
+          >
+            <Text style={styles.guestSheetSecondaryText}>אולי אחר כך</Text>
+          </Pressable>
+        </View>
+      </PopModal>
+      {/* In-app feedback toast (restore / consent / account) — replaces Alert.alert. */}
+      <SharkInsightToast
+        visible={toast !== null}
+        shark={toast?.shark ?? FINN_HAPPY}
+        title={toast?.title ?? ''}
+        body={toast?.body ?? ''}
+        accentColor={toast?.accentColor}
+        autoDismissMs={6000}
+        onDismiss={() => setToast(null)}
+      />
     </View>
   );
 }
@@ -1124,6 +1207,46 @@ const styles = StyleSheet.create({
     color: DUO.textMuted,
     marginTop: 6,
   },
+  guestSheetCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#0f2942",
+    borderRadius: 28,
+    padding: 28,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(56,189,248,0.15)",
+  },
+  guestSheetShark: { width: 84, height: 84, marginBottom: 12 },
+  guestSheetTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#ffffff",
+    textAlign: "center",
+    writingDirection: "rtl",
+    marginBottom: 8,
+  },
+  guestSheetBody: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.7)",
+    textAlign: "center",
+    writingDirection: "rtl",
+    lineHeight: 21,
+    marginBottom: 22,
+  },
+  guestSheetCta: {
+    backgroundColor: DUO.green,
+    borderRadius: 16,
+    paddingVertical: 15,
+    width: "100%",
+    alignItems: "center",
+    borderBottomWidth: 4,
+    borderBottomColor: DUO.greenDark,
+  },
+  guestSheetCtaText: { fontSize: 17, fontWeight: "900", color: "#ffffff" },
+  guestSheetSecondary: { marginTop: 14, paddingVertical: 8 },
+  guestSheetSecondaryText: { fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.55)" },
   noThanksBtn: {
     paddingVertical: 4,
   },

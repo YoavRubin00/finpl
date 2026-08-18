@@ -32,6 +32,18 @@ import { BackButton } from "../../components/ui/BackButton";
 import { GlowCard } from "../../components/ui/GlowCard";
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 
+/**
+ * Sign-out confirmation copy — the ONE source of truth, shared with MoreScreen
+ * (same action → same wording). Genuine yes/no confirm, so it stays native.
+ * Voice (docs/BRAND.md): system speaks → plural / impersonal.
+ */
+export const SIGN_OUT_DIALOG = {
+  title: "התנתקות",
+  message: "להתנתק מהחשבון?",
+  confirm: "התנתקות",
+  cancel: "ביטול",
+} as const;
+
 // Stitch Premium Blue Theme
 const STITCH_BLUE = {
   primary: "#0ea5e9", // Sky Blue
@@ -266,9 +278,9 @@ export function SettingsScreen() {
   }
 
   function handleSignOut() {
-    Alert.alert("התנתקות", "להתנתק מהחשבון?", [
-      { text: "ביטול", style: "cancel" },
-      { text: "התנתק", onPress: async () => { await lifecycleSignOut(); router.replace("/(auth)/sign-in"); } },
+    Alert.alert(SIGN_OUT_DIALOG.title, SIGN_OUT_DIALOG.message, [
+      { text: SIGN_OUT_DIALOG.cancel, style: "cancel" },
+      { text: SIGN_OUT_DIALOG.confirm, style: "destructive", onPress: async () => { await lifecycleSignOut(); router.replace("/(auth)/sign-in"); } },
     ]);
   }
 

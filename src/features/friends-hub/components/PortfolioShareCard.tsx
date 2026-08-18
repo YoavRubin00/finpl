@@ -34,6 +34,15 @@ const STAR_GOLD = '#f59e0b';
 const NUM_STYLE = { fontVariant: ['tabular-nums' as const] };
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
+// Informational moderation confirmations — in-app notice band (was native
+// Alert.alert). The genuine confirm dialogs (options / report-comment) stay
+// native. Voice (docs/BRAND.md): system speaks → plural.
+const PF_NOTICES = {
+  reportReceivedHidden: 'הדיווח התקבל. נבדוק את התוכן — והוא הוסתר מכם מעכשיו.',
+  reportReceived: 'הדיווח התקבל. נבדוק את התוכן.',
+  userBlocked: 'המשתמש נחסם. לא תראו יותר תוכן ממנו.',
+} as const;
+
 function timeAgo(iso: string): string {
   if (!iso) return '';
   const ms = Date.now() - new Date(iso).getTime();
@@ -187,9 +196,13 @@ function CommentRow({ comment, onReport }: { comment: RatedComment; onReport?: (
 function PortfolioPost({
   pf,
   onRewardCoins,
+  onNotice,
 }: {
   pf: RatedPortfolio;
   onRewardCoins: (coins: number) => void;
+  /** Informational confirmation (report received / user blocked) — shown as
+   *  the card's in-app notice band instead of a native Alert. */
+  onNotice: (text: string) => void;
 }): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState('');
@@ -276,7 +289,7 @@ function PortfolioPost({
           style: 'destructive',
           onPress: () => {
             void report({ type: 'portfolio', id: pf.id });
-            Alert.alert('הדיווח התקבל', 'נבדוק את התוכן. הוא הוסתר עבורך מעכשיו.');
+            onNotice(PF_NOTICES.reportReceivedHidden);
           },
         },
         ...(canBlock
@@ -285,7 +298,7 @@ function PortfolioPost({
               style: 'destructive' as const,
               onPress: () => {
                 void blockUser(pf.authorUserId);
-                Alert.alert('המשתמש נחסם', 'לא תראו יותר תוכן מהמשתמש הזה.');
+                onNotice(PF_NOTICES.userBlocked);
               },
             }]
           : []),
@@ -304,7 +317,7 @@ function PortfolioPost({
         style: 'destructive',
         onPress: () => {
           void report({ type: 'comment', id: c.id, portfolioId: pf.id });
-          Alert.alert('הדיווח התקבל', 'נבדוק את התוכן.');
+          onNotice(PF_NOTICES.reportReceived);
         },
       },
       { text: 'ביטול', style: 'cancel' },
@@ -488,6 +501,12 @@ export function PortfolioShareCard(): React.ReactElement {
   const [composerOpen, setComposerOpen] = useState(false);
   const [rewardToast, setRewardToast] = useState<string | null>(null);
   const [moderationNote, setModerationNote] = useState<string | null>(null);
+  const [infoNotice, setInfoNotice] = useState<string | null>(null);
+
+  const showNotice = useCallback((text: string) => {
+    setInfoNotice(text);
+    setTimeout(() => setInfoNotice(null), 4000);
+  }, []);
 
   // Pull the real feed on mount (and when auth changes the caller identity).
   useEffect(() => {
@@ -627,11 +646,24 @@ export function PortfolioShareCard(): React.ReactElement {
         </Animated.View>
       )}
 
+      {/* Info notice (report received / user blocked) — was a native Alert */}
+      {infoNotice && (
+        <Animated.View
+          entering={FadeInDown.duration(220)}
+          exiting={FadeOut.duration(220)}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
+          style={{ marginHorizontal: 14, marginTop: 8, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12 }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '800', color: '#1d4ed8', ...RTL }}>{infoNotice}</Text>
+        </Animated.View>
+      )}
+
       {/* Feed — real content ranked by engagement; example content only while empty */}
       {feed.map((pf, i) => (
         <React.Fragment key={pf.id}>
           {i > 0 && <View style={{ height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 14 }} />}
-          <PortfolioPost pf={pf} onRewardCoins={(coins) => showReward(coins, 'דירגתם!')} />
+          <PortfolioPost pf={pf} onRewardCoins={(coins) => showReward(coins, 'דירגתם!')} onNotice={showNotice} />
         </React.Fragment>
       ))}
 

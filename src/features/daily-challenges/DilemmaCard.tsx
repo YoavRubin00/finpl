@@ -63,7 +63,12 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
   const [showFlyingCoins, setShowFlyingCoins] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  const dilemma = (dilemmaId ? getDilemmaById(dilemmaId) : null) ?? getTodayDilemma();
+  // Dilemmas are local content (dilemma-data.ts): an unknown per-pearl id or
+  // a scenario with no choices (content bug) both fall back to today's
+  // rotation, so the "לא זמין" branch below is defensive only — it can't be
+  // reached by a network/loading failure and there is nothing to "retry".
+  const requested = dilemmaId ? getDilemmaById(dilemmaId) : null;
+  const dilemma = requested && requested.choices.length > 0 ? requested : getTodayDilemma();
 
   // Pulsing blue glow for unanswered state, must be before any early return
   const glow = useSharedValue(0.3);
@@ -84,7 +89,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
     shadowOpacity: glow.value,
   }));
 
-  if (!dilemma || !dilemma.choices) {
+  if (!dilemma || !dilemma.choices || dilemma.choices.length === 0) {
     return (
       <FeedGameShell
         gameTitle="האתגר היומי"
@@ -94,8 +99,8 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
         variant="light"
       >
         <View style={styles.stateBox}>
-          <Text style={[styles.answeredTitle, RTL]}>האתגר היומי לא זמין כרגע</Text>
-          <Text style={[styles.answeredSub, RTL]}>נסו שוב מאוחר יותר</Text>
+          <Text style={[styles.answeredTitle, RTL]}>הדילמה של היום בדרך</Text>
+          <Text style={[styles.answeredSub, RTL]}>בינתיים ממשיכים ללמוד, היא תופיע כאן</Text>
           {/* Inside a Pearl: surface a Continue so a missing dilemmaId doesn't
               dead-end the pager. Standalone usage (no onContinue) leaves only
               the X — same as the original behavior. */}

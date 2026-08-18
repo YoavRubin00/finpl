@@ -9,6 +9,7 @@ import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FINN_EMPATHIC } from "../retention-loops/finnMascotConfig";
 import { successHaptic, tapHaptic } from "../../utils/haptics";
 import { useBandit } from "../bandit/useBandit";
+import { useRewardedAd } from "../../hooks/useRewardedAd";
 
 const REPAIR_COST_GEMS = 30;
 
@@ -26,6 +27,10 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
   const dismissRepairOffer = useEconomyUIStore((s) => s.dismissRepairOffer);
 
   const { payload, trackImpression, trackConversion, trackDismiss } = useBandit('streak_repair_offer');
+  // Same rewarded-ad singleton as HeartsUI / StreakAtRiskBanner. The repair is
+  // granted ONLY inside the ad's reward callback (fires once, after EARNED +
+  // CLOSED) — never on tap. Pro users don't see the ad option at all.
+  const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
 
   useEffect(() => {
     if (visible) trackImpression();
@@ -52,12 +57,16 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
   };
 
   const handleRepairAd = () => {
-    const ok = repairStreak("ad");
-    if (ok) {
-      successHaptic();
-      trackConversion();
-      onDismiss();
-    }
+    if (!adReady) return; // button is disabled while the ad loads / after a load error
+    tapHaptic();
+    showAd(() => {
+      const ok = repairStreak("ad");
+      if (ok) {
+        successHaptic();
+        trackConversion();
+        onDismiss();
+      }
+    });
   };
 
   const handleDecline = () => {
@@ -121,18 +130,24 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
               </Text>
             </Pressable>
 
-            {/* Option B: Ad */}
-            <Pressable
-              onPress={handleRepairAd}
-              style={styles.adBtn}
-              accessibilityRole="button"
-              accessibilityLabel="החזר את הרצף דרך צפייה בפרסומת"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.adBtnText}>
-                {payload.adCTA}
-              </Text>
-            </Pressable>
+            {/* Option B: Ad — hidden for Pro (pattern: HeartsUI/StreakAtRiskBanner);
+                disabled with a loading label until the singleton has an ad, so
+                a load failure degrades to "not available yet", never a free grant. */}
+            {!isPro && (
+              <Pressable
+                onPress={adReady ? handleRepairAd : undefined}
+                disabled={!adReady}
+                style={[styles.adBtn, !adReady && styles.disabledBtn]}
+                accessibilityRole="button"
+                accessibilityLabel={adReady ? "החזר את הרצף דרך צפייה בפרסומת" : "הפרסומת נטענת"}
+                accessibilityState={{ disabled: !adReady }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.adBtnText}>
+                  {adReady ? payload.adCTA : "הפרסומת נטענת... עוד רגע"}
+                </Text>
+              </Pressable>
+            )}
 
             {/* Option C: Decline */}
             <Pressable
