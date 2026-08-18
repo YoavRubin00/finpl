@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, Pressable, Image } from "react-native";
 // Ionicons removed, using Finn error illustration instead
 import { captureException } from "../../lib/sentry";
-import { captureEvent } from "../../lib/posthog";
+import { captureAppException } from "../../lib/posthog";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -37,21 +37,16 @@ export class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, Err
       componentStack: errorInfo.componentStack ?? "unknown",
     });
     // Mirror to PostHog Error Tracking so render-tree crashes are visible
-    // alongside product analytics (until now $exception fired 0× — total blind
-    // spot per the board, 2026-06-18). Sentry stays as the rich crash sink.
+    // alongside product analytics. Goes through captureAppException (SDK
+    // captureException → parsed stacktrace + issue grouping, rate-limited,
+    // screen/app_version/ota props). Sentry stays as the rich crash sink.
     try {
-      captureEvent("$exception", {
-        $exception_list: [
-          {
-            type: error.name,
-            value: error.message,
-            mechanism: { handled: true, synthetic: false },
-          },
-        ],
-        $exception_message: error.message,
-        $exception_type: error.name,
-        component_stack: errorInfo.componentStack ?? "unknown",
-        capture_source: "error_boundary",
+      captureAppException(error, {
+        source: "error_boundary",
+        fatal: false,
+        extra: {
+          component_stack: (errorInfo.componentStack ?? "unknown").slice(0, 2000),
+        },
       });
     } catch {
       /* analytics must never break the crash screen */

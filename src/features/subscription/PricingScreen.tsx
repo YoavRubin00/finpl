@@ -279,12 +279,6 @@ export function PricingScreen() {
   // → purchase impossible" (the App Review 2.1a path) rather than low intent.
   // Fire once per settled state so PostHog can show the 'unavailable' rate.
   const ctaStateTrackedRef = useRef<'ready' | 'unavailable' | null>(null);
-  useEffect(() => {
-    if (offerState === 'loading') return;
-    if (ctaStateTrackedRef.current === offerState) return;
-    ctaStateTrackedRef.current = offerState;
-    track({ name: 'paywall_cta_state', props: { state: offerState, source } });
-  }, [offerState, source]);
 
   const priceString = activePackage?.product.priceString ?? "";
   const periodLabel = (() => {
@@ -315,6 +309,29 @@ export function PricingScreen() {
     }
   })();
   const hasTrial = trialDays > 0;
+
+  // Fired once per settled state. Since 9.8 also carries WHAT the user was
+  // offered (trial / price / package) — 28 paywall viewers → 0 conversions in
+  // 3 weeks and nobody could tell from PostHog whether the store-side free
+  // trial was even live. Now `has_trial` on this event answers it directly.
+  useEffect(() => {
+    if (offerState === 'loading') return;
+    if (ctaStateTrackedRef.current === offerState) return;
+    ctaStateTrackedRef.current = offerState;
+    track({
+      name: 'paywall_cta_state',
+      props: {
+        state: offerState,
+        source,
+        has_trial: hasTrial,
+        trial_days: trialDays,
+        price_string: priceString || null,
+        package_type: activePackage?.packageType ?? null,
+        package_id: activePackage?.identifier ?? null,
+        intro_price: introPrice ? introPrice.price : null,
+      },
+    });
+  }, [offerState, source, hasTrial, trialDays, priceString, activePackage, introPrice]);
 
   const insets = useSafeAreaInsets();
   const ctaGlowStyle = useCtaGlow();

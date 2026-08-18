@@ -3020,9 +3020,13 @@ export function DuoLearnScreen() {
       {/* שוק ההון נפתח לכולם (Yoav 3.8): auto-unlocks chapter 4 + one-time
           takeover that jumps straight to mod-4-19. Reuses the exact fast-track
           jump path (unlock flag + analytics + topic-tree routing). */}
+      {/* Gated on a first real completion (18.8): the funnel showed the takeover
+          hit brand-new users 2-3 min after install and yanked them out of
+          mod-0-1 into chapter 4 (13/26 pre-fix ch-4 droppers were day-0
+          users). Every user still gets it — right after their first chest. */}
       {!isWalkthroughActive && !pendingPostWalkthroughCTA && (
         <MarketUnlockGate
-          eligible={!isWalkthroughActive}
+          eligible={!isWalkthroughActive && localCompletedModuleIds.length > 0}
           onEnter={() => handleJumpHere(ALL_CHAPTERS[4], 4)}
         />
       )}

@@ -2,7 +2,7 @@ import "../global.css";
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../src/lib/queryClient';
 import { initSentry } from "../src/lib/sentry";
-import { initPostHog, getPostHogClient, captureScreen, captureEvent, captureLaunchAttribution } from "../src/lib/posthog";
+import { initPostHog, getPostHogClient, captureScreen, captureEvent, captureLaunchAttribution, captureAppException } from "../src/lib/posthog";
 import { PostHogProvider } from "posthog-react-native";
 import { I18nManager } from "react-native";
 import { enableFreeze } from "react-native-screens";
@@ -43,6 +43,10 @@ try {
     onUnhandled: (id, error) => {
       const msg = error instanceof Error ? error.message : String(error);
       console.warn(`[UnhandledRejection #${id}]`, msg);
+      // Mirror to PostHog Error Tracking (rate-limited, never throws). The
+      // client exists by the time any rejection fires — initPostHog() runs
+      // synchronously right below.
+      captureAppException(error, { source: "unhandled_rejection", fatal: false });
     },
   });
 } catch { /* ignore — polyfill not available, fall back to default behavior */ }

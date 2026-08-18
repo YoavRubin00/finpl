@@ -5,13 +5,15 @@ import { Resend } from 'resend';
 import { userProfiles, moduleProgress } from '../../src/db/schema';
 import {
   buildDailyEmailHtml,
-  buildRetentionEmailHtml,
-  buildD1EmailHtml,
   D1_EMAIL_VARIANT_ID,
   RETENTION_VARIANT_IDS,
   retentionVariantForSeq,
   type RetentionVariantId,
 } from '../../src/features/email/emailTemplates';
+// One-action template (2026-08-18): hook → ONE button → today's-dilemma
+// teaser. Replaces buildRetentionEmailHtml / buildD1EmailHtml for the cron —
+// those stayed in emailTemplates.ts for the preview/blast scripts.
+import { buildDailyRetentionEmail } from './dailyRetentionEmail';
 import { signEmailClick } from '../../src/features/email/emailClickSig';
 import { capturePostHog } from './posthogCapture';
 
@@ -214,27 +216,22 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
 
       let subject: string;
       let html: string;
+      let text: string | undefined;
       try {
-        const built = isD1NewUser
-          ? buildD1EmailHtml({
-              name: user.displayName ?? 'חבר',
-              streak: user.currentStreak ?? 0,
-              date: now,
-              ctaUrl: clickUrl,
-              unsubscribeUrl,
-              openPixelUrl,
-            })
-          : buildRetentionEmailHtml({
-              variantId: variantId as RetentionVariantId,
-              name: user.displayName ?? 'חבר',
-              streak: user.currentStreak ?? 0,
-              longestStreak: user.longestStreak ?? 0,
-              ctaUrl: clickUrl,
-              unsubscribeUrl,
-              openPixelUrl,
-            });
+        // Same builder for the D1 cohort and the sequenced drip: every variant
+        // sells ONE action (today's dilemma) behind the ONE tracked button.
+        const built = buildDailyRetentionEmail({
+          variantId,
+          name: user.displayName ?? 'חבר',
+          streak: user.currentStreak ?? 0,
+          longestStreak: user.longestStreak ?? 0,
+          ctaUrl: clickUrl,
+          unsubscribeUrl,
+          openPixelUrl,
+        });
         subject = built.subject;
         html = built.html;
+        text = built.text;
       } catch (err) {
         console.error('[send-daily] retention build failed, falling back to legacy', err);
         const legacy = buildDailyEmailHtml({
@@ -260,6 +257,8 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         to: user.email,
         subject,
         html,
+        // Plain-text alternative (deliverability; undefined on the legacy fallback).
+        ...(text ? { text } : {}),
       });
 
       // Stamp the send time AND advance the drip counter (Yoav 2026-07-09), so

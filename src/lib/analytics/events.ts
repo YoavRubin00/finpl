@@ -191,7 +191,7 @@ export type AppEvent =
   // CTA) or 'unavailable' (no packages → the CTA degrades to a silent "נסה שוב"
   // and the user CANNOT buy). A high `unavailable` rate means the ₪0 is broken
   // offerings, not behavioral. App Review 2.1a already hit this path in sandbox.
-  | { name: 'paywall_cta_state'; props: { state: 'ready' | 'unavailable'; source?: string } }
+  | { name: 'paywall_cta_state'; props: { state: 'ready' | 'unavailable'; source?: string; has_trial?: boolean; trial_days?: number; price_string?: string | null; package_type?: string | null; package_id?: string | null; intro_price?: number | null } }
 
   // ── Store / Shop / Purchases ───────────────────────────────────────────
   | { name: 'shop_screen_viewed'; props: { coins: number; gems: number; is_pro: boolean } }

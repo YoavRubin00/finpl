@@ -1,7 +1,9 @@
 import PostHog from 'posthog-react-native';
 import type { PostHogEventProperties } from '@posthog/core';
 import * as Linking from 'expo-linking';
+import * as Updates from 'expo-updates';
 import { Platform } from 'react-native';
+import { getAppVersion } from './version';
 
 // Re-export under a friendlier name so feature code can import a single,
 // well-known type rather than reaching into PostHog internals.
@@ -72,25 +74,100 @@ export function initPostHog(): void {
     getGlobalHandler?: () => ((e: unknown, fatal?: boolean) => void) | undefined;
     setGlobalHandler?: (h: (e: unknown, fatal?: boolean) => void) => void;
   };
-  const errorUtils = (globalThis as unknown as { ErrorUtils?: RNErrorUtils }).ErrorUtils;
-  if (client && errorUtils?.setGlobalHandler) {
-    const prev = errorUtils.getGlobalHandler?.();
-    errorUtils.setGlobalHandler((error: unknown, isFatal?: boolean) => {
-      try {
-        const message = error instanceof Error ? error.message : String(error);
-        const type = error instanceof Error ? error.name : 'Error';
-        client?.capture('$exception', {
-          $exception_list: [{ type, value: message, mechanism: { handled: false } }],
-          $exception_message: message,
-          $exception_type: type,
-          is_fatal: !!isFatal,
-          capture_source: 'global_handler',
-        });
-      } catch {
-        /* never block the native handler */
-      }
-      prev?.(error, isFatal);
-    });
+  try {
+    const errorUtils = (globalThis as unknown as { ErrorUtils?: RNErrorUtils }).ErrorUtils;
+    if (client && errorUtils?.setGlobalHandler) {
+      const prev = errorUtils.getGlobalHandler?.();
+      errorUtils.setGlobalHandler((error: unknown, isFatal?: boolean) => {
+        captureAppException(error, { source: 'global_handler', fatal: !!isFatal });
+        prev?.(error, isFatal);
+      });
+    }
+  } catch {
+    /* never let instrumentation break boot */
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exception capture (Yoav 9.8: `$exception` has been dark since 5.7)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ExceptionSource =
+  | 'global_handler'
+  | 'error_boundary'
+  | 'unhandled_rejection'
+  | 'manual';
+
+interface CaptureAppExceptionOptions {
+  source: ExceptionSource;
+  /** True when RN reports the error as fatal (app is about to die). */
+  fatal?: boolean;
+  /** Extra flat props (component stack, feature tag, …). */
+  extra?: EventProperties;
+}
+
+/** Max exceptions we send per rolling minute — a render loop or a retry storm
+ *  must not flood the project (and PostHog bills exceptions separately). */
+const EXCEPTION_RATE_LIMIT = 5;
+const EXCEPTION_RATE_WINDOW_MS = 60_000;
+const exceptionTimestamps: number[] = [];
+
+/** Last route name reported via captureScreen — attached to every exception
+ *  so a crash can be tied to the screen it happened on. */
+let currentScreenName: string | null = null;
+
+function isExceptionRateLimited(now: number): boolean {
+  while (exceptionTimestamps.length > 0 && now - exceptionTimestamps[0] > EXCEPTION_RATE_WINDOW_MS) {
+    exceptionTimestamps.shift();
+  }
+  if (exceptionTimestamps.length >= EXCEPTION_RATE_LIMIT) return true;
+  exceptionTimestamps.push(now);
+  return false;
+}
+
+function getOtaUpdateId(): string | null {
+  try {
+    // Embedded launch = the bundle shipped inside the native binary (no OTA).
+    if (Updates.isEmbeddedLaunch) return 'embedded';
+    return Updates.updateId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Capture a JS error to PostHog Error Tracking. Uses the SDK's
+ * `captureException` (posthog-react-native ≥4.45) so the stack trace is
+ * parsed into `$exception_list[].stacktrace` and PostHog groups it into an
+ * issue — a hand-rolled `$exception` event without frames never groups.
+ *
+ * Guarantees: never throws, rate-limited to EXCEPTION_RATE_LIMIT/min per
+ * session, flushes immediately on fatal (the process is about to die, so a
+ * queued event would be lost).
+ */
+export function captureAppException(error: unknown, options: CaptureAppExceptionOptions): void {
+  try {
+    if (!client) return;
+    const now = Date.now();
+    if (isExceptionRateLimited(now)) return;
+    const fatal = options.fatal === true;
+    const props: EventProperties = {
+      ...(options.extra ?? {}),
+      capture_source: options.source,
+      is_fatal: fatal,
+      fatal,
+      $exception_level: fatal ? 'fatal' : 'error',
+      screen_name: currentScreenName ?? 'unknown',
+      app_version: getAppVersion(),
+      ota_update_id: getOtaUpdateId() ?? 'unknown',
+    };
+    // Non-Error throwables (strings, plain objects) are coerced by the SDK.
+    client.captureException(error, props);
+    if (fatal) {
+      void client.flush().catch(() => { /* best-effort */ });
+    }
+  } catch {
+    /* analytics must NEVER crash the app */
   }
 }
 
@@ -103,6 +180,19 @@ export function captureEvent(name: string, properties?: EventProperties): void {
 }
 
 export function captureScreen(screenName: string, properties?: EventProperties): void {
+  currentScreenName = screenName;
+  // Register the route as a SUPER PROPERTY (next to `platform` above) so every
+  // JS-side event carries `screen_name`. The SDK's own `screen()` only
+  // session-registers `$screen_name`, which is lost on session rotation.
+  // NOTE: `$rageclick` is emitted by the NATIVE session-replay SDK (its
+  // `$screen_name` is the native view class — 'RNSScreen'/'UI'/'Modal') and
+  // native events do NOT receive JS super properties; correlate those to a
+  // route via `$session_id` + the preceding `$screen` event instead.
+  try {
+    void client?.register({ screen_name: screenName });
+  } catch {
+    /* non-fatal */
+  }
   client?.screen(screenName, properties);
 }
 

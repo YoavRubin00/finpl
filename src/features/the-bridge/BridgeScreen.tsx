@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Alert,
   Linking,
   AppState,
   Modal,
@@ -16,6 +15,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Info, X } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { FINN_DANCING, FINN_HAPPY, FINN_TABLET } from '../retention-loops/finnMascotConfig';
+import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import Animated, {
   useSharedValue,
@@ -39,7 +39,8 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { useBridgeStore } from './useBridgeStore';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
 import { captureEvent } from '../../lib/posthog';
-import { BRIDGE_BENEFITS } from './bridgeData';
+import { BRIDGE_BENEFITS, VISIBLE_BRIDGE_CATEGORIES } from './bridgeData';
+import { bridgeToastFor, type BridgeToast } from './bridgeToast';
 import { BenefitCard } from './BenefitCard';
 import { RedemptionModal } from './RedemptionModal';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
@@ -51,13 +52,14 @@ import type { Benefit, BenefitCategory } from './types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
-const ALL_CATEGORIES: BenefitCategory[] = [
-  'investments',
-  'bank-accounts',
-  'insurance',
-  'credit-cards',
-  'education',
-];
+// Only categories that hold a real (non-placeholder) benefit get a tab —
+// derived from bridgeData, so re-enabling a partner slot brings its tab back
+// automatically. Never empty in practice; the 'investments' fallback keeps
+// the type honest if every partner were ever pulled.
+const VISIBLE_CATEGORIES: BenefitCategory[] = VISIBLE_BRIDGE_CATEGORIES;
+const DEFAULT_CATEGORY: BenefitCategory = VISIBLE_CATEGORIES[0] ?? 'investments';
+const isVisibleCategory = (cat: string | undefined): cat is BenefitCategory =>
+  !!cat && (VISIBLE_CATEGORIES as string[]).includes(cat);
 
 // ── Floating coin with individual animation ─────────────────────────────────
 interface FloatingCoinProps {
@@ -202,12 +204,19 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const { tab, highlight } = useLocalSearchParams<{ tab?: BenefitCategory; highlight?: string }>();
   // When a deep-link names a specific benefit (e.g. /bridge?highlight=bridge-invest-altshuler
   // from the mod-0-5 PostCelebration handoff), force the tab to that benefit's
-  // category so the user lands directly on the right view.
+  // category so the user lands directly on the right view. A deep-link into a
+  // hidden (placeholder-only) category falls back to the first visible tab.
   const highlightedBenefit = highlight ? BRIDGE_BENEFITS.find(b => b.id === highlight) : undefined;
+  const highlightedCategory = highlightedBenefit?.category;
   const initialCategory: BenefitCategory =
-    highlightedBenefit?.category
-    ?? (tab && (ALL_CATEGORIES as string[]).includes(tab) ? tab : 'investments');
+    isVisibleCategory(highlightedCategory) ? highlightedCategory
+    : isVisibleCategory(tab) ? tab
+    : DEFAULT_CATEGORY;
   const [activeCategory, setActiveCategory] = useState<BenefitCategory>(initialCategory);
+  // One in-app toast at a time (replaces the native Alert.alert product
+  // messaging — same SharkInsightToast the Shop uses). Setting a new toast
+  // while one is showing simply swaps its content.
+  const [toast, setToast] = useState<BridgeToast | null>(null);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -387,7 +396,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       await Linking.openURL(url);
     } catch {
       awaitingReturnFromPartner.current = false;
-      Alert.alert('שגיאה בפתיחת הקישור', 'בדקו את החיבור לאינטרנט ונסו שוב.');
+      setToast(bridgeToastFor({ kind: 'link_failed' }));
     }
   }, []);
 
@@ -453,14 +462,11 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         is_pro: isPro,
       });
       if (!benefit.isAvailable) {
-        Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
+        setToast(bridgeToastFor({ kind: 'not_available' }));
       } else if (currentCoins < benefit.costCoins) {
-        Alert.alert(
-          'אין מספיק מטבעות',
-          `צריך ${benefit.costCoins.toLocaleString()} מטבעות להטבה הזו. יש לכם ${currentCoins.toLocaleString()}.`,
-        );
+        setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: benefit.costCoins, coins: currentCoins }));
       } else {
-        Alert.alert('שגיאה ברכישה', 'נסו שוב מאוחר יותר.');
+        setToast(bridgeToastFor({ kind: 'redeem_failed' }));
       }
     }
   }, [isBenefitRedeemed, redeemBenefit, openPartnerUrl, email, isPro]);
@@ -529,14 +535,11 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         is_pro: isPro,
       });
       if (!selectedBenefit.isAvailable) {
-        Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
+        setToast(bridgeToastFor({ kind: 'not_available' }));
       } else if (coins < selectedBenefit.costCoins) {
-        Alert.alert(
-          'אין מספיק מטבעות',
-          `צריך ${selectedBenefit.costCoins.toLocaleString()} מטבעות להטבה הזו. יש לכם ${coins.toLocaleString()}.`,
-        );
+        setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: selectedBenefit.costCoins, coins }));
       } else {
-        Alert.alert('ההמרה נכשלה', 'נסו שוב בעוד רגע.');
+        setToast(bridgeToastFor({ kind: 'redeem_failed' }));
       }
     }
   }, [selectedBenefit, redeemBenefit, email, isBenefitRedeemed, openPartnerUrl, isPro]);
@@ -662,7 +665,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
           {/* Category Tabs */}
           <Animated.View entering={FadeInDown.duration(400).delay(200)}>
             <AnimatedTabBar
-              categories={ALL_CATEGORIES}
+              categories={VISIBLE_CATEGORIES}
               activeCategory={activeCategory}
               onSelect={setActiveCategory}
             />
@@ -755,6 +758,18 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         canAfford={selectedBenefit ? coins >= selectedBenefit.costCoins : true}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
+      />
+
+      {/* In-app feedback toast (not-available / not-enough-coins / failures).
+          Bottom card above the safe area, RTL, auto-dismisses; one at a time. */}
+      <SharkInsightToast
+        visible={toast !== null}
+        shark={toast?.shark ?? FINN_HAPPY}
+        title={toast?.title ?? ''}
+        body={toast?.body ?? ''}
+        accentColor={toast?.accentColor}
+        autoDismissMs={2500}
+        onDismiss={() => setToast(null)}
       />
 
       {/* Post Redemption Return Modal */}

@@ -4,6 +4,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
+import { captureEvent } from '../../lib/posthog';
+import { getIsraelDateISO } from '../../utils/israelTime';
 import type { NotificationChannelId, NotificationState } from "./notificationTypes";
 
 // ─── Default handler, show banners in foreground ───────────────────────────
@@ -73,7 +75,9 @@ const CONTENT: Record<Exclude<NotificationChannelId, "fantasy">, Notifications.N
   },
   dailyChallenge: {
     title: "האתגר היומי מחכה לכם",
-    body: "דילמה פיננסית חדשה. בואו לפתור ולצבור XP.",
+    // 2026-08-18: days 2–7 retention rung (useFinnNotificationScheduler slot 2)
+    // — an invitation-to-content, not guilt. Plural = system voice (BRAND.md).
+    body: "דילמה חדשה: מה אתם הייתם עושים? 60 שניות, XP בכיס.",
     // 2026-05-30: was `/(tabs)/learn` + orphan `feedScrollIndex` (Feed-scroll
     // anchor from the deleted FinFeedScreen). The push body promises a dilemma
     // — route directly to the dedicated host so the user lands in the game,
@@ -85,10 +89,17 @@ const CONTENT: Record<Exclude<NotificationChannelId, "fantasy">, Notifications.N
     body: "כל החדשות מאתמול על המניות שלך — תוך 30 שניות.",
     data: { screen: "/breaking-news" },
   },
+  // 2026-08-18: repurposed from a generic "markets are moving" teaser (3-4 days
+  // out, no call site) into the days 1–3 LEARNING hook tied to the market-unlock
+  // chapter (chapter-4 "צמיחה" / mod-4-19 "שוק ההון" — MarketUnlockGate opens it
+  // for everyone). Retention-only: it sells the next lesson, never Pro/tools.
+  // Screen is overridden per-call by the scheduler: the lesson itself once the
+  // invest fast-track flag is set, otherwise the learn tab where the unlock
+  // moment plays. Plural = system voice (BRAND.md).
   marketHook: {
-    title: "השוקים זזים",
-    body: "בואו לראות מה קורה בעולם הפיננסי.",
-    data: { screen: "/(tabs)/investments" },
+    title: "שוק ההון נפתח לכם",
+    body: "המגרש של הגדולים פתוח: מניות, אג\"ח ואיך הכסף עובד בשבילכם. 3 דקות.",
+    data: { screen: "/(tabs)/learn" },
   },
   aiInsight: {
     title: "תובנה חדשה מקפטן שארק",
@@ -205,6 +216,18 @@ interface NotificationExtraState {
    *  time chips ("מתי להזכיר?"). Wins over computePersonalizedHour until the
    *  user changes it — an explicit appointment beats an inferred habit. */
   preferredReminderHour: number | null;
+  /** IL-ISO date this install was first observed by the daily scheduler
+   *  (min of first active date / first scheduler run). Day 0 of the
+   *  new-user ladder — the app has no other install-date source. */
+  firstSeenDate: string | null;
+  /** Epoch-ms fire time of the pending/delivered days 1–3 market-unlock hook.
+   *  Non-null and in the past = delivered once → never re-armed. Non-null and
+   *  in the future = pending (cancelled on same-day activity, or by the daily
+   *  re-arm). */
+  marketHookFireAt: number | null;
+  /** Epoch-ms fire time of the pending days 2–7 daily-dilemma push (for the
+   *  cancel-on-activity watcher). */
+  dailyChallengeFireAt: number | null;
 }
 
 interface NotificationActions {
@@ -236,9 +259,15 @@ interface NotificationActions {
   scheduleStreakFallbackWithCopy: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
   scheduleMorningMotivation: (content: Notifications.NotificationContentInput) => Promise<void>;
   scheduleInactivityEscalation: (notifications: Array<{ content: Notifications.NotificationContentInput; delayHours: number }>) => Promise<void>;
-  scheduleMarketHook: (content: Notifications.NotificationContentInput) => Promise<void>;
+  /** Days 1–3 market-unlock learning hook (retention-only). ONE-SHOT DATE
+   *  trigger at `hourOfDay` on today+`dayOffset` (rolls to the next day when
+   *  that time already passed). Cancels the previous marketHook first. */
+  scheduleMarketHook: (content: Notifications.NotificationContentInput, hourOfDay?: number, dayOffset?: number) => Promise<void>;
   scheduleChestReady: (delayMs: number) => Promise<void>;
-  scheduleDailyChallenge: (hourOfDay?: number) => Promise<void>;
+  /** Days 2–7 daily-dilemma push. ONE-SHOT DATE trigger at `hourOfDay` on
+   *  today+`dayOffset` (rolls to the next day when already passed). Was an
+   *  iOS-only CALENDAR trigger that also stacked on repeat calls. */
+  scheduleDailyChallenge: (hourOfDay?: number, dayOffset?: number) => Promise<void>;
   /** Fantasy-league weekly cycle (P1-3, founder-approved to exceed the daily
    *  cap): three recurring WEEKLY pushes in device-local time — draft opens
    *  (Thu 09:00), lock-soon nudge (Sun 20:00), results (Mon 09:00). Cancels the
@@ -256,6 +285,21 @@ interface NotificationActions {
   setPreference: (channelId: NotificationChannelId, enabled: boolean) => void;
   setLastScheduledDate: (date: string) => void;
   setLastFinnCopyTitle: (title: string | null) => void;
+  setFirstSeenDate: (date: string | null) => void;
+  setMarketHookFireAt: (at: number | null) => void;
+  setDailyChallengeFireAt: (at: number | null) => void;
+}
+
+/** Resolve the one-shot fire time: local `hourOfDay`:00 on today+`dayOffset`;
+ *  if that instant already passed, roll forward one day. Returns the Date plus
+ *  the IL-ISO calendar day it lands on (for per-day cap accounting). */
+export function resolveOneShotFireDate(hourOfDay: number, dayOffset: number, now: Date = new Date()): { date: Date; dateISO: string } {
+  const hour = Math.max(0, Math.min(23, Math.round(hourOfDay)));
+  const fireAt = new Date(now);
+  fireAt.setDate(fireAt.getDate() + Math.max(0, Math.round(dayOffset)));
+  fireAt.setHours(hour, 0, 0, 0);
+  if (fireAt.getTime() <= now.getTime()) fireAt.setDate(fireAt.getDate() + 1);
+  return { date: fireAt, dateISO: getIsraelDateISO(fireAt) };
 }
 
 export const useNotificationStore = create<NotificationState & NotificationExtraState & NotificationActions>()(
@@ -266,6 +310,9 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
       bannerDismissed: false,
       bannerDismissedAt: null as string | null,
       preferredReminderHour: null as number | null,
+      firstSeenDate: null as string | null,
+      marketHookFireAt: null as number | null,
+      dailyChallengeFireAt: null as number | null,
       // Apple 4.5.4: ALL notification preferences default to OFF on fresh install.
       // Notifications are only scheduled after the user explicitly toggles a
       // preference ON in Settings, which triggers the system permission prompt.
@@ -304,7 +351,10 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
             ? Math.max(8, Math.min(22, Math.round(preferredHour)))
             : null;
           set({
-            preferences: { ...get().preferences, streak: true, morning: true, inactivity: true, dailyChallenge: true },
+            // marketHook = the days 1–3 market-unlock LEARNING hook (2026-08-18,
+            // useFinnNotificationScheduler slot 2) — retention-only, so it
+            // ships enabled with the other core reminders.
+            preferences: { ...get().preferences, streak: true, morning: true, inactivity: true, dailyChallenge: true, marketHook: true },
             ...(appointmentHour !== null ? { preferredReminderHour: appointmentHour } : {}),
           });
           try {
@@ -398,28 +448,43 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
         });
       },
 
-      /** Schedule daily challenge reminder at specified hour (default 12:00) */
-      scheduleDailyChallenge: async (hourOfDay = 12): Promise<void> => {
-        const { permissionGranted, scheduled } = get();
+      /** Days 2–7 daily-dilemma push (default 12:00 today, or tomorrow when
+       *  12:00 already passed). 2026-08-18 fixes: (1) the old CALENDAR trigger
+       *  is iOS-only (expo-notifications @platform ios) — on Android it never
+       *  armed; (2) it never cancelled the previous dailyChallenge, so repeat
+       *  calls stacked; (3) no analytics. Deep link `/quest/daily-dilemma`
+       *  (app/quest/daily-dilemma.tsx) — unchanged, verified to exist. */
+      scheduleDailyChallenge: async (hourOfDay = 12, dayOffset = 0): Promise<void> => {
+        const { permissionGranted, cancelChannel } = get();
         if (!permissionGranted) return;
-
+        await cancelChannel("dailyChallenge");
+        const { date, dateISO } = resolveOneShotFireDate(hourOfDay, dayOffset);
+        const content = withChannel(CONTENT.dailyChallenge, "dailyChallenge");
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: withChannel(CONTENT.dailyChallenge, "dailyChallenge"),
+          content: { ...content, data: { ...(content.data ?? {}), fireDate: dateISO } },
           trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-            hour: hourOfDay,
-            minute: 0,
-            repeats: false,
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date,
             channelId: "dailyChallenge",
           },
         });
-
+        // Re-read after cancelChannel's set() (captured array would be stale).
         set({
           scheduled: [
-            ...scheduled,
-            { channelId: "dailyChallenge", identifier },
+            ...get().scheduled.filter((s) => s.channelId !== "dailyChallenge"),
+            { channelId: "dailyChallenge" as const, identifier },
           ],
+          dailyChallengeFireAt: date.getTime(),
         });
+        try {
+          captureEvent('notification_scheduled', {
+            type: 'dailyChallenge',
+            hour: date.getHours(),
+            fire_date: dateISO,
+            day_offset: dayOffset,
+            screen: '/quest/daily-dilemma',
+          });
+        } catch { /* non-fatal */ }
       },
 
       /** Schedule the three recurring weekly fantasy-league pushes (device-local
@@ -585,6 +650,9 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
 
       setLastScheduledDate: (date) => set({ lastScheduledDate: date }),
       setLastFinnCopyTitle: (title) => set({ lastFinnCopyTitle: title }),
+      setFirstSeenDate: (date) => set({ firstSeenDate: date }),
+      setMarketHookFireAt: (at) => set({ marketHookFireAt: at }),
+      setDailyChallengeFireAt: (at) => set({ dailyChallengeFireAt: at }),
 
       /** Schedule streak reminder with custom Finn copy */
       scheduleStreakReminderWithCopy: async (content, hourOfDay = 20): Promise<void> => {
@@ -685,22 +753,39 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
         set({ scheduled: newScheduled });
       },
 
-      /** Schedule a market hook notification 3-4 days out */
-      scheduleMarketHook: async (content): Promise<void> => {
-        const { permissionGranted, scheduled, cancelChannel } = get();
+      /** Days 1–3 market-unlock learning hook — one-shot DATE trigger at
+       *  `hourOfDay` on today+`dayOffset` (rolls forward if already passed).
+       *  2026-08-18: was a random 3–4-days-out TIME_INTERVAL with no call site
+       *  and generic "השוקים זזים" copy. The scheduler owns eligibility (day
+       *  window, activity, cap, spacing from the streak reminder). */
+      scheduleMarketHook: async (content, hourOfDay = 20, dayOffset = 0): Promise<void> => {
+        const { permissionGranted, cancelChannel } = get();
         if (!permissionGranted) return;
         await cancelChannel("marketHook");
-        const delayDays = 3 + Math.random();
+        const { date, dateISO } = resolveOneShotFireDate(hourOfDay, dayOffset);
+        const stamped = withChannel(content, "marketHook");
         const identifier = await Notifications.scheduleNotificationAsync({
-          content: withChannel(content, "marketHook"),
+          content: { ...stamped, data: { ...(stamped.data ?? {}), fireDate: dateISO } },
           trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-            seconds: Math.round(delayDays * 86400),
-            repeats: false,
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date,
             channelId: "marketHook",
           },
         });
-        set({ scheduled: [...scheduled.filter((s) => s.channelId !== "marketHook"), { channelId: "marketHook" as const, identifier }] });
+        set({
+          scheduled: [...get().scheduled.filter((s) => s.channelId !== "marketHook"), { channelId: "marketHook" as const, identifier }],
+          marketHookFireAt: date.getTime(),
+        });
+        try {
+          const screen = (content.data as Record<string, unknown> | undefined)?.screen;
+          captureEvent('notification_scheduled', {
+            type: 'marketHook',
+            hour: date.getHours(),
+            fire_date: dateISO,
+            day_offset: dayOffset,
+            screen: typeof screen === 'string' ? screen : null,
+          });
+        } catch { /* non-fatal */ }
       },
 
       reset: () => set({
@@ -709,6 +794,9 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
         bannerDismissed: false,
         bannerDismissedAt: null,
         preferredReminderHour: null,
+        firstSeenDate: null,
+        marketHookFireAt: null,
+        dailyChallengeFireAt: null,
         preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false, tools: false },
         lastScheduledDate: null,
         lastFinnCopyTitle: null,
@@ -724,6 +812,9 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
         bannerDismissed: s.bannerDismissed,
         bannerDismissedAt: s.bannerDismissedAt,
         preferredReminderHour: s.preferredReminderHour,
+        firstSeenDate: s.firstSeenDate,
+        marketHookFireAt: s.marketHookFireAt,
+        dailyChallengeFireAt: s.dailyChallengeFireAt,
         preferences: s.preferences,
         lastScheduledDate: s.lastScheduledDate,
         lastFinnCopyTitle: s.lastFinnCopyTitle,

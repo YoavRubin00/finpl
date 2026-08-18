@@ -1,4 +1,32 @@
-import type { Benefit } from './types';
+import type { Benefit, BenefitCategory } from './types';
+
+/**
+ * A "placeholder" is a reserved partner slot with nothing to redeem yet:
+ * `partnerAdSlot` + not available + free. Derived from existing fields so we
+ * never need a new required flag on every card. Placeholder cards STAY in
+ * the data (they get re-enabled the moment a partner signs) — the screen just
+ * doesn't render a category tab that holds nothing but placeholders
+ * (Yoav directive 9.8).
+ */
+export function isPlaceholderBenefit(b: Benefit): boolean {
+  return b.partnerAdSlot === true && !b.isAvailable && b.costCoins === 0;
+}
+
+/** Display order of the category tabs (visually right-to-left in the RTL bar). */
+export const BRIDGE_CATEGORY_ORDER: BenefitCategory[] = [
+  'investments',
+  'bank-accounts',
+  'insurance',
+  'credit-cards',
+  'education',
+];
+
+/** Categories that hold at least one non-placeholder benefit, in display order. */
+export function getVisibleBridgeCategories(benefits: Benefit[]): BenefitCategory[] {
+  return BRIDGE_CATEGORY_ORDER.filter((cat) =>
+    benefits.some((b) => b.category === cat && !isPlaceholderBenefit(b)),
+  );
+}
 
 export const BRIDGE_BENEFITS: Benefit[] = [
   // ── 📈 השקעות ──
@@ -125,3 +153,6 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerAdSlot: true,
   },
 ];
+
+/** Tabs the Bridge actually renders — computed once from the data above. */
+export const VISIBLE_BRIDGE_CATEGORIES: BenefitCategory[] = getVisibleBridgeCategories(BRIDGE_BENEFITS);

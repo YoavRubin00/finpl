@@ -3397,7 +3397,11 @@ export function LessonFlowScreen() {
   // Detect navigation away mid-lesson (user tapped a tab, swipe-back, deep
   // link, etc.) — distinct from `forceExit` which only covers the explicit
   // exit-confirm flow. Together they should account for nearly all bails.
-  const ACTIVE_LESSON_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes", "sim", "summary"]);
+  // "intro"/"video"/"hero" added 18.8: the mod-0-1 funnel showed the biggest
+  // new-user drop is DURING the intro (Android 65% intro completion vs iOS 90%),
+  // and this tracker was blind to it — 0 lesson_exited_early for 15 intro
+  // droppers. Now every pre-content exit is measurable too.
+  const ACTIVE_LESSON_PHASES = new Set<FlowPhase>(["hero", "intro", "video", "flashcards", "interactive-recall", "quizzes", "sim", "summary"]);
   const wasFocusedRef = useRef(true);
   useEffect(() => {
     if (wasFocusedRef.current && !isFocused && mod && ACTIVE_LESSON_PHASES.has(phase) && phase !== "summary") {
