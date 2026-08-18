@@ -95,39 +95,6 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     isPartnerAd: true,
   },
 
-  // ★ REAL PARTNER: הגשמה פיננסית (boutique pension agency) ★
-  // TODO(Yoav 2026-07-28): partnerUrl still missing — Yoav is sending the
-  // partner link separately. Until it lands this stays isAvailable:false so
-  // nobody can spend coins on a redemption that opens nothing. To go live:
-  // fill partnerUrl + flip isAvailable to true (and confirm costCoins with Moni).
-  {
-    id: 'bridge-insurance-hagshama',
-    title: 'ליווי פנסיוני אישי, הגשמה פיננסית',
-    description:
-      'לא עוד אופטימיזציה אוטומטית. ליווי אמיתי, של בן אדם אחד, לאורך זמן.\n\n' +
-      'בעולם שבו כל אפליקציה מבטיחה לכם "לסדר את כל הביטוחים בקליק אחד", ' +
-      'הגשמה פיננסית בוחרת ללכת בכיוון ההפוך: סוכנות פנסיונית בוטיקית, שבה אתם ' +
-      'מלווים בכל רגע נתון על ידי אדם אחד שמכיר אתכם, את המשפחה שלכם ואת הצרכים ' +
-      'שמשתנים עם הזמן — ולא תמונת מצב חד-פעמית שמופקת על ידי מנוע המלצות.\n\n' +
-      'לא תשמעו "העלו מסמכים וחכו לעדכון", אלא:\n' +
-      '• שתי פגישות עומק ותוכנית מסודרת בכתב.\n' +
-      '• ערוץ וואטסאפ וטלפון אישי, מענה תוך יום עסקים.\n' +
-      '• סקירה שנתית יזומה, לא תזכורת שנשלחת אוטומטית.\n' +
-      '• ליווי שגדל אתכם: נישואין, ילד, שינוי בהכנסה — ולא מערכת שמחכה שתלחצו על הכפתור.\n\n' +
-      'התוצאה: לא רק "כל הביטוחים והפיננסים במקום אחד", אלא מישהו שאחראי שהם ' +
-      'נכונים בשבילכם — היום ובעוד עשור.',
-    partnerName: 'הגשמה פיננסית',
-    partnerLogo: '🏡',
-    partnerLogoImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/bridge-logos/hagshama.jpeg' },
-    // 1000 (Yoav 2026-07-28): mid tier — above Cover's 500 entry slot, well
-    // under the 2500 investment partners, so an engaged learner can reach it.
-    costCoins: 1000,
-    category: 'insurance',
-    isAvailable: false,
-    reward: 'ליווי אישי מסוכן אחד: שתי פגישות עומק ותוכנית פנסיונית בכתב',
-    isPartnerAd: true,
-  },
-
   // ── 💳 כרטיסי אשראי, placeholder ──
   {
     id: 'bridge-cc-partner-slot',
