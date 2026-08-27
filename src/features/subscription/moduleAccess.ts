@@ -54,7 +54,7 @@ export function isModuleAccessible(moduleId: string, chapterId: string): boolean
       const prevCompleted = getCompletedModulesSync(chapterStoreKey(prev.id));
       if (
         !prev.modules.every(
-          (m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id),
+          (m) => m.comingSoon || m.bonusModule || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id),
         )
       ) {
         return false;
@@ -66,7 +66,7 @@ export function isModuleAccessible(moduleId: string, chapterId: string): boolean
   if (modIdx < 0) return true;
   const completed = getCompletedModulesSync(chapterStoreKey(chapter.id));
   for (let mi = 0; mi < modIdx; mi++) {
-    if (chapter.modules[mi].comingSoon) continue;
+    if (chapter.modules[mi].comingSoon || chapter.modules[mi].bonusModule) continue;
     if (PRO_LOCKED_SIMS.has(chapter.modules[mi].id)) continue;
     if (!completed.includes(chapter.modules[mi].id)) return false;
   }

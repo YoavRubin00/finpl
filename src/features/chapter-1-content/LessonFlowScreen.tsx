@@ -2692,7 +2692,7 @@ export function LessonFlowScreen() {
       for (let ci = 0; ci < chapterIdx; ci++) {
         const prev = ALL_CHAPTERS_ORDERED[ci];
         const prevCompleted = getCompletedModulesSync(chapterStoreKey(prev.id));
-        if (!prev.modules.every((m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id))) return false;
+        if (!prev.modules.every((m) => m.comingSoon || m.bonusModule || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id))) return false;
       }
     }
     const chapter = ALL_CHAPTERS_ORDERED[chapterIdx];
@@ -2700,7 +2700,7 @@ export function LessonFlowScreen() {
     if (modIdx < 0) return true;
     const completed = getCompletedModulesSync(chapterStoreKey(chapter.id));
     for (let mi = 0; mi < modIdx; mi++) {
-      if (chapter.modules[mi].comingSoon) continue;
+      if (chapter.modules[mi].comingSoon || chapter.modules[mi].bonusModule) continue;
       if (PRO_LOCKED_SIMS.has(chapter.modules[mi].id)) continue;
       if (!completed.includes(chapter.modules[mi].id)) return false;
     }

@@ -602,6 +602,7 @@ function ModuleNode({
   nodeType,
   modIndex,
   isProLocked,
+  isBonus,
   isComingSoon,
   isCompleted,
   isLastModule,
@@ -626,6 +627,8 @@ function ModuleNode({
   nodeType: NodeType;
   modIndex: number;
   isProLocked: boolean;
+  /** bonusModule flag — playable extra content that never blocks progression */
+  isBonus: boolean;
   isComingSoon: boolean;
   /** True when the user has ACTUALLY finished this module (real completion
    *  list), independent of the position-derived `state`. Drives the ✓ badge —
@@ -912,6 +915,14 @@ function ModuleNode({
           <View style={styles.comingSoonBadge} accessible={true} accessibilityLabel="בקרוב">
             <Lock size={9} color="#ffffff" strokeWidth={2.5} />
             <Text style={styles.comingSoonText} allowFontScaling={false}>בקרוב</Text>
+          </View>
+        )}
+
+        {/* Bonus badge — extra content that doesn't gate the next chapter */}
+        {isBonus && !isComingSoon && !isCompleted && (
+          <View style={[styles.comingSoonBadge, styles.bonusBadge]} accessible={true} accessibilityLabel="בונוס">
+            <Star size={9} color="#ffffff" strokeWidth={2.5} />
+            <Text style={styles.comingSoonText} allowFontScaling={false}>בונוס</Text>
           </View>
         )}
 
@@ -1340,6 +1351,7 @@ const ChapterSection = React.memo(function ChapterSection({
                 nodeType={nodeType}
                 modIndex={i}
                 isProLocked={!isPro && PRO_LOCKED_SIMS.has(module.id)}
+                isBonus={!!module.bonusModule}
                 isComingSoon={!!module.comingSoon}
                 isCompleted={completedModules.includes(module.id)}
                 isLastModule={i === chapter.modules.length - 1}
@@ -1702,7 +1714,7 @@ export function DuoLearnScreen() {
       if (!isPro && i > 0) {
         const prev = ALL_CHAPTERS[i - 1];
         const prevDone = completedByPrefix(`mod-${storeKey(prev.id).replace('ch-', '')}-`);
-        unlocked = prev.modules.every((m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevDone.includes(m.id))
+        unlocked = prev.modules.every((m) => m.comingSoon || m.bonusModule || PRO_LOCKED_SIMS.has(m.id) || prevDone.includes(m.id))
           || (i === 4 && investJump); // investments fast-track (Yoav 8.7)
       }
       if (!unlocked) continue;
@@ -1786,7 +1798,7 @@ export function DuoLearnScreen() {
         const prev = ALL_CHAPTERS[i - 1];
         const prevPfx = `mod-${storeKey(prev.id).replace('ch-', '')}-`;
         const prevDone = byPrefix(prevPfx);
-        unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
+        unlocked = prev.modules.every((m) => m.comingSoon || m.bonusModule || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
           || (i === 4 && investJump); // investments fast-track (Yoav 8.7)
       }
       if (!unlocked) continue;
@@ -2213,7 +2225,7 @@ export function DuoLearnScreen() {
         const prevNum = storeKey(prev.id).replace('ch-', '');
         const prevPrefix = `mod-${prevNum}-`;
         const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
-        unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
+        unlocked = prev.modules.every((m) => m.comingSoon || m.bonusModule || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
           || (chIdx === 4 && investJump); // investments fast-track (Yoav 8.7)
       }
       if (!unlocked) break;
@@ -3292,7 +3304,7 @@ export function DuoLearnScreen() {
               const prevNum = storeKey(prevChapter.id).replace('ch-', '');
               const prevPrefix = `mod-${prevNum}-`;
               const prevCompleted = completedByPrefix(prevPrefix);
-              isUnlocked = prevChapter.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id))
+              isUnlocked = prevChapter.modules.every((m) => m.comingSoon || m.bonusModule || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id))
                 || (idx === 4 && investJump); // investments fast-track (Yoav 8.7)
             }
 
@@ -3568,7 +3580,9 @@ export function DuoLearnScreen() {
                 const chNum2 = storeKey(ch.id).replace('ch-', '');
                 const prefix2 = `mod-${chNum2}-`;
                 const done = progressData?.filter((m) => m.moduleId.startsWith(prefix2) && m.status === 'completed').map((m) => m.moduleId) ?? [];
-                const totalModules = ch.modules.filter(m => !m.comingSoon).length;
+                // Bonus modules (content added after users finished the chapter,
+                // e.g. mod-4-31/32/33 on 19.8) don't count against completion.
+                const totalModules = ch.modules.filter(m => !m.comingSoon && !m.bonusModule).length;
                 const completedCount = done.length;
                 const isComplete = completedCount >= totalModules;
 
@@ -3578,7 +3592,7 @@ export function DuoLearnScreen() {
                   const prevNum2 = storeKey(prev.id).replace('ch-', '');
                   const prevPrefix2 = `mod-${prevNum2}-`;
                   const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix2) && m.status === 'completed').map((m) => m.moduleId) ?? [];
-                  chapterUnlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
+                  chapterUnlocked = prev.modules.every((m) => m.comingSoon || m.bonusModule || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id))
                     || (idx === 4 && investJump); // investments fast-track (Yoav 8.7)
                 }
 
@@ -3910,6 +3924,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     color: "#ffffff",
+  },
+  bonusBadge: {
+    backgroundColor: "#d97706",
   },
   nodeLabelSide: {
     position: "absolute",
