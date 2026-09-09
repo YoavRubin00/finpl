@@ -244,6 +244,14 @@ export type AppEvent =
   // ── Tools (Financial Tools hub) ────────────────────────────────────────
   | { name: 'tool_opened'; props: { tool_key: string } }
   | { name: 'tool_used'; props: { tool_key: string; threshold_seconds: number } }
+  // ── Live holdings (real-portfolio tracker on the net-worth dashboard) ──
+  // The competitive answer to tracker apps (Yoav 9.9.26): real tickers, live
+  // prices, and a portfolio-shaped lesson recommendation. `reason` on the
+  // lesson CTA tells us WHICH portfolio state converts tracking → learning.
+  | { name: 'holdings_section_viewed'; props: { holdings_count: number } }
+  | { name: 'holding_added'; props: { ticker: string; has_buy_price: boolean; holdings_count: number } }
+  | { name: 'holding_removed'; props: { ticker: string; holdings_count: number } }
+  | { name: 'portfolio_lesson_cta_tapped'; props: { module_id: string; reason: 'concentration' | 'no_etf' | 'know_your_holdings' } }
 
   // ── News Challenge ─────────────────────────────────────────────────────
   | { name: 'news_challenge_viewed'; props: { question_count?: number; news_date?: string } }

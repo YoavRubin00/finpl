@@ -18,6 +18,7 @@ import { NetWorthSummary } from './components/NetWorthSummary';
 import { AssetRow } from './components/AssetRow';
 import { InvestmentNudgeCard } from './components/InvestmentNudgeCard';
 import { AssetEditModal } from './AssetEditModal';
+import { HoldingsSection } from './holdings/HoldingsSection';
 
 /**
  * Main screen — user's real assets dashboard.
@@ -37,6 +38,15 @@ export function NetWorthDashboardScreen(): React.ReactElement {
 
   const [editing, setEditing] = useState<Asset | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Live stock holdings fold into the hero totals. Stocks count as liquid,
+  // and project at the catalog's equity-track default (8%/yr) — the same
+  // convention an investment_account asset on 'equity' gets.
+  const [holdingsValueIls, setHoldingsValueIls] = useState(0);
+  const combinedTotal = totalValue + holdingsValueIls;
+  const combinedLiquid = totalLiquid + holdingsValueIls;
+  const combinedGrowth = annualGrowth + holdingsValueIls * 0.08;
+  const combinedYoyPct = combinedTotal > 0 ? combinedGrowth / combinedTotal : yoyDeltaPct;
 
   /** Idle = sitting in cash + checking. These accounts produce no growth, so they're prime targets for the "put it to work" nudge. */
   const idleCash = assets
@@ -95,12 +105,14 @@ export function NetWorthDashboardScreen(): React.ReactElement {
         showsVerticalScrollIndicator={false}
       >
         <NetWorthSummary
-          totalValue={totalValue}
-          totalLiquid={totalLiquid}
+          totalValue={combinedTotal}
+          totalLiquid={combinedLiquid}
           monthlyDeposit={monthlyDeposit}
-          annualGrowth={annualGrowth}
-          yoyDeltaPct={yoyDeltaPct}
+          annualGrowth={combinedGrowth}
+          yoyDeltaPct={combinedYoyPct}
         />
+
+        <HoldingsSection onValueChange={setHoldingsValueIls} />
 
         {isEmpty ? (
           <View style={styles.emptyCard}>
