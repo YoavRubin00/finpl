@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -139,6 +139,10 @@ export function ChestCelebrationModal({
   analyticsSource,
   ahaLine,
 }: ChestCelebrationModalProps): React.ReactElement | null {
+  // Native SafeAreaView inside a RN Modal drops the top inset on iOS (new
+  // arch) — the "כל הכבוד" heading rendered under the Dynamic Island.
+  // Insets via the JS hook + manual padding instead (Yoav 9.9).
+  const insets = useSafeAreaInsets();
   const [opened, setOpened] = useState(false);
   const [showDoN, setShowDoN] = useState(false);
 
@@ -424,7 +428,7 @@ export function ChestCelebrationModal({
       statusBarTranslucent
     >
       <View style={styles.backdrop}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={[styles.safe, { paddingTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 12) }]}>
           {/* Heading */}
           <Animated.View entering={FadeInUp.duration(360)} style={styles.headingWrap}>
             <Text style={[styles.heading, RTL_CENTER]} allowFontScaling={false}>
@@ -641,7 +645,7 @@ export function ChestCelebrationModal({
               )}
             </Animated.View>
           )}
-        </SafeAreaView>
+        </View>
 
         {/* Double-or-Nothing sub-modal. Fires after the wisdom popup is
             dismissed (see effect above). On resolve we apply the
@@ -694,7 +698,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 20,
+    // Vertical padding applied inline (insets-based) — see render.
   },
   headingWrap: {
     alignItems: 'center',

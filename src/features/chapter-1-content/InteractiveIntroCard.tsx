@@ -36,6 +36,9 @@ function renderBoldText(text: string, accentColor: string): React.ReactNode[] {
   const cleaned = cleanGlossaryMarkup(text);
   const regex = /(\([^)]+\)|[A-Za-z][A-Za-z\d\s&.,-]*)/g;
   const result: React.ReactNode[] = [];
+  // RTL anchor for Latin/digit/paren-opening strings — mirrors the fix in
+  // LessonFlowScreen.renderBoldText (iOS mirrored-parens report, Yoav 9.9).
+  if (/^[A-Za-z0-9($"']/.test(cleaned)) result.push('‏');
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
@@ -44,8 +47,10 @@ function renderBoldText(text: string, accentColor: string): React.ReactNode[] {
       result.push(<Text key={key++}>{cleaned.slice(lastIndex, match.index)}</Text>);
     }
     result.push(
+      // RLI…PDI isolate — parens inside the token can't mirror against the
+      // surrounding Hebrew (see LessonFlowScreen.renderBoldText).
       <Text key={key++} style={{ fontWeight: "900", color: accentColor }}>
-        {match[0]}
+        {`⁧${match[0]}⁩`}
       </Text>,
     );
     result.push('\u200F');

@@ -9,7 +9,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { usePathname } from 'expo-router';
 import Animated, {
@@ -51,6 +51,10 @@ const FIRST_CHEST_XP = 50;
 
 function PostWalkthroughFirstChest(): React.JSX.Element {
   const reducedMotion = useReducedMotion();
+  // Native SafeAreaView inside a RN Modal drops the top inset on iOS (new
+  // arch) — the heading rendered under the Dynamic Island. Insets via the
+  // JS hook + manual padding instead (Yoav 9.9: "חורג בחלק העליון").
+  const insets = useSafeAreaInsets();
   const { playSound } = useSoundEffect();
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const addXP = useEconomyUIStore((s) => s.addXP);
@@ -158,7 +162,7 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => { /* block back — must open + continue */ }}>
       <View style={styles.backdrop}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={[styles.safe, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
           {/* Heading */}
           <Animated.View entering={FadeInUp.duration(360)} style={styles.headingWrap}>
             <Text style={[styles.heading, RTL_CENTER]} allowFontScaling={false}>
@@ -230,7 +234,7 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
           ) : (
             <View style={styles.bottomSpacer} />
           )}
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );
@@ -268,7 +272,8 @@ const styles = StyleSheet.create({
   // the heavy learn-map mount now happens BEHIND this screen; at 0.86 alpha
   // the half-mounted map shimmered through and read as "slow loading".
   backdrop: { flex: 1, backgroundColor: '#0f172a' },
-  safe: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 20 },
+  // Vertical padding applied inline (insets.top/bottom + 20) — see render.
+  safe: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24 },
   headingWrap: { alignItems: 'center', gap: 8, marginTop: 8 },
   heading: { fontSize: 30, fontWeight: '900', color: '#fcd34d' },
   subheading: { fontSize: 15, fontWeight: '600', color: '#e0f2fe', maxWidth: 320, lineHeight: 22 },

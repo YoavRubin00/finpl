@@ -428,6 +428,10 @@ const quizFeedbackStyles = StyleSheet.create({
 function renderBoldText(text: string, onTermPress?: (term: string) => void): React.ReactNode[] {
   const regex = /(\[\[[^\]]+\]\]|\([^)\[]+\)|[A-Za-z][A-Za-z\d\s&.,-]*)/g;
   const result: React.ReactNode[] = [];
+  // Anchor the paragraph to RTL even when the string opens with a Latin /
+  // digit / paren run — first-strong resolution otherwise flips the whole
+  // line to LTR and every paren renders mirrored (iOS ")" report, Yoav 9.9).
+  if (/^[A-Za-z0-9($"']/.test(text)) result.push('‏');
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
@@ -454,7 +458,10 @@ function renderBoldText(text: string, onTermPress?: (term: string) => void): Rea
     } else {
       // English words inside Hebrew text: render inline with matching style
       // (no color, no emphasized weight) so they don't tip off quiz answers.
-      result.push(<Text key={key++}>{token}</Text>);
+      // RLI…PDI bidi-isolate: the token (Latin run / "(…)" parenthetical)
+      // resolves direction internally, so its parens can't mirror against
+      // the surrounding Hebrew.
+      result.push(<Text key={key++}>{`⁧${token}⁩`}</Text>);
     }
     // Inject strong Right-To-Left Mark to prevent punctuation breaking
     result.push('\u200F');

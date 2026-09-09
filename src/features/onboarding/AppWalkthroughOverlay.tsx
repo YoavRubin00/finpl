@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { useRouter, useSegments } from "expo-router";
 import Animated, {
@@ -23,6 +23,8 @@ import { useBannerCooldownStore } from "../notifications/useBannerCooldownStore"
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
 import { captureEvent } from "../../lib/posthog";
+import { getCachedAudioPath, prefetchModuleAudio } from "../../hooks/useModulePrefetch";
+import { useCompletedModulesStore } from "../economy/useCompletedModulesStore";
 
 // ---------------------------------------------------------------------------
 // Steps
@@ -162,6 +164,10 @@ export function AppWalkthroughOverlay() {
   const segments = useSegments();
   const [transitioning, setTransitioning] = useState(false);
   const reducedMotion = useReducedMotion();
+  // SafeAreaView (native) inside a RN Modal loses its top inset on iOS under
+  // the new architecture — the pill rendered under the Dynamic Island (Yoav
+  // 9.9: "חורג בחלק העליון"). The JS hook reads window insets reliably.
+  const insets = useSafeAreaInsets();
   // The walkthrough only starts once the user explicitly opts in by tapping
   // continue on the welcome chest (which sets walkthroughTriggered=true).
   // This keeps the reward and the tour as separate, non-competing moments.
@@ -213,7 +219,10 @@ export function AppWalkthroughOverlay() {
 
     if (stepAudioUrl && ready) {
       try {
-        const player = createAudioPlayer({ uri: stepAudioUrl });
+        // Cached local path when the mount-time prefetch already landed it —
+        // narration then starts the same frame as the step transition instead
+        // of cold-fetching from Blob (Yoav 9.9: "שיתחיל מיד עם המעבר").
+        const player = createAudioPlayer({ uri: getCachedAudioPath(stepAudioUrl) });
         player.play();
         playerObj = player;
       } catch { /* audio playback failed, silent */ }
@@ -225,6 +234,13 @@ export function AppWalkthroughOverlay() {
       }
     };
   }, [stepAudioUrl, ready]);
+
+  // Warm EVERY step narration into the local audio cache the moment this
+  // overlay mounts — i.e. while the user is still on the welcome chest.
+  // ~8 small MP3s; failures fall back to the remote URL above.
+  useEffect(() => {
+    STEPS.forEach((s) => prefetchModuleAudio(s.audioUrl));
+  }, []);
 
   /** Check if we're already on the target route to avoid redundant navigation */
   const isAlreadyOnRoute = useCallback((target: string | null) => {
@@ -273,14 +289,22 @@ export function AppWalkthroughOverlay() {
       // restoring the post_walkthrough monetization moment without blocking the
       // path to the first module.
       void via;
-      // 18.8 (Yoav): no more auto-launch of mod-0-1 the second the tour ends.
-      // The funnel showed 7/15 new-user intro-droppers had lesson_started fire
-      // in the same second as walkthrough end, still on /bridge or /friends —
-      // they never chose to start, so they backed straight out. Now everyone
-      // lands on the learn map, where FirstLessonCTA offers "בואו נתחיל"
-      // explicitly (same route, user-initiated).
-      if (firstChestOpened) {
+      // 9.9 (Yoav): the tour hands DIRECTLY into the first lesson — "מיד לאחר
+      // הסיום של ההדרכה 0 צריך להיכנס לתוך השיעור הראשון, לא למסך הכללי".
+      // Reverses the 18.8 map-landing. FirstLessonCTA stays armed as the
+      // safety net: backing out of the intro lands on the map with the
+      // explicit "בואו נתחיל" card waiting (and it self-heals on completion).
+      // Watch mod-0-1 intro-completion post-OTA — the 18.8 change existed
+      // because same-second auto-launches produced instant back-outs.
+      const mod01Done = useCompletedModulesStore
+        .getState()
+        .completedIds.includes("mod-0-1");
+      if (firstChestOpened && !mod01Done) {
         try { useTutorialStore.getState().setPendingFirstLessonCTA(true); } catch { /* non-fatal */ }
+        router.replace(
+          "/lesson/mod-0-1?startPhase=intro&returnTo=topic-tree&chapterId=chapter-0" as never,
+        );
+        return;
       }
       router.replace("/(tabs)" as never);
     } catch {
@@ -390,7 +414,7 @@ export function AppWalkthroughOverlay() {
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter (hidden on step 0 — welcome card has no pill) ── */}
         {step > 0 && (
-          <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 56 }}>
+          <View style={{ alignItems: "center", paddingTop: Math.max(insets.top + 16, 56) }}>
             <Animated.View
               key={`pill-${contentKey}`}
               entering={reducedMotion ? undefined : FadeInDown.duration(350)}
@@ -402,14 +426,14 @@ export function AppWalkthroughOverlay() {
                 <Text style={s.stepCounterText}>{`${step + 1}/${stepsWithLast.length}`}</Text>
               </View>
             </Animated.View>
-          </SafeAreaView>
+          </View>
         )}
 
         {/* ── Middle: transparent, real screen shows through ── */}
         <View style={{ flex: 1 }} />
 
         {/* ── Bottom: Finn card + CTA ── */}
-        <SafeAreaView edges={["bottom"]} style={{ paddingHorizontal: 16 }}>
+        <View style={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom, 12) }}>
           <Animated.View entering={reducedMotion ? undefined : FadeInUp.duration(500)} style={s.card}>
             {/* Glow border */}
             <View style={s.glowBorder} />
@@ -513,7 +537,7 @@ export function AppWalkthroughOverlay() {
               <Text style={s.skipText}>דלג על הסיור</Text>
             </Pressable>
           </Animated.View>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );
