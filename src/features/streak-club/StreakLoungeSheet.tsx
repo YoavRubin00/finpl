@@ -19,6 +19,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 
 import { SheetCloseButton } from "../../components/ui/SheetCloseButton";
@@ -31,6 +32,8 @@ import { captureEvent } from "../../lib/posthog";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { todayIsraelDate } from "../economy/useStreak";
+import { useEconomyUIStore, deriveStreakFromDates } from "../economy/useEconomyUIStore";
+import { getNextLessonTarget } from "../retention-loops/nextLessonTarget";
 import { FINN_HELLO, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 
 import { LOUNGE_TABLES, SCENE_URI, SCENE_BLUR_URI, SCENE_AR, HOTSPOT_TOUCH, type LoungeTable, type TableId } from "./loungeConfig";
@@ -176,9 +179,27 @@ export function StreakLoungeSheet({
   const { width: screenW, height: screenH } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
   const { playSound } = useSoundEffect();
+  const router = useRouter();
 
-  const locked = streak < 1; // יום-1 (streak>=1) = חבר מלא (יואב 2.7); streak=0 (אורח) לא מגיע לכאן — ההורה מסנן
   const dateKey = todayIsraelDate();
+
+  /**
+   * הרצף האפקטיבי (באג יואב 18.9 — "נכנסים למועדון ונזרקים החוצה"):
+   * ה-prop מגיע מ-useStreak() בלבד, ששאילתת-השרת שלו כבויה לאורחים ועוד
+   * לא נטענה בשניות הראשונות של קר-סטארט. במצב הזה streak=0 ⇒ locked ⇒
+   * המשתמש נכנס לטרקלין ומקבל מיד את קלף-הנעילה שה-CTA שלו רק סוגר —
+   * זריקה החוצה. מגבים בחישוב המקומי (activeDates/frozenDates), אותה
+   * נוסחה שמזינה את מונה-הרצף בכותרת, כך שהנעילה נשארת רק למי שבאמת
+   * עוד לא פתח רצף.
+   */
+  const activeDates = useEconomyUIStore((s) => s.activeDates);
+  const frozenDates = useEconomyUIStore((s) => s.frozenDates);
+  const localStreak = useMemo(
+    () => deriveStreakFromDates(activeDates ?? [], frozenDates ?? []),
+    [activeDates, frozenDates],
+  );
+  const effectiveStreak = Math.max(streak, localStreak);
+  const locked = effectiveStreak < 1; // יום-1 (streak>=1) = חבר מלא (יואב 2.7)
 
   const recordVisit = useStreakClubStore((s) => s.recordVisit);
   const markTableSeen = useStreakClubStore((s) => s.markTableSeen);
@@ -302,6 +323,20 @@ export function StreakLoungeSheet({
   useEffect(() => () => {
     if (dancingTimer.current) clearTimeout(dancingTimer.current);
   }, []);
+
+  /** "מתחילים שיעור" ממצב-הנעול: סוגר את הטרקלין ונכנס ישר לשיעור הבא. */
+  const handleStartStreak = useCallback(() => {
+    tapHaptic();
+    const target = getNextLessonTarget();
+    try {
+      captureEvent("streak_club_locked_cta", {
+        date_key: dateKey,
+        module_id: target?.moduleId ?? null,
+      });
+    } catch { /* non-fatal */ }
+    onClose();
+    if (target) router.push(target.route as never);
+  }, [dateKey, onClose, router]);
 
   const openTable = useCallback(
     (table: LoungeTable) => {
@@ -477,7 +512,7 @@ export function StreakLoungeSheet({
             </View>
           </View>
           <View style={styles.memberRow}>
-            <Text style={styles.memberLine} allowFontScaling={false}>{locked ? "עוד לא התחלת רצף" : `רצף ${streak}`}</Text>
+            <Text style={styles.memberLine} allowFontScaling={false}>{locked ? "עוד לא התחלת רצף" : `רצף ${effectiveStreak}`}</Text>
             <LottieIcon source={FIRE_LOTTIE} size={18} autoPlay loop active={visible && !reducedMotion} />
             {!locked && (
               <Text style={styles.memberLine} allowFontScaling={false}>{`· ביקור מס' ${Math.max(totalVisits, 1)}`}</Text>
@@ -528,25 +563,26 @@ export function StreakLoungeSheet({
           </Animated.View>
         )}
 
-        {/* ── מצב-נעול (teaser, streak=1): מציצים אבל לא נוגעים ── */}
+        {/* ── מצב-נעול (teaser, streak=0): מציצים אבל לא נוגעים ──
+            באג יואב 18.9: ה-CTA "מתחילים" רק קרא ל-onClose() — כלומר
+            המשתמש נכנס למועדון ומיד הוטל החוצה למפה בלי שום דרך להתחיל.
+            עכשיו הוא באמת מתחיל: פותח את השיעור הבא (הדרך היחידה לפתוח
+            רצף), ורק אם אין שיעור זמין נופל בחזרה לסגירה. */}
         {locked && (
           <View style={styles.lockWrap} pointerEvents="box-none">
             <Animated.View entering={FadeInUp.delay(200).duration(320)} style={styles.lockCard}>
               <Text style={styles.lockEmoji} allowFontScaling={false}>🗝️</Text>
               <Text style={styles.lockTitle} allowFontScaling={false}>המועדון מחכה לך</Text>
               <Text style={styles.lockBody}>
-                כל יום, 3 שולחנות ודרופ בלעדי חדש. מתחילים רצף ונכנסים.
+                כל יום, 3 שולחנות ודרופ בלעדי חדש. שיעור אחד היום פותח רצף — ואתם בפנים.
               </Text>
               <Pressable
-                onPress={() => {
-                  tapHaptic();
-                  onClose();
-                }}
+                onPress={handleStartStreak}
                 style={styles.lockCta}
                 accessibilityRole="button"
-                accessibilityLabel="סגירה"
+                accessibilityLabel="מתחילים שיעור ופותחים רצף"
               >
-                <Text style={styles.lockCtaText} allowFontScaling={false}>מתחילים</Text>
+                <Text style={styles.lockCtaText} allowFontScaling={false}>מתחילים שיעור</Text>
               </Pressable>
             </Animated.View>
           </View>
