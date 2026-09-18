@@ -283,7 +283,7 @@ function ScoreScreen({
 
       {/* Grade banner */}
       <Animated.View entering={FadeInDown.duration(600)} style={sim4Styles.gradeContainer}>
-        <Text accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: gradeColor }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: gradeColor }]}>
           {GRADE_HEBREW[score.grade] ?? score.grade}
         </Text>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>

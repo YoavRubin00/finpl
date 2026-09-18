@@ -553,7 +553,7 @@ function ScoreScreen({
       {/* Grade banner */}
       <Animated.View entering={FadeInDown.springify().damping(22)} style={sim4Styles.gradeContainer}>
         <View accessible={false}><LottieIcon source={gradeLotties[score.grade] || LOTTIE_CHART} size={56} /></View>
-        <Text accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: gradeColor }]}>{GRADE_HEBREW[score.grade] ?? score.grade}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: gradeColor }]}>{GRADE_HEBREW[score.grade] ?? score.grade}</Text>
         <Text style={[sim4Styles.gradeLabel, { color: gradeColor }]}>
           {gradeLabels[score.grade] ?? ''}
         </Text>

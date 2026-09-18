@@ -256,7 +256,7 @@ function ScoreScreen({ result, onReplay, onContinue }: ScoreScreenProps) {
             contentFit="contain"
             accessible={false}
           />
-          <Text accessibilityLiveRegion="polite" style={{ fontSize: 38, fontWeight: '900', color: '#0c4a6e', marginBottom: 4 }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} accessibilityLiveRegion="polite" style={{ fontSize: 38, fontWeight: '900', color: '#0c4a6e', marginBottom: 4 }}>
             {GRADE_HEBREW[result.grade] ?? result.grade}
           </Text>
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748b', textAlign: 'center', writingDirection: 'rtl' }}>{gradeLabel}</Text>

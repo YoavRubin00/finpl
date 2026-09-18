@@ -327,7 +327,7 @@ function ScoreScreen({
 
       {/* Grade */}
       <Animated.View entering={FadeInDown.duration(600).delay(100)} style={sim5Styles.gradeContainer}>
-        <Text accessibilityLiveRegion="polite" style={[sim5Styles.gradeText, { color: gradeColor }]}>{GRADE_HEBREW[score.grade] ?? score.grade}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} accessibilityLiveRegion="polite" style={[sim5Styles.gradeText, { color: gradeColor }]}>{GRADE_HEBREW[score.grade] ?? score.grade}</Text>
         <Text style={sim5Styles.gradeLabel}>דירוג ניהול המשכנתא</Text>
       </Animated.View>
 

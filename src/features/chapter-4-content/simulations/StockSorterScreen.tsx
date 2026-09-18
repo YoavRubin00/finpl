@@ -193,7 +193,7 @@ function ScoreScreen({
 
       {/* Grade */}
       <Animated.View entering={FadeInDown.springify().damping(22)} style={sim4Styles.gradeContainer}>
-        <Text accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: GRADE_COLORS4[score.grade] }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: GRADE_COLORS4[score.grade] }]}>
           {score.grade}
         </Text>
         <Text style={sim4Styles.gradeLabel}>{score.gradeLabel}</Text>

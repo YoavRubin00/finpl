@@ -432,7 +432,7 @@ function ScoreReveal({
             {/* Grade + savings header, compact */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
                 <View style={sim2Styles.gradeContainer}>
-                    <Text style={[sim2Styles.gradeText, { color: gradeColor }]}>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[sim2Styles.gradeText, { color: gradeColor }]}>
                         {GRADE_HEBREW[score.grade] ?? score.grade}
                     </Text>
                     <Text style={[RTL, sim2Styles.gradeLabel]}>

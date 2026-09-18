@@ -311,7 +311,7 @@ function ScoreScreen({
             <ScrollView contentContainerStyle={receiptStyles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Grade */}
                 <Animated.View entering={FadeIn.delay(300)} style={[sim2Styles.gradeContainer, { marginBottom: 4 }]}>
-                    <Text style={[sim2Styles.gradeText, { color: gradeColor, fontSize: 36 }]}>{GRADE_HEBREW[score.grade] ?? score.grade}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[sim2Styles.gradeText, { color: gradeColor, fontSize: 36 }]}>{GRADE_HEBREW[score.grade] ?? score.grade}</Text>
                     <Text style={[sim2Styles.gradeLabel, { fontSize: 13 }]}>דירוג אשראי</Text>
                 </Animated.View>
 

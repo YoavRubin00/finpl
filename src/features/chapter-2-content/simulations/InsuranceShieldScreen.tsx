@@ -376,7 +376,7 @@ function ScoreScreen({
         entering={FadeInDown.springify().damping(22)}
         style={{ alignItems: 'center', marginBottom: 4 }}
       >
-        <Text style={{ fontSize: 28, fontWeight: '900', color: gradeColor, letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6, textAlign: 'center' }}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={{ fontSize: 28, fontWeight: '900', color: gradeColor, letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6, textAlign: 'center' }}>
           {GRADE_HEBREW[score.grade] ?? score.grade}
         </Text>
         <Text style={[sim2Styles.gradeLabel, RTL, { fontSize: 14 }]}>{score.gradeLabel}</Text>

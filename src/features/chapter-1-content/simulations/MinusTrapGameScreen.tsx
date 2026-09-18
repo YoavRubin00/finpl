@@ -557,8 +557,8 @@ function ScoreScreen({
                 {/* Grade + Finn */}
                 <View style={[simStyles.gradeContainer, { flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 12 }]}>
                     <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 60, height: 60 }} contentFit="contain" />
-                    <View style={{ alignItems: 'center' }}>
-                        <Text style={[simStyles.gradeText, { color: gradeColor }]}>
+                    <View style={{ alignItems: 'center', flexShrink: 1, minWidth: 0 }}>
+                        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[simStyles.gradeText, { color: gradeColor }]}>
                             {GRADE_HEBREW[score.grade] ?? score.grade}
                         </Text>
                         <Text style={[RTL, simStyles.gradeLabel]}>

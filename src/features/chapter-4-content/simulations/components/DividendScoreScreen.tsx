@@ -38,7 +38,7 @@ export function DividendScoreScreen({ score, onReplay, onContinue }: DividendSco
 
       <Animated.View entering={FadeInDown.springify().damping(22)} style={sim4Styles.gradeContainer}>
         <View accessible={false}><LottieIcon source={LOTTIE_TREE} size={56} /></View>
-        <Text accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: COLORS.gold }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: COLORS.gold }]}>
           פי {multiplier.toFixed(1)}
         </Text>
         <Text style={[sim4Styles.gradeLabel, { color: COLORS.gold }]}>

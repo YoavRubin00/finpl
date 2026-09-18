@@ -440,7 +440,7 @@ function ScoreScreen({
                     transform: [{ rotate: '-6deg' }],
                     marginBottom: 8,
                 }}>
-                    <Text style={[simStyles.gradeText, { color: gradeColor }]}>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[simStyles.gradeText, { color: gradeColor }]}>
                         {GRADE_HEBREW[score.grade] ?? score.grade}
                     </Text>
                 </View>

@@ -176,7 +176,7 @@ function ScoreScreen({
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 16, paddingVertical: 16, paddingBottom: 120 }}>
             {/* Grade banner */}
             <View style={simStyles.gradeContainer}>
-                <Text style={[simStyles.gradeText, { color: gradeColor }]}>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[simStyles.gradeText, { color: gradeColor }]}>
                     {GRADE_HEBREW[score.grade] ?? score.grade}
                 </Text>
                 <Text style={[RTL, simStyles.gradeLabel]}>

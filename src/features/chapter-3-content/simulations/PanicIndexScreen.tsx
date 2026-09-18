@@ -330,7 +330,7 @@ function ScoreScreen({
         entering={FadeInDown.springify().damping(22)}
         style={sim3Styles.gradeContainer}
       >
-        <Text style={[sim3Styles.gradeText, { color: gradeColor }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[sim3Styles.gradeText, { color: gradeColor }]}>
           {GRADE_HEBREW[score.grade] ?? score.grade}
         </Text>
         <Text style={[sim3Styles.gradeLabel, RTL]}>{score.gradeLabel}</Text>

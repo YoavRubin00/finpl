@@ -269,7 +269,7 @@ function ScoreScreenInner({ result, onReplay, onContinue }: ScoreScreenProps) {
 
       {/* Grade banner */}
       <Animated.View entering={FadeInDown.duration(600)} style={sim4Styles.gradeContainer}>
-        <Text accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: gradeColor }]}>{GRADE_HEBREW[result.grade] ?? result.grade}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: gradeColor }]}>{GRADE_HEBREW[result.grade] ?? result.grade}</Text>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
           <LottieIcon source={gradeLottie} size={28} />
           <Text style={[sim4Styles.gradeLabel, { color: gradeColor }]}>{gradeLabel}</Text>

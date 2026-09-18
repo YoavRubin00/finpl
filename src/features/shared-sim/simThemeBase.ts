@@ -118,9 +118,11 @@ export function createTYPE(sim: SimPalette) {
 
 export function createSimStyles(sim: SimPalette) {
     return StyleSheet.create({
-        gradeContainer: { alignItems: 'center', marginBottom: 8 },
-        gradeText: { fontSize: 52, fontWeight: '900', letterSpacing: 2, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6 },
-        gradeLabel: { fontSize: 16, fontWeight: '700', color: sim.textOnGradientMuted, textAlign: 'center', lineHeight: 24, ...SHADOW_LIGHT },
+        // minWidth:0 + flexShrink let the banner shrink instead of spilling off-screen when it sits in a row
+        gradeContainer: { alignItems: 'center', marginBottom: 8, flexShrink: 1, minWidth: 0 },
+        // holds a Hebrew phrase (GRADE_HEBREW), not a single letter - must stay inside the screen on narrow devices
+        gradeText: { fontSize: 52, fontWeight: '900', letterSpacing: 1, textAlign: 'center', flexShrink: 1, maxWidth: '100%', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6 },
+        gradeLabel: { fontSize: 16, fontWeight: '700', color: sim.textOnGradientMuted, textAlign: 'center', lineHeight: 24, flexShrink: 1, ...SHADOW_LIGHT },
         scoreCard: { backgroundColor: sim.cardBg, borderRadius: 20, borderWidth: 1.5, borderColor: sim.cardBorder, shadowOpacity: 0.15, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
         scoreCardInner: { padding: 20, gap: 14 },
         scoreRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

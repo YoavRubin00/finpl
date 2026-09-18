@@ -251,7 +251,7 @@ function ScoreScreen({
           marginBottom: 14,
         }}>
           <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 64, height: 64, marginBottom: 8 }} contentFit="contain" />
-          <Text accessibilityLiveRegion="polite" style={{ fontSize: 42, fontWeight: '900', color: '#0c4a6e', marginBottom: 4 }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} accessibilityLiveRegion="polite" style={{ fontSize: 42, fontWeight: '900', color: '#0c4a6e', marginBottom: 4 }}>
             {GRADE_HEBREW[grade] ?? grade}
           </Text>
           <Text style={{ fontSize: 15, fontWeight: '700', color: '#64748b', textAlign: 'center', writingDirection: 'rtl' }}>
