@@ -257,14 +257,14 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
         {/* Top-center tier pill ("הכי משתלם ★" / "פופולרי") */}
         {tier.topPill && (
           <LinearGradient colors={tier.pillBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles2.tierPill} pointerEvents="none">
-            <Text style={[styles2.tierPillText, { color: tier.pillText }]} allowFontScaling={false} numberOfLines={1}>{tier.topPill}</Text>
+            <Text style={[styles2.tierPillText, { color: tier.pillText }]} maxFontSizeMultiplier={1.3} numberOfLines={1}>{tier.topPill}</Text>
           </LinearGradient>
         )}
 
         {/* Bonus sticker — top-right green tilted pill with "+25%" etc. */}
         {cleanBonus && (
           <LinearGradient colors={tier.bonusBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles2.bonusSticker} pointerEvents="none">
-            <Text style={styles2.bonusStickerText} allowFontScaling={false} numberOfLines={1}>{cleanBonus}</Text>
+            <Text style={styles2.bonusStickerText} maxFontSizeMultiplier={1.3} numberOfLines={1}>{cleanBonus}</Text>
           </LinearGradient>
         )}
 
@@ -279,8 +279,8 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
         </View>
 
         {/* Big amount + label */}
-        <Text style={styles2.gemAmountBig} allowFontScaling={false}>{bundle.gems.toLocaleString('he-IL')}</Text>
-        <Text style={styles2.gemAmountLabel} allowFontScaling={false}>יהלומים</Text>
+        <Text style={styles2.gemAmountBig} maxFontSizeMultiplier={1.3}>{bundle.gems.toLocaleString('he-IL')}</Text>
+        <Text style={styles2.gemAmountLabel} maxFontSizeMultiplier={1.3}>יהלומים</Text>
 
         {/* Green price button */}
         <LinearGradient
@@ -290,7 +290,7 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
           style={styles2.gemPriceBtn}
           pointerEvents="none"
         >
-          <Text style={styles2.gemPriceBtnText} allowFontScaling={false}>{bundle.priceLabel}</Text>
+          <Text style={styles2.gemPriceBtnText} maxFontSizeMultiplier={1.3}>{bundle.priceLabel}</Text>
         </LinearGradient>
       </AnimatedPressable>
     </Animated.View>

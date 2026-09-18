@@ -1488,7 +1488,8 @@ function QuizCard({
                 style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 16, paddingVertical: 14, borderBottomWidth: 3, borderBottomColor: unitColors.bottom ?? unitColors.bg }}
                 color={unitColors.bg}
               >
-                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>המשך {'>'}</Text>
+                {/* UX-58: ASCII ">" reads as BACK in RTL — plain label. */}
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>המשך</Text>
               </LiquidButton>
             </Animated.View>
           </>
@@ -5260,7 +5261,7 @@ export function LessonFlowScreen() {
                   elevation: 8,
                 }}>
                   <Text style={{ fontSize: 18, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>
-                    מתחילים ←
+                    מתחילים
                   </Text>
                 </View>
               </Pressable>

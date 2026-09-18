@@ -99,10 +99,15 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
   // Phase advance timer
   useEffect(() => {
     if (phase >= 2) return;
+    // UX-55 (Yoav 18.9.26): captions used to run on a wall clock while the
+    // narration was still buffering, so on slow networks the text moved on
+    // before the shark started talking. Hold the phase timer while audio is
+    // still loading; 'playing' / 'finished' / 'failed' / no-audio all proceed.
+    if (audioUri && (audioState === 'loading' || audioState === 'slow')) return;
     const next: 0 | 1 | 2 = phase === 0 ? 1 : 2;
     const timer = setTimeout(() => setPhase(next), PHASE_DURATIONS[phase]);
     return () => clearTimeout(timer);
-  }, [phase]);
+  }, [phase, audioState, audioUri]);
 
   // Caption fade-in on phase change
   useEffect(() => {
@@ -161,7 +166,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
         hitSlop={16}
         style={{ position: 'absolute', top: 0, right: 0, padding: 10, zIndex: 10 }}
       >
-        <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: '600' }}>דלג ›</Text>
+        <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: '600' }}>דלג</Text>
       </Pressable>
 
       <View style={{ flex: 1, justifyContent: 'space-evenly', alignItems: 'center', paddingHorizontal: 16 }}>

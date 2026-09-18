@@ -50,6 +50,18 @@ export function FantasyComingSoonScreen(): React.ReactElement {
         <Text style={[styles.sub, RTL_CENTER]} maxFontSizeMultiplier={1.3}>
           אנחנו משדרגים אותה כדי שיהיה שווה להתחרות.{'\n'}נעדכן אתכם ברגע שהשערים נפתחים.
         </Text>
+        {/* UX-38 (Yoav 18.9.26): a dead end became a door — the daily
+            challenge is the closest live competitive loop. */}
+        <Pressable
+          onPress={() => router.push('/daily-challenge' as never)}
+          accessibilityRole="button"
+          accessibilityLabel="בינתיים: האתגר היומי"
+          style={{ marginTop: 20, borderRadius: 14 }}
+        >
+          <View style={{ backgroundColor: '#0284c7', borderRadius: 14, paddingHorizontal: 24, minHeight: 46, justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: '#0369a1' }}>
+            <Text style={{ color: '#ffffff', fontSize: 15, fontWeight: '900', writingDirection: 'rtl', textAlign: 'center' }}>בינתיים: האתגר היומי</Text>
+          </View>
+        </Pressable>
       </View>
     </SafeAreaView>
   );

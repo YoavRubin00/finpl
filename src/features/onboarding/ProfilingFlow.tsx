@@ -69,7 +69,10 @@ import type {
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHAT_BG = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/HOMEPAGE.png' };
 const SLIDE_MS = 300;
-const AUTO_ADVANCE_MS = 1150; // 900ms typing + 250ms extra before transition
+// UX-50(א) (Yoav 18.9.26): was 1150ms × 3 screens = 3.45s of dead time on
+// the exact screens where the funnel leaks most (screen-1 = −18.6%). The
+// typing effect still plays; the advance just doesn't wait for it to finish.
+const AUTO_ADVANCE_MS = 500;
 const TOTAL_STEPS = 3;
 
 const CONFETTI_COLORS = [
@@ -742,7 +745,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
 
         {/* CTA */}
         <Animated.View style={ctaStyle}>
-          <Pressable onPress={handleStart} disabled={bursting} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
+          <Pressable onPress={handleStart} disabled={bursting} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="מתחילים">
             <Text style={styles.celebCTAText}>מתחילים</Text>
           </Pressable>
         </Animated.View>
@@ -1977,7 +1980,10 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   const finnOpacity = useSharedValue(0);
   const textOpacity = useSharedValue(0);
   const textTy = useSharedValue(24);
-  const ctaScale = useSharedValue(0);
+  // UX-50(ד): never start from scale 0 — the collapsed hit-rect left the CTA
+  // untappable on some Reanimated versions (see the note near :624). A 0.92→1
+  // settle reads the same and is always pressable.
+  const ctaScale = useSharedValue(0.92);
 
   useEffect(() => {
     finnOpacity.value = withTiming(1, { duration: 400 });
@@ -1993,7 +1999,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   useEffect(() => {
     textOpacity.value = 0;
     textTy.value = 24;
-    ctaScale.value = 0;
+    ctaScale.value = 0.92;
     textOpacity.value = withTiming(1, { duration: 250 });
     textTy.value = withTiming(0, { duration: 250, easing: Easing.out(Easing.quad) });
     ctaScale.value = withDelay(150, withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) }));
@@ -2236,10 +2242,10 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
               backgroundColor: "#ecfeff",
             }}
             accessibilityRole="button"
-            accessibilityLabel="המשך בלי חשבון"
+            accessibilityLabel="המשך כאורח"
           >
             <Text style={{ color: "#0891b2", fontSize: 15, fontWeight: "800", writingDirection: "rtl" }}>
-              המשך בלי חשבון
+              המשך כאורח
             </Text>
           </Pressable>
 

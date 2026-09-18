@@ -257,7 +257,7 @@ export function SalaryNetCalculator(): React.ReactElement {
         <View style={styles.employerCard}>
           <View style={styles.employerTopRow}>
             <View style={styles.employerTotalWrap}>
-              <Text style={styles.employerTotalLabel}>סך עלות לעסיק</Text>
+              <Text style={styles.employerTotalLabel}>סך עלות למעסיק</Text>
               <Text style={styles.employerTotalValue}>{formatShekel(totalEmployerCost)}</Text>
             </View>
             <View style={styles.employerMarkupPill}>
@@ -275,7 +275,7 @@ export function SalaryNetCalculator(): React.ReactElement {
 
         <FinTip
           kind="tip"
-          text={`עלות מעסיק = ₪${Math.round(totalEmployerCost).toLocaleString('he-IL')} — כשמשווים שכר עצמאי לעיר שכיר, זה הסכום הרלוונטי.`}
+          text={`עלות מעסיק = ₪${Math.round(totalEmployerCost).toLocaleString('he-IL')} — כשמשווים שכר עצמאי לעומת שכיר, זה הסכום הרלוונטי.`}
           subtext="המס השולי שלך עולה עם השכר — לכן חשוב לדעת איפה אתה במדרגות."
         />
 

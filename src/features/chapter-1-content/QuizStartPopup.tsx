@@ -31,13 +31,9 @@ export function QuizStartPopup({ visible, quizCount, onStart, unitColors }: Quiz
     if (visible) {
       scale.value = withSpring(1, { damping: 14, stiffness: 200 });
       opacity.value = withTiming(1, { duration: 200 });
-      // Auto-dismiss after 2 seconds
-      const t = setTimeout(() => {
-        onStart();
-      }, 2000);
-      return () => {
-        clearTimeout(t);
-      };
+      // UX-50(ג) (Yoav 18.9.26): the 2s auto-dismiss is GONE. A tap aimed at
+      // the button after the popup unmounted itself landed on a quiz option
+      // behind it — an answer by accident. The button is the only way in.
     } else {
       scale.value = withTiming(0.85, { duration: 150 });
       opacity.value = withTiming(0, { duration: 150 });
@@ -67,7 +63,7 @@ export function QuizStartPopup({ visible, quizCount, onStart, unitColors }: Quiz
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>מוכן לאתגר?</Text>
+          <Text style={styles.title}>רגע של אתגר</Text>
 
           {/* Quiz count pill */}
           <View style={[styles.badge, { backgroundColor: unitColors.dim, borderColor: unitColors.bg }]}>
@@ -75,7 +71,7 @@ export function QuizStartPopup({ visible, quizCount, onStart, unitColors }: Quiz
           </View>
 
           <Text style={styles.sub}>
-            בדוק את עצמך על מה שלמדת
+            בדיקה קטנה על מה שנלמד עכשיו
           </Text>
 
           {/* CTA, 3D button */}
@@ -96,7 +92,7 @@ export function QuizStartPopup({ visible, quizCount, onStart, unitColors }: Quiz
               }}
               style={[styles.btn, { backgroundColor: unitColors.bg, shadowColor: unitColors.glow }]}
             >
-              <Text style={styles.btnText}>בואו נתחיל!</Text>
+              <Text style={styles.btnText}>מתחילים</Text>
             </AnimatedPressable>
           </View>
         </Animated.View>

@@ -227,17 +227,17 @@ export function ProfileScreen() {
               accessibilityLabel="שמירת החשבון — הרשמה"
               style={guestCtaStyles.card}
             >
-              <Text style={guestCtaStyles.emoji} allowFontScaling={false}>🔓</Text>
+              <Text style={guestCtaStyles.emoji} maxFontSizeMultiplier={1.3}>🔓</Text>
               <View style={{ flex: 1 }}>
-                <Text style={guestCtaStyles.title} allowFontScaling={false}>
+                <Text style={guestCtaStyles.title} maxFontSizeMultiplier={1.3}>
                   ההתקדמות שלכם עדיין לא שמורה
                 </Text>
-                <Text style={guestCtaStyles.sub} allowFontScaling={false}>
+                <Text style={guestCtaStyles.sub} maxFontSizeMultiplier={1.3}>
                   הרשמה של 30 שניות — והמטבעות, הרצף וההתקדמות נשמרים לתמיד
                 </Text>
               </View>
               <View style={guestCtaStyles.btn}>
-                <Text style={guestCtaStyles.btnText} allowFontScaling={false}>שמרו לי</Text>
+                <Text style={guestCtaStyles.btnText} maxFontSizeMultiplier={1.3}>שמרו לי</Text>
               </View>
             </Pressable>
           )}
@@ -295,7 +295,7 @@ export function ProfileScreen() {
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                allowFontScaling={false}
+                maxFontSizeMultiplier={1.3}
               >
                 {displayName ?? "שחקן"}
               </Text>
@@ -352,7 +352,7 @@ export function ProfileScreen() {
                 style={[styles.accountEmail, { color: theme.textMuted }]}
                 numberOfLines={1}
                 ellipsizeMode="middle"
-                allowFontScaling={false}
+                maxFontSizeMultiplier={1.3}
                 accessibilityLabel={`מחוברים עם ${accountEmail}`}
               >
                 מחוברים עם {accountEmail}

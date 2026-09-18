@@ -3179,7 +3179,7 @@ export function DuoLearnScreen() {
             >
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
               <Text style={{ writingDirection: "rtl", fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 8, textAlign: "center" }}>
-                מדלגים קדימה? 🚀
+                מדלגים קדימה?
               </Text>
               <Text style={{ writingDirection: "rtl", fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 22, textAlign: "center", marginBottom: 20 }}>
                 הרשמו בחינם כדי לשמור את ההתקדמות ולהמשיך מפרק 1 בלי לאבד כלום
@@ -3210,9 +3210,9 @@ export function DuoLearnScreen() {
                 }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
-                accessibilityLabel="המשך כאורח לפרק 1"
+                accessibilityLabel="ממשיכים כאורחים לפרק 1"
               >
-                <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>המשך כאורח</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>ממשיכים כאורחים</Text>
               </Pressable>
             </Pressable>
           </Pressable>

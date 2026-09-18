@@ -183,10 +183,11 @@ export function StreakCelebrationScreen({
       );
     }
 
-    // Auto-dismiss after 5 seconds
+    // Auto-dismiss fallback. UX-50(ב) (Yoav 18.9.26): the visible "המשך"
+    // button below is the primary way out; 8s is just the safety net.
     const timer = setTimeout(() => {
       handleDismiss();
-    }, 5000);
+    }, 8000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -416,6 +417,19 @@ export function StreakCelebrationScreen({
         {/* Motivational text */}
         <Animated.View style={motivationStyle}>
           <Text style={styles.motivationText}>{motivation}</Text>
+          {/* UX-50(ב): a visible way out. The whole screen was tappable but
+              nothing said so — users waited out the 5s timer. */}
+          <Pressable
+            onPress={handleDismiss}
+            accessibilityRole="button"
+            accessibilityLabel="המשך"
+            hitSlop={10}
+            style={{ marginTop: 18, alignSelf: 'center', borderRadius: 14 }}
+          >
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.45)', borderRadius: 14, paddingHorizontal: 28, paddingVertical: 11 }}>
+              <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '900', writingDirection: 'rtl' }}>המשך</Text>
+            </View>
+          </Pressable>
         </Animated.View>
       </Animated.View>
     </Pressable>
