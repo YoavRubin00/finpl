@@ -268,6 +268,28 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
       topic: 'earnings',
     },
   },
+  // ── Israel-2026 trends (Yoav 18.9.26) ──
+  // The Treasury's 2027–2032 plan floats a gradual retirement age of 70 and
+  // lower pension contributions; the finance minister denies it. A live,
+  // Israeli, evergreen question — resolved by law, not by a price.
+  {
+    id: 'cq-retirement-age-70',
+    text: 'גיל הפרישה בישראל יעלה ל-70 עד 2032?',
+    termExplanation: {
+      title: 'מה זה בכלל',
+      body: 'היום גיל הפרישה לגברים הוא 67. האוצר בוחן תוכנית להעלות אותו בהדרגה ל-70 ולהקטין את ההפרשות לפנסיה — כרגע הצעה, לא חוק.',
+    },
+    options: [
+      { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
+      { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
+    ],
+    baselinePct: [50, 50],
+    baselineN: 0,
+    tags: {
+      timing: 'evergreen',
+      topic: 'macro',
+    },
+  },
 ];
 
 /**

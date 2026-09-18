@@ -63,6 +63,26 @@ export const TICKER_CATALOG: readonly CatalogEntry[] = [
   { ticker: 'MNDY', nameEn: 'monday.com', nameHe: 'מאנדיי', exchange: 'NASDAQ', category: 'israel' },
   { ticker: 'GLBE', nameEn: 'Global-e', nameHe: 'גלובל-e', exchange: 'NASDAQ', category: 'israel' },
 
+  // TASE-listed shares (Yoav 18.9.26 — young Israelis bought ₪13.7B of LOCAL
+  // stocks in 2025; the live portfolio must hold them). Yahoo quotes these in
+  // AGOROT (currency 'ILA') — the quote API forwards `currency`, and the
+  // holdings layer divides by 100. Symbols verified against Yahoo 18.9.26.
+  { ticker: 'LUMI.TA', nameEn: 'Bank Leumi', nameHe: 'בנק לאומי', exchange: 'TASE', category: 'israel' },
+  { ticker: 'POLI.TA', nameEn: 'Bank Hapoalim', nameHe: 'בנק הפועלים', exchange: 'TASE', category: 'israel' },
+  { ticker: 'DSCT.TA', nameEn: 'Israel Discount Bank', nameHe: 'בנק דיסקונט', exchange: 'TASE', category: 'israel' },
+  { ticker: 'MZTF.TA', nameEn: 'Mizrahi Tefahot', nameHe: 'מזרחי טפחות', exchange: 'TASE', category: 'israel' },
+  { ticker: 'ESLT.TA', nameEn: 'Elbit Systems', nameHe: 'אלביט מערכות', exchange: 'TASE', category: 'israel' },
+  { ticker: 'TEVA.TA', nameEn: 'Teva (TASE)', nameHe: 'טבע (ת"א)', exchange: 'TASE', category: 'israel' },
+  { ticker: 'ICL.TA', nameEn: 'ICL Group', nameHe: 'איי.סי.אל (כיל)', exchange: 'TASE', category: 'israel' },
+  { ticker: 'NVMI.TA', nameEn: 'Nova', nameHe: 'נובה', exchange: 'TASE', category: 'israel' },
+  { ticker: 'TSEM.TA', nameEn: 'Tower Semiconductor', nameHe: 'טאואר', exchange: 'TASE', category: 'israel' },
+  { ticker: 'ELAL.TA', nameEn: 'El Al', nameHe: 'אל על', exchange: 'TASE', category: 'israel' },
+  { ticker: 'BEZQ.TA', nameEn: 'Bezeq', nameHe: 'בזק', exchange: 'TASE', category: 'israel' },
+  { ticker: 'AZRG.TA', nameEn: 'Azrieli Group', nameHe: 'עזריאלי', exchange: 'TASE', category: 'israel' },
+  { ticker: 'PHOE.TA', nameEn: 'Phoenix Holdings', nameHe: 'הפניקס', exchange: 'TASE', category: 'israel' },
+  { ticker: 'ENLT.TA', nameEn: 'Enlight Renewable', nameHe: 'אנלייט', exchange: 'TASE', category: 'israel' },
+  { ticker: 'ORL.TA', nameEn: 'Bazan (Oil Refineries)', nameHe: 'בזן', exchange: 'TASE', category: 'israel' },
+
   // Crypto (handled as tickers by the news layer even though prices live elsewhere)
   { ticker: 'BTC', nameEn: 'Bitcoin', nameHe: 'ביטקוין', exchange: 'CRYPTO', category: 'crypto' },
   { ticker: 'ETH', nameEn: 'Ethereum', nameHe: 'את׳ריום', exchange: 'CRYPTO', category: 'crypto' },

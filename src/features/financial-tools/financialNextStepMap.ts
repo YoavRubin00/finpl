@@ -25,7 +25,10 @@ export type FinancialToolKey =
   | 'pension-fees'
   | 'compound'
   | 'fire'
-  | 'payslip';
+  | 'payslip'
+  | 'miluim'
+  | 'rent-vs-buy'
+  | 'bet-vs-invest';
 
 interface NextStepEntry {
   /** Lesson id inside the chapter's modules array (e.g. `mod-2-11`). */
@@ -95,5 +98,27 @@ export const NEXT_STEPS: Record<FinancialToolKey, NextStepEntry> = {
     lessonLabel: 'איך לקרוא תלוש שכר',
     actionLabel: 'חשב את הנטו האמיתי',
     actionRoute: '/salary-net-calculator',
+  },
+  // ── Israel-2026 trends pass (Yoav 18.9.26) ──
+  miluim: {
+    lessonId: 'mod-2-11',
+    chapterId: 'chapter-2',
+    lessonLabel: 'נקודות זיכוי — איך הן עובדות',
+    actionLabel: 'בדקו אם מגיע לכם החזר מס',
+    actionRoute: '/tax-refund-calculator',
+  },
+  'rent-vs-buy': {
+    lessonId: 'mod-5-26',
+    chapterId: 'chapter-5',
+    lessonLabel: 'נדל"ן ומשכנתא — איך זה עובד',
+    actionLabel: 'כמה תעלה המשכנתא בפועל',
+    actionRoute: '/mortgage-calculator',
+  },
+  'bet-vs-invest': {
+    lessonId: 'mod-3-16',
+    chapterId: 'chapter-3',
+    lessonLabel: 'הפסיכולוגיה של הכסף',
+    actionLabel: 'תראו מה ₪100 בשבוע עושים',
+    actionRoute: '/compound-calculator',
   },
 };

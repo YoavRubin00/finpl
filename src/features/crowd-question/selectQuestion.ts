@@ -27,6 +27,17 @@ function scoreQuestion(q: CrowdQuestion, ctx: SelectionContext): number {
     anyTrigger = true;
     if (triggers.monthDay.includes(ctx.monthDay)) score += 4;
   }
+  if (triggers.dates) {
+    anyTrigger = true;
+    // Event day itself, or the day before it (ask the forecast ahead of time).
+    const isOn = triggers.dates.includes(ctx.todayISO);
+    const isEve = triggers.dates.some((d) => {
+      const dt = new Date(`${d}T12:00:00Z`);
+      dt.setUTCDate(dt.getUTCDate() - 1);
+      return dt.toISOString().slice(0, 10) === ctx.todayISO;
+    });
+    if (isOn || isEve) score += 6;
+  }
   if (triggers.btcNear !== undefined && ctx.market?.btcPrice !== undefined) {
     anyTrigger = true;
     const within = Math.abs(ctx.market.btcPrice - triggers.btcNear) / triggers.btcNear;

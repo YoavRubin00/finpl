@@ -44,6 +44,9 @@ interface QuoteResponse {
   timeframe: Timeframe;
   price: number;
   previousClose: number | null;
+  /** Yahoo quote currency — 'USD', 'ILS', or 'ILA' (TASE equities quote in
+   *  AGOROT; clients must ÷100 to get shekels). null when Yahoo omits it. */
+  currency: string | null;
   chart: ChartPoint[];
 }
 
@@ -135,6 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       timeframe: tf,
       price: currentPrice,
       previousClose,
+      currency: typeof result.meta.currency === 'string' ? result.meta.currency : null,
       chart,
     };
 

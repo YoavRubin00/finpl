@@ -11,7 +11,7 @@ import { SectionLabel } from '../../financial-tools/components/atoms';
 import { FINN_STANDARD } from '../../retention-loops/finnMascotConfig';
 import { lessonRouteById } from '../../subscription/moduleAccess';
 import { track } from '../../../lib/analytics/events';
-import { recommendPortfolioLesson, type Holding } from './holdingsCatalog';
+import { recommendPortfolioLesson, unitPriceToIls, type Holding } from './holdingsCatalog';
 import { useHoldingsStore } from './useHoldingsStore';
 import { useHoldingsQuotes } from './useHoldingsQuotes';
 import { HoldingRow } from './HoldingRow';
@@ -49,10 +49,12 @@ export function HoldingsSection({
       for (const h of holdings) {
         const q = data.quotes[h.ticker];
         if (!q) continue;
-        const v = h.units * q.price * data.usdIls;
+        const unitIls = unitPriceToIls(q.price, q.currency, h.ticker, data.usdIls);
+        const v = h.units * unitIls;
         total += v;
         if (q.previousClose !== null) {
-          dayChange += h.units * (q.price - q.previousClose) * data.usdIls;
+          const prevIls = unitPriceToIls(q.previousClose, q.currency, h.ticker, data.usdIls);
+          dayChange += h.units * (unitIls - prevIls);
         }
         rows.push({ holding: h, weight: v });
       }

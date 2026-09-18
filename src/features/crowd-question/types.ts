@@ -23,6 +23,10 @@ export interface CrowdOption {
 export interface CrowdQuestionTriggers {
   dayOfWeek?: number[];
   monthDay?: number[];
+  /** Exact ISO dates (YYYY-MM-DD) on which this question is the strongest
+   *  candidate — e.g. Bank of Israel rate-decision days. Also matches the
+   *  day BEFORE each date (the forecast is asked ahead of the event). */
+  dates?: string[];
   btcNear?: number;
   spyNear?: number;
   gtBtcPrice?: number;

@@ -4,7 +4,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import { STITCH } from '../../../constants/theme';
 import { formatShekel } from '../../../utils/format';
 import { tapHaptic } from '../../../utils/haptics';
-import type { Holding } from './holdingsCatalog';
+import { unitPriceToIls, type Holding } from './holdingsCatalog';
 import type { LiveQuote } from './useHoldingsQuotes';
 
 interface HoldingRowProps {
@@ -28,7 +28,16 @@ function formatUsd(n: number): string {
  * P&L%. Tap → edit modal. No quote yet → quiet placeholders, never spinners.
  */
 function HoldingRowInner({ holding, quote, usdIls, onPress }: HoldingRowProps): React.ReactElement {
-  const valueIls = quote ? holding.units * quote.price * usdIls : null;
+  const unitIls = quote ? unitPriceToIls(quote.price, quote.currency, holding.ticker, usdIls) : null;
+  const valueIls = unitIls !== null ? holding.units * unitIls : null;
+  // TASE shares are quoted in agorot — show the per-share price in shekels;
+  // everything else stays in its native USD.
+  const isIlsQuote = quote ? unitIls !== null && (quote.currency === 'ILA' || quote.currency === 'ILS' || (quote.currency === null && holding.ticker.endsWith('.TA'))) : false;
+  const priceLabel = quote
+    ? isIlsQuote
+      ? `₪${(unitIls ?? 0).toLocaleString('he-IL', { maximumFractionDigits: 2 })}`
+      : formatUsd(quote.price)
+    : 'מחיר בטעינה…';
 
   const dayPct =
     quote && quote.previousClose !== null
@@ -67,11 +76,7 @@ function HoldingRowInner({ holding, quote, usdIls, onPress }: HoldingRowProps): 
         </View>
 
         <View style={styles.bottomRow}>
-          {quote ? (
-            <Text style={styles.priceText}>{formatUsd(quote.price)}</Text>
-          ) : (
-            <Text style={styles.priceText}>מחיר בטעינה…</Text>
-          )}
+          <Text style={styles.priceText}>{priceLabel}</Text>
           {dayPct !== null ? (
             <View style={[styles.pill, dayPct >= 0 ? styles.pillUp : styles.pillDown]}>
               <Text style={[styles.pillText, dayPct >= 0 ? styles.pillTextUp : styles.pillTextDown]}>

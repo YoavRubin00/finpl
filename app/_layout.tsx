@@ -706,6 +706,8 @@ function RootLayoutInner() {
       "salary-net-calculator", "tax-refund-calculator", "mortgage-calculator",
       "pension-fees-comparator", "breaking-news", "coming-soon",
       "net-worth-dashboard", "financial-profile",
+      // Israel-2026 trends tools (Yoav 18.9.26)
+      "miluim-calculator", "rent-vs-buy-calculator", "bet-vs-invest-calculator",
       // יומן משקיעים — opened from the Tools hub as its own route. Without this
       // the auth/onboarding guard below bounced it to /(tabs) ~2s after mount
       // (Yoav 2026-07-04: "קורס אחרי 2 שניות ועובר למסך הלמידה"). The learn-map

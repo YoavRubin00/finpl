@@ -13,9 +13,12 @@
 import {
   CalendarDays,
   Coins,
+  Dices,
   FileText,
   Home,
+  KeyRound,
   LineChart,
+  Shield,
   Newspaper,
   PieChart,
   PiggyBank,
@@ -38,7 +41,11 @@ export type ToolKey =
   | 'portfolio'
   | 'analyst'
   | 'journal'
-  | 'cashflow';
+  | 'cashflow'
+  // Israel-2026 trends pass (Yoav 18.9.26)
+  | 'miluim'
+  | 'rent-vs-buy'
+  | 'bet-vs-invest';
 
 export type ToolStatus = 'active' | 'coming_soon';
 
@@ -231,6 +238,58 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     emoji: '🔥',
     premiumDark: true,
     xpReward: 25,
+    status: 'active',
+    category: 'investor',
+  },
+  // ── Israel-2026 trends pass (Yoav 18.9.26) ──
+  // מילואים: ₪6.2B of 2026 benefits, zero coverage in-app, and the user base
+  // IS the reservist population. Uniquely Israeli, shareable "תשלח לחבר מהפלוגה".
+  {
+    key: 'miluim',
+    route: '/miluim-calculator',
+    label: 'מחשבון מילואימניק',
+    subtitle: 'נקודות זיכוי, מענקים והטבות על הימים ששירתתם',
+    Icon: Shield,
+    hue: '#4d7c0f',
+    light: '#ecfccb',
+    deep: '#3f6212',
+    emoji: '🎖️',
+    premiumDark: false,
+    xpReward: 15,
+    status: 'active',
+    category: 'financial',
+  },
+  // Renters, not buyers: new-tenant rents +4.4% (CBS Aug-2026). The mortgage
+  // tool answers "can I?"; this one answers "should I?".
+  {
+    key: 'rent-vs-buy',
+    route: '/rent-vs-buy-calculator',
+    label: 'שכירות מול קנייה',
+    subtitle: 'אחרי X שנים — למי יש יותר כסף?',
+    Icon: KeyRound,
+    hue: '#0891b2',
+    light: '#cffafe',
+    deep: '#155e75',
+    emoji: '🔑',
+    premiumDark: false,
+    xpReward: 15,
+    status: 'active',
+    category: 'financial',
+  },
+  // Sports betting is replacing Gen-Z's portfolio (Globes 2026). Same ₪/week,
+  // two futures — fights for the same dopamine with arithmetic.
+  {
+    key: 'bet-vs-invest',
+    route: '/bet-vs-invest-calculator',
+    label: 'הימור מול השקעה',
+    subtitle: 'אותו כסף כל שבוע. שני עתידים.',
+    Icon: Dices,
+    hue: '#dc2626',
+    light: '#fee2e2',
+    deep: '#991b1b',
+    emoji: '🎲',
+    premiumDark: false,
+    xpReward: 15,
     status: 'active',
     category: 'investor',
   },

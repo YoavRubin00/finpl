@@ -40,6 +40,31 @@ export function findHoldable(ticker: string): CatalogEntry | undefined {
   return HOLDABLE_CATALOG.find((e) => e.ticker === ticker);
 }
 
+/** True for Tel-Aviv listed tickers (Yahoo `.TA` suffix). */
+export function isTaseTicker(ticker: string): boolean {
+  return ticker.endsWith('.TA');
+}
+
+/**
+ * Convert ONE unit's quoted price to shekels.
+ *   'ILA' → agorot (Yahoo's TASE convention) → ÷100
+ *   'ILS' → already shekels
+ *   otherwise → treated as USD × live rate
+ * When Yahoo omits the currency, `.TA` tickers are assumed agorot (that is
+ * what every TASE equity returns) and everything else USD.
+ */
+export function unitPriceToIls(
+  price: number,
+  currency: string | null,
+  ticker: string,
+  usdIls: number,
+): number {
+  const cur = currency ?? (isTaseTicker(ticker) ? 'ILA' : 'USD');
+  if (cur === 'ILA') return price / 100;
+  if (cur === 'ILS') return price;
+  return price * usdIls;
+}
+
 /** Index ETFs — used by the lesson recommender ("no ETF in portfolio" rule). */
 const ETF_TICKERS = new Set<string>(['SPY', 'QQQ', 'VTI']);
 

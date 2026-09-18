@@ -8,9 +8,12 @@ import { useQuery } from '@tanstack/react-query';
 import { getApiBase } from '../../../db/apiBase';
 
 export interface LiveQuote {
-  /** Latest price in the instrument's quote currency (USD for our universe). */
+  /** Latest price in the instrument's quote currency (see `currency`). */
   price: number;
   previousClose: number | null;
+  /** 'USD' | 'ILS' | 'ILA' (TASE agorot) | other; null when Yahoo omits it —
+   *  the holdings layer then assumes USD for non-.TA tickers. */
+  currency: string | null;
 }
 
 export interface HoldingsQuotesData {
@@ -39,6 +42,7 @@ async function fetchQuote(ticker: string): Promise<LiveQuote | null> {
       ok?: boolean;
       price?: number;
       previousClose?: number | null;
+      currency?: string | null;
     };
     if (json.ok !== true || typeof json.price !== 'number' || !(json.price > 0)) {
       return null;
@@ -49,6 +53,7 @@ async function fetchQuote(ticker: string): Promise<LiveQuote | null> {
         typeof json.previousClose === 'number' && json.previousClose > 0
           ? json.previousClose
           : null,
+      currency: typeof json.currency === 'string' ? json.currency : null,
     };
   } catch {
     return null;
