@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
@@ -58,6 +58,8 @@ export function AssetEditModal({
   const addAsset = useNetWorthStore((s) => s.addAsset);
   const updateAsset = useNetWorthStore((s) => s.updateAsset);
   const removeAsset = useNetWorthStore((s) => s.removeAsset);
+  // Manual insets — SafeAreaView inside a Modal drops the top inset on iOS.
+  const insets = useSafeAreaInsets();
 
   const isEdit = asset !== null;
 
@@ -158,7 +160,7 @@ export function AssetEditModal({
       animationType="slide"
       presentationStyle="formSheet"
     >
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View style={[styles.safe, { paddingTop: Platform.OS === 'ios' ? 8 : insets.top, paddingBottom: insets.bottom }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.flex}
@@ -306,7 +308,7 @@ export function AssetEditModal({
           />
         </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

@@ -224,13 +224,13 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 14,
-              backgroundColor: "#0ea5e9",
+              backgroundColor: "#ffffff", borderWidth: 2, borderColor: "#0ea5e9",
               paddingVertical: 15,
               borderBottomWidth: 3,
               borderBottomColor: "#0284c7",
             }}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff", writingDirection: "rtl" }}>הירשם עם אימייל</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#0ea5e9", writingDirection: "rtl" }}>הירשם עם אימייל</Text>
           </Pressable>
 
           {/* Guest CTA — structurally IDENTICAL to the Google button above
@@ -250,13 +250,13 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               justifyContent: "center",
               gap: 8,
               borderRadius: 14,
-              backgroundColor: "#64748b",
+              backgroundColor: "transparent",
               paddingVertical: 15,
               borderBottomWidth: 3,
               borderBottomColor: "#475569",
             }}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff" }}>המשך כאורח</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#64748b", textDecorationLine: "underline" }}>המשך כאורח</Text>
           </Pressable>
         </Animated.View>
       </ScrollView>

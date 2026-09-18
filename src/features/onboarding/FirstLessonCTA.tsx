@@ -9,6 +9,7 @@ import { useCompletedModulesStore } from "../economy/useCompletedModulesStore";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { captureEvent } from "../../lib/posthog";
 import { tapHaptic } from "../../utils/haptics";
+import { BANNER_PRIORITY, useBannerSlot } from '../../stores/useBannerSlotStore';
 
 /** Same destination the walkthrough used to auto-launch (auto-intro flow):
  *  the topic-tree intro of mod-0-1, returning to the accordion afterwards. */
@@ -40,7 +41,9 @@ export function FirstLessonCTA() {
   const mod01Done = completedIds.includes("mod-0-1");
   const shownRef = useRef(false);
 
-  const visible = pending && !isWalkthroughActive && !mod01Done;
+  const wants = pending && !isWalkthroughActive && !mod01Done;
+  // UX-14: banner slot — a streak-at-risk banner outranks this invitation.
+  const visible = useBannerSlot('first_lesson_cta', wants, BANNER_PRIORITY.firstLesson);
 
   // Self-heal: if mod-0-1 got completed while the flag was still armed
   // (user tapped the node directly), retire the flag quietly.

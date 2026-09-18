@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Calculator, Coins, Share2 } from 'lucide-react-native';
@@ -157,10 +157,15 @@ export function SalaryNetCalculator(): React.ReactElement {
         toolKey="salary-net"
       />
 
+      {/* UX-45: keyboard no longer covers the lower inputs / the CALC button,
+          and a tap on CALC works with the keyboard open (one tap, not two). */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <ProfileFingerprint accentColor={TOOL.hue} />
 
@@ -283,6 +288,7 @@ export function SalaryNetCalculator(): React.ReactElement {
 
         <LegalDisclaimer scope="tax" extra="נכון לשנת המס 2026." />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

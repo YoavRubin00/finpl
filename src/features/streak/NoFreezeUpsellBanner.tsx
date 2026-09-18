@@ -12,6 +12,7 @@ import { useEconomy, useSpendCoins } from "../economy/useEconomy";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useStreak } from "../economy/useStreak";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { BANNER_PRIORITY, useBannerSlot } from '../../stores/useBannerSlotStore';
 
 const DISMISSED_KEY = "no_freeze_upsell_dismissed_date";
 const FREEZE_COST_COINS = 50;
@@ -58,7 +59,9 @@ export function NoFreezeUpsellBanner() {
     [streak, streakFreezes],
   );
 
-  if (!shouldShow || dismissed) return null;
+  // UX-14: yields to streak-at-risk / first-lesson when they want the slot.
+  const canShow = useBannerSlot('no_freeze_upsell', shouldShow && !dismissed, BANNER_PRIORITY.noFreezeUpsell);
+  if (!canShow) return null;
 
   const canAfford = coins >= FREEZE_COST_COINS;
 

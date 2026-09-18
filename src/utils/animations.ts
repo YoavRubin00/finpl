@@ -6,7 +6,8 @@ import {
   type WithSpringConfig,
   type WithTimingConfig,
   Easing,
-} from "react-native-reanimated";
+  useReducedMotion,
+} from 'react-native-reanimated';
 import { useEffect } from "react";
 
 // ---------------------------------------------------------------------------
@@ -119,9 +120,12 @@ export function useEntranceAnimation(
   const spring = overrides?.spring ?? configSpring;
 
   const progress = useSharedValue(0);
+  // UX-08 (Yoav 18.9.26): honour the OS "Reduce Motion" setting — land on the
+  // final frame immediately instead of springing in.
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    progress.value = withDelay(delay, withSpring(1, spring));
+    progress.value = reducedMotion ? 1 : withDelay(delay, withSpring(1, spring));
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => {

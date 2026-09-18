@@ -194,7 +194,7 @@ export function DailyDealsSection() {
                 const SvgIcon = getShopSvgIcon(deal.item.id);
                 if (SvgIcon) return <View style={styles.iconBox}><SvgIcon size={42} /></View>;
                 if (deal.item.imageUrl) return (
-                  <ExpoImage source={{ uri: deal.item.imageUrl }} style={{ width: 48, height: 48, borderRadius: 24 }} contentFit="cover" />
+                  <ExpoImage source={{ uri: deal.item.imageUrl }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e0f2fe' }} contentFit="cover" cachePolicy="memory-disk" transition={180} />
                 );
                 if (deal.item.lottieSource) return <LottieIcon source={deal.item.lottieSource} size={40} />;
                 return <Text style={styles.emoji}>{deal.item.emoji}</Text>;

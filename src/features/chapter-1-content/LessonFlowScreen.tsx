@@ -1837,7 +1837,7 @@ function ChestFlyToSlot({
     <View style={chestFlyStyles.overlay} pointerEvents="none">
       <Animated.View style={[chestFlyStyles.chestContainer, flyStyle]}>
         <Text style={chestFlyStyles.chestEmoji}>{chestIcon}</Text>
-        <Text style={chestFlyStyles.label}>→ תיבות שלך</Text>
+        <Text style={chestFlyStyles.label}>תיבות שלך</Text>
       </Animated.View>
     </View>
   );
@@ -6714,7 +6714,7 @@ export function LessonFlowScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="קח את ההטבה ב-Bridge"
               >
-                <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>{"קח את ההטבה ←"}</Text>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>{"קח את ההטבה"}</Text>
               </AnimatedPressable>
               <Pressable
                 onPress={() => {
@@ -6820,7 +6820,7 @@ export function LessonFlowScreen() {
               <Text style={{ fontSize: 18, fontWeight: "900", color: "#ffffff" }}>{"הצטרפו למסיבה!"}</Text>
             </Pressable>
             <Pressable onPress={() => { setShowPartyInvite(false); safeTimeout(() => goToNextSequentialModule(), 80); }} style={{ paddingVertical: 10 }} accessibilityRole="button" accessibilityLabel="המשך">
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>{"ממשיכים ללמוד →"}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>{"ממשיכים ללמוד"}</Text>
             </Pressable>
           </Animated.View>
         </Pressable>
@@ -6858,7 +6858,7 @@ export function LessonFlowScreen() {
               <Text style={{ fontSize: 18, fontWeight: "900", color: "#ffffff" }}>{lifestyleVideo.ctaLabel}</Text>
             </Pressable>
             <Pressable onPress={() => { setShowLifestyleInvite(false); safeTimeout(() => goToNextSequentialModule(), 80); }} style={{ paddingVertical: 10 }} accessibilityRole="button" accessibilityLabel="המשך">
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>{"ממשיכים ללמוד →"}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>{"ממשיכים ללמוד"}</Text>
             </Pressable>
           </Animated.View>
         </Pressable>

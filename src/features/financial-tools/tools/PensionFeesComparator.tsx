@@ -177,7 +177,8 @@ export function PensionFeesComparator(): React.ReactElement {
     setCommittedState(state);
     setCommitCount((c) => c + 1);
     setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      // UX-45: the result hero sits BELOW the button here — scroll toward it, not away.
+      scrollRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [state]);
 

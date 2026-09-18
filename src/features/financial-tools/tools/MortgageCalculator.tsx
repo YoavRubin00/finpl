@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Calculator, HardHat, Home, Info, Share2 } from 'lucide-react-native';
@@ -171,10 +171,15 @@ export function MortgageCalculator(): React.ReactElement {
         toolKey="mortgage"
       />
 
+      {/* UX-45: keyboard no longer covers the lower inputs / the CALC button,
+          and a tap on CALC works with the keyboard open (one tap, not two). */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <ProfileFingerprint accentColor={TOOL.hue} />
 
@@ -436,6 +441,7 @@ export function MortgageCalculator(): React.ReactElement {
           extra="תקרות בנק ישראל בתוקף (DSR 40%, הון עצמי 25% לדירה ראשונה, 30% לחליפית, 50% להשקעה). הלוואות קבלן ומימון משלים זמינים בשוק 2026 אך מצריכים תכנון תזרים נפרד."
         />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

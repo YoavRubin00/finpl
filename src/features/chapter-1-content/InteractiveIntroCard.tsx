@@ -183,8 +183,11 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
             <ExpoImage
               source={{ uri: introImageUri }}
               accessible={false}
-              style={{ width: SW * 0.85, height: SW * 0.42, borderRadius: 16 }}
+              // UX-41: brand-tinted box while loading + soft fade-in, no white pop-in mid-lesson.
+              style={{ width: SW * 0.85, height: SW * 0.42, borderRadius: 16, backgroundColor: '#e0f2fe' }}
               contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={180}
             />
           </Animated.View>
         ) : (

@@ -96,8 +96,10 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
             <View style={{ width: 88, height: 88, borderRadius: 44, overflow: 'hidden' }}>
               <ExpoImage
                 source={{ uri: item.imageUrl }}
-                style={{ width: 88 * 1.1, height: 88 * 1.1, marginLeft: -(88 * 0.05), marginTop: -(88 * 0.05) }}
+                style={{ width: 88 * 1.1, height: 88 * 1.1, marginLeft: -(88 * 0.05), marginTop: -(88 * 0.05), backgroundColor: '#e0f2fe' }}
                 contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={180}
                 accessibilityLabel={item.name}
               />
             </View>

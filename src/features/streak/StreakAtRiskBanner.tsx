@@ -18,6 +18,7 @@ import { useStreak } from "../economy/useStreak";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useRewardedAd } from "../../hooks/useRewardedAd";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { BANNER_PRIORITY, useBannerSlot } from '../../stores/useBannerSlotStore';
 
 const DISMISSED_KEY = "streak_banner_dismissed_date";
 
@@ -73,7 +74,9 @@ export function StreakAtRiskBanner() {
     shadowOpacity: glowOpacity.value,
   }));
 
-  if (!isAtRisk || dismissed) return null;
+  // UX-14: one banner above the golden node — streak-at-risk outranks the rest.
+  const canShow = useBannerSlot('streak_at_risk', isAtRisk && !dismissed, BANNER_PRIORITY.streakAtRisk);
+  if (!canShow) return null;
 
   return (
     <Animated.View

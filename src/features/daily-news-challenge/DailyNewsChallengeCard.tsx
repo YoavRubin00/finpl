@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image as ExpoImage } from 'expo-image';
 import Animated, {
   FadeInDown,
   useSharedValue,
@@ -167,8 +168,11 @@ export function DailyNewsChallengeCard({
 
           {/* Optional hero image strip */}
           {challenge.heroImageUrl ? (
-            <Image
+            <ExpoImage
               source={{ uri: challenge.heroImageUrl }}
+              cachePolicy="memory-disk"
+              transition={180}
+              contentFit="cover"
               style={styles.heroImage}
               accessible={false}
             />
