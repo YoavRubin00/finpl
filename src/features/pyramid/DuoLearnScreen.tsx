@@ -2182,6 +2182,16 @@ export function DuoLearnScreen() {
   const claimEasterEgg = useFunStore((s) => s.claimEasterEgg);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const [showEasterEggReward, setShowEasterEggReward] = useState<"xp" | "coins" | null>(null);
+  // UX-54 (Yoav 18.9.26): one-shot coin flight for the welcome chest.
+  const [showFirstChestFly, setShowFirstChestFly] = useState(false);
+  const firstChestOpenedFlag = useTutorialStore((st) => st.firstChestOpened);
+  const firstChestRewardShown = useTutorialStore((st) => st.firstChestRewardShown);
+  const markFirstChestRewardShown = useTutorialStore((st) => st.markFirstChestRewardShown);
+  useEffect(() => {
+    if (!firstChestOpenedFlag || firstChestRewardShown) return;
+    const t = setTimeout(() => { setShowFirstChestFly(true); markFirstChestRewardShown(); }, 600);
+    return () => clearTimeout(t);
+  }, [firstChestOpenedFlag, firstChestRewardShown, markFirstChestRewardShown]);
 
   // Roll Easter egg on screen focus (20% chance to place coin on a completed node)
   useFocusEffect(
@@ -3693,6 +3703,11 @@ export function DuoLearnScreen() {
         {showEasterEggReward === "coins" && (
           <FlyingRewards type="coins" amount={50} onComplete={() => setShowEasterEggReward(null)} />
         )}
+        {/* UX-54: the welcome chest granted 100 coins behind an opaque backdrop —
+            this is the first time the balance is SEEN moving. */}
+        {showFirstChestFly ? (
+          <FlyingRewards type="coins" amount={100} onComplete={() => setShowFirstChestFly(false)} />
+        ) : null}
 
         {/* FeedNudgeBanner removed — the only entry point to the daily challenge
             is now the Captain Shark Daily News Challenge card at the top of the

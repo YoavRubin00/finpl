@@ -83,7 +83,7 @@ export interface PortfolioLessonReco {
   /** One-liner under the headline. */
   body: string;
   /** Analytics discriminator for which rule fired. */
-  reason: 'concentration' | 'no_etf' | 'know_your_holdings';
+  reason: 'concentration' | 'no_etf' | 'tase' | 'know_your_holdings';
 }
 
 interface WeightedHolding {
@@ -123,6 +123,15 @@ export function recommendPortfolioLesson(
       title: 'אין תעודת סל בתיק',
       body: 'הכלי שרוב המשקיעים הגדולים מתחילים ממנו.',
       reason: 'no_etf',
+    });
+  }
+  // Holds Tel-Aviv shares → the TASE module (agorot, Mon–Fri, banks' weight).
+  if (weighted.some((w) => isTaseTicker(w.holding.ticker))) {
+    chain.push({
+      moduleId: 'mod-4-34',
+      title: 'יש לכם מניות מתל אביב',
+      body: 'אגורות, שעות מסחר, ולמה הבנקים מזיזים את המדד.',
+      reason: 'tase',
     });
   }
   chain.push({

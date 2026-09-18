@@ -11,6 +11,7 @@ import { formatShekel } from '../../utils/format';
 import { tapHaptic } from '../../utils/haptics';
 import { useNetWorthStore } from '../net-worth-dashboard/useNetWorthStore';
 import { TOOLS_REGISTRY } from './toolsRegistry';
+import { toolOfTheDay } from './toolOfTheDay';
 import { ToolHubCard } from './components/ToolHubCard';
 import { FinTip } from './components/atoms/FinTip';
 import { CountUpNumber } from './components/atoms/CountUpNumber';
@@ -84,6 +85,9 @@ export function FinancialToolsScreen(): React.ReactElement {
         <Text style={styles.sectionTitle} accessibilityRole="header">
           כלים למשקיעים
         </Text>
+        {/* UX-33 (Yoav 18.9.26): the daily rotation fed the home banner and
+            in-lesson CTA but never the hub itself — 8 flat cards, no hierarchy. */}
+        <ToolOfTheDayRow />
         <View style={styles.grid}>
           {investorTools.map((tool, i) => (
             <ToolHubCard key={tool.key} tool={tool} index={i} />
@@ -101,10 +105,35 @@ export function FinancialToolsScreen(): React.ReactElement {
 
         <FinTip
           kind="tip"
-          text="כל כלי שתסיים נותן XP — סיימת את כולם? פותחת לך מערכת פיננסית מלאה."
+          text="כל כלי שמסיימים נותן XP. סיימתם את כולם? נפתחת מערכת פיננסית מלאה."
         />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+
+/** "כלי היום" — one highlighted tool from the shared daily rotation. */
+function ToolOfTheDayRow(): React.ReactElement | null {
+  const router = useRouter();
+  const daily = toolOfTheDay();
+  const meta = TOOLS_REGISTRY.find((t) => t.key === daily.toolKey);
+  if (!meta) return null;
+  return (
+    <Pressable
+      onPress={() => { tapHaptic(); router.push(daily.route as never); }}
+      accessibilityRole="button"
+      accessibilityLabel={`כלי היום: ${meta.label}`}
+      style={{ marginBottom: 12, borderRadius: 16 }}
+    >
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12, backgroundColor: meta.light, borderRadius: 16, borderWidth: 1.5, borderColor: meta.hue + '66', paddingHorizontal: 14, paddingVertical: 12 }}>
+        <Text style={{ fontSize: 26 }}>{meta.emoji}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, fontWeight: '900', color: meta.deep, writingDirection: 'rtl', textAlign: 'right' }}>כלי היום</Text>
+          <Text style={{ fontSize: 14, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }} numberOfLines={2}>{daily.title}</Text>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 

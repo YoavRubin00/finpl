@@ -254,7 +254,7 @@ export type AppEvent =
   // candidate NSM per the 11.7 decision log.
   | { name: 'first_real_holding_added'; props: { ticker: string; is_tase: boolean } }
   | { name: 'holding_removed'; props: { ticker: string; holdings_count: number } }
-  | { name: 'portfolio_lesson_cta_tapped'; props: { module_id: string; reason: 'concentration' | 'no_etf' | 'know_your_holdings' } }
+  | { name: 'portfolio_lesson_cta_tapped'; props: { module_id: string; reason: 'concentration' | 'no_etf' | 'tase' | 'know_your_holdings' } }
 
   // ── News Challenge ─────────────────────────────────────────────────────
   | { name: 'news_challenge_viewed'; props: { question_count?: number; news_date?: string } }

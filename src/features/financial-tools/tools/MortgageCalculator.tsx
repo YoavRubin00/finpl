@@ -205,6 +205,8 @@ export function MortgageCalculator(): React.ReactElement {
               ]}
             >
               {approvalStatus ? 'נראה אפשרי' : 'שווה לבדוק שוב'}
+              {/* UX-44: the verdict with its reason, not 90px below it. */}
+              {` · יחס החזר ${pct1(result.incomeRatio)} · הון עצמי ${pct1(result.downPaymentRatio)}`}
             </Text>
           </View>
         ) : null}

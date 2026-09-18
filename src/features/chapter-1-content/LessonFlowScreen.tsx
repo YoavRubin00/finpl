@@ -1179,6 +1179,10 @@ function QuizCard({
   const celebrationScale = useSharedValue(0);
   const [wrongAttempts, setWrongAttempts] = useState<Set<number>>(new Set());
   const [answerState, setAnswerState] = useState<AnswerState | null>(null);
+  // UX-52 (Yoav 18.9.26): a correct answer flies +5 XP toward the header.
+  // VISUAL ONLY — no economy write (מוני owns the value). The real XP still
+  // lands with the chest.
+  const [microXp, setMicroXp] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
   const [calcDisplay, setCalcDisplay] = useState("0");
   const [calcPrev, setCalcPrev] = useState<number | null>(null);
@@ -1247,6 +1251,7 @@ function QuizCard({
       if (correct) {
         // Correct answer - celebrate!
         setAnswerState({ selectedIndex: idx, isCorrect: true, revealed: true });
+        setMicroXp(true);
         celebrationScale.value = withSpring(1, { damping: 20, stiffness: 150 });
         setFinnState("celebrate");
         successHaptic();
@@ -1302,6 +1307,7 @@ function QuizCard({
         </View>
       </View>
 
+      {microXp ? <FlyingRewards type="xp" amount={5} onComplete={() => setMicroXp(false)} /> : null}
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 }}
