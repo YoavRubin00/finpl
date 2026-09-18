@@ -2,8 +2,26 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { applyEconomyDelta, getEconomy, type Economy } from '../../lib/api/economy';
 import { useAuthStore } from '../auth/useAuthStore';
+import { readSnapshot, writeSnapshot } from './querySnapshot';
 
 export const economyQueryKey = ['economy'] as const;
+
+/** Persisted last-known economy (UX-21 flash-of-zero). Keyed by authId inside. */
+const ECONOMY_SNAPSHOT_KEY = 'economy-snapshot:v1';
+
+function isEconomy(v: unknown): v is Economy {
+  if (!v || typeof v !== 'object') return false;
+  const e = v as Partial<Economy>;
+  const numOrNull = (x: unknown): boolean => x === null || typeof x === 'number';
+  return numOrNull(e.xp) && numOrNull(e.coins) && numOrNull(e.gems) && numOrNull(e.level)
+    && typeof e.virtualBalance === 'string';
+}
+
+/** Shown while the real query is pending on a cold open — the LAST server-
+ *  confirmed balance for this account, never 0. Pure read (no writes on render). */
+function economyPlaceholder(): Economy | undefined {
+  return readSnapshot(ECONOMY_SNAPSHOT_KEY, isEconomy)?.value;
+}
 
 export function useEconomy() {
   // Guests cannot read their economy server-side — they have no auth token,
@@ -14,9 +32,18 @@ export function useEconomy() {
   const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: economyQueryKey,
-    queryFn: async () => (await getEconomy()).economy,
+    queryFn: async () => {
+      const economy = (await getEconomy()).economy;
+      // Snapshot only on a successful fetch (event-driven, never per render).
+      writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy);
+      return economy;
+    },
     staleTime: 30_000,
     enabled: isAuthenticated && !isGuest,
+    // UX-21: placeholder = last snapshot for THIS authId (readSnapshot returns
+    // null for guests / other accounts, so the header falls back to 0 only
+    // for a genuinely new wallet).
+    placeholderData: economyPlaceholder,
   });
 }
 
@@ -62,7 +89,11 @@ export function useApplyEconomyDelta() {
     // Server already returned the authoritative economy row — write it straight
     // into the cache instead of invalidating, which would trigger a redundant
     // GET /api/sync/economy after every XP/coin/gem mutation.
-    onSuccess: (economy) => qc.setQueryData(economyQueryKey, economy),
+    onSuccess: (economy) => {
+      qc.setQueryData(economyQueryKey, economy);
+      // Server-authoritative row → keep the cold-open snapshot fresh (UX-21).
+      writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy);
+    },
   });
 }
 

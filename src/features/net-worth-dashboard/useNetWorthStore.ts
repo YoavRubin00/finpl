@@ -25,8 +25,23 @@ interface NewAssetInput {
   notes?: string;
 }
 
+/** Live-holdings snapshot written by HoldingsSection after every successful
+ *  quote fetch, so the Tools-hub hero and the dashboard totals count real
+ *  stocks without the hub having to run the quote query itself (UX-15). */
+export interface HoldingsSnapshot {
+  valueIls: number;
+  count: number;
+  /** epoch ms of the quote fetch this value came from */
+  at: number;
+}
+
+/** Stocks are equities — projected at the catalog's equity-track default. */
+const HOLDINGS_EQUITY_RETURN_PCT = 8;
+
 interface NetWorthState {
   assets: Asset[];
+  holdingsSnapshot: HoldingsSnapshot | null;
+  setHoldingsSnapshot: (snap: HoldingsSnapshot | null) => void;
 
   addAsset: (init: NewAssetInput) => string;
   updateAsset: (id: string, patch: Partial<Omit<Asset, 'id' | 'createdAt'>>) => void;
@@ -48,6 +63,18 @@ export const useNetWorthStore = create<NetWorthState>()(
   persist(
     (set, get) => ({
       assets: [],
+      holdingsSnapshot: null,
+      setHoldingsSnapshot: (snap) => {
+        const prev = get().holdingsSnapshot;
+        // Skip no-op writes — the section reports on every render pass.
+        if (
+          (prev === null && snap === null) ||
+          (prev && snap && prev.valueIls === snap.valueIls && prev.count === snap.count)
+        ) {
+          return;
+        }
+        set({ holdingsSnapshot: snap });
+      },
 
       addAsset: (init) => {
         const id = generateId();
@@ -100,18 +127,24 @@ export const useNetWorthStore = create<NetWorthState>()(
 
       clearAll: () => set({ assets: [] }),
 
-      totalValue: () => get().assets.reduce((s, a) => s + a.value, 0),
+      // Totals include the live-holdings snapshot: stocks are liquid and
+      // project at the equity default, same as an investment_account asset.
+      totalValue: () =>
+        get().assets.reduce((s, a) => s + a.value, 0) +
+        (get().holdingsSnapshot?.valueIls ?? 0),
       totalLiquid: () =>
         get()
           .assets.filter((a) => a.liquid)
-          .reduce((s, a) => s + a.value, 0),
+          .reduce((s, a) => s + a.value, 0) +
+        (get().holdingsSnapshot?.valueIls ?? 0),
       totalMonthlyDeposit: () =>
         get().assets.reduce((s, a) => s + a.monthlyDeposit, 0),
       projectedAnnualGrowth: () =>
         get().assets.reduce(
           (s, a) => s + (a.value * effectiveReturnPct(a)) / 100,
           0,
-        ),
+        ) +
+        ((get().holdingsSnapshot?.valueIls ?? 0) * HOLDINGS_EQUITY_RETURN_PCT) / 100,
       yoyDeltaPct: () => {
         const total = get().totalValue();
         if (total <= 0) return 0;
@@ -122,7 +155,7 @@ export const useNetWorthStore = create<NetWorthState>()(
       name: '@finplay/net-worth',
       storage: createJSONStorage(() => zustandStorage),
       version: 1,
-      partialize: (state) => ({ assets: state.assets }),
+      partialize: (state) => ({ assets: state.assets, holdingsSnapshot: state.holdingsSnapshot }),
     },
   ),
 );

@@ -114,6 +114,9 @@ export function TomorrowChestReadyHost(): React.ReactElement | null {
     setOpened(false);
     setRewards(null);
     setVisible(true);
+    // The day-2 ceremony IS this session's popup moment (Yoav 18.9 budget):
+    // earned, never skipped, and it spends the slot so no promo follows it.
+    try { useNudgeQueueStore.getState().takePopupSlot('earned'); } catch { /* non-fatal */ }
     // One landing ritual: suppress today's 5s streak daily-nudge (same
     // IL-date key useStreakCelebration writes — time-contract sweep 11.7).
     // The earned streak celebration (post-activity) is untouched.

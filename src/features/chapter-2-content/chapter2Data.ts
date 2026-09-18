@@ -1,4 +1,5 @@
 import { Chapter } from './types';
+import { MOD_2_15_MILUIM } from './mod-2-15-miluim';
 
 export const chapter2Data: Chapter = {
   id: 'chapter-2',
@@ -1010,5 +1011,7 @@ export const chapter2Data: Chapter = {
       // both teach "things go wrong, are you protected?"
       interModuleGame: 'crash',
     },
+    // Israel-2026 trends pass (Yoav 18.9.26) — bonusModule: never re-locks chapter 3.
+    MOD_2_15_MILUIM,
   ],
 };

@@ -15,6 +15,7 @@ import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { EnergyBatteryIcon } from '../../components/ui/EnergyBatteryIcon';
 import { DoubleOrNothingModal } from '../../components/ui/DoubleOrNothingModal';
+import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import {
   doubleHeavyHaptic,
@@ -152,6 +153,9 @@ export function ChestCelebrationModal({
   useEffect(() => {
     if (!visible || presentedFiredRef.current || !analyticsModuleId) return;
     presentedFiredRef.current = true;
+    // UX-51 (18.9.26): the chest is the session's earned popup moment — take
+    // the stage so the notification primer / promos can't stack on top of it.
+    try { useNudgeQueueStore.getState().takePopupSlot('earned'); } catch { /* non-fatal */ }
     try {
       track({
         name: 'chest_presented',

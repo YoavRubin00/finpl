@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { useAuthStore } from '../auth/useAuthStore';
+import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { tokenStore } from '../../lib/auth/secureStore';
 import { queryClient } from '../../lib/queryClient';
 import { economyQueryKey } from '../economy/useEconomy';
@@ -44,6 +45,8 @@ export function PredictionResultsHost(): React.ReactElement | null {
         if (shown.length > 0) {
           setResults(shown);
           setVisible(true);
+          // Earned moment — occupies the session's popup stage (Yoav 18.9).
+          try { useNudgeQueueStore.getState().takePopupSlot('earned'); } catch { /* non-fatal */ }
           successHaptic();
         }
       } catch {

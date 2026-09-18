@@ -42,8 +42,12 @@ export function MarketUnlockGate({ eligible, onEnter }: Props) {
       const seqDelay = Math.max(0, useNudgeQueueStore.getState().popupBusyUntil - Date.now());
       slotTimer = setTimeout(() => {
         if (shownRef.current) return;
+        // Uninvited-popup budget (Yoav 18.9): if this session already had its
+        // one popup, skip silently — `momentSeen` is only marked on a real
+        // show, so the takeover simply waits for the next session.
+        if (!useNudgeQueueStore.getState().canTakePopupSlot('auto')) return;
         shownRef.current = true;
-        useNudgeQueueStore.getState().takePopupSlot();
+        useNudgeQueueStore.getState().takePopupSlot('auto');
         // Seen at SHOW time — a force-kill mid-moment must not replay it.
         markSeen();
         setVisible(true);

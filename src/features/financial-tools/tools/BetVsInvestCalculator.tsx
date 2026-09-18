@@ -99,6 +99,13 @@ export function BetVsInvestCalculator(): React.ReactElement {
           <MoneySlider label="כמה שנים" value={years} onChange={setYears} min={1} max={30} step={1} formatValue={(v) => `${v} שנ׳`} accentColor={TOOL.hue} milestones={[5, 10, 20]} />
         </View>
 
+        {/* מחקר פרופ' ענת שושני, אונ' רייכמן + ICA, 3,878 נבדקים, 2026 (ynet) —
+            FACTS-2026-09 §5 */}
+        <FinTip
+          kind="tip"
+          text="17% מבני הנוער בישראל הימרו על כסף בשנה האחרונה."
+          subtext="מחקר אוניברסיטת רייכמן, 2026. זה מתחיל צעיר — ולכן החשבון הזה חשוב דווקא עכשיו."
+        />
         <FinTip
           kind="warning"
           text="הבית תמיד מנצח — זה לא מזל, זה מתמטיקה."

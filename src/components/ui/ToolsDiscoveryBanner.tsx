@@ -88,9 +88,12 @@ export function ToolsDiscoveryBanner() {
       const slotDelay = Math.max(bannerSlot, seqDelay);
 
       const slotTimer = setTimeout(() => {
+        // Uninvited-popup budget (Yoav 18.9) — discovery is the first thing
+        // to give up its turn when the session already had its one interrupt.
+        if (!useNudgeQueueStore.getState().canTakePopupSlot('auto')) return;
         setVisible(true);
         useBannerCooldownStore.getState().markShown();
-        useNudgeQueueStore.getState().takePopupSlot();
+        useNudgeQueueStore.getState().takePopupSlot('auto');
         if (!trackedShownRef.current) {
           trackedShownRef.current = true;
           track({

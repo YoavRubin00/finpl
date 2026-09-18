@@ -1,4 +1,5 @@
 import { Chapter } from './types';
+import { MOD_4_34_TA35 } from './mod-4-34-ta35';
 import { MOD_4_33_VIX } from './mod-4-33-vix';
 
 export const chapter4Data: Chapter = {
@@ -2540,6 +2541,7 @@ flashcards: [{
     // "תגובות לאירועים גדולים" and "לנצח את המדד" so the fear thermometer
     // follows the crisis-reaction lesson.
     MOD_4_33_VIX,
+    MOD_4_34_TA35,
     {
       id: 'mod-4-30',
       title: 'לנצח את המדד',

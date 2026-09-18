@@ -39,14 +39,9 @@ export function NetWorthDashboardScreen(): React.ReactElement {
   const [editing, setEditing] = useState<Asset | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Live stock holdings fold into the hero totals. Stocks count as liquid,
-  // and project at the catalog's equity-track default (8%/yr) — the same
-  // convention an investment_account asset on 'equity' gets.
-  const [holdingsValueIls, setHoldingsValueIls] = useState(0);
-  const combinedTotal = totalValue + holdingsValueIls;
-  const combinedLiquid = totalLiquid + holdingsValueIls;
-  const combinedGrowth = annualGrowth + holdingsValueIls * 0.08;
-  const combinedYoyPct = combinedTotal > 0 ? combinedGrowth / combinedTotal : yoyDeltaPct;
+  // Live stock holdings are folded into the store totals via the holdings
+  // snapshot (see useNetWorthStore.holdingsSnapshot) — so the hero here and
+  // the Tools-hub strip agree without running the quote query twice.
 
   /** Idle = sitting in cash + checking. These accounts produce no growth, so they're prime targets for the "put it to work" nudge. */
   const idleCash = assets
@@ -105,14 +100,14 @@ export function NetWorthDashboardScreen(): React.ReactElement {
         showsVerticalScrollIndicator={false}
       >
         <NetWorthSummary
-          totalValue={combinedTotal}
-          totalLiquid={combinedLiquid}
+          totalValue={totalValue}
+          totalLiquid={totalLiquid}
           monthlyDeposit={monthlyDeposit}
-          annualGrowth={combinedGrowth}
-          yoyDeltaPct={combinedYoyPct}
+          annualGrowth={annualGrowth}
+          yoyDeltaPct={yoyDeltaPct}
         />
 
-        <HoldingsSection onValueChange={setHoldingsValueIls} />
+        <HoldingsSection />
 
         {isEmpty ? (
           <View style={styles.emptyCard}>

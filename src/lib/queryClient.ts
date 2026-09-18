@@ -36,7 +36,20 @@ export function createQueryClient(): QueryClient {
 export const queryClient = createQueryClient();
 
 import NetInfo from '@react-native-community/netinfo';
-import { onlineManager } from '@tanstack/react-query';
+import { AppState, Platform } from 'react-native';
+import { focusManager, onlineManager } from '@tanstack/react-query';
+
+// react-query's `refetchOnWindowFocus` is a no-op in RN unless focusManager is
+// wired to AppState (UX-15, 18.9.26). Foregrounding the app now refreshes stale
+// queries (live quotes, economy) exactly like a browser tab regaining focus.
+if (Platform.OS !== 'web') {
+  focusManager.setEventListener((handleFocus) => {
+    const sub = AppState.addEventListener('change', (state) => {
+      handleFocus(state === 'active');
+    });
+    return () => sub.remove();
+  });
+}
 
 onlineManager.setEventListener((setOnline) => {
   return NetInfo.addEventListener((state) => {

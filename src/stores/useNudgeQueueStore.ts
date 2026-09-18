@@ -12,8 +12,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../lib/zustandStorage';
 import { registerLocalStore } from '../lib/stores/registry';
+import { getIsraelDateISO } from '../utils/israelTime';
 
 export type NudgeType = 'bridge' | 'referral' | 'tools';
+
+/** 'auto' = uninvited popup (marketing / reminder / discovery) — budgeted.
+ *  'earned' = a moment the user created (reward, chest, grant) — never budgeted. */
+export type PopupKind = 'auto' | 'earned';
 
 interface NudgeState {
   /** last 2 dismissal timestamps per CTA type (most recent first). Empty array if never dismissed. */
@@ -38,10 +43,27 @@ interface NudgeState {
    *  Session-only (not persisted); streak surfaces (priority 1) show
    *  immediately AND reserve, pushing the promo popups behind them. */
   popupBusyUntil: number;
-  /** True if a popup may take the stage right now (enough gap since the last). */
-  canTakePopupSlot: () => boolean;
-  /** Reserve the stage for POPUP_GAP_MS. Call the moment a popup becomes visible. */
-  takePopupSlot: () => void;
+  /** How many UNINVITED ('auto') popups already took the stage this session.
+   *  Session-only. The 6s gap alone only SPACED the flood — the user still met
+   *  popup after popup on every app open (Yoav 18.9: "יותר מדי התראות, זה
+   *  יוצר אוברוולמינג"). This is the budget that actually thins it out. */
+  autoPopupsThisSession: number;
+  /** Israel date-key of the last 'auto' popup + that day's count — caps
+   *  uninvited popups per day too, so opening the app 5× a day is not 5
+   *  interrupts. Persisted (survives cold starts, unlike the session count). */
+  lastAutoPopupDateKey: string | null;
+  autoPopupsToday: number;
+  /** True if a popup may take the stage right now.
+   *  kind 'auto' (default) = uninvited marketing/reminder/discovery popup →
+   *  subject to the gap AND the session/day budget (it simply stays quiet and
+   *  comes back another day).
+   *  kind 'earned' = the user created this moment (chest, streak, rewards that
+   *  landed, a grant) → only the gap applies, it is never skipped. */
+  canTakePopupSlot: (kind?: PopupKind) => boolean;
+  /** Reserve the stage for POPUP_GAP_MS and spend one popup of the session/day
+   *  budget. Call the moment a popup becomes visible — earned moments spend it
+   *  too, so nothing stacks on top of them. */
+  takePopupSlot: (kind?: PopupKind) => void;
 
   /** Record dismissal and return whether this user is now "cooled-down" */
   recordDismiss: (type: NudgeType) => void;
@@ -73,6 +95,10 @@ const COOLDOWN_MS = 48 * 60 * 60 * 1000; // 48h per Duolingo A/B
 const DISMISS_THRESHOLD = 2; // 2 consecutive dismisses triggers cooldown
 /** Minimum gap between any two launch-time popups (Yoav 2026-07-08). */
 const POPUP_GAP_MS = 6000;
+/** Uninvited popups allowed per app-open session (Yoav 18.9 — "תדלל"). */
+const MAX_AUTO_POPUPS_PER_SESSION = 1;
+/** …and per Israeli calendar day, across sessions. */
+const MAX_AUTO_POPUPS_PER_DAY = 2;
 
 function emptyMap<T>(defaultVal: T): Record<NudgeType, T> {
   return { bridge: defaultVal, referral: defaultVal, tools: defaultVal };
@@ -89,15 +115,47 @@ export const useNudgeQueueStore = create<NudgeState>()(
       inLesson: false,
       streakShownThisSession: false,
       popupBusyUntil: 0,
+      autoPopupsThisSession: 0,
+      lastAutoPopupDateKey: null,
+      autoPopupsToday: 0,
 
       setInLesson: (v) => set({ inLesson: v }),
       // The streak popup is PRIORITY 1 (Yoav 2026-07-08): it always shows, and
       // reserves the popup stage the moment it does — so every promo popup
       // (buy-asset splash, bridge/tools banners) waits behind it instead of
       // stacking on top. All 3 streak show-sites call this right after setVisible.
-      markStreakShown: () => set({ streakShownThisSession: true, popupBusyUntil: Date.now() + POPUP_GAP_MS }),
-      canTakePopupSlot: () => Date.now() >= get().popupBusyUntil,
-      takePopupSlot: () => set({ popupBusyUntil: Date.now() + POPUP_GAP_MS }),
+      markStreakShown: () => {
+        set({ streakShownThisSession: true });
+        // The streak celebration IS this session's popup moment (Yoav 18.9) —
+        // it reserves the gap and spends the budget, so no promo follows it.
+        get().takePopupSlot('earned');
+      },
+      canTakePopupSlot: (kind: PopupKind = 'auto') => {
+        const s = get();
+        if (Date.now() < s.popupBusyUntil) return false;
+        // Earned moments are never blocked — the user created them.
+        if (kind === 'earned') return true;
+        if ((s.autoPopupsThisSession ?? 0) >= MAX_AUTO_POPUPS_PER_SESSION) return false;
+        const today = getIsraelDateISO();
+        const usedToday = s.lastAutoPopupDateKey === today ? (s.autoPopupsToday ?? 0) : 0;
+        return usedToday < MAX_AUTO_POPUPS_PER_DAY;
+      },
+
+      // EVERY full-screen interrupt spends the session's stage — an earned
+      // ceremony included. That is the whole point of the budget: after the
+      // one moment the session gets, nothing else may pile on top of it.
+      takePopupSlot: (_kind: PopupKind = 'auto') => {
+        set((s) => {
+          const today = getIsraelDateISO();
+          const usedToday = s.lastAutoPopupDateKey === today ? (s.autoPopupsToday ?? 0) : 0;
+          return {
+            popupBusyUntil: Date.now() + POPUP_GAP_MS,
+            autoPopupsThisSession: (s.autoPopupsThisSession ?? 0) + 1,
+            lastAutoPopupDateKey: today,
+            autoPopupsToday: usedToday + 1,
+          };
+        });
+      },
 
       recordDismiss: (type) => {
         set((state) => {
@@ -145,6 +203,7 @@ export const useNudgeQueueStore = create<NudgeState>()(
           inLesson: false,
           streakShownThisSession: false,
           popupBusyUntil: 0,
+          autoPopupsThisSession: 0,
         });
       },
 
@@ -166,6 +225,9 @@ export const useNudgeQueueStore = create<NudgeState>()(
         inLesson: false,
         streakShownThisSession: false,
         popupBusyUntil: 0,
+        autoPopupsThisSession: 0,
+        lastAutoPopupDateKey: null,
+        autoPopupsToday: 0,
         lastBridgeNudgeDateISO: null,
         lastInviteNudgeDateISO: null,
         lastCrowdPopupDateISO: null,
@@ -181,7 +243,10 @@ export const useNudgeQueueStore = create<NudgeState>()(
         lastBridgeNudgeDateISO: state.lastBridgeNudgeDateISO,
         lastInviteNudgeDateISO: state.lastInviteNudgeDateISO,
         lastCrowdPopupDateISO: state.lastCrowdPopupDateISO,
-        // sessionShown deliberately NOT persisted — resets each cold start
+        lastAutoPopupDateKey: state.lastAutoPopupDateKey,
+        autoPopupsToday: state.autoPopupsToday,
+        // sessionShown + autoPopupsThisSession deliberately NOT persisted —
+        // they reset on every cold start (a new session gets a fresh budget)
       }),
     },
   ),

@@ -268,6 +268,34 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
       topic: 'earnings',
     },
   },
+  // Bank of Israel rate-decision days (boi.org.il calendar, verified 18.9.26 —
+  // FACTS-2026-09 §6.3). Asked on the eve + the day itself. Current rate 3.25%
+  // after the 1.9.2026 cut.
+  {
+    id: 'cq-boi-rate-decision',
+    text: 'בנק ישראל מחליט על הריבית. מה קורה?',
+    termExplanation: {
+      title: 'מה זה בכלל',
+      body: 'שמונה פעמים בשנה הוועדה המוניטרית של בנק ישראל קובעת את הריבית במשק. הריבית הזו + 1.5% = הפריים, שעליו יושבות רוב המשכנתאות וההלוואות.',
+    },
+    options: [
+      { id: 'a', label: 'יורדת', emoji: '🟢', sentiment: 'green' },
+      { id: 'b', label: 'נשארת או עולה', emoji: '🔴', sentiment: 'red' },
+    ],
+    baselinePct: [50, 50],
+    baselineN: 0,
+    tags: {
+      timing: 'evergreen',
+      topic: 'rates',
+      triggers: {
+        dates: [
+          '2026-10-21', '2026-11-23',
+          '2027-01-04', '2027-02-22', '2027-04-05', '2027-05-24', '2027-07-05', '2027-08-18', '2027-09-27', '2027-11-22',
+          '2028-01-03', '2028-02-21', '2028-04-03',
+        ],
+      },
+    },
+  },
   // ── Israel-2026 trends (Yoav 18.9.26) ──
   // The Treasury's 2027–2032 plan floats a gradual retirement age of 70 and
   // lower pension contributions; the finance minister denies it. A live,

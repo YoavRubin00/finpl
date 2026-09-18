@@ -24,10 +24,9 @@ export function BackButton({ label = "", color = "#6b7280", size = 20, onPress }
     } else if (router.canGoBack()) {
       router.back();
     } else {
-      // Always /(tabs)/index — bare /(tabs) lands on Investments (the tabs
-      // layout sets initialRouteName='investments'), which is rarely what
-      // the user wants when backing out of a feature screen.
-      router.replace('/(tabs)/index' as never);
+      // Yoav 18.9.26 — cold open lands on the learn map: the tabs layout's
+      // initialRouteName is "index" again, so bare /(tabs) is the learn map.
+      router.replace('/(tabs)' as never);
     }
   };
 

@@ -115,11 +115,11 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
       // then the ritual closes the session. Never two modals stacked.
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { useNudgeQueueStore } = require('../../stores/useNudgeQueueStore') as typeof import('../../stores/useNudgeQueueStore');
-      if (!useNudgeQueueStore.getState().canTakePopupSlot()) {
+      if (!useNudgeQueueStore.getState().canTakePopupSlot('earned')) {
         if (waited < 18000) retry = setTimeout(() => attempt(waited + 3000), 3000);
         return;
       }
-      useNudgeQueueStore.getState().takePopupSlot();
+      useNudgeQueueStore.getState().takePopupSlot('earned');
       // מוני: balance < stake → the offer is never shown (and never
       // discounted). Checked at fire time, against the server-truth cache.
       const coins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;

@@ -9,8 +9,24 @@ import { useEconomyUIStore } from './useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { captureEvent, setPersonProperties } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
+import { readSnapshot, writeSnapshot } from './querySnapshot';
 
 export const streakQueryKey = ['streak'] as const;
+
+/** Persisted last-known streak (UX-21 flash-of-zero on the header flame). */
+const STREAK_SNAPSHOT_KEY = 'streak-snapshot:v1';
+
+function isStreakState(v: unknown): v is StreakState {
+  if (!v || typeof v !== 'object') return false;
+  const s = v as Partial<StreakState>;
+  const numOrNull = (x: unknown): boolean => x === null || typeof x === 'number';
+  return numOrNull(s.currentStreak) && numOrNull(s.longestStreak)
+    && (s.lastActiveDate === null || typeof s.lastActiveDate === 'string');
+}
+
+function streakPlaceholder(): StreakState | undefined {
+  return readSnapshot(STREAK_SNAPSHOT_KEY, isStreakState)?.value;
+}
 
 export function useStreak() {
   // Skip for guests — server streak is keyed off authId; guests use the local
@@ -19,9 +35,15 @@ export function useStreak() {
   const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: streakQueryKey,
-    queryFn: async () => (await getStreak()).streak,
+    queryFn: async () => {
+      const streak = (await getStreak()).streak;
+      writeSnapshot(STREAK_SNAPSHOT_KEY, streak); // successful fetch only
+      return streak;
+    },
     staleTime: 60_000,
     enabled: isAuthenticated && !isGuest,
+    // UX-21: last server-confirmed streak for THIS authId while pending.
+    placeholderData: streakPlaceholder,
   });
 }
 
@@ -42,6 +64,7 @@ export function useRecordDailyActivity() {
       // shared emitter can detect a genuine streak extension.
       const prev = qc.getQueryData<StreakState | null>(streakQueryKey)?.currentStreak ?? 0;
       qc.setQueryData<StreakState | null>(streakQueryKey, streak);
+      writeSnapshot(STREAK_SNAPSHOT_KEY, streak);
       try {
         setPersonProperties({
           current_streak: streak?.currentStreak ?? 0,
@@ -141,6 +164,7 @@ export function markDailyActivityCompleted(): void {
   void recordDailyActivity(todayIsraelDate())
     .then((res) => {
       queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
+      writeSnapshot(STREAK_SNAPSHOT_KEY, res.streak);
       // Keep the PostHog person streak props fresh (incl. server resets to 1/0).
       try {
         setPersonProperties({

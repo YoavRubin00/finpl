@@ -71,9 +71,12 @@ export function ProPromoExpiringBanner() {
       const seqDelay = Math.max(0, useNudgeQueueStore.getState().popupBusyUntil - Date.now());
       const slotDelay = Math.max(bannerSlot, seqDelay);
       slotTimer = setTimeout(() => {
+        // Uninvited-popup budget (Yoav 18.9): the expiry nudge has its own
+        // once-a-day cap; if the session's slot is gone it waits for tomorrow.
+        if (!useNudgeQueueStore.getState().canTakePopupSlot('auto')) return;
         setVisible(true);
         useBannerCooldownStore.getState().markShown();
-        useNudgeQueueStore.getState().takePopupSlot();
+        useNudgeQueueStore.getState().takePopupSlot('auto');
         // Hard once-a-day cap — marked on SHOW, not on dismissal.
         markShownToday();
         if (!trackedShownRef.current) {

@@ -14,15 +14,14 @@ export default function TowerDefenseBossPage() {
     // goToNextSequentialModule → tower-defense again, trapping the user in
     // an infinite loop (QA audit 2026-05-31). Use replace so the stack is
     // wiped and there's no Back path back into the boss fight either.
-    // "/(tabs)/index" instead of "/(tabs)" because the tabs layout has
-    // initialRouteName="investments", so the bare "/(tabs)" lands on
-    // Investments instead of the chapter-2 unlock celebration.
-    router.replace("/(tabs)/index" as never);
+    // Yoav 18.9.26 — cold open lands on the learn map: bare "/(tabs)" is the
+    // learn map again (initialRouteName="index"), so no explicit /index.
+    router.replace("/(tabs)" as never);
   }, [router]);
 
   const handleVictory = useCallback(() => {
     markBossComplete("ch-1");
-    router.replace("/(tabs)/index" as never);
+    router.replace("/(tabs)" as never);
   }, [router, markBossComplete]);
 
   return (

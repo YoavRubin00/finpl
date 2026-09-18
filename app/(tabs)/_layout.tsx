@@ -21,7 +21,9 @@ export default function TabsLayout() {
       </View>
       <View style={{ flex: 1, overflow: "hidden" }}>
         <Tabs
-          initialRouteName="investments"
+          // Yoav 18.9.26 — cold open lands on the learn map (UX-01): under
+          // 400 XP the Investments tab is a locked, grey screen with no CTA.
+          initialRouteName="index"
           screenOptions={{
             headerShown: false,
             // PERF (user review 14.7: "תגובה איטית בניווט בין ממשקים"): freeze

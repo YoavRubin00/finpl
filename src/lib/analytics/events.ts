@@ -250,6 +250,9 @@ export type AppEvent =
   // lesson CTA tells us WHICH portfolio state converts tracking → learning.
   | { name: 'holdings_section_viewed'; props: { holdings_count: number } }
   | { name: 'holding_added'; props: { ticker: string; has_buy_price: boolean; holdings_count: number } }
+  // The user's first REAL financial move inside FinPlay (UX-17, 18.9.26) —
+  // candidate NSM per the 11.7 decision log.
+  | { name: 'first_real_holding_added'; props: { ticker: string; is_tase: boolean } }
   | { name: 'holding_removed'; props: { ticker: string; holdings_count: number } }
   | { name: 'portfolio_lesson_cta_tapped'; props: { module_id: string; reason: 'concentration' | 'no_etf' | 'know_your_holdings' } }
 

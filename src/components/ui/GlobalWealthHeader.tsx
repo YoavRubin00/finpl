@@ -448,6 +448,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
               style={[s.shortcutBtnCompact, { width: d.shortcutSize, height: d.shortcutSize, borderRadius: d.shortcutRadius }]}
               accessibilityRole="button"
               accessibilityLabel="הגדרות"
+              hitSlop={8}
             >
               <Settings size={d.shortcutIcon} color="#64748b" />
             </Pressable>
@@ -470,7 +471,10 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         </ResourcePill>
         </View>
 
-        {/* Gems pill */}
+        {/* Gems pill — hidden while gems === 0 (UX-20, Yoav 18.9.26): most
+            beginners have none, and coins + gems both open the shop anyway,
+            so the empty pill only added a 6th tap target to the row. */}
+        {gems > 0 && (
         <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
         <ResourcePill
           icon={<LottieIcon source={require("../../../assets/lottie/Diamond.json") as number} size={d.lottieSize} autoPlay loop={false} active={appActive} />}
@@ -484,11 +488,15 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
           <AnimatedNumber value={gems} color="#67e8f9" fontSize={d.pillFont} />
         </ResourcePill>
         </View>
+        )}
 
-        {/* Streak pill */}
+        {/* Streak pill — the flame was an always-on SOFTWARE-rendered loop
+            under every tab (UX-09). One cycle on mount + a burst every ~8s
+            keeps the eye-draw at a fraction of the duty cycle, same pattern
+            as the profile confetti below. */}
         <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
         <ResourcePill
-          icon={<LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number} size={d.lottieSize} autoPlay loop active={appActive} />}
+          icon={<LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number} size={d.lottieSize} autoPlay loop={false} burstEveryMs={8_000} active={appActive} />}
           glowColor="#fb923c"
           trackedValue={streak}
           accessibilityLabel={`רצף ${streak} ימים, פתח לוח שנה`}
@@ -695,7 +703,9 @@ function LevelProgressPopup({
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose} accessibilityViewIsModal={true} accessibilityLabel="התקדמות רמה">
       <Pressable style={popupStyles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="סגור">
-        <Pressable style={popupStyles.card} onPress={() => {}}>
+        {/* accessible={false}: without it the whole popup collapses into one
+            unlabeled element for screen readers (UX-10). */}
+        <Pressable style={popupStyles.card} onPress={() => {}} accessible={false}>
           {/* Level circle */}
           <View style={popupStyles.levelCircle}>
             <Crown size={18} color="#38bdf8" fill="#38bdf8" />

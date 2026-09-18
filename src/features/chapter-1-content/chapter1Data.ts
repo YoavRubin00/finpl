@@ -1,4 +1,5 @@
 import { Chapter } from './types';
+import { MOD_1_10_FIRST_SALARY } from './mod-1-10-first-salary';
 
 export const chapter1Data: Chapter = {
   id: 'chapter-1',
@@ -2292,5 +2293,7 @@ export const chapter1Data: Chapter = {
       },
       interModuleGame: 'fomo-killer',
     },
+    // Israel-2026 trends pass (Yoav 18.9.26) — bonusModule: never re-locks chapter 2.
+    MOD_1_10_FIRST_SALARY,
   ],
 };

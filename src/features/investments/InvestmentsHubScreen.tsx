@@ -3,13 +3,23 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  cancelAnimation,
+  Easing,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, TrendingUp, Building2, Briefcase } from "lucide-react-native";
+import { ChevronLeft, TrendingUp, Building2, Briefcase, Wallet } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import LottieView from "lottie-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -24,8 +34,12 @@ import { tapHaptic } from "../../utils/haptics";
 import { Lock } from "lucide-react-native";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
+import { SupercellButton } from "../../components/ui/SupercellButton";
+import { useHoldingsStore } from "../net-worth-dashboard/holdings/useHoldingsStore";
 
 const ASSETS_INTRO_DISMISSED_KEY = "assets_market_intro_dismissed";
+// Real-holdings dashboard hue (matches /net-worth-dashboard).
+const HOLDINGS_PINK = "#ec4899";
 
 export function InvestmentsHubScreen() {
   const isFocused = useIsFocused();
@@ -47,19 +61,49 @@ export function InvestmentsHubScreen() {
     const pnl = ((p.currentPrice - p.entryPrice) / p.entryPrice) * p.amountInvested;
     return sum + pnl;
   }, 0);
+  const pnl = Math.round(totalPnl);
 
   const ownedCount = Object.keys(ownedAssets).length;
+  const holdingsCount = useHoldingsStore((s) => s.holdings.length);
 
-  // Walkthrough step 3 → auto-open trading hub after 2s
+  // Walkthrough step 3 → glow on the trading card (UX-19, Yoav 18.9.26).
+  // Used to auto-push /trading-hub after 2s with no touch ("hidden state");
+  // now the card pulses and the user taps it themselves.
   const walkthroughStep = useTutorialStore((s) => s.appWalkthroughStep);
   const hasSeenWT = useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  const tradingGlowActive = !hasSeenWT && walkthroughStep === 3;
+  const reduceMotion = useReducedMotion();
+  const tradingPulse = useSharedValue(0);
   useEffect(() => {
-    if (hasSeenWT || walkthroughStep !== 3) return;
-    const timer = setTimeout(() => {
-      try { router.push("/trading-hub" as never); } catch {}
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [walkthroughStep, hasSeenWT, router]);
+    if (!tradingGlowActive) {
+      cancelAnimation(tradingPulse);
+      tradingPulse.value = 0;
+      return;
+    }
+    if (reduceMotion) {
+      tradingPulse.value = 1;
+      return;
+    }
+    tradingPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 450, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.35, { duration: 450, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(tradingPulse);
+  }, [tradingGlowActive, reduceMotion, tradingPulse]);
+  const tradingGlowStyle = useAnimatedStyle(() => ({
+    borderRadius: 14,
+    borderWidth: tradingPulse.value > 0.05 ? 2.5 : 0,
+    borderColor: `rgba(14, 165, 233, ${tradingPulse.value})`,
+    shadowColor: "#0ea5e9",
+    shadowOpacity: tradingPulse.value * 0.9,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: tradingPulse.value > 0.05 ? 12 : 0,
+  }));
 
   // ── Assets Market intro modal ──
   const [showAssetsIntro, setShowAssetsIntro] = useState(false);
@@ -98,13 +142,17 @@ export function InvestmentsHubScreen() {
   const tradingStyle = useEntranceAnimation(fadeInUp, { delay: 120 });
   const marketStyle = useEntranceAnimation(fadeInUp, { delay: 180 });
   const portfolioStyle = useEntranceAnimation(fadeInUp, { delay: 230 });
+  const holdingsStyle = useEntranceAnimation(fadeInUp, { delay: 280 });
 
   /* ── Stage-1 lock screen ── */
   if (!isInvestmentsUnlocked) {
     return (
       <View style={s.root}>
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 32, opacity: 0.55 }}>
-          <View style={{ width: 100, height: 100, overflow: "hidden", marginBottom: 20 }}>
+        {/* UX-03 (Yoav 18.9.26): opacity only on the Lottie — the text was
+            #cbd5e1 under a 0.55 block (≈1.5:1, fails AA / תקנה 5568) — and a
+            real way out instead of a dead end. */}
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 32 }}>
+          <View style={{ width: 100, height: 100, overflow: "hidden", marginBottom: 20, opacity: 0.55 }}>
             {/* Focus-gated: an ungated loop here kept burning frames off-tab. */}
             {isFocused && (
               <LottieView
@@ -115,15 +163,22 @@ export function InvestmentsHubScreen() {
             )}
           </View>
           <Lock size={40} color="#64748b" style={{ marginBottom: 12 }} />
-          <Text style={{ fontSize: 22, fontWeight: "900", color: "#64748b", textAlign: "center", writingDirection: "rtl", marginBottom: 8 }}>
+          <Text style={{ fontSize: 22, fontWeight: "900", color: "#334155", textAlign: "center", writingDirection: "rtl", marginBottom: 8 }}>
             מרכז ההשקעות
           </Text>
           <Text style={{ fontSize: 16, fontWeight: "600", color: "#64748b", textAlign: "center", writingDirection: "rtl", lineHeight: 24 }}>
             נפתח בשלב 2
           </Text>
-          <Text style={{ fontSize: 13, color: "#cbd5e1", textAlign: "center", writingDirection: "rtl", marginTop: 8 }}>
+          <Text style={{ fontSize: 13, color: "#64748b", textAlign: "center", writingDirection: "rtl", marginTop: 8, marginBottom: 24 }}>
             התקדמו לשלב 2 כדי לפתוח
           </Text>
+          <View style={{ alignSelf: "stretch" }}>
+            <SupercellButton
+              label="ממשיכים ללמוד"
+              variant="blue"
+              onPress={() => router.push("/(tabs)/index" as never)}
+            />
+          </View>
         </View>
       </View>
     );
@@ -135,7 +190,13 @@ export function InvestmentsHubScreen() {
           2,900 dismissals vs 3 actions in 14d. The appointment primer +
           day-2 ritual own the permission ask now. */}
       {false && <NotificationPermissionBanner />}
-      <View style={[s.content, { paddingBottom: insets.bottom + 16 }]}>
+      {/* UX-02 (Yoav 18.9.26): the hub is ~574px of content on ~500px of
+          SE-height — a ScrollView instead of a flex:1 View so the last card
+          never hides under the tab bar (or any Dynamic-Type size). */}
+      <ScrollView
+        contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 16 }]}
+        showsVerticalScrollIndicator={false}
+      >
 
         {/* ── Page title ── */}
         <Text style={s.pageTitle}>מרכז ההשקעות</Text>
@@ -158,7 +219,7 @@ export function InvestmentsHubScreen() {
             }]}
           >
             <View style={s.finnTextCol}>
-              <Text style={s.finnMessage}>בנה את האימפריה{"\n"}הפיננסית שלך</Text>
+              <Text style={s.finnMessage}>בונים אימפריה{"\n"}פיננסית</Text>
             </View>
             <View style={s.finnLottieWrap}>
               <ExpoImage source={FINN_STANDARD} accessible={false}
@@ -173,16 +234,27 @@ export function InvestmentsHubScreen() {
         <Animated.View style={summaryStyle}>
           <View style={s.portfolioCard}>
             <View style={s.portfolioTextCol}>
-              <Text style={s.portfolioTitle}>תיק ההשקעות שלך</Text>
+              {/* UX-05: this is the virtual coin balance, not the real
+                  ₪ holdings portfolio that lives in /net-worth-dashboard. */}
+              <Text style={s.portfolioTitle}>המטבעות שלך למסחר</Text>
               <View style={s.portfolioRow}>
                 <GoldCoinIcon size={22} />
                 <Text style={s.portfolioValue}>{coins.toLocaleString()}</Text>
               </View>
-              <Pressable style={s.pnlPill} accessibilityRole="text" accessibilityLabel="רווח והפסד">
-                <Text style={s.pnlText}>
-                  +{Math.round(totalPnl)} רווח/הפסד
+              {/* UX-04: a real button (was a role="text" Pressable with no
+                  onPress), correct sign (was "+-120" on a loss), and a
+                  ChevronLeft = forward in RTL (was "→" = back). */}
+              <Pressable
+                style={s.pnlPill}
+                onPress={() => { tapHaptic(); router.push("/trading-hub" as never); }}
+                accessibilityRole="button"
+                accessibilityLabel={`רווח והפסד ${pnl}, פתיחת זירת המסחר`}
+                hitSlop={6}
+              >
+                <Text style={[s.pnlText, { color: pnl >= 0 ? "#15803d" : "#dc2626" }]}>
+                  {pnl >= 0 ? "+" : ""}{pnl} רווח/הפסד
                 </Text>
-                <Text style={s.pnlArrow}>→</Text>
+                <ChevronLeft size={14} color="#64748b" />
               </Pressable>
             </View>
             <View style={s.portfolioImageWrap}>
@@ -199,26 +271,31 @@ export function InvestmentsHubScreen() {
           </View>
         </Animated.View>
 
-        {/* ── Navigation Cards ── */}
+        {/* ── Navigation Cards ──
+            UX-34: ChevronLeft is the LAST child of each row-reverse card so
+            it renders on the left edge (forward in RTL), icon tile on the
+            right — same order as the Tools hub. */}
 
         {/* Trading Hub */}
-        <Animated.View style={tradingStyle}>
+        <Animated.View style={[tradingStyle, tradingGlowStyle]}>
           {isTradingUnlocked ? (
             <Pressable onPress={() => router.push("/trading-hub" as never)} style={s.navCard} accessibilityRole="button" accessibilityLabel="זירת המסחר">
-              <ChevronLeft size={20} color="#cbd5e1" />
-              <View style={s.navTextCol}>
-                <Text style={s.navTitle}>מסחר בשוק ההון</Text>
-                <Text style={s.navDesc}>
-                  {positions.length > 0 ? `${positions.length} פוזיציות פתוחות` : "קנה ומכור מניות ומדדים בלייב"}
-                </Text>
-              </View>
               <View style={[s.navIconBox, { backgroundColor: "#f1f5f9" }]}>
                 <TrendingUp size={26} color="#64748b" />
               </View>
+              <View style={s.navTextCol}>
+                <Text style={s.navTitle}>מסחר בשוק ההון</Text>
+                <Text style={s.navDesc}>
+                  {positions.length > 0 ? `${positions.length} פוזיציות פתוחות` : "קונים ומוכרים מניות ומדדים בלייב"}
+                </Text>
+              </View>
+              <ChevronLeft size={20} color="#94a3b8" />
             </Pressable>
           ) : (
             <View style={[s.navCard, { opacity: 0.65 }]}>
-              <View />
+              <View style={[s.navIconBox, { backgroundColor: "#f1f5f9" }]}>
+                <TrendingUp size={26} color="#64748b" />
+              </View>
               <View style={s.navTextCol}>
                 <Text style={s.navTitle}>מסחר בשוק ההון</Text>
                 <View style={s.lockRow}>
@@ -226,9 +303,7 @@ export function InvestmentsHubScreen() {
                   <Lock size={12} color="#64748b" />
                 </View>
               </View>
-              <View style={[s.navIconBox, { backgroundColor: "#f1f5f9" }]}>
-                <TrendingUp size={26} color="#64748b" />
-              </View>
+              <View />
             </View>
           )}
         </Animated.View>
@@ -236,32 +311,60 @@ export function InvestmentsHubScreen() {
         {/* Real Assets Market */}
         <Animated.View style={marketStyle}>
           <Pressable onPress={handleAssetsPress} style={s.navCard} accessibilityRole="button" accessibilityLabel="שוק הנכסים">
-            <ChevronLeft size={20} color="#cbd5e1" />
+            <View style={[s.navIconBox, { backgroundColor: "#eff6ff" }]}>
+              <Building2 size={26} color="#3b82f6" />
+            </View>
             <View style={s.navTextCol}>
               <Text style={s.navTitle}>זירת הנכסים</Text>
               <Text style={s.navDesc}>נדל"ן, עסקים ועסקאות גדולות</Text>
             </View>
-            <View style={[s.navIconBox, { backgroundColor: "#eff6ff" }]}>
-              <Building2 size={26} color="#3b82f6" />
-            </View>
+            <ChevronLeft size={20} color="#94a3b8" />
           </Pressable>
         </Animated.View>
 
-        {/* My Portfolio */}
+        {/* My Portfolio (in-game assets) */}
         <Animated.View style={portfolioStyle}>
           <Pressable onPress={() => router.push("/assets" as never)} style={s.navCard} accessibilityRole="button" accessibilityLabel="הנכסים שלי">
-            <ChevronLeft size={20} color="#cbd5e1" />
+            <View style={[s.navIconBox, { backgroundColor: "#eff6ff" }]}>
+              <Briefcase size={26} color="#3b82f6" />
+            </View>
             <View style={s.navTextCol}>
               <Text style={s.navTitle}>הנכסים שלי</Text>
               <Text style={s.navDesc}>צפייה וניהול האחזקות הקיימות</Text>
             </View>
-            <View style={[s.navIconBox, { backgroundColor: "#eff6ff" }]}>
-              <Briefcase size={26} color="#3b82f6" />
-            </View>
+            <ChevronLeft size={20} color="#94a3b8" />
           </Pressable>
         </Animated.View>
 
-      </View>
+        {/* UX-18 (Yoav 18.9.26): the REAL ₪ stock portfolio (holdings/) was
+            reachable only from the Tools tab. Fourth card → dashboard. */}
+        <Animated.View style={holdingsStyle}>
+          <Pressable
+            onPress={() => { tapHaptic(); router.push("/net-worth-dashboard" as never); }}
+            style={s.navCard}
+            accessibilityRole="button"
+            accessibilityLabel={
+              holdingsCount > 0
+                ? `תיק המניות שלי, ${holdingsCount} ניירות, מעקב חי`
+                : "תיק המניות שלי, מעקב חי אחרי מניות שבאמת יש לכם"
+            }
+          >
+            <View style={[s.navIconBox, { backgroundColor: "#fdf2f8" }]}>
+              <Wallet size={26} color={HOLDINGS_PINK} />
+            </View>
+            <View style={s.navTextCol}>
+              <Text style={s.navTitle}>תיק המניות שלי</Text>
+              <Text style={s.navDesc}>
+                {holdingsCount > 0
+                  ? `${holdingsCount === 1 ? "נייר אחד" : `${holdingsCount} ניירות`} · מעקב חי`
+                  : "מעקב חי אחרי מניות שבאמת יש לכם"}
+              </Text>
+            </View>
+            <ChevronLeft size={20} color="#94a3b8" />
+          </Pressable>
+        </Animated.View>
+
+      </ScrollView>
 
       {/* ── Assets Market Intro Modal ── */}
       <Modal
@@ -271,8 +374,13 @@ export function InvestmentsHubScreen() {
         onRequestClose={() => setShowAssetsIntro(false)}
         accessibilityViewIsModal
       >
-        <Pressable style={s.introOverlay} onPress={() => setShowAssetsIntro(false)}>
-          <Pressable style={s.introSheet} onPress={() => {}}>
+        <Pressable
+          style={s.introOverlay}
+          onPress={() => setShowAssetsIntro(false)}
+          accessibilityRole="button"
+          accessibilityLabel="סגור"
+        >
+          <Pressable style={s.introSheet} onPress={() => {}} accessible={false}>
             <Animated.View entering={FadeInDown.duration(300)}>
               {/* Finn */}
               <View style={s.introFinnWrap}>
@@ -301,7 +409,7 @@ export function InvestmentsHubScreen() {
                 onPress={handleAssetsIntroContinue}
                 style={({ pressed }) => [s.introBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
                 accessibilityRole="button"
-                accessibilityLabel="הבנתי, קח אותי לזירה"
+                accessibilityLabel="הבנתי, לזירה"
               >
                 <LinearGradient
                   colors={["#3b82f6", "#2563eb"]}
@@ -309,7 +417,7 @@ export function InvestmentsHubScreen() {
                   end={{ x: 1, y: 1 }}
                   style={s.introBtnGradient}
                 >
-                  <Text style={s.introBtnText}>הבנתי, קח אותי לזירה!</Text>
+                  <Text style={s.introBtnText}>הבנתי, לזירה</Text>
                 </LinearGradient>
               </Pressable>
 
@@ -318,7 +426,7 @@ export function InvestmentsHubScreen() {
                 onPress={handleAssetsIntroDontShow}
                 style={s.introDontShow}
                 accessibilityRole="button"
-                accessibilityLabel="אל תראה הסבר זה שוב"
+                accessibilityLabel="אל תראו לי הסבר זה שוב"
               >
                 <Text style={s.introDontShowText}>אל תראו לי הסבר זה שוב</Text>
               </Pressable>
@@ -336,7 +444,6 @@ const s = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   content: {
-    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 10,
     gap: 10,
@@ -438,10 +545,6 @@ const s = StyleSheet.create({
   pnlText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#64748b",
-  },
-  pnlArrow: {
-    fontSize: 14,
     color: "#64748b",
   },
   portfolioImageWrap: {
@@ -565,7 +668,7 @@ const s = StyleSheet.create({
   introDontShowText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
     textAlign: "center",
     writingDirection: "rtl",
   },

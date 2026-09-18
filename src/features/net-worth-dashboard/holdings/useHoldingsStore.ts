@@ -13,7 +13,7 @@ interface NewHoldingInput {
   ticker: string;
   nameHe: string;
   units: number;
-  avgBuyPriceUsd?: number;
+  avgBuyPrice?: number;
 }
 
 interface HoldingsState {
@@ -22,7 +22,7 @@ interface HoldingsState {
   addHolding: (init: NewHoldingInput) => string;
   updateHolding: (
     id: string,
-    patch: Partial<Pick<Holding, 'units' | 'avgBuyPriceUsd'>>,
+    patch: Partial<Pick<Holding, 'units' | 'avgBuyPrice'>>,
   ) => void;
   removeHolding: (id: string) => void;
 }
@@ -43,18 +43,18 @@ export const useHoldingsStore = create<HoldingsState>()(
         if (existing) {
           const mergedUnits = existing.units + Math.max(0, init.units);
           const bothPriced =
-            typeof existing.avgBuyPriceUsd === 'number' &&
-            typeof init.avgBuyPriceUsd === 'number' &&
+            typeof existing.avgBuyPrice === 'number' &&
+            typeof init.avgBuyPrice === 'number' &&
             mergedUnits > 0;
           const mergedAvg = bothPriced
-            ? (existing.units * (existing.avgBuyPriceUsd ?? 0) +
-                init.units * (init.avgBuyPriceUsd ?? 0)) /
+            ? (existing.units * (existing.avgBuyPrice ?? 0) +
+                init.units * (init.avgBuyPrice ?? 0)) /
               mergedUnits
-            : existing.avgBuyPriceUsd ?? init.avgBuyPriceUsd;
+            : existing.avgBuyPrice ?? init.avgBuyPrice;
           set({
             holdings: get().holdings.map((h) =>
               h.id === existing.id
-                ? { ...h, units: mergedUnits, avgBuyPriceUsd: mergedAvg }
+                ? { ...h, units: mergedUnits, avgBuyPrice: mergedAvg }
                 : h,
             ),
           });
@@ -67,9 +67,9 @@ export const useHoldingsStore = create<HoldingsState>()(
           ticker: init.ticker,
           nameHe: init.nameHe,
           units: Math.max(0, init.units),
-          avgBuyPriceUsd:
-            typeof init.avgBuyPriceUsd === 'number' && init.avgBuyPriceUsd > 0
-              ? init.avgBuyPriceUsd
+          avgBuyPrice:
+            typeof init.avgBuyPrice === 'number' && init.avgBuyPrice > 0
+              ? init.avgBuyPrice
               : undefined,
           createdAt: Date.now(),
         };
@@ -87,12 +87,12 @@ export const useHoldingsStore = create<HoldingsState>()(
                     patch.units !== undefined
                       ? Math.max(0, patch.units)
                       : h.units,
-                  avgBuyPriceUsd:
-                    patch.avgBuyPriceUsd !== undefined
-                      ? patch.avgBuyPriceUsd > 0
-                        ? patch.avgBuyPriceUsd
+                  avgBuyPrice:
+                    patch.avgBuyPrice !== undefined
+                      ? patch.avgBuyPrice > 0
+                        ? patch.avgBuyPrice
                         : undefined
-                      : h.avgBuyPriceUsd,
+                      : h.avgBuyPrice,
                 }
               : h,
           ),
@@ -106,8 +106,20 @@ export const useHoldingsStore = create<HoldingsState>()(
     {
       name: '@finplay/holdings',
       storage: createJSONStorage(() => zustandStorage),
-      version: 1,
+      version: 2,
       partialize: (state) => ({ holdings: state.holdings }),
+      // v1 → v2: `avgBuyPriceUsd` became currency-aware `avgBuyPrice` (UX-31:
+      // TASE shares are bought in shekels; the old name misled the P&L math).
+      migrate: (persisted, version) => {
+        const state = persisted as { holdings?: Array<Record<string, unknown>> };
+        if (version < 2 && Array.isArray(state.holdings)) {
+          state.holdings = state.holdings.map((h) => {
+            const { avgBuyPriceUsd, ...rest } = h;
+            return typeof avgBuyPriceUsd === 'number' ? { ...rest, avgBuyPrice: avgBuyPriceUsd } : rest;
+          });
+        }
+        return state as unknown as HoldingsState;
+      },
     },
   ),
 );

@@ -4,15 +4,18 @@ import { ChevronLeft } from 'lucide-react-native';
 import { STITCH } from '../../../constants/theme';
 import { formatShekel } from '../../../utils/format';
 import { tapHaptic } from '../../../utils/haptics';
-import { unitPriceToIls, type Holding } from './holdingsCatalog';
+import { isTaseTicker, unitPriceToIls, type Holding } from './holdingsCatalog';
 import type { LiveQuote } from './useHoldingsQuotes';
 
 interface HoldingRowProps {
   holding: Holding;
-  /** Live quote for this ticker, undefined while loading / on fetch miss. */
+  /** Live quote for this ticker; undefined while loading OR when the fetch
+   *  missed this ticker — `quotesLoaded` tells the two apart. */
   quote: LiveQuote | undefined;
+  quotesLoaded: boolean;
   usdIls: number;
   onPress: (holding: Holding) => void;
+  onLongPress: (holding: Holding) => void;
 }
 
 function formatUsd(n: number): string {
@@ -22,32 +25,52 @@ function formatUsd(n: number): string {
   })}`;
 }
 
+function pct(n: number): string {
+  return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+}
+
 /**
  * One live holding. Right (RTL start): ticker + Hebrew name + units. Left:
  * live ₪ value, then a day-change pill and, when a buy price exists, total
- * P&L%. Tap → edit modal. No quote yet → quiet placeholders, never spinners.
+ * P&L%. Tap → edit; long-press → quick actions. Three price states: loading,
+ * live, and "no price right now" (quote missing after load) — never a
+ * spinner that lives forever (UX-15).
  */
-function HoldingRowInner({ holding, quote, usdIls, onPress }: HoldingRowProps): React.ReactElement {
+function HoldingRowInner({ holding, quote, quotesLoaded, usdIls, onPress, onLongPress }: HoldingRowProps): React.ReactElement {
+  const tase = isTaseTicker(holding.ticker);
   const unitIls = quote ? unitPriceToIls(quote.price, quote.currency, holding.ticker, usdIls) : null;
   const valueIls = unitIls !== null ? holding.units * unitIls : null;
-  // TASE shares are quoted in agorot — show the per-share price in shekels;
-  // everything else stays in its native USD.
-  const isIlsQuote = quote ? unitIls !== null && (quote.currency === 'ILA' || quote.currency === 'ILS' || (quote.currency === null && holding.ticker.endsWith('.TA'))) : false;
-  const priceLabel = quote
-    ? isIlsQuote
-      ? `₪${(unitIls ?? 0).toLocaleString('he-IL', { maximumFractionDigits: 2 })}`
-      : formatUsd(quote.price)
-    : 'מחיר בטעינה…';
 
   const dayPct =
     quote && quote.previousClose !== null
       ? ((quote.price - quote.previousClose) / quote.previousClose) * 100
       : null;
 
+  // Buy price is entered in the display currency (₪ for TASE, $ otherwise),
+  // so compare it against the same-currency unit price (UX-31).
+  const buy = holding.avgBuyPrice;
+  const unitDisplay = quote ? (tase ? unitIls : quote.price) : null;
   const pnlPct =
-    quote && typeof holding.avgBuyPriceUsd === 'number' && holding.avgBuyPriceUsd > 0
-      ? ((quote.price - holding.avgBuyPriceUsd) / holding.avgBuyPriceUsd) * 100
+    unitDisplay !== null && typeof buy === 'number' && buy > 0
+      ? ((unitDisplay - buy) / buy) * 100
       : null;
+
+  const priceLabel = !quote
+    ? quotesLoaded
+      ? 'אין מחיר כרגע'
+      : 'מחיר בטעינה…'
+    : tase
+      ? `₪${(unitIls ?? 0).toLocaleString('he-IL', { maximumFractionDigits: 2 })}`
+      : formatUsd(quote.price);
+
+  const a11y = [
+    holding.nameHe,
+    valueIls !== null ? formatShekel(valueIls) : priceLabel,
+    dayPct !== null ? `שינוי יומי ${pct(dayPct)}` : null,
+    pnlPct !== null ? `רווח כולל ${pct(pnlPct)}` : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <Pressable
@@ -55,14 +78,18 @@ function HoldingRowInner({ holding, quote, usdIls, onPress }: HoldingRowProps): 
         tapHaptic();
         onPress(holding);
       }}
+      onLongPress={() => onLongPress(holding)}
+      delayLongPress={350}
       style={styles.row}
       accessibilityRole="button"
-      accessibilityLabel={`${holding.nameHe}, ${valueIls !== null ? formatShekel(valueIls) : 'מחיר בטעינה'}`}
+      accessibilityLabel={a11y}
+      accessibilityHint="הקשה לעריכה, לחיצה ארוכה לפעולות"
     >
       <View style={styles.tickerTile}>
         <Text style={styles.tickerText} numberOfLines={1}>
-          {holding.ticker}
+          {holding.ticker.replace('.TA', '')}
         </Text>
+        {tase ? <Text style={styles.tickerSub}>ת"א</Text> : null}
       </View>
 
       <View style={styles.body}>
@@ -76,20 +103,18 @@ function HoldingRowInner({ holding, quote, usdIls, onPress }: HoldingRowProps): 
         </View>
 
         <View style={styles.bottomRow}>
-          <Text style={styles.priceText}>{priceLabel}</Text>
+          <Text style={[styles.priceText, !quote && quotesLoaded && styles.priceMissing]}>{priceLabel}</Text>
           {dayPct !== null ? (
             <View style={[styles.pill, dayPct >= 0 ? styles.pillUp : styles.pillDown]}>
               <Text style={[styles.pillText, dayPct >= 0 ? styles.pillTextUp : styles.pillTextDown]}>
-                {dayPct >= 0 ? '+' : ''}
-                {dayPct.toFixed(1)}% היום
+                {pct(dayPct)} היום
               </Text>
             </View>
           ) : null}
           {pnlPct !== null ? (
             <View style={[styles.pill, pnlPct >= 0 ? styles.pillUp : styles.pillDown]}>
               <Text style={[styles.pillText, pnlPct >= 0 ? styles.pillTextUp : styles.pillTextDown]}>
-                {pnlPct >= 0 ? '+' : ''}
-                {pnlPct.toFixed(1)}% סה"כ
+                {pct(pnlPct)} סה"כ
               </Text>
             </View>
           ) : null}
@@ -133,6 +158,12 @@ const styles = StyleSheet.create({
     color: STITCH.onSurface,
     letterSpacing: 0.2,
   },
+  tickerSub: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: STITCH.onSurfaceVariant,
+    marginTop: 1,
+  },
   body: { flex: 1, gap: 4 },
   topRow: {
     flexDirection: 'row-reverse',
@@ -166,6 +197,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: STITCH.onSurfaceVariant,
   },
+  priceMissing: { color: '#b45309' },
   pill: {
     paddingHorizontal: 6,
     paddingVertical: 2,

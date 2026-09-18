@@ -102,8 +102,8 @@ export function FreezeRefundModalGate() {
     const tryShow = () => {
       if (cancelled) return;
       const queue = useNudgeQueueStore.getState();
-      if (queue.canTakePopupSlot()) {
-        queue.takePopupSlot();
+      if (queue.canTakePopupSlot('earned')) {
+        queue.takePopupSlot('earned');
         setVisible(true);
       } else {
         timer = setTimeout(tryShow, 2500);

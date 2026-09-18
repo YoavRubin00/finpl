@@ -7,6 +7,7 @@
 // (moduleEndGateShown); this component is purely the modal.
 
 import React, { useEffect } from "react";
+import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { Modal, Pressable, Text } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
@@ -34,6 +35,8 @@ export function ModuleEndSignupGate({ visible, moduleId, onClose, source = "modu
 
   useEffect(() => {
     if (!visible) return;
+    // UX-51: the post-chest signup gate occupies the popup stage too.
+    try { useNudgeQueueStore.getState().takePopupSlot('earned'); } catch { /* non-fatal */ }
     try { captureEvent("register_cta_shown", { source, module_id: moduleId }); } catch { /* non-fatal */ }
   }, [visible, moduleId, source]);
 

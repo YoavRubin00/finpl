@@ -87,7 +87,7 @@ export function MiluimCalculator(): React.ReactElement {
 
         <View style={styles.inputCard}>
           <MoneySlider
-            label="ימי מילואים בשנת המס הקודמת"
+            label="ימי מילואים בשנה הקודמת (2025)"
             value={days}
             onChange={setDays}
             min={DAYS_MIN}
@@ -119,8 +119,8 @@ export function MiluimCalculator(): React.ReactElement {
             strong={result.creditPoints > 0}
           />
           <Row
-            label="מענק ימי מילואים"
-            value={result.grant > 0 ? formatShekel(result.grant) : 'מתחת לסף'}
+            label="תגמול נוסף (ביטוח לאומי)"
+            value={result.grant > 0 ? formatShekel(result.grant) : 'מ-10 ימים ומעלה'}
             strong={result.grant > 0}
           />
           {result.notes.map((n) => (

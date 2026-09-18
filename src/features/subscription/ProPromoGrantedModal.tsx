@@ -70,7 +70,7 @@ export function ProPromoGrantedModal() {
       slotTimer = setTimeout(() => {
         if (shownRef.current) return;
         shownRef.current = true;
-        useNudgeQueueStore.getState().takePopupSlot();
+        useNudgeQueueStore.getState().takePopupSlot('earned');
         // Mark seen at SHOW time — "shown once" must survive a force-kill.
         markSeen(expiryKey);
         setVisible(true);

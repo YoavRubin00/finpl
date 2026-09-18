@@ -138,6 +138,25 @@ interface UpsertEvent {
   sort?: number;
 }
 
+/**
+ * Decode literal escape sequences that a caller double-encoded into the JSON
+ * body (Yoav 18.9): two September rows were written on 4.7 with their Hebrew
+ * stored as the TEXT "\\u05d4\\u05de...", so the app rendered raw
+ * escapes instead of copy. The write path now normalises them, so a caller
+ * that escapes its payload can no longer poison the journal.
+ */
+function decodeEscapes(value: string | undefined): string | undefined {
+  if (!value) return value;
+  if (!/\\u[0-9a-fA-F]{4}/.test(value)) return value;
+  return value.replace(/\\(u[0-9a-fA-F]{4}|[^])/g, (_m, esc: string) => {
+    if (esc[0] === 'u' && esc.length === 5) return String.fromCharCode(parseInt(esc.slice(1), 16));
+    if (esc === 'n') return '\n';
+    if (esc === 't') return '\t';
+    if (esc === 'r') return '\r';
+    return esc;
+  });
+}
+
 export async function POST(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'journal-events-write', { limit: 20, windowSec: 60 });
   if (blocked) return blocked;
@@ -158,8 +177,8 @@ export async function POST(request: Request): Promise<Response> {
     for (const e of events) {
       const id = sanitizeString(e.id, 64);
       const eventDate = sanitizeString(e.eventDate, 10);
-      const title = sanitizeString(e.title, 120);
-      const question = sanitizeString(e.question, 160);
+      const title = decodeEscapes(sanitizeString(e.title, 120));
+      const question = decodeEscapes(sanitizeString(e.question, 160));
       if (!id || !eventDate || !title || !question) continue;
       await db.execute(sql`
         INSERT INTO investor_journal_events (
@@ -169,12 +188,12 @@ export async function POST(request: Request): Promise<Response> {
         ) VALUES (
           ${id}, ${eventDate}, ${e.country === 'il' ? 'il' : 'us'},
           ${['earnings', 'rate', 'cpi', 'jobs'].includes(e.kind ?? '') ? e.kind : 'other'},
-          ${sanitizeString(e.emoji, 8) ?? '📊'}, ${title}, ${sanitizeString(e.teaser, 200) ?? ''},
-          ${sanitizeString(e.explainWhat, 400) ?? ''}, ${sanitizeString(e.explainWhyMe, 400) ?? ''},
-          ${sanitizeString(e.explainMarket, 400) ?? ''},
-          ${question}, ${sanitizeString(e.optionA, 60) ?? ''}, ${sanitizeString(e.optionB, 60) ?? ''},
+          ${decodeEscapes(sanitizeString(e.emoji, 8)) ?? '📊'}, ${title}, ${decodeEscapes(sanitizeString(e.teaser, 200)) ?? ''},
+          ${decodeEscapes(sanitizeString(e.explainWhat, 400)) ?? ''}, ${decodeEscapes(sanitizeString(e.explainWhyMe, 400)) ?? ''},
+          ${decodeEscapes(sanitizeString(e.explainMarket, 400)) ?? ''},
+          ${question}, ${decodeEscapes(sanitizeString(e.optionA, 60)) ?? ''}, ${decodeEscapes(sanitizeString(e.optionB, 60)) ?? ''},
           ${e.outcome === 0 || e.outcome === 1 ? e.outcome : null},
-          ${sanitizeString(e.outcomeNote ?? null, 200)}, ${e.hidden === true}, ${typeof e.sort === 'number' ? e.sort : 0},
+          ${decodeEscapes(sanitizeString(e.outcomeNote ?? null, 200))}, ${e.hidden === true}, ${typeof e.sort === 'number' ? e.sort : 0},
           now()
         )
         ON CONFLICT (id) DO UPDATE SET

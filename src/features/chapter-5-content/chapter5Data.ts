@@ -1,4 +1,5 @@
 import { Chapter } from '../chapter-1-content/types';
+import { MOD_5_31_RENTER } from './mod-5-31-renter';
 
 export const chapter5Data: Chapter = {
   id: 'chapter-5',
@@ -1244,5 +1245,7 @@ export const chapter5Data: Chapter = {
     },
     // mod-5-31 (תיק IRA module + "בונה ה-IRA" simulator) removed — content
     // was not accurate enough for the Israeli audience.
+    // Israel-2026 trends pass (Yoav 18.9.26) — bonusModule.
+    MOD_5_31_RENTER,
   ],
 };

@@ -28,6 +28,21 @@ function getMmkv(): MMKVInstance | null {
   }
 }
 
+/**
+ * Synchronous read for the FIRST render of a cold open (e.g. the economy
+ * snapshot that stops the header's flash-of-zero). MMKV-only: returns null on
+ * web / when MMKV is unavailable — callers must fall back to the async path.
+ */
+export function readStringSync(name: string): string | null {
+  const m = getMmkv();
+  if (!m) return null;
+  try {
+    return m.getString(name) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const zustandStorage: StateStorage = {
   getItem: async (name) => {
     const m = getMmkv();

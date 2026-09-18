@@ -22,7 +22,7 @@ const TOOL = findTool('rent-vs-buy')!;
 
 // Defaults — Israeli 2026 norms. Sources:
 //   home appreciation 3.5%/yr → assetCatalog.ts real_estate default (blended national CAGR)
-//   mortgage 5.0% → prime 5.0% after the Sept-2026 BoI cut (ynet 2026-09)
+//   mortgage 4.75% → prime after the 1.9.2026 BoI cut to 3.25% (FACTS-2026-09 §6)
 //   alt. return 8% → assetCatalog equity default
 //   rent growth 3%/yr → CBS Aug-2026: renewals +2.6%, new tenants +4.4%
 //   purchase costs 2% → lawyer + broker + fees (single-home purchase tax ≈ 0 below the first bracket)
@@ -30,7 +30,7 @@ const DEFAULTS = {
   price: 1_800_000,
   rent: 5_500,
   downPct: 25,
-  mortgageRate: 5.0,
+  mortgageRate: 4.75,
   years: 10,
   homeGrowth: 3.5,
   altReturn: 8,

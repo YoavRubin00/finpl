@@ -40,8 +40,6 @@ interface TabConfig {
   label: string;
   Icon: LucideIcon;
   badge?: number;
-  /** Show "חדש" badge to draw attention on first launches. */
-  isNew?: boolean;
 }
 
 // Visual L→R ordering in RTL: chat | friends | למידה (center) | השקעות | כלים
@@ -49,7 +47,7 @@ interface TabConfig {
 // The "learn" key (feed) was dropped and replaced by "tools" — the Financial
 // Tools hub is the new entry point on the right.
 const TABS: TabConfig[] = [
-  { key: "tools",       label: "כלים",    Icon: Wrench, isNew: true },
+  { key: "tools",       label: "כלים",    Icon: Wrench },
   { key: "investments", label: "השקעות",  Icon: TrendingUp },
   { key: "index",       label: "למידה",   Icon: BookOpen },
   { key: "friends",     label: "חברים",   Icon: Users },
@@ -59,7 +57,9 @@ const TABS: TabConfig[] = [
 // Unified accent color across all tabs. Active tab pops cyan; inactive tabs
 // stay a quiet slate gray so the bar doesn't shout. Default state = silent.
 const TAB_ACCENT = "#0891b2"; // cyan, only on the focused tab
-const TAB_INACTIVE = "#94a3b8"; // slate-400, quiet
+// slate-500: 4.8:1 on white. Was slate-400 (#94a3b8, 3.0:1) — the 11px
+// inactive labels failed WCAG AA / תקנה 5568 (UX-32, Yoav 18.9.26).
+const TAB_INACTIVE = "#64748b";
 const TAB_COLORS: Record<string, string> = {
   tools:       TAB_ACCENT,
   index:       TAB_ACCENT,
@@ -223,6 +223,8 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
           focused && styles.tabLabelFocused,
           walkthroughLocked && { opacity: 0.2 },
         ]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.2}
       >
         {label}
       </Text>

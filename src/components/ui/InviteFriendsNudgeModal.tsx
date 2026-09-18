@@ -129,6 +129,11 @@ export function InviteFriendsNudgeModal() {
       if (!s.streakShownThisSession && sessionAge < MIN_SESSION_MS + STREAK_WAIT_GRACE_MS) return;
       // Defer if Bridge fired today (post-rehydrate check via store)
       if (s.lastBridgeNudgeDateISO === today) return;
+      // Global uninvited-popup budget (Yoav 18.9): if another auto popup
+      // already took this session's single slot, stay quiet and let the
+      // 3-day cadence bring us back — never stack a second interrupt.
+      if (!s.canTakePopupSlot('auto')) return;
+      s.takePopupSlot('auto');
       shownRef.current = true;
       setVisible(true);
       stopPolling();

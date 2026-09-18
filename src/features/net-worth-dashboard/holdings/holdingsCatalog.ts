@@ -20,8 +20,10 @@ export interface Holding {
   nameHe: string;
   /** Share/coin count — fractional allowed (0.5 of NVDA is real life). */
   units: number;
-  /** Average buy price in USD. Optional — without it we skip P&L, no guilt. */
-  avgBuyPriceUsd?: number;
+  /** Average buy price in the DISPLAY currency of the instrument: shekels for
+   *  TASE (.TA) tickers, USD for everything else. Optional — without it we
+   *  skip P&L, no guilt. (Was `avgBuyPriceUsd` in store v1 — migrated.) */
+  avgBuyPrice?: number;
   createdAt: number;
 }
 

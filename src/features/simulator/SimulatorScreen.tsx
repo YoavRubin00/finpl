@@ -7,6 +7,7 @@ import {
   PanResponder,
   Dimensions,
   Pressable,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TrendingUp } from "lucide-react-native";
@@ -237,7 +238,14 @@ export function SimulatorScreen() {
           <BackButton onPress={goBack} />
         </View>
 
-        <View style={{ flex: 1, paddingHorizontal: 20, justifyContent: "space-between" }}>
+        {/* UX-02 (Yoav 18.9.26): ~580px of content in a non-scrolling
+            space-between column clipped the sliders/CTA on SE-height screens
+            and at any Dynamic-Type size. flexGrow keeps the tall-screen
+            layout identical; short screens now scroll. */}
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, justifyContent: "space-between" }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Finn + Title */}
           <View style={{ alignItems: "center", marginTop: 4, marginBottom: 6 }}>
             <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 70, height: 70 }} contentFit="contain" />
@@ -289,7 +297,7 @@ export function SimulatorScreen() {
             <Text style={s.continueBtnText}>הבא</Text>
           </Pressable>
           <View style={{ height: 8 }} />
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
