@@ -88,6 +88,28 @@ export const DAILY_TOOLS: readonly DailyTool[] = [
     pushTitle: 'אולי מגיע לך החזר מס',
     pushBody: 'הרבה אנשים לא יודעים שמגיע להם כסף בחזרה. תבדוק.',
   },
+  // ── Israel-2026 trends pass (Yoav 18.9.26) ──
+  {
+    toolKey: 'miluim',
+    route: '/miluim-calculator',
+    title: 'עשית מילואים? יש לך כסף שלא מימשת',
+    pushTitle: 'הכסף של המילואים',
+    pushBody: 'נקודות זיכוי, מענקים והטבות על הימים ששירתת. בדיקה של דקה.',
+  },
+  {
+    toolKey: 'rent-vs-buy',
+    route: '/rent-vs-buy-calculator',
+    title: 'לשכור או לקנות? המספרים מחליטים',
+    pushTitle: 'לשכור או לקנות',
+    pushBody: 'אחרי עשר שנים, למי יש יותר כסף? תבדוק בדקה.',
+  },
+  {
+    toolKey: 'bet-vs-invest',
+    route: '/bet-vs-invest-calculator',
+    title: '100₪ בשבוע: הימור או תעודת סל?',
+    pushTitle: 'הימור מול השקעה',
+    pushBody: 'אותו כסף, שני עתידים. תראה את הפער.',
+  },
 ] as const;
 
 /** Tools hidden from the hub (dilution 11.7) must never be advertised. */
