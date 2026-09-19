@@ -76,6 +76,12 @@ export function ToolsDiscoveryBanner() {
     //    Avoids a flash when the user is just passing through DuoLearnScreen.
     // 2) After 5s, wait for the global banner-cooldown slot (10s gap from any
     //    other banner that just showed). Then mark shown and render.
+    // slotTimer lives in the effect scope: returning its cleanup from INSIDE
+    // the presence callback (as this did) throws the cleanup away, so leaving
+    // the learn map between the two delays still fired setVisible on an
+    // unmounted banner and burned the session's popup slot on a banner nobody
+    // saw (audit 19.9 — ProPromoExpiringBanner was already fixed for this).
+    let slotTimer: ReturnType<typeof setTimeout> | undefined;
     const presenceTimer = setTimeout(() => {
       // If the permission banner is still actively trying to show, let it go
       // first — it's a higher-priority CTA.
@@ -87,7 +93,7 @@ export function ToolsDiscoveryBanner() {
       const seqDelay = Math.max(0, useNudgeQueueStore.getState().popupBusyUntil - Date.now());
       const slotDelay = Math.max(bannerSlot, seqDelay);
 
-      const slotTimer = setTimeout(() => {
+      slotTimer = setTimeout(() => {
         // Uninvited-popup budget (Yoav 18.9) — discovery is the first thing
         // to give up its turn when the session already had its one interrupt.
         if (!useNudgeQueueStore.getState().canTakePopupSlot('auto')) return;
@@ -102,11 +108,12 @@ export function ToolsDiscoveryBanner() {
           });
         }
       }, slotDelay);
-
-      return () => clearTimeout(slotTimer);
     }, PRESENCE_DELAY_MS);
 
-    return () => clearTimeout(presenceTimer);
+    return () => {
+      clearTimeout(presenceTimer);
+      if (slotTimer) clearTimeout(slotTimer);
+    };
   }, [eligible, permissionBannerActive, suggestion.toolKey]);
 
   const handleOpen = () => {

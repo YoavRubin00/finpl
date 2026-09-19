@@ -141,11 +141,21 @@ export const useNudgeQueueStore = create<NudgeState>()(
         return usedToday < MAX_AUTO_POPUPS_PER_DAY;
       },
 
-      // EVERY full-screen interrupt spends the session's stage — an earned
-      // ceremony included. That is the whole point of the budget: after the
-      // one moment the session gets, nothing else may pile on top of it.
-      takePopupSlot: (_kind: PopupKind = 'auto') => {
+      // Every interrupt reserves the GAP, but only an UNINVITED ('auto') popup
+      // spends the budget.
+      //
+      // The first cut of this counted 'earned' too, on the logic of "nothing
+      // stacks on a ceremony". The 19.9 audit showed what that actually does:
+      // a chest is 'earned' and fires on the core loop, so the first chest of
+      // the session burned the session slot and two chests burned the whole
+      // DAY — killing the Pro-expiry warning, the market-unlock takeover and
+      // the tools banner until Israeli midnight, every day. Yoav asked to thin
+      // out the uninvited popups, not to let the reward loop silence the
+      // product. So: ceremonies hold the stage for POPUP_GAP_MS (nothing lands
+      // ON them), and the budget applies to what the user never asked for.
+      takePopupSlot: (kind: PopupKind = 'auto') => {
         set((s) => {
+          if (kind === 'earned') return { popupBusyUntil: Date.now() + POPUP_GAP_MS };
           const today = getIsraelDateISO();
           const usedToday = s.lastAutoPopupDateKey === today ? (s.autoPopupsToday ?? 0) : 0;
           return {

@@ -1,5 +1,5 @@
 import { Chapter } from '../chapter-1-content/types';
-import { MOD_5_31_RENTER } from './mod-5-31-renter';
+import { MOD_5_32_RENTER } from './mod-5-32-renter';
 
 export const chapter5Data: Chapter = {
   id: 'chapter-5',
@@ -1244,8 +1244,11 @@ export const chapter5Data: Chapter = {
       interModuleGame: 'fomo-killer',
     },
     // mod-5-31 (תיק IRA module + "בונה ה-IRA" simulator) removed — content
-    // was not accurate enough for the Israeli audience.
+    // was not accurate enough for the Israeli audience. Its id is BURNED: every
+    // user who finished it still carries 'mod-5-31' in useCompletedModulesStore,
+    // so reusing it would show the new module as already-completed (and mix the
+    // analytics). The renter module therefore takes mod-5-32 (audit 19.9).
     // Israel-2026 trends pass (Yoav 18.9.26) — bonusModule.
-    MOD_5_31_RENTER,
+    MOD_5_32_RENTER,
   ],
 };

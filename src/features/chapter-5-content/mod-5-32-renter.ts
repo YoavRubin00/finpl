@@ -1,7 +1,7 @@
 import type { Module } from '../chapter-1-content/types';
 
 /**
- * mod-5-31 — שוכר חכם. Yoav 18.9.2026 (Israel-2026 trends pass): the user
+ * mod-5-32 — שוכר חכם. Yoav 18.9.2026 (Israel-2026 trends pass): the user
  * base rents, it doesn't buy — and new-tenant rents rose 4.4% in a year.
  *
  * Bonus module (added to a shipped chapter → never re-locks anything).
@@ -14,8 +14,8 @@ import type { Module } from '../chapter-1-content/types';
  *  [S4] Average 3-room rent, March 2026 (secondary): Tel Aviv ~₪6,718 · Haifa ~₪3,450 · Beer Sheva ~₪3,200
  * NOT verified (deliberately not stated as fact): landlord insurance, "30 days" repair deadline, CPI-linking rules, structural repairs.
  */
-export const MOD_5_31_RENTER: Module = {
-  id: 'mod-5-31',
+export const MOD_5_32_RENTER: Module = {
+  id: 'mod-5-32',
   bonusModule: true,
   title: 'שוכר חכם',
   videoHook:

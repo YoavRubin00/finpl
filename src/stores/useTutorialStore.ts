@@ -278,6 +278,13 @@ export const useTutorialStore = create<TutorialState>()(
         //      the user is freed. A healthy user resolves on launch #1.
         const s = useTutorialStore.getState();
         const patch: Partial<TutorialState> = { _hydrated: true };
+        // firstChestRewardShown is NEW (19.9). Existing users have no value for
+        // it in their persisted JSON, so the shallow merge leaves it false while
+        // firstChestOpened has been true for months — and the map would fire a
+        // "+100 coins" flight at every veteran on their first launch after this
+        // OTA, with the balance never moving. Anyone who already opened the
+        // chest has, by definition, already seen its reward.
+        if (s.firstChestOpened && !s.firstChestRewardShown) patch.firstChestRewardShown = true;
         if (s.hasSeenAppWalkthrough) {
           if (s.walkthroughActiveScreen !== null || s.walkthroughGlowTab !== null || s.appWalkthroughStep !== -1 || s.walkthroughTriggered) {
             patch.appWalkthroughStep = -1;

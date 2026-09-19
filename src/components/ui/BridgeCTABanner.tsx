@@ -85,9 +85,10 @@ export function BridgeCTABanner() {
       const seqDelay = Math.max(0, useNudgeQueueStore.getState().popupBusyUntil - Date.now());
       const slotDelay = Math.max(bannerSlot, seqDelay);
       const slotTimer = setTimeout(() => {
+        if (!useNudgeQueueStore.getState().canTakePopupSlot('auto')) return;
         setVisible(true);
         useBannerCooldownStore.getState().markShown();
-        useNudgeQueueStore.getState().takePopupSlot();
+        useNudgeQueueStore.getState().takePopupSlot('auto');
         if (!trackedShownRef.current) {
           trackedShownRef.current = true;
           captureEvent("bridge_cta_banner_shown", { source: "home", variant_index: variantIndex });

@@ -1307,7 +1307,18 @@ function QuizCard({
         </View>
       </View>
 
-      {microXp ? <FlyingRewards type="xp" amount={5} onComplete={() => setMicroXp(false)} /> : null}
+      {/* Same top-level absoluteFill wrapper every other FlyingRewards call site
+          uses (see flyingXp/flyingCoins below). FlyingRewards positions its
+          particles in SCREEN coordinates (endY=65 targets the header's XP ring),
+          so mounting it as a bare child of the quiz card made them start from
+          55% of the CARD and land 65px below the CARD's top edge — on short
+          screens the start point fell past the card's bottom and got clipped
+          (audit 19.9). */}
+      {microXp ? (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} pointerEvents="none">
+          <FlyingRewards type="xp" amount={5} onComplete={() => setMicroXp(false)} />
+        </View>
+      ) : null}
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 }}

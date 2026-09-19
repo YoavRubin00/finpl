@@ -13,11 +13,15 @@ import { CalculateButton, FinTip, LegalDisclaimer, MoneySlider, SectionLabel } f
 
 const TOOL = findTool('bet-vs-invest')!;
 
-// Return-to-player of Israeli sports betting (ווינר): the regulator caps the
-// payout ratio; the long-run share of stakes paid back to players is ~70%.
-// ⚠️ pending חוקרון confirmation against המועצה להסדר ההימורים בספורט reports.
-//  // source: docs/content/FACTS-2026-09-trends.md §5
-const BET_RTP = 0.70;
+// Return-to-player of Israeli sports betting (ווינר) — the long-run share of
+// stakes paid back to players. Our own fact sheet
+// (docs/content/FACTS-2026-09-trends.md §5) puts it at ~60-65% off a 2019
+// source and flags it "verify before publishing", so 19.9 we moved from an
+// unsourced 0.70 down to the documented 0.65 and phrase it as an ESTIMATE in
+// the UI ("לפי הערכות"). Every user-facing use of this number must stay
+// hedged until המועצה להסדר ההימורים בספורט confirms a current figure — and
+// it must never go out in a share message as a hard number.
+const BET_RTP = 0.65;
 // Long-run equity return used across the app (assetCatalog snp500 default).
 const MARKET_RETURN = 0.10;
 
@@ -83,7 +87,7 @@ export function BetVsInvestCalculator(): React.ReactElement {
             <Text style={styles.heroValue}>{formatShekel(gap)}</Text>
             <View style={styles.compareRow}>
               <Tile label="הימורים — מה שנשאר בממוצע" value={result.betExpected} tone="bad" />
-              <Tile label="תעודת סל — שווי התיק" value={result.investValue} tone="good" />
+              <Tile label="תעודת סל — שווי משוער" value={result.investValue} tone="good" />
             </View>
             <Text style={styles.heroSub}>
               סה"כ שהכנסתם: {formatShekel(result.totalStaked)} · הבית לקח: {formatShekel(result.burned)}
@@ -109,7 +113,7 @@ export function BetVsInvestCalculator(): React.ReactElement {
         <FinTip
           kind="warning"
           text="הבית תמיד מנצח — זה לא מזל, זה מתמטיקה."
-          subtext={`על כל ₪100 שמהמרים, בממוצע חוזרים כ-₪${Math.round(BET_RTP * 100)}. הזכייה הגדולה של השכן היא הסטטיסטיקה, לא היוצא מן הכלל.`}
+          subtext={`לפי הערכות, על כל ₪100 שמהמרים חוזרים בממוצע כ-₪${Math.round(BET_RTP * 100)}. הזכייה הגדולה של השכן היא הסטטיסטיקה, לא היוצא מן הכלל.`}
         />
         <FinTip
           kind="grow"
@@ -131,7 +135,11 @@ export function BetVsInvestCalculator(): React.ReactElement {
           iconLeft={<Share2 size={18} color="#ffffff" strokeWidth={2.6} />}
           onPress={() => {
             Share.share({
-              message: `${formatShekel(committed.weekly)} בשבוע, ${committed.years} שנים.\n\nהימורים: נשאר בממוצע ${formatShekel(result.betExpected)}\nתעודת סל: ${formatShekel(result.investValue)}\n\nהפער: ${formatShekel(gap)}. בדקתי ב-FinPlay`,
+              message: `${formatShekel(committed.weekly)} בשבוע, ${committed.years} שנים — שתי דרכים.
+
+בהימורים רוב הכסף לא חוזר. בתעודת סל הוא עובד בינתיים.
+
+שווה לעשות את החשבון ב-FinPlay`,
             }).catch(() => { /* dismissed */ });
           }}
         />

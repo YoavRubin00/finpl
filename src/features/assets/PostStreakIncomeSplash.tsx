@@ -66,15 +66,15 @@ export function PostStreakIncomeSplash() {
         // it can appear on the next cold start.
         const nudge = useNudgeQueueStore.getState();
         let waited = 0;
-        while (!useNudgeQueueStore.getState().canTakePopupSlot() && waited < 12000) {
+        while (!useNudgeQueueStore.getState().canTakePopupSlot('earned') && waited < 12000) {
           await new Promise((r) => setTimeout(r, 2000));
           if (cancelled) return;
           waited += 2000;
         }
-        if (!useNudgeQueueStore.getState().canTakePopupSlot()) return;
+        if (!useNudgeQueueStore.getState().canTakePopupSlot('earned')) return;
 
         await AsyncStorage.setItem(SHOWN_KEY, today);
-        nudge.takePopupSlot();
+        nudge.takePopupSlot('earned');
 
         setHasAssetsAtShow(currentHasAssets);
 
