@@ -727,7 +727,7 @@ export function PricingScreen() {
                           style={[planStyles.pill, active && planStyles.pillActive]}
                         >
                           {pct > 0 ? (
-                            <View style={planStyles.badge}><Text style={planStyles.badgeText} allowFontScaling={false}>{`הכי משתלם · ${pct}%-`}</Text></View>
+                            <View style={planStyles.badge}><Text style={planStyles.badgeText} allowFontScaling={false}>{`הכי משתלם · חיסכון ${pct}%`}</Text></View>
                           ) : null}
                           <Text style={planStyles.pillTitle} allowFontScaling={false}>{title}</Text>
                           <Text style={planStyles.pillPrice} allowFontScaling={false}>
