@@ -1,0 +1,28 @@
+# OTA to the `production` update branch, bundled on EAS servers.
+#
+# Why a workflow and not `eas update` on the laptop (Yoav 11.10.26): Windows
+# Smart App Control (enforce mode) blocks node_modules/hermes-compiler/.../
+# hermesc.exe, so every local export dies with "spawn UNKNOWN" at the Hermes
+# step. The cloud runner has its own hermesc. EXPO_PUBLIC_* come from the EAS
+# `production` environment (aligned 19.9 — see docs/DECISION-LOG), never from
+# a local .env file.
+#
+# Run from a clean checkout:
+#   eas workflow:run .eas/workflows/ota-production.yml --non-interactive --wait -F message="..."
+name: OTA production
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        type: string
+        default: "OTA"
+
+jobs:
+  update:
+    name: Publish update to production
+    type: update
+    environment: production
+    params:
+      branch: production
+      message: ${{ inputs.message }}
