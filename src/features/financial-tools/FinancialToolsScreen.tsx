@@ -26,6 +26,14 @@ import { describeProfileFreshness } from './financialProfile';
  * adding a new tool is a one-line registry change.
  */
 
+const TOOL_POPULARITY: readonly string[] = [
+  'compound', 'fire', 'rent-vs-buy', 'analyst', 'payslip', 'miluim', 'breaking-news', 'bet-vs-invest', 'journal',
+];
+function rank(key: string): number {
+  const i = TOOL_POPULARITY.indexOf(key);
+  return i === -1 ? TOOL_POPULARITY.length : i;
+}
+
 export function FinancialToolsScreen(): React.ReactElement {
   // Screen renders inside (tabs), which already reserves the status-bar
   // safe-area above GlobalWealthHeader + BoostBanner. Only a small gap
@@ -33,8 +41,11 @@ export function FinancialToolsScreen(): React.ReactElement {
   // TOOL DILUTION + FLAT HUB (Yoav 11.7): hidden tools filtered out (9→5
   // sharp tools), and the two collapsible accordions replaced by one always-
   // open grid — every tool visible on the main screen, no tap-to-reveal.
+  // Ordered by what people actually open (PostHog tool_opened since 18.9,
+  // Yoav 11.10.26): compound 7 users, fire 6, rent-vs-buy 5, analyst 4,
+  // payslip 3, miluim 2 … Unknown keys keep registry order at the end.
   const visibleTools = useMemo(
-    () => TOOLS_REGISTRY.filter((t) => !t.hidden),
+    () => TOOLS_REGISTRY.filter((t) => !t.hidden).slice().sort((x, y) => rank(x.key) - rank(y.key)),
     [],
   );
   const investorTools = useMemo(

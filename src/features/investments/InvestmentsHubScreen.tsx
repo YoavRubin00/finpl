@@ -340,7 +340,7 @@ export function InvestmentsHubScreen() {
             reachable only from the Tools tab. Fourth card → dashboard. */}
         <Animated.View style={holdingsStyle}>
           <Pressable
-            onPress={() => { tapHaptic(); router.push("/net-worth-dashboard" as never); }}
+            onPress={() => { tapHaptic(); router.push((holdingsCount > 0 ? "/net-worth-dashboard" : "/net-worth-dashboard?add=1") as never); }}
             style={s.navCard}
             accessibilityRole="button"
             accessibilityLabel={

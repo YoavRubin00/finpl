@@ -58,6 +58,7 @@ export const BANNER_PRIORITY = {
   noFreezeUpsell: 80,
   toolsDiscovery: 70,
   proPromoExpiring: 60,
+  thirdChestPro: 50,
 } as const;
 
 export function useBannerSlot(id: string, wants: boolean, priority: number): boolean {

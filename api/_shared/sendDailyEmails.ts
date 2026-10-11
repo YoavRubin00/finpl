@@ -21,6 +21,14 @@ const EXPERIMENT_ID = 'daily_email_variant';
 
 /** Each user receives at most one re-engagement email every N days. */
 const EMAIL_COOLDOWN_DAYS = 3;
+/** Deliverability guard (Yoav 11.10.26): opens collapsed from ~35% to ~2% on
+ *  3.10.2026 across EVERY variant on the same day while sends rose 240→270 —
+ *  inbox providers junk-foldering us, not a copy problem. ~250 emails a day to
+ *  a mostly long-dormant list, every 3 days, forever, burns the domain. Two
+ *  caps: only users active within MAX_DORMANT_DAYS are eligible, and the drip
+ *  stops after MAX_DRIP_EMAILS unanswered sends until the user comes back. */
+const MAX_DORMANT_DAYS = 45;
+const MAX_DRIP_EMAILS = 6;
 
 export interface DailyEmailResult {
   sent: number;
@@ -103,6 +111,9 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
   const cooldownCutoff = new Date(now);
   cooldownCutoff.setDate(cooldownCutoff.getDate() - EMAIL_COOLDOWN_DAYS);
   const cooldownCutoffIso = cooldownCutoff.toISOString();
+  const dormantCutoff = new Date(now);
+  dormantCutoff.setDate(dormantCutoff.getDate() - MAX_DORMANT_DAYS);
+  const dormantCutoffDate = dormantCutoff.toISOString().slice(0, 10);
 
   // Fetch users who:
   //   1. Have an email address
@@ -119,6 +130,8 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       longestStreak: userProfiles.longestStreak,
       createdAt: userProfiles.createdAt,
       dailyEmailSeq: userProfiles.dailyEmailSeq,
+      lastActiveDate: userProfiles.lastActiveDate,
+      dailyEmailSentAt: userProfiles.dailyEmailSentAt,
     })
     .from(userProfiles)
     .where(
@@ -134,6 +147,9 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         // string-slice intended.
         sql`(${userProfiles.lastActiveDate} <= ${inactiveCutoffDate} OR ((${userProfiles.createdAt})::date = ${yesterdayDate}::date AND ${userProfiles.lastActiveDate} <= ${yesterdayDate}))`,
         sql`(${userProfiles.dailyEmailSentAt} IS NULL OR ${userProfiles.dailyEmailSentAt} < ${cooldownCutoffIso})`,
+        // Deliverability caps (11.10.26) — see MAX_DORMANT_DAYS / MAX_DRIP_EMAILS.
+        sql`${userProfiles.lastActiveDate} >= ${dormantCutoffDate}`,
+        sql`(${userProfiles.dailyEmailSeq} < ${MAX_DRIP_EMAILS} OR ${userProfiles.dailyEmailSentAt} IS NULL OR ${userProfiles.lastActiveDate} > (${userProfiles.dailyEmailSentAt})::date)`,
       ),
     );
 
@@ -195,7 +211,11 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       // the bandit — so "תזכורת מספר שלוש" arrives as their real 3rd email. The
       // D1 curiosity template still owns the day-1 cohort (a brand-new lapsed
       // user), and does not consume a sequence slot.
-      const seq = user.dailyEmailSeq ?? 0;
+      // A user who came back AFTER the last email restarts the drip from its
+      // first position (that's also what re-opens the MAX_DRIP_EMAILS cap).
+      const lastSentDay = (user.dailyEmailSentAt ?? '').slice(0, 10);
+      const returnedSinceLastEmail = !!lastSentDay && !!user.lastActiveDate && user.lastActiveDate > lastSentDay;
+      const seq = returnedSinceLastEmail ? 0 : (user.dailyEmailSeq ?? 0);
       const variantId: RetentionVariantId | typeof D1_EMAIL_VARIANT_ID = isD1NewUser
         ? D1_EMAIL_VARIANT_ID
         : retentionVariantForSeq(seq, user.currentStreak ?? 0);
@@ -255,6 +275,13 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         // support). Defaults to support@ so nothing breaks before then.
         replyTo: process.env.EMAIL_REPLY_TO ?? 'support@finplay.me',
         to: user.email,
+        // RFC 8058 one-click unsubscribe (11.10.26): Gmail/Yahoo bulk-sender
+        // rules want it, and a visible unsubscribe is what stops the "report
+        // spam" clicks that killed our open rate on 3.10.
+        headers: {
+          'List-Unsubscribe': `<${unsubscribeUrl}>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        },
         subject,
         html,
         // Plain-text alternative (deliverability; undefined on the legacy fallback).
@@ -312,7 +339,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
     failed,
     total: users.length,
     date: todayDate,
-    targeting: `inactive since ${inactiveCutoffDate} (D1 signups: ${yesterdayDate}), cooldown=${EMAIL_COOLDOWN_DAYS}d`,
+    targeting: `inactive since ${inactiveCutoffDate} (D1 signups: ${yesterdayDate}), cooldown=${EMAIL_COOLDOWN_DAYS}d, dormant<=${MAX_DORMANT_DAYS}d, drip<=${MAX_DRIP_EMAILS}`,
   };
 }
 

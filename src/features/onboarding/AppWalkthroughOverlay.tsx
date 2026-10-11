@@ -43,11 +43,15 @@ interface WalkthroughStep {
   isLast?: boolean;
 }
 
+// 3 steps, not 8 (Yoav 11.10.26). PostHog 30d: 75 of 123 users skipped the
+// tour (34 of them on step 0) and only 30 reached step 6 — people want to
+// play, not to be shown around. Hello → the learning path → the tools, then
+// straight into the first lesson. The other tabs introduce themselves.
 const STEPS: WalkthroughStep[] = [
   {
     title: "היי! אני קפטן שארק",
     emoji: "",
-    message: "אני אלווה אתכם לאורך כל הדרך.\nבואו נעשה סיור קצר באפליקציה!",
+    message: "אני אלווה אתכם לאורך כל הדרך.\nסיור של חצי דקה, ומתחילים!",
     navigateTo: null,
     ctaLabel: "יאללה, קדימה!",
     screenSignal: null,
@@ -58,66 +62,19 @@ const STEPS: WalkthroughStep[] = [
     emoji: "📚",
     message: "כאן מסלול הלמידה שלכם. שיעורים, חידונים וסימולציות שיהפכו אתכם למומחים פיננסיים.",
     navigateTo: "/(tabs)/index",
-    ctaLabel: "מה נלמד באפליקציה?",
+    ctaLabel: "עוד רגע ומתחילים",
     screenSignal: "learn",
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-1-NaswjWGVR7sUYk9zEIq52y2EGFxnue.mp3",
-  },
-  {
-    title: "מה נלמד באפליקציה?",
-    emoji: "🎓",
-    message: "6 פרקים, מאפס ועד מומחה. כל מה שצריך כדי להבין את עולם הכסף. גללו למטה ותראו!",
-    navigateTo: "/(tabs)/index",
-    ctaLabel: "עכשיו לחברים",
-    screenSignal: "lesson-preview",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-2-pdqXZwiv2qVntQy0hzWaQnkaj6cPbV.mp3",
-  },
-  {
-    title: "החברים שלכם",
-    emoji: "🤝",
-    message: "כאן העולם החברתי שלכם. ליגת פנטזי, חכמת המונים, חדרי מסחר וייעוץ אנונימי. כי ללמוד על כסף כיף יותר ביחד!",
-    navigateTo: "/(tabs)/friends",
-    ctaLabel: "עכשיו לכלים",
-    screenSignal: "friends",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-8-Ife58cmIVoQ16t28LPooTXEwlU9dVJ.mp3",
   },
   {
     title: "הכלים הפיננסיים",
     emoji: "🛠️",
     message: "מחשבונים, אנליסט מניות, ניתוח תלוש שכר ועוד. כל הכלים שצריך כדי לנהל את הכסף נכון, ישר בכף יד.",
     navigateTo: "/(tabs)/tools",
-    ctaLabel: "המשך",
+    ctaLabel: "לשיעור הראשון!",
     screenSignal: "tools",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-lv1H3VoC9p0JS9tjD8Hq7ehQGCP1jR.mp3",
-  },
-  // Chat tab navigation: ChatScreen suppresses the chat-style picker while
-  // `walkthroughActiveScreen === 'chat'` so the picker doesn't race this overlay.
-  {
-    title: "הצ'אט של שארק",
-    emoji: "💬",
-    message: "כאן תוכלו לדבר על כל מה שקשור לכסף. שארק תמיד פה לשאלות והסברים.",
-    navigateTo: "/(tabs)/chat",
-    ctaLabel: "לחנות",
-    screenSignal: "chat",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-5-izvyJZVophx4OdIJ5P7pInn0trmiD5.mp3",
-  },
-  {
-    title: "החנות",
-    emoji: "🏪",
-    message: "כאן תוכלו להשתמש במטבעות הזהב שצברתם. אייטמים, בוסטרים ועוד. מרוויחים זהב דרך למידה!",
-    navigateTo: "/(tabs)/shop",
-    ctaLabel: "ומה עם הגשר?",
-    screenSignal: "shop",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-6-AChQLzDxn8DEVzZQ5rx2cRnfQCpibW.mp3",
-  },
-  {
-    title: "הגשר",
-    emoji: "🌉",
-    message: "הידע שלכם שווה כסף אמיתי! בגשר תמירו את המטבעות שצברתם להטבות ומוצרים פיננסיים בעולם האמיתי.",
-    navigateTo: "/bridge",
-    ctaLabel: "המשך",
-    screenSignal: "bridge",
     isLast: true,
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-7-7rr5fmPQ7ZVwKa6BczIDjwsShoKQL0.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-lv1H3VoC9p0JS9tjD8Hq7ehQGCP1jR.mp3",
   },
 ];
 
@@ -458,7 +415,7 @@ export function AppWalkthroughOverlay() {
               {stepConfig.message}
             </Animated.Text>
 
-            {/* Dots, smaller for 7 steps */}
+            {/* Dots (3 steps) */}
             <View style={s.dotsRow} accessibilityLabel={`שלב ${step + 1} מתוך ${stepsWithLast.length}`} accessibilityRole="text">
               {stepsWithLast.map((_, i) => (
                 <View key={i} style={[s.dot, i === step && s.dotActive]} />

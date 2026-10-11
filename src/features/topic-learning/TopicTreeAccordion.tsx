@@ -873,7 +873,16 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             }
             // Guests get the signup gate (#8, skipped for mod-0-1), registered
             // users any pending staged profile question (#6). Mutually exclusive.
-            if (isGuest) { maybeShowSignupGate(); } else if (!maybeShowProfileQuestion() && !maybeShowToolNudge()) { maybeShowRatePrompt(); }
+            // Which post-chest surface (if any) is about to open — decides
+            // whether we may jump straight into the next chip below.
+            let popupShown = false;
+            if (isGuest) {
+              popupShown = module.id !== 'mod-0-1b' && !useTutorialStore.getState().moduleEndGateShown[module.id];
+              maybeShowSignupGate();
+            } else {
+              popupShown = maybeShowProfileQuestion() || maybeShowToolNudge();
+              if (!popupShown) { popupShown = shouldShowRatePrompt(); maybeShowRatePrompt(); }
+            }
             // The 70% chest keeps the accordion open so the user can
             // finish the remaining 30% — but when the chest fired at 100%
             // (e.g. a continuous run completed every chip before returning)
@@ -883,6 +892,18 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
               completeWithDeckMoment(() => onModuleCompleted?.());
             } else {
               onContinueAfterChest?.();
+              // Shorter, more immediate (Yoav 11.10.26): "המשך" on the 70%
+              // chest opens the NEXT chip right away instead of dropping the
+              // user back on the map. PostHog 30d: 34 of 73 mod-0-1 learners
+              // stopped at exactly 4/7 chips — the chest was an exit, not a
+              // continue. The chip runs with returnTo=topic-tree, so the
+              // continuous flow carries the last 30% to the 100% chest. Only
+              // when no post-chest modal is about to open on the map.
+              const next = summary.nextTopic;
+              if (!popupShown && next && next.kind !== 'carousel') {
+                try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'continue' } }); } catch { /* non-fatal */ }
+                onTopicSelected(next);
+              }
             }
           }}
           // Hardware back / system dismiss: close WITHOUT chest_cta_tapped —

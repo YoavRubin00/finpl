@@ -131,22 +131,37 @@ interface FeatureRow {
 //  - "פריטי פרימיום מהחנות" — cosmetic, weak conversion driver
 // Live shark voice call ("סיכום שיעור לייב") — added 2026-06-23 now that it
 // ships: 1 free trial for everyone, unlimited (all modules) on Pro.
+// Order = what the data says users feel first (Yoav 11.10.26): energy is the
+// daily friction (energy_spent: 83 users/30d), then the two universal signals.
 const FEATURES: FeatureRow[] = [
-  // The line Yoav specifically asked for — "Financial Tools, limited vs full"
-  { label: "כלים פיננסיים מתקדמים", free: "גישה מוגבלת", pro: "גישה מלאה" },
-  // AI chat is the real value driver (lifeline + analyst + insights)
-  { label: "צ'אט AI עם שארק", free: "2 הודעות ביום", pro: "ללא הגבלה" },
-  // Live shark voice "lesson summary" call — 1 free trial for all, all modules on Pro.
-  { label: "סיכום שיעור לייב", free: "1 חינם", pro: "כל המודולות" },
-  // Content lock — Pro-only exclusive lessons (was "7 סימולציות פרימיום").
-  { label: "שיעורים בלעדיים", free: false, pro: true },
-  // The most viscerally felt daily friction
   { label: "אנרגיה", free: "20", pro: "אינסוף ♾️" },
-  // Universal Pro signal — everyone understands the value
   { label: "ללא פרסומות", free: false, pro: true },
-  // Progression boost — small but compounds over time
+  { label: "צ'אט AI עם שארק", free: "2 הודעות ביום", pro: "ללא הגבלה" },
+  { label: "כלים פיננסיים מתקדמים", free: "גישה מוגבלת", pro: "גישה מלאה" },
+  { label: "סיכום שיעור לייב", free: "1 חינם", pro: "כל המודולות" },
+  { label: "שיעורים בלעדיים", free: false, pro: true },
   { label: "בוסט XP", free: "x1", pro: "x1.5" },
 ];
+
+/** Monthly ↔ annual plan picker. Renders only when the current offering
+ *  carries BOTH packages — today it has one ($rc_monthly), so the picker is
+ *  dormant until an annual product is added in the stores + RevenueCat. */
+const planStyles = StyleSheet.create({
+  row: { flexDirection: "row-reverse", gap: 10, marginBottom: 12 },
+  pill: { flex: 1, borderRadius: 14, borderWidth: 2, borderColor: "#cbd5e1", paddingVertical: 10, paddingHorizontal: 10, alignItems: "center", backgroundColor: "#ffffff" },
+  pillActive: { borderColor: "#0ea5e9", backgroundColor: "#f0f9ff" },
+  pillTitle: { fontSize: 14, fontWeight: "900", color: "#0f172a", writingDirection: "rtl" },
+  pillPrice: { fontSize: 12.5, fontWeight: "700", color: "#475569", marginTop: 2, writingDirection: "rtl" },
+  badge: { position: "absolute", top: -10, alignSelf: "center", backgroundColor: "#f59e0b", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  badgeText: { fontSize: 10.5, fontWeight: "900", color: "#ffffff" },
+});
+
+function savingPct(monthly: PurchasesPackage, annual: PurchasesPackage): number {
+  const m = monthly.product.price;
+  const a = annual.product.price;
+  if (!m || !a || m <= 0) return 0;
+  return Math.max(0, Math.round((1 - a / (m * 12)) * 100));
+}
 
 // ── Decorative sparkle dots ──────────────────────────────────────────────
 const SPARKLES = [
@@ -269,6 +284,7 @@ export function PricingScreen() {
     if (isMinor) void refreshConsentStatus({ force: true });
   }, [isMinor, refreshConsentStatus]);
   const [activePackage, setActivePackage] = useState<PurchasesPackage | null>(null);
+  const [planPackages, setPlanPackages] = useState<{ monthly: PurchasesPackage | null; annual: PurchasesPackage | null }>({ monthly: null, annual: null });
   // Offering availability state machine. Drives the CTA so the user can NEVER
   // tap into a raw error: 'loading' shows a spinner, 'unavailable' turns the
   // CTA into a silent retry, only 'ready' exposes the real purchase button.
@@ -303,9 +319,13 @@ export function PricingScreen() {
     if (mountedRef.current) setOfferState('loading');
     try {
       const offering = await getOffering();
-      const pkg =
-        offering?.monthly ?? offering?.annual ?? offering?.availablePackages?.[0] ?? null;
+      const monthly = offering?.monthly ?? null;
+      const annual = offering?.annual ?? null;
+      // Annual first when both exist (higher LTV, "הכי משתלם"); the picker
+      // below lets the user flip. Falls back to whatever the offering has.
+      const pkg = annual ?? monthly ?? offering?.availablePackages?.[0] ?? null;
       if (!mountedRef.current) return;
+      setPlanPackages({ monthly, annual });
       if (pkg) {
         setActivePackage(pkg);
         setOfferState('ready');
@@ -689,6 +709,35 @@ export function PricingScreen() {
               <ParentalConsentGate />
             ) : (
               <>
+                {planPackages.monthly && planPackages.annual && !isGuest && offerState === 'ready' ? (
+                  <View style={planStyles.row} accessibilityRole="radiogroup">
+                    {([
+                      { pkg: planPackages.annual, title: "שנתי", best: true },
+                      { pkg: planPackages.monthly, title: "חודשי", best: false },
+                    ] as const).map(({ pkg, title, best }) => {
+                      const active = activePackage?.identifier === pkg.identifier;
+                      const pct = best ? savingPct(planPackages.monthly!, planPackages.annual!) : 0;
+                      return (
+                        <Pressable
+                          key={pkg.identifier}
+                          onPress={() => { setActivePackage(pkg); captureEvent('paywall_plan_selected', { plan: pkg.packageType, source }); }}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: active }}
+                          accessibilityLabel={`${title}, ${pkg.product.priceString}${pct > 0 ? `, חיסכון ${pct}%` : ''}`}
+                          style={[planStyles.pill, active && planStyles.pillActive]}
+                        >
+                          {pct > 0 ? (
+                            <View style={planStyles.badge}><Text style={planStyles.badgeText} allowFontScaling={false}>{`הכי משתלם · ${pct}%-`}</Text></View>
+                          ) : null}
+                          <Text style={planStyles.pillTitle} allowFontScaling={false}>{title}</Text>
+                          <Text style={planStyles.pillPrice} allowFontScaling={false}>
+                            {best ? `${pkg.product.priceString} לשנה` : `${pkg.product.priceString} לחודש`}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
                 <Animated.View style={[styles.ctaWrapper, ctaGlowStyle]}>
                   <Pressable
                     // 'unavailable' → the button silently retries loading the

@@ -90,6 +90,7 @@ import { MarketUnlockGate } from "../market-unlock";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { FirstLessonCTA } from "../onboarding/FirstLessonCTA";
+import { ThirdChestProBanner } from "../subscription/ThirdChestProBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
 import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
 import { DailyNewsChallengeCard } from "../daily-news-challenge/DailyNewsChallengeCard";
@@ -2800,21 +2801,9 @@ export function DuoLearnScreen() {
     if (!current) return;
     const ch = ALL_CHAPTERS.find((c) => c.id === current.chapterId);
     if (!ch) return;
-    // mod-0-1b → non-Pro users still see the pricing screen once before
-    // mod-0-2 becomes reachable (business gate, unchanged). This is the one
-    // case that still navigates away rather than just scrolling the map.
-    if (
-      current.module.id === 'mod-0-1b'
-      && !isPro
-      && !useUsageStore.getState().hasSeenMod01bPaywall
-    ) {
-      setTopicTreeModule(null);
-      useUsageStore.getState().markMod01bPaywallSeen();
-      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b_topic_tree' }); } catch { /* non-fatal */ }
-      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree';
-      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
-      return;
-    }
+    // The forced post-mod-0-1b paywall is gone (Yoav 11.10.26): 34 viewers in
+    // 60 days, 0 purchases, and it taught every new user to tap "ליציאה" on
+    // day one. Pro is offered at intent moments instead (ThirdChestProBanner).
     // Keep the accordion open; land the end-of-module cards near the top with
     // the pearl + next module visible below — same landing as the 70%-chest
     // continue path (Yoav 2026-06-29).
@@ -2931,6 +2920,12 @@ export function DuoLearnScreen() {
       // when the destination supports it. Without this, "JUMP HERE?"
       // dropped the user into the legacy linear flow.
       const target = jumpChapter.modules[0];
+      // Warm the destination's narration BEFORE navigating (Yoav 11.10.26):
+      // the fast-track lands on mod-4-19 with no prefetch, and on iOS every
+      // single starter (13/13 in 30d) had `intro_audio_delayed` → frozen
+      // captions → 8 backed out at the intro. One line, no await.
+      const jumpIntroUri = target?.introAudio?.uri;
+      if (jumpIntroUri && !isBundledIntroAudio(jumpIntroUri)) prefetchModuleAudio(jumpIntroUri);
       if (target && shouldUseTopicTree(target)) {
         const introDone = useTopicProgressStore.getState()
           .isTopicCompleted(`${target.id}:intro`);
@@ -3044,6 +3039,9 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <FirstLessonCTA />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
+      {/* Pro at an INTENT moment (Yoav 11.10.26): a soft banner after the 3rd
+          chest, instead of the forced day-one paywalls (0 conversions). */}
+      {!isWalkthroughActive && <ThirdChestProBanner />}
       {/* Promo-grant visibility (Yoav 2026-07-26): one-time "קיבלתם Pro
           במתנה" modal + the ≤3-days expiry nudge for manual RC promotional
           entitlements. Both self-gate on proSource==='promotional' from

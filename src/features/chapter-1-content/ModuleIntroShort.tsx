@@ -24,6 +24,7 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const STAGE_W = SW - 48;
 
 const PHASE_DURATIONS: [number, number, number] = [4000, 4800, Infinity];
+const AUDIO_WAIT_MAX_MS = 1500;
 
 const LOTTIE_MAP = {
   moneybag: require('../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json'),
@@ -60,6 +61,16 @@ interface Props {
 
 export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioReady, audioPaused }: Props) {
   const audioState = useIntroAudio(audioUri, audioReady, audioPaused);
+  // Cap on the UX-55 "captions wait for audio" hold (Yoav 11.10.26). PostHog:
+  // on iOS every mod-4-19 starter (13/13) had the narration delayed, so the
+  // captions froze on line 1 for up to 6s and 8 users backed out at the intro.
+  // After AUDIO_WAIT_MAX_MS the captions run on the wall clock regardless.
+  const [audioWaitExpired, setAudioWaitExpired] = useState(false);
+  useEffect(() => {
+    if (!audioUri) return;
+    const t = setTimeout(() => setAudioWaitExpired(true), AUDIO_WAIT_MAX_MS);
+    return () => clearTimeout(t);
+  }, [audioUri]);
   const talkingImgRef = useRef<ExpoImage>(null);
 
   // Freeze webp on pause, resume on play, swap happens via `source` swap below.
@@ -103,11 +114,11 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
     // narration was still buffering, so on slow networks the text moved on
     // before the shark started talking. Hold the phase timer while audio is
     // still loading; 'playing' / 'finished' / 'failed' / no-audio all proceed.
-    if (audioUri && (audioState === 'loading' || audioState === 'slow')) return;
+    if (audioUri && !audioWaitExpired && (audioState === 'loading' || audioState === 'slow')) return;
     const next: 0 | 1 | 2 = phase === 0 ? 1 : 2;
     const timer = setTimeout(() => setPhase(next), PHASE_DURATIONS[phase]);
     return () => clearTimeout(timer);
-  }, [phase, audioState, audioUri]);
+  }, [phase, audioState, audioUri, audioWaitExpired]);
 
   // Caption fade-in on phase change
   useEffect(() => {

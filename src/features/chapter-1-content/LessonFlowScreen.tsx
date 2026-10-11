@@ -765,9 +765,11 @@ function FlashcardCard({
   // animated text experience and IGNORE the legacy dive/infographic fields.
   const hasSegments = !!card.segments && card.segments.length > 0;
   const [segTrigger, setSegTrigger] = useState(0);
+  const [segRevealAll, setSegRevealAll] = useState(0);
   const [allSegmentsRevealed, setAllSegmentsRevealed] = useState(false);
   useEffect(() => {
     setSegTrigger(0);
+    setSegRevealAll(0);
     setAllSegmentsRevealed(false);
   }, [card.id]);
   const isDiveMode = !hasSegments && card.diveMode && card.zoomRegions && card.zoomRegions.length > 0;
@@ -793,9 +795,12 @@ function FlashcardCard({
     tapHaptic();
     playSound('btn_click_soft_2');
     if (hasSegments && !allSegmentsRevealed) {
-      // Living-lesson: המשך reveals the next segment (same as tapping the
-      // card) until everything is on screen, then advances to the next card.
-      setSegTrigger((t) => t + 1);
+      // Living-lesson: המשך used to reveal ONE segment per tap, so a 4-segment
+      // card cost 5 taps. PostHog 30d (Yoav 11.10.26): the flashcards phase is
+      // where chapter-1 users quit (mod-1-1: 23 users, 69 starts, 9 chests).
+      // Now the first tap puts the whole card on screen; the next tap advances.
+      // Tapping the card itself still reveals one segment at a time.
+      setSegRevealAll((t) => t + 1);
     } else if (isDiveMode && diveStep < totalDiveSteps - 1) {
       setDiveStep(d => d + 1);
     } else {
@@ -967,6 +972,7 @@ function FlashcardCard({
               segments={card.segments!}
               cardId={card.id}
               revealTrigger={segTrigger}
+              revealAllTrigger={segRevealAll}
               onAllRevealed={() => setAllSegmentsRevealed(true)}
             />
           </View>
@@ -2874,23 +2880,9 @@ export function LessonFlowScreen() {
       navigateToNextModuleNormally();
       return;
     }
-    // After mod-0-1b (non-Pro): show the Pro paywall once, before mod-0-2.
-    // Moved here from the post-walkthrough slot (2026-06-11) — analytics showed
-    // the old early paywall fired before the user got value: ~38% of onboarders
-    // hit it during module 0-1 and first-module completion cratered. Now the
-    // user finishes the full intro module (0-1 + 0-1b) first, THEN sees the
-    // paywall; both dismiss and purchase route forward to mod-0-2 via returnTo,
-    // so they always continue. Shown a single time.
-    if (id === 'mod-0-1b' && !isPro && !useUsageStore.getState().hasSeenMod01bPaywall) {
-      useUsageStore.getState().markMod01bPaywallSeen();
-      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b' }); } catch { /* non-fatal */ }
-      const mod02 = chapterModules.find((m) => m.id === 'mod-0-2');
-      const returnTo = mod02
-        ? lessonRouteFor(mod02, 'chapter-0')
-        : '/lesson/mod-0-2?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree';
-      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
-      return;
-    }
+    // Forced post-mod-0-1b / post-mod-0-4 paywalls removed (Yoav 11.10.26):
+    // 0 conversions in 60 days; they only trained the "ליציאה" tap. Pro is
+    // offered at intent moments instead (ThirdChestProBanner on the map).
     // Register CTA cadence (guests only): fire after mod-0-2/3/4/5, but ONLY on
     // odd-indexed modules (mod-0-2, mod-0-4) where the PostCelebration "Netflix?"
     // modal doesn't fire. This prevents the two end-of-module modals from stacking
@@ -2899,24 +2891,6 @@ export function LessonFlowScreen() {
     if (isGuest && (id === 'mod-0-2' || id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5') && currentModIdx % 2 !== 0) {
       try { captureEvent('register_cta_shown', { module_id: id, source: 'lesson' }); } catch { /* non-fatal */ }
       setShowRegisterNudge(true);
-      return;
-    }
-    // After mod-0-4 (non-guest, non-Pro): show the Pro paywall once, before
-    // mod-0-5. Both dismiss and purchase route forward to mod-0-5 via the
-    // returnTo param, so the user is never stranded on the paywall. Guests are
-    // handled by the register CTA above and skip this. Shown a single time.
-    if (id === 'mod-0-4' && !isPro && !useUsageStore.getState().hasSeenMod04Paywall) {
-      useUsageStore.getState().markMod04PaywallSeen();
-      // Use `paywall_viewed` (the canonical event used by StarterPackModal,
-      // IAPModal, PricingScreen) instead of the legacy `paywall_shown` name.
-      // The two-name split fragmented funnels — all paywall surfaces now land
-      // on the same event with `paywall` / `source` properties for breakdown.
-      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_4', source: 'post_mod_0_4' }); } catch { /* non-fatal */ }
-      const mod05 = chapterModules.find((m) => m.id === 'mod-0-5');
-      const returnTo = mod05
-        ? lessonRouteFor(mod05, 'chapter-0')
-        : '/lesson/mod-0-5?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree';
-      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
     }
     // After completing the Emergency Fund module, route to the Tower Defense boss.

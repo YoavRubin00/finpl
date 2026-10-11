@@ -32,6 +32,13 @@ interface LivingFlashcardProps {
    * same progression so every tap target the user is used to advances.
    */
   revealTrigger?: number;
+  /**
+   * Reveal-ALL signal (Yoav 11.10.26, "shorter and more immediate"): each
+   * increment puts every remaining segment on screen at once. The bottom
+   * "המשך" button uses this, so a long card costs two taps (read, next), not
+   * one tap per segment. Tapping the card itself still reveals one at a time.
+   */
+  revealAllTrigger?: number;
 }
 
 /**
@@ -41,7 +48,7 @@ interface LivingFlashcardProps {
  * rest of the app already uses, and each segment may carry one motion
  * visual instead of a static image.
  */
-export function LivingFlashcard({ segments, onAllRevealed, cardId, revealTrigger }: LivingFlashcardProps) {
+export function LivingFlashcard({ segments, onAllRevealed, cardId, revealTrigger, revealAllTrigger }: LivingFlashcardProps) {
   const reducedMotion = useReducedMotion();
   const animate = !reducedMotion;
 
@@ -80,6 +87,20 @@ export function LivingFlashcard({ segments, onAllRevealed, cardId, revealTrigger
     selectionHaptic();
     setActiveTerm(term);
   }, []);
+
+  // Reveal-all signal (bottom "המשך" button). Skip the initial value.
+  const prevRevealAllRef = useRef(revealAllTrigger ?? 0);
+  useEffect(() => {
+    const t = revealAllTrigger ?? 0;
+    if (t === prevRevealAllRef.current) return;
+    prevRevealAllRef.current = t;
+    if (revealedCount < segments.length) {
+      tapHaptic();
+      setRevealedCount(segments.length);
+    }
+    // revealedCount intentionally read, not depended on — once per trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealAllTrigger, segments.length]);
 
   // External reveal signal (the lesson's bottom "המשך" button). Skip the
   // initial value so mounting with revealTrigger=0 doesn't consume a step.

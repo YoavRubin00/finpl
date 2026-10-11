@@ -34,7 +34,13 @@ function timeHHMM(ms: number): string {
  * Honest states (UX-15): loading skeleton, "no price right now" per ticker,
  * fetch error, "updated HH:MM", estimated-FX notice, manual refresh.
  */
-export function HoldingsSection(): React.ReactElement {
+interface HoldingsSectionProps {
+  /** Open the add-holding sheet on mount when the portfolio is still empty
+   *  (deep link from the investments hub card, Yoav 11.10.26). */
+  autoOpenAdd?: boolean;
+}
+
+export function HoldingsSection({ autoOpenAdd = false }: HoldingsSectionProps = {}): React.ReactElement {
   const router = useRouter();
   const holdings = useHoldingsStore((s) => s.holdings);
   const removeHolding = useHoldingsStore((s) => s.removeHolding);
@@ -90,10 +96,21 @@ export function HoldingsSection(): React.ReactElement {
 
   const viewedRef = useRef(false);
   useEffect(() => {
-    if (viewedRef.current || holdings.length === 0) return;
+    // Fires for EMPTY portfolios too (11.10.26): it used to fire only with
+    // holdings>0, so 30 days of exposure read as "1 user" while 12 reached
+    // the dashboard. holdings_count:0 = saw the section, didn't add yet.
+    if (viewedRef.current) return;
     viewedRef.current = true;
     track({ name: 'holdings_section_viewed', props: { holdings_count: holdings.length } });
   }, [holdings.length]);
+
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!autoOpenAdd || autoOpenedRef.current || holdings.length > 0) return;
+    autoOpenedRef.current = true;
+    setEditing(null);
+    setModalVisible(true);
+  }, [autoOpenAdd, holdings.length]);
 
   const reco = useMemo(() => (weighted.length > 0 ? recommendPortfolioLesson(weighted) : null), [weighted]);
 

@@ -78,6 +78,8 @@ interface UsageState {
   promoWelcomeSeenForExpiry: string | null;
   // IL calendar-day the promo-expiry banner last showed — max once per day.
   promoExpiryBannerLastShownDate: string | null;
+  // Soft Pro banner after the 3rd chest (Yoav 11.10.26) — dismissed once = gone.
+  thirdChestProBannerDismissed: boolean;
 }
 
 interface UsageActions {
@@ -97,6 +99,7 @@ interface UsageActions {
   markPromoWelcomeSeen: (expiryKey: string) => void;
   /** Mark the promo-expiry banner as shown today (once-per-day cap). */
   markPromoExpiryBannerShown: () => void;
+  markThirdChestProBannerDismissed: () => void;
   reset: () => void;
 }
 
@@ -117,6 +120,7 @@ const initialState: UsageState = {
   hasSeenMod01bPaywall: false,
   promoWelcomeSeenForExpiry: null,
   promoExpiryBannerLastShownDate: null,
+  thirdChestProBannerDismissed: false,
 };
 
 export const useUsageStore = create<UsageState & UsageActions>()(
@@ -304,6 +308,8 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         set({ promoExpiryBannerLastShownDate: todayISO() });
       },
 
+      markThirdChestProBannerDismissed: () => set({ thirdChestProBannerDismissed: true }),
+
       reset: () => set(initialState),
     }),
     {
@@ -326,6 +332,7 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         hasSeenMod01bPaywall: state.hasSeenMod01bPaywall,
         promoWelcomeSeenForExpiry: state.promoWelcomeSeenForExpiry,
         promoExpiryBannerLastShownDate: state.promoExpiryBannerLastShownDate,
+        thirdChestProBannerDismissed: state.thirdChestProBannerDismissed,
       }),
     },
   ),

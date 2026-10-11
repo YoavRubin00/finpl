@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ChevronRight, Plus } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
@@ -28,6 +28,7 @@ import { HoldingsSection } from './holdings/HoldingsSection';
  */
 export function NetWorthDashboardScreen(): React.ReactElement {
   const router = useRouter();
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const insets = useSafeAreaInsets();
   const assets = useNetWorthStore((s) => s.assets);
   const totalValue = useNetWorthStore((s) => s.totalValue());
@@ -107,7 +108,7 @@ export function NetWorthDashboardScreen(): React.ReactElement {
           yoyDeltaPct={yoyDeltaPct}
         />
 
-        <HoldingsSection />
+        <HoldingsSection autoOpenAdd={add === '1'} />
 
         {isEmpty ? (
           <View style={styles.emptyCard}>
