@@ -7,7 +7,12 @@
 # `production` environment (aligned 19.9 — see docs/DECISION-LOG), never from
 # a local .env file.
 #
-# Run from a clean checkout:
+# Two jobs, one per native platform, on purpose: `platform: all` also exports
+# WEB, and the web bundle pulls app/api/** routes whose server-only imports
+# (src/db/schema) are export-ignored from the archive → "Unable to resolve
+# module". Native bundles never include API routes.
+#
+# Run from a clean checkout (needs a git repo in that folder):
 #   eas workflow:run .eas/workflows/ota-production.yml --non-interactive --wait -F message="..."
 name: OTA production
 
@@ -19,10 +24,19 @@ on:
         default: "OTA"
 
 jobs:
-  update:
-    name: Publish update to production
+  update_android:
+    name: Publish update (Android)
     type: update
     environment: production
     params:
       branch: production
+      platform: android
+      message: ${{ inputs.message }}
+  update_ios:
+    name: Publish update (iOS)
+    type: update
+    environment: production
+    params:
+      branch: production
+      platform: ios
       message: ${{ inputs.message }}

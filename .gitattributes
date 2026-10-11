@@ -12,5 +12,9 @@ skills/ export-ignore
 docs/ export-ignore
 scripts/ export-ignore
 generated/ export-ignore
-db/ export-ignore
-public/ export-ignore
+# Anchored to the repo root on purpose (Yoav 11.10.26): the unanchored `db/`
+# also matched `src/db/`, which holds `apiBase.ts` — imported by ~50 client
+# files — so every `git archive` (and the cloud `eas update`) shipped a tree
+# that could not resolve `src/db/apiBase`.
+/db/ export-ignore
+/public/ export-ignore
