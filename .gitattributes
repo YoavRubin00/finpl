@@ -5,7 +5,8 @@
 assets/video/ export-ignore
 assets/videos/ export-ignore
 assets/comics/ export-ignore
-assets/infographics/ export-ignore
+# assets/infographics/ is REQUIRED at bundle time (FlashcardInfographic.tsx
+# requires fc-0-2-*.jpg, finn-*.png) — never export-ignore it (Yoav 11.10.26).
 assets/SOUND/ export-ignore
 notebooklm-py/ export-ignore
 skills/ export-ignore
