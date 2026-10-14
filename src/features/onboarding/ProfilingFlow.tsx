@@ -51,6 +51,7 @@ import { ONBOARDING_XP } from "../../constants/economy";
 import { captureEvent } from "../../lib/posthog";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PENDING_REFERRAL_STORAGE_KEY, PENDING_REFERRAL_ATTEMPTS_STORAGE_KEY } from '../social/InviteRedemptionScreen';
+import * as Clipboard from 'expo-clipboard';
 import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
 import { FREE_AVATARS } from "../avatars/avatarData";
 import type { AvatarDefinition } from "../avatars/avatarData";
@@ -662,6 +663,32 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
   const [showCodeField, setShowCodeField] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [codeSaved, setCodeSaved] = useState(false);
+  // Clipboard bridge, app side (Yoav 14.10.26). finplay.me/invite/CODE already
+  // copies the code before handing off to the store — that is the ONLY way an
+  // iOS install can carry an invite (no install-referrer on iOS). The app never
+  // read it back: `expo-clipboard` was a dependency with zero call sites, so
+  // every iOS invite died on "the user must remember 8 characters and find a
+  // collapsed text link". PostHog: friends_count=0 for every user, 45 days.
+  //
+  // `hasStringAsync` needs no permission and shows no banner, so it is safe on
+  // mount; it only tells us a string EXISTS. The content is read in
+  // `showCode()` — in direct response to the user's tap — so any iOS paste
+  // prompt is something they just asked for.
+  const [clipboardMayHaveCode, setClipboardMayHaveCode] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Already have a pending code (Android install-referrer or a deep link
+        // on an installed app)? Then there is nothing to offer.
+        const pending = await AsyncStorage.getItem(PENDING_REFERRAL_STORAGE_KEY);
+        if (pending) return;
+        const has = await Clipboard.hasStringAsync();
+        if (!cancelled) setClipboardMayHaveCode(has);
+      } catch { /* non-fatal */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const codeAreaOpacity = useSharedValue(0);
   const codeAreaHeight = useSharedValue(0);
 
@@ -674,14 +701,28 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     // The actual redeem is deferred to the post-signup hook in _layout.tsx
     // (it emits referral_redeem_succeeded/failed with source 'pending_hook');
     // here we only record that a manual code entered the pipeline.
-    try { captureEvent('referral_redeem_attempted', { source: 'profiling_manual', invite_code: trimmed, deferred: true }); } catch { /* non-fatal */ }
+    try { captureEvent('referral_redeem_attempted', { source: codePasted ? 'profiling_clipboard' : 'profiling_manual', invite_code: trimmed, deferred: true }); } catch { /* non-fatal */ }
     setCodeSaved(true);
   };
 
+  const [codePasted, setCodePasted] = useState(false);
   const showCode = () => {
     setShowCodeField(true);
     codeAreaOpacity.value = withTiming(1, { duration: 220 });
     codeAreaHeight.value = withSpring(72, { damping: 16, stiffness: 140 });
+    // Pre-fill from the clipboard when it holds something code-shaped. The user
+    // still taps "אישור", so nothing is attributed without their confirmation.
+    (async () => {
+      try {
+        const raw = (await Clipboard.getStringAsync())?.trim().toUpperCase() ?? '';
+        const candidate = raw.replace(/^.*\/INVITE\//, '');
+        if (/^[A-Z0-9-]{4,12}$/.test(candidate)) {
+          setInviteCode(candidate);
+          setCodePasted(true);
+          try { captureEvent('referral_code_autofilled', { source: 'clipboard', invite_code: candidate }); } catch { /* non-fatal */ }
+        }
+      } catch { /* clipboard denied — the user can still type the code */ }
+    })();
   };
 
   const codeAreaStyle = useAnimatedStyle(() => ({
@@ -781,17 +822,23 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
               <Text style={styles.codeSubmitText}>אישור</Text>
             </Pressable>
           </Animated.View>
-        ) : (
+        ) : null}
+        {showCodeField && !codeSaved && codePasted ? (
+          <Text style={styles.codePastedText}>הדבקנו את הקוד שהעתקתם — רק לאשר</Text>
+        ) : null}
+        {!codeSaved && !showCodeField ? (
           <Pressable
             onPress={showCode}
-            style={styles.codeToggle}
+            style={[styles.codeToggle, clipboardMayHaveCode && styles.codeTogglePrimed]}
             accessibilityRole="button"
-            accessibilityLabel="הוזמנתם דרך חבר? לחצו להזנת קוד הזמנה"
+            accessibilityLabel={clipboardMayHaveCode ? 'הוזמנתם דרך חבר? לחצו והקוד יודבק מלוח ההעתקה' : 'הוזמנתם דרך חבר? לחצו להזנת קוד הזמנה'}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.codeToggleText}>הוזמנתם דרך חבר? הזינו קוד</Text>
+            <Text style={[styles.codeToggleText, clipboardMayHaveCode && styles.codeToggleTextPrimed]}>
+              {clipboardMayHaveCode ? 'הוזמנתם דרך חבר? להדביק את הקוד' : 'הוזמנתם דרך חבר? הזינו קוד'}
+            </Text>
           </Pressable>
-        )}
+        ) : null}
       </SafeAreaView>
 
     </ImageBackground>
@@ -3661,6 +3708,21 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "800",
     fontSize: 15,
+  },
+  codeTogglePrimed: {
+    backgroundColor: 'rgba(14,165,233,0.14)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  codeToggleTextPrimed: { color: '#0369a1', fontWeight: '800' },
+  codePastedText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0369a1',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginTop: 6,
   },
   codeSavedText: {
     color: "#4ade80",
