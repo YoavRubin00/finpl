@@ -68,6 +68,9 @@ SELECT toStartOfWeek(timestamp) AS w,
 FROM events WHERE event='lesson_exited_early' AND timestamp >= now() - INTERVAL 56 DAY GROUP BY w ORDER BY w;
 
 -- W8 — Email deliverability. TARGET: opened/sent back above 20%, sent 60-90/day.
+-- CAVEAT: opens of OLDER emails land on today's row, so a low-volume day can
+-- show an inflated open_pct (a day with 0 sends can still show opens). Read the
+-- trend over a week, not a single day.
 SELECT toDate(timestamp) AS d,
        countIf(event='retention_email_sent') AS sent,
        countIf(event='retention_email_opened') AS opened,
@@ -75,9 +78,11 @@ SELECT toDate(timestamp) AS d,
        round(100.0 * countIf(event='retention_email_opened') / nullIf(countIf(event='retention_email_sent'), 0), 1) AS open_pct
 FROM events WHERE event LIKE 'retention_email%' AND timestamp >= now() - INTERVAL 21 DAY GROUP BY d ORDER BY d;
 
--- W9 — iOS D1, still unexplained (was 2/42 vs android 18/103). TARGET: iOS D1 >= 10%.
-SELECT platform, count() AS cohort, countIf(d1) AS d1, round(100.0 * countIf(d1) / count(), 1) AS d1_pct
-FROM (SELECT p, platform, first_day, max(toDate(t) = first_day + 1) AS d1 FROM (
+-- W9 — iOS D1 (was 2/42 vs android 18/103; 12.5% on 14.10). TARGET: iOS D1 >= 10%.
+-- The inner alias must NOT be called d1: countIf(d1) on a UInt64 max() is an
+-- illegal type, and countIf(d1>0) nests aggregates. Hence `ret`.
+SELECT platform, count() AS cohort, countIf(ret > 0) AS d1_users, round(100.0 * countIf(ret > 0) / count(), 1) AS d1_pct
+FROM (SELECT p, platform, first_day, max(toDate(t) = first_day + 1) AS ret FROM (
         SELECT e.person_id AS p, toString(e.properties.platform) AS platform, e.timestamp AS t, f.first_day AS first_day
         FROM events e JOIN (SELECT person_id, toDate(min(timestamp)) AS first_day FROM events WHERE event='Application Opened' GROUP BY person_id) f
           ON e.person_id = f.person_id
