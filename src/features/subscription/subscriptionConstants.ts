@@ -66,7 +66,9 @@ const ENERGY_REGEN_MS = 15 * 60 * 1000; // 15 minutes per energy unit (was 5h/he
 
 /** Time until the next energy unit regenerates, in ms. */
 export function getTimeUntilNextHeart(lastLostAt: string | null, currentEnergy: number): number {
-  const MAX_ENERGY = 20;
+  // Mirrors MAX_HEARTS in useHeartsStore (10 since 14.10.26). Kept as a literal
+  // here on purpose: this module must not import the store (cycle).
+  const MAX_ENERGY = 10;
   if (!lastLostAt || currentEnergy >= MAX_ENERGY) return 0;
   const elapsed = Math.max(0, Date.now() - new Date(lastLostAt).getTime());
   const remaining = ENERGY_REGEN_MS - (elapsed % ENERGY_REGEN_MS);

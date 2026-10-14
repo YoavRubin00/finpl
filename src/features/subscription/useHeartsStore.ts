@@ -9,15 +9,24 @@ import { israelDayKey } from '../../utils/dateUtils';
 // names in v1 to avoid churning ~6 call-sites; the full rename to
 // useEnergyStore happens in phase 2 (see plan E). Semantically these ARE the
 // purple energy units shown in the תחנת הכוח / power-station component.
-export const MAX_HEARTS = 20; // MAX energy units (was 5)
+// 10, down from 20 (Yoav 14.10.26). PostHog 30d: `energy_depleted` fired ZERO
+// times — with a 20-unit bar nobody ever hit the wall, so "אנרגיה אינסופית"
+// was selling a problem the player never had (2 trials in 90 days). The regen
+// rate is unchanged, so a full bar now returns in 2.5h instead of 5h: the wall
+// is reachable, and recovery is twice as fast. Watch `energy_depleted` users/day
+// against session length and `lesson_started` — if depth drops, raise it back.
+export const MAX_HEARTS = 10; // MAX energy units (was 20, before that 5)
 /** Alias for new energy-aware code. Same value as MAX_HEARTS. */
 export const MAX_ENERGY = MAX_HEARTS;
-/** Passive regen interval: one energy unit every 15 minutes (full 0→20 in 5h). */
+/** Passive regen interval: one energy unit every 15 minutes (full 0→10 in 2.5h). */
 export const ENERGY_REGEN_MS = 15 * 60 * 1000;
-const HEART_REFILL_MS = 15 * 60 * 1000; // 15 minutes per energy unit (was 5h) → full 0→20 in 5h
+const HEART_REFILL_MS = 15 * 60 * 1000; // 15 minutes per energy unit → full 0→10 in 2.5h
 
-const MAX_PRACTICE_REFILLS_PER_DAY = 2; // ×PRACTICE_ENERGY_GRANT = +10/day
-const PRACTICE_ENERGY_GRANT = 5; // energy granted per practice/replay completion (was +1)
+const MAX_PRACTICE_REFILLS_PER_DAY = 2; // ×PRACTICE_ENERGY_GRANT = +6/day
+// 3, down from 5 (Yoav 14.10.26): on a 10-unit bar a single replay used to
+// hand back HALF the bar, which would have cancelled the smaller bar outright.
+// Practice still pays (3 units ≈ 45min of regen), it just isn't a reset button.
+const PRACTICE_ENERGY_GRANT = 3; // energy granted per practice/replay completion
 
 /** One-time daily "welcome back" gift granted on RETURN to the app (on top of
  *  passive regen), capped to once per calendar day via `returnGiftDate`. Yoav
@@ -383,11 +392,11 @@ export const useHeartsStore = create<HeartsState & HeartsActions>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        // Legacy builds stored hearts on a 0–5 scale. The energy rescale moved
-        // MAX to 20; a persisted 0–5 value is still valid (just "low"), but a
-        // value above the new MAX (shouldn't happen) is clamped. We deliberately
-        // do NOT upscale old 0–5 values — passive regen (15min/unit) refills
-        // them to 20 within hours, so users heal automatically.
+        // The clamp now does real work (Yoav 14.10.26): MAX went 20→10, so every
+        // existing player holds a persisted value above the new max and is
+        // brought down to a FULL 10 on the next launch — a full bar, not a
+        // punishment. Legacy 0–5 values are left alone; passive regen
+        // (15min/unit) tops them up within ~2.5h.
         if (typeof state.hearts === 'number' && state.hearts > MAX_HEARTS) {
           state.hearts = MAX_HEARTS;
         }

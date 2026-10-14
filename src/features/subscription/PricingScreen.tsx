@@ -136,7 +136,7 @@ interface FeatureRow {
 // Order = what the data says users feel first (Yoav 11.10.26): energy is the
 // daily friction (energy_spent: 83 users/30d), then the two universal signals.
 const FEATURES: FeatureRow[] = [
-  { label: "אנרגיה", free: "20", pro: "אינסוף ♾️" },
+  { label: "אנרגיה", free: "10", pro: "אינסוף ♾️" },
   { label: "ללא פרסומות", free: false, pro: true },
   { label: "צ'אט AI עם שארק", free: "2 הודעות ביום", pro: "ללא הגבלה" },
   { label: "כלים פיננסיים מתקדמים", free: "גישה מוגבלת", pro: "גישה מלאה" },

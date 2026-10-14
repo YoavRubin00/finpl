@@ -78,7 +78,10 @@ export function HeartsDisplay() {
 // NOT be an easy money bypass) — a full refill for a hefty price, so the cheap
 // routes stay "wait / watch an ad / play a game", not "pay coins". The ad path
 // stays generous (+8) since ads are the play-first-friendly free option.
-const ENERGY_REFILL_COIN_COST = 5000; // full battery (20), a real decision
+// Halved with the bar (Yoav 14.10.26): 5,000 coins bought a full 20-unit
+// battery, so the same price for a 10-unit battery would have been a silent
+// 2× price rise on the coin path the moment the wall started to bite.
+const ENERGY_REFILL_COIN_COST = 2500; // full battery (10), still a real decision
 const ENERGY_AD_GRANT = 8;
 
 // Yoav 2026-06-22: dancing Captain Shark on the refill screen for an upbeat
@@ -275,7 +278,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                         <View style={{ width: '100%', marginTop: 2 }}>
                             <ProUpsellCard
                                 source="energy_depleted"
-                                headline="אנרגיה אינסופית + בוסט XP"
+                                headline="7 ימים חינם: אנרגיה בלי סוף"
                                 onPress={handleUpgrade}
                             />
                         </View>
