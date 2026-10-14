@@ -368,7 +368,7 @@ export function AIInsightsScreen() {
           )}
 
           {/* Upgrade CTA */}
-          <UpgradeCTA onPress={() => router.push('/pricing' as never)} />
+          <UpgradeCTA onPress={() => router.push('/pricing?source=ai_insights' as never)} />
 
           {/* 3 blurred locked bubbles */}
           <BlurredLockedBubble index={0} />

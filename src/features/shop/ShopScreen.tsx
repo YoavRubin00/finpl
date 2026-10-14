@@ -715,7 +715,7 @@ export function ShopScreen() {
                   <DiamondPattern />
                   <SectionBgLottie source={require('../../../assets/lottie/wired-flat-407-crown-king-lord-hover-roll.json')} active={isFocused} />
                   <SectionHeader title="PRO אקסקלוסיבי" />
-                  <Pressable onPress={() => router.push('/pricing' as never)} style={({ pressed }) => [pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="שדרג ל-PRO">
+                  <Pressable onPress={() => router.push('/pricing?source=shop' as never)} style={({ pressed }) => [pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="שדרג ל-PRO">
                     <LinearGradient
                       colors={['#0a2540', '#164e63', '#0a2540']}
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}

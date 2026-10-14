@@ -109,7 +109,7 @@ export function SavedItemsScreen() {
           </Text>
           <TouchableOpacity
             style={styles.upsellButton}
-            onPress={() => router.push("/pricing" as never)}
+            onPress={() => router.push("/pricing?source=saved_items" as never)}
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="שדרג לפרו"

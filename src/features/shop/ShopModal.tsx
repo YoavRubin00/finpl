@@ -440,7 +440,7 @@ export function ShopModal() {
           {/* ── PRO Banner, Bottom ── */}
           {!isPro && (
             <Pressable
-              onPress={() => { close(); router.push("/pricing" as never); }}
+              onPress={() => { close(); router.push("/pricing?source=shop_modal" as never); }}
               style={({ pressed }) => [ms.proBottomBanner, pressed && { opacity: 0.85 }]}
               accessibilityRole="button"
               accessibilityLabel="שדרג ל-PRO, גישה מלאה"

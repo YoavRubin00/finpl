@@ -194,7 +194,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({
                     <Text style={styles.blockedTimer}>{cooldownLeft}</Text>
                     <Pressable
                         style={({ pressed }) => [pressed && { opacity: 0.85 }]}
-                        onPress={() => { tapHaptic(); router.push('/pricing' as never); }}
+                        onPress={() => { tapHaptic(); router.push('/pricing?source=myth_feed' as never); }}
                     >
                         <LinearGradient
                             colors={['#0a2540', '#164e63', '#0a2540']}

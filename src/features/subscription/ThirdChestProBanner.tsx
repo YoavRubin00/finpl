@@ -90,13 +90,13 @@ export function ThirdChestProBanner() {
         <Pressable
           onPress={handleOpen}
           accessibilityRole="button"
-          accessibilityLabel="לראות מה נותן Pro"
+          accessibilityLabel="להתחיל 7 ימים חינם של Pro"
           style={({ pressed }) => [styles.ctaOuter, pressed && styles.ctaPressed]}
         >
           {/* bg on an inner View — RN Pressable function-style drops
               backgroundColor on Android (house rule). */}
           <View style={styles.ctaInner}>
-            <Text style={styles.ctaText} allowFontScaling={false}>לראות מה נותן Pro</Text>
+            <Text style={styles.ctaText} allowFontScaling={false}>להתחיל 7 ימים חינם</Text>
           </View>
         </Pressable>
       </View>

@@ -4678,7 +4678,7 @@ export function LessonFlowScreen() {
             שדרג לPRO כדי לגשת לכל המודולים, או המשך מהמקום שהפסקת ברצף הלמידה
           </Text>
           <Pressable
-            onPress={() => { setShowProGate(false); router.push("/pricing" as never); }}
+            onPress={() => { setShowProGate(false); router.push("/pricing?source=lesson_pro_gate" as never); }}
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#0a2540", paddingHorizontal: 28, paddingVertical: 16, borderRadius: 999, width: "100%", borderWidth: 2, borderColor: "rgba(22, 78, 99, 0.6)", shadowColor: "#0a2540", shadowOpacity: 0.5, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 8 }}
             accessibilityRole="button"
             accessibilityLabel="שדרג לPRO"
@@ -5955,7 +5955,7 @@ export function LessonFlowScreen() {
         }}
         onUpgrade={() => {
           setShowOutOfHearts(false);
-          router.push('/pricing' as never);
+          router.push('/pricing?source=out_of_hearts_quiz' as never);
         }}
       />
 

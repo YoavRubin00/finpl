@@ -511,7 +511,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
           <Animated.View style={styles.blockedFooter}>
             <Pressable
               style={({ pressed }) => [styles.proBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => { tapHaptic(); router.push('/pricing' as never); }}
+              onPress={() => { tapHaptic(); router.push('/pricing?source=macro_event' as never); }}
             >
               <LinearGradient
                 colors={['#0891b2', '#0284c7', '#0369a1']}

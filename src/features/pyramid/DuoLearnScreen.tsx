@@ -1036,7 +1036,7 @@ function LockedModuleModal({ visible, onClose }: { visible: boolean; onClose: ()
         <AnimatedPressable
           onPress={() => {
             onClose();
-            router.push("/pricing" as never);
+            router.push("/pricing?source=locked_module" as never);
           }}
           style={styles.modalCTA}
           accessibilityRole="button"
@@ -2801,9 +2801,24 @@ export function DuoLearnScreen() {
     if (!current) return;
     const ch = ALL_CHAPTERS.find((c) => c.id === current.chapterId);
     if (!ch) return;
-    // The forced post-mod-0-1b paywall is gone (Yoav 11.10.26): 34 viewers in
-    // 60 days, 0 purchases, and it taught every new user to tap "ליציאה" on
-    // day one. Pro is offered at intent moments instead (ThirdChestProBanner).
+    // Day-0 trial moment after mod-0-1b — BACK, with the data (Yoav 14.10.26).
+    // The 11.10 removal read "34 viewers, 0 purchases" off the pre-redirect
+    // event; the redirect itself fired `paywall_viewed{subscription_pricing}`,
+    // and 52 of the 86 pricing viewers in 90d came through here — including
+    // both September trials (day 0, 1–2 chests). 5 of 8 trials ever started on
+    // day 0. Same once-only gate, now with a real `source` so the attribution
+    // holds, and the paywall leads with the 7-day trial. Skipping is one tap.
+    if (
+      current.module.id === 'mod-0-1b'
+      && !isPro
+      && !useUsageStore.getState().hasSeenMod01bPaywall
+    ) {
+      setTopicTreeModule(null);
+      useUsageStore.getState().markMod01bPaywallSeen();
+      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree';
+      router.replace(`/pricing?source=post_mod_0_1b&returnTo=${encodeURIComponent(returnTo)}` as never);
+      return;
+    }
     // Keep the accordion open; land the end-of-module cards near the top with
     // the pearl + next module visible below — same landing as the 70%-chest
     // continue path (Yoav 2026-06-29).
@@ -2915,7 +2930,7 @@ export function DuoLearnScreen() {
       if (idx === 4) {
         useTutorialStore.getState().unlockInvestChapterJump();
         try { captureEvent('invest_fast_track_unlocked', { source: 'jump_here', is_pro: isPro }); } catch { /* non-fatal */ }
-      } else if (!isPro) { router.push('/pricing' as never); return; }
+      } else if (!isPro) { router.push('/pricing?source=jump_here_locked' as never); return; }
       // Yoav 2026-06-11 sweep: jump-here also routes through topic-tree
       // when the destination supports it. Without this, "JUMP HERE?"
       // dropped the user into the legacy linear flow.

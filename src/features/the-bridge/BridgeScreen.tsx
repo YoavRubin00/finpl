@@ -719,7 +719,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
           {/* PRO upsell card */}
           {!isPro && (
             <AnimatedPressable
-              onPress={() => router.push('/pricing' as never)}
+              onPress={() => router.push('/pricing?source=bridge' as never)}
               style={{ marginTop: 20, marginBottom: 8 }}
             >
               <Animated.View style={[styles.proCard, proBorderStyle]}>

@@ -589,7 +589,7 @@ export function ProfileScreen() {
             {/* Pro Upgrade CTA, only for free users */}
             {!isPro && (
               <ProUpgradeCard
-                onPress={() => router.push("/pricing" as never)}
+                onPress={() => router.push("/pricing?source=profile" as never)}
                 headline="לבבות אינסופיים + בוסט XP"
                 active={isFocused}
               />

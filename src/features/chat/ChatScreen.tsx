@@ -1038,7 +1038,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     if (messages[i].role === "user") { anchorIdx = i; break; }
   }
 
-  const handleUpgradePress = useCallback(() => router.push("/pricing" as never), [router]);
+  const handleUpgradePress = useCallback(() => router.push("/pricing?source=chat_limit" as never), [router]);
 
   // Thin wrapper over the memoized MessageBubble. Index keys are safe here: the
   // message list is append-only (never reordered/inserted), so each row keeps a

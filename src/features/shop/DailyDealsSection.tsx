@@ -230,7 +230,7 @@ export function DailyDealsSection() {
                 </Pressable>
               ) : isGem && !isPro ? (
                 <Pressable
-                  onPress={() => router.push('/pricing' as never)}
+                  onPress={() => router.push('/pricing?source=daily_deals' as never)}
                   style={({ pressed }) => [styles.proBadgeBtn, pressed && { opacity: 0.8 }]}
                   accessibilityRole="button"
                   accessibilityLabel="שדרג ל-PRO"

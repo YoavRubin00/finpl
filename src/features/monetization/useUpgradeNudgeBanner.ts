@@ -43,7 +43,7 @@ export function useUpgradeNudgeBanner() {
 
   const navigate = useCallback(() => {
     dismiss();
-    router.push('/pricing' as never);
+    router.push('/pricing?source=upgrade_nudge' as never);
   }, [dismiss, router]);
 
   return { visible, dismiss, navigate, copy };

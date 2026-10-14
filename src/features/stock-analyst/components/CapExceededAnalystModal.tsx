@@ -75,7 +75,7 @@ export function CapExceededAnalystModal({ visible, mode, isPro, onClose }: Props
                 onPress={() => {
                   tapHaptic();
                   onClose();
-                  router.push('/pricing' as never);
+                  router.push('/pricing?source=analyst_cap' as never);
                 }}
                 accessibilityRole="button"
                 style={{ borderRadius: 14, overflow: 'hidden' }}

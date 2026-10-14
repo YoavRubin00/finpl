@@ -45,6 +45,8 @@ import { useBandit } from "../bandit/useBandit";
 import { setPersonProperties, captureEvent } from "../../lib/posthog";
 import { track } from "../../lib/analytics/events";
 import { logTrialStart, logPurchase } from "../../utils/fbEvents";
+import * as Notifications from "expo-notifications";
+import { useNotificationStore, resolveOneShotFireDate } from "../notifications/useNotificationStore";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -163,6 +165,38 @@ function savingPct(monthly: PurchasesPackage, annual: PurchasesPackage): number 
   return Math.max(0, Math.round((1 - a / (m * 12)) * 100));
 }
 
+/** Local "your trial ends in 2 days" reminder (Yoav 14.10.26). The trial
+ *  timeline on the paywall promises it, so it must exist. Scheduled at 19:00
+ *  local, two days before the trial converts; one-shot, best-effort. Uses
+ *  the existing `upgradeNudge` channel so no new Android channel is needed.
+ *  Transparency, not a sales push (CTA-in-app rule is about conversion CTAs). */
+async function scheduleTrialEndingReminder(trialDays: number, priceLine: string): Promise<void> {
+  try {
+    if (!useNotificationStore.getState().permissionGranted) return;
+    const dayOffset = Math.max(1, trialDays - 2);
+    const { date, dateISO } = resolveOneShotFireDate(19, dayOffset);
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "הניסיון של Pro נגמר בעוד יומיים",
+        body: priceLine ? `אחריו ${priceLine}. רוצים להמשיך? לא צריך לעשות כלום. לא? ביטול בלחיצה בהגדרות המנוי.` : "רוצים להמשיך? לא צריך לעשות כלום. לא? ביטול בלחיצה בהגדרות המנוי.",
+        data: { screen: "/profile", channelId: "upgradeNudge", fireDate: dateISO },
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date, channelId: "upgradeNudge" },
+    });
+    captureEvent('notification_scheduled', { type: 'trialEnding', fire_date: dateISO, day_offset: dayOffset });
+  } catch { /* non-fatal */ }
+}
+
+const trialStyles = StyleSheet.create({
+  wrap: { marginHorizontal: 20, marginBottom: 16, borderRadius: 16, borderWidth: 1, borderColor: "#bae6fd", backgroundColor: "#f0f9ff", paddingVertical: 10, paddingHorizontal: 12 },
+  row: { flexDirection: "row-reverse", alignItems: "flex-start", gap: 10, paddingVertical: 6 },
+  dot: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  dotText: { fontSize: 11, fontWeight: "900", color: "#ffffff" },
+  textCol: { flex: 1 },
+  when: { fontSize: 12, fontWeight: "900", color: "#0369a1", textAlign: "right", writingDirection: "rtl" },
+  what: { fontSize: 12.5, fontWeight: "600", color: "#334155", textAlign: "right", writingDirection: "rtl", lineHeight: 17 },
+});
+
 // ── Decorative sparkle dots ──────────────────────────────────────────────
 const SPARKLES = [
   { top: 30, left: 20, size: 3, opacity: 0.6 },
@@ -249,7 +283,7 @@ export function PricingScreen() {
   // funnel so paywall_dismissed events can be sliced separately. Defaults
   // to 'subscription_pricing' when omitted so existing call sites still
   // get a value on the event.
-  const { returnTo, source: rawSource } = useLocalSearchParams<{ returnTo?: string; source?: string }>();
+  const { returnTo, source: rawSource, resume } = useLocalSearchParams<{ returnTo?: string; source?: string; resume?: string }>();
   const source = typeof rawSource === 'string' && rawSource ? rawSource : 'subscription_pricing';
   const isCurrentlyPro = useIsPro();
   const hasSeenProWelcome = useUsageStore((s) => s.hasSeenProWelcome);
@@ -480,6 +514,7 @@ export function PricingScreen() {
         // distinguish trial starts from straight purchases (Moni 2026-05-30
         // — separately tracking trial→paid conversion is the whole point).
         const isTrial = entitlement.periodType === 'TRIAL';
+        if (isTrial && trialDays >= 3) void scheduleTrialEndingReminder(trialDays, priceString ? `${priceString} ${periodLabel}` : '');
         track({
           name: isTrial ? 'trial_started' : 'subscription_purchased',
           props: {
@@ -552,6 +587,18 @@ export function PricingScreen() {
       setIsLoading(false);
     }
   }, [displayName, isGuest, source, useHardGateFallback, hasParentalConsent, minorNeedsHybridModal, isMinor, notifyPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo, activePackage]);
+
+  // Guest came back from registration with resume=purchase: open the store
+  // sheet without another tap. Once per mount; only when there is a real
+  // buyable package and the user is no longer a guest.
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resume !== 'purchase' || resumedRef.current) return;
+    if (isGuest || isCurrentlyPro || offerState !== 'ready' || !activePackage || isLoading) return;
+    resumedRef.current = true;
+    try { captureEvent('paywall_purchase_resumed', { source }); } catch { /* non-fatal */ }
+    void handleUpgrade();
+  }, [resume, isGuest, isCurrentlyPro, offerState, activePackage, isLoading, handleUpgrade, source]);
 
   const handleRestore = useCallback(async () => {
     setIsLoading(true);
@@ -664,6 +711,27 @@ export function PricingScreen() {
             contentContainerStyle={{ paddingTop: 20, paddingBottom: 24 }}
             showsVerticalScrollIndicator={false}
           >
+            {/* Trial timeline (Yoav 14.10.26): the single biggest fear on a
+                trial is "I'll forget and get charged". Say exactly what happens
+                and when — Blinkist's pattern. Renders only when a trial exists. */}
+            {hasTrial && !isCurrentlyPro ? (
+              <Animated.View entering={FadeInDown.delay(250).duration(400)} style={trialStyles.wrap} accessibilityRole="summary">
+                {([
+                  { n: "1", when: "היום", what: "כל Pro נפתח: אנרגיה בלי סוף, בלי פרסומות, צ'אט חופשי.", color: "#0ea5e9" },
+                  { n: "2", when: `יום ${Math.max(1, trialDays - 2)}`, what: "תזכורת מאיתנו, יומיים לפני שמשהו קורה.", color: "#f59e0b" },
+                  { n: "3", when: `יום ${trialDays}`, what: priceString ? `${priceString} ${periodLabel}. לא רוצים? ביטול בלחיצה, בלי שאלות.` : "החיוב מתחיל. לא רוצים? ביטול בלחיצה, בלי שאלות.", color: "#10b981" },
+                ] as const).map((r) => (
+                  <View key={r.n} style={trialStyles.row}>
+                    <View style={[trialStyles.dot, { backgroundColor: r.color }]}><Text style={trialStyles.dotText} allowFontScaling={false}>{r.n}</Text></View>
+                    <View style={trialStyles.textCol}>
+                      <Text style={trialStyles.when} allowFontScaling={false}>{r.when}</Text>
+                      <Text style={trialStyles.what}>{r.what}</Text>
+                    </View>
+                  </View>
+                ))}
+              </Animated.View>
+            ) : null}
+
             {/* ── Column headers ── */}
             <View style={styles.columnHeaders}>
               <Text style={[styles.colHeaderFree, { color: theme.textMuted }]}>חינמי</Text>
@@ -931,7 +999,10 @@ export function PricingScreen() {
             onPress={() => {
               setGuestSheetVisible(false);
               captureEvent('register_cta_accepted', { source: 'pro_purchase' });
-              const back = `/pricing?source=${encodeURIComponent(source)}`;
+              // resume=purchase → the sheet opens by itself after registration
+              // (PostHog 90d: 23 guests reached the paywall, 2 registered, 0 bought —
+              // they came back to a cold screen and left). Yoav 14.10.26.
+              const back = `/pricing?source=${encodeURIComponent(source)}&resume=purchase`;
               router.replace(`/(auth)/register?returnTo=${encodeURIComponent(back)}` as never);
             }}
             style={styles.guestSheetCta}
