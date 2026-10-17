@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeInDown, FadeOut, useReducedMotion } from "react-native-reanimated";
@@ -12,10 +12,15 @@ import { tapHaptic } from "../../utils/haptics";
 import { BANNER_PRIORITY, useBannerSlot } from "../../stores/useBannerSlotStore";
 import { useIsPro } from "./useSubscription";
 import { useUsageStore } from "./useUsageStore";
+import { israelDayKey } from "../../utils/dateUtils";
 
-/** Chests opened before Pro is worth mentioning. PostHog (60d): of 56 pricing
- *  viewers, 36 had 3+ chests — intent follows progress, not day one. */
-const CHESTS_BEFORE_OFFER = 3;
+/** Chests opened before Pro is worth mentioning.
+ *  3 → 2 (Yoav 17.10.26): of the 38 learners who opened any chest in 14 days,
+ *  17 stopped at one and 9 at two — a threshold of 3 hid the offer from 26 of
+ *  38 engaged users (68%). At 2 it reaches 21 of 38. Meanwhile only 2 of 46 new
+ *  users ever reached the pricing screen, so the problem was never that the
+ *  offer came too early; it was that it never arrived at all. */
+const CHESTS_BEFORE_OFFER = 2;
 
 /**
  * Soft Pro invitation on the learn map after the 3rd chest (Yoav 11.10.26).
@@ -33,16 +38,33 @@ export function ThirdChestProBanner() {
   const completedIds = useCompletedModulesStore((s) => s.completedIds);
   const dismissed = useUsageStore((s) => s.thirdChestProBannerDismissed);
   const markDismissed = useUsageStore((s) => s.markThirdChestProBannerDismissed);
-  const shownRef = useRef(false);
+  const markShownToday = useUsageStore((s) => s.markProBannerShownToday);
+  const lastShownDate = useUsageStore((s) => s.proBannerLastShownDate);
 
-  const wants = !isPro && !dismissed && !isWalkthroughActive && completedIds.length >= CHESTS_BEFORE_OFFER;
+  // Once per IL day, not once per mount: the learn map remounts this constantly,
+  // so the banner used to reappear (and re-report) all day long — 145 reports
+  // from 21 users, one of them 39 times. A yellow card seen 39 times is
+  // wallpaper, not an offer.
+  const alreadyShownToday = lastShownDate === israelDayKey();
+  const wants =
+    !isPro
+    && !dismissed
+    && !isWalkthroughActive
+    && !alreadyShownToday
+    && completedIds.length >= CHESTS_BEFORE_OFFER;
   const visible = useBannerSlot("third_chest_pro", wants, BANNER_PRIORITY.thirdChestPro);
 
   useEffect(() => {
-    if (!visible || shownRef.current) return;
-    shownRef.current = true;
-    try { captureEvent("paywall_viewed", { paywall: "third_chest_banner", source: "third_chest_banner", chests: completedIds.length }); } catch { /* non-fatal */ }
-  }, [visible, completedIds.length]);
+    if (!visible) return;
+    // `markShownToday` is the idempotent guard — it returns false if another
+    // mount already stamped today, so no remount can double-report.
+    if (!markShownToday()) return;
+    // NOT `paywall_viewed`: a banner impression is not a paywall view, and
+    // mixing them made this banner the app's top "paywall source" while the
+    // real pricing screen saw 3 users in six days. Its own event keeps the
+    // purchase funnel honest.
+    try { captureEvent("pro_banner_shown", { source: "third_chest_banner", chests: completedIds.length }); } catch { /* non-fatal */ }
+  }, [visible, markShownToday, completedIds.length]);
 
   const handleOpen = useCallback(() => {
     try { tapHaptic(); } catch { /* ignore */ }
@@ -52,7 +74,7 @@ export function ThirdChestProBanner() {
 
   const handleDismiss = useCallback(() => {
     try { tapHaptic(); } catch { /* ignore */ }
-    try { captureEvent("paywall_dismissed", { paywall: "third_chest_banner", source: "third_chest_banner" }); } catch { /* non-fatal */ }
+    try { captureEvent("pro_banner_dismissed", { source: "third_chest_banner" }); } catch { /* non-fatal */ }
     markDismissed();
   }, [markDismissed]);
 

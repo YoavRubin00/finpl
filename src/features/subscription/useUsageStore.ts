@@ -80,6 +80,11 @@ interface UsageState {
   promoExpiryBannerLastShownDate: string | null;
   // Soft Pro banner after the 3rd chest (Yoav 11.10.26) — dismissed once = gone.
   thirdChestProBannerDismissed: boolean;
+  // IL calendar-day the Pro banner last appeared. The banner lives on the learn
+  // map, which mounts and unmounts constantly, so a per-mount ref let it fire an
+  // impression on every remount: 145 impressions from 21 users in six days, one
+  // user 39 times (Yoav 17.10.26). One per day, persisted.
+  proBannerLastShownDate: string | null;
 }
 
 interface UsageActions {
@@ -100,6 +105,8 @@ interface UsageActions {
   /** Mark the promo-expiry banner as shown today (once-per-day cap). */
   markPromoExpiryBannerShown: () => void;
   markThirdChestProBannerDismissed: () => void;
+  /** Stamp today as the Pro banner's shown-day. Returns false if already stamped. */
+  markProBannerShownToday: () => boolean;
   reset: () => void;
 }
 
@@ -121,6 +128,7 @@ const initialState: UsageState = {
   promoWelcomeSeenForExpiry: null,
   promoExpiryBannerLastShownDate: null,
   thirdChestProBannerDismissed: false,
+  proBannerLastShownDate: null,
 };
 
 export const useUsageStore = create<UsageState & UsageActions>()(
@@ -310,6 +318,13 @@ export const useUsageStore = create<UsageState & UsageActions>()(
 
       markThirdChestProBannerDismissed: () => set({ thirdChestProBannerDismissed: true }),
 
+      markProBannerShownToday: (): boolean => {
+        const today = todayISO();
+        if (get().proBannerLastShownDate === today) return false;
+        set({ proBannerLastShownDate: today });
+        return true;
+      },
+
       reset: () => set(initialState),
     }),
     {
@@ -333,6 +348,7 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         promoWelcomeSeenForExpiry: state.promoWelcomeSeenForExpiry,
         promoExpiryBannerLastShownDate: state.promoExpiryBannerLastShownDate,
         thirdChestProBannerDismissed: state.thirdChestProBannerDismissed,
+        proBannerLastShownDate: state.proBannerLastShownDate,
       }),
     },
   ),
