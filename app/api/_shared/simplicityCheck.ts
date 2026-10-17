@@ -78,6 +78,12 @@ const SENTENCE_SPLIT = /(?<=[.!?])\s+/;
  *  that doesn't end a sentence. Numbers count as one word ("89.4%" = 1). */
 function countWords(sentence: string): number {
   const tokens = sentence
+    // Hebrew acronyms (נאסד"ק, ת"א, ארה"ב) are one word. Gemini often writes
+    // them with an ASCII quote, which the split below would cut in two.
+    .replace(/([֐-׿])["״]([֐-׿])/g, '$1$2')
+    // Parenthesised asides — tickers "(AMZN)" and the inline definitions that
+    // rule 3 demands — don't count toward sentence length.
+    .replace(/\([^()]*\)/g, ' ')
     .trim()
     .split(/[\s,;:()"'–—]+/)
     .filter((t) => t.length > 0);

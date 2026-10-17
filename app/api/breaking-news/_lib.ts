@@ -19,7 +19,7 @@ import { fetchTickerNews } from '../_shared/perplexityNews';
 import { tavilyNewsSearch, type TavilyBundle } from '../_shared/tavily';
 import { fetchMarketData } from './fetchMarketData';
 import { withRetry, isTransientAiError } from '../_shared/retry';
-import { formatFailuresForRetryHint } from '../_shared/simplicityCheck';
+import { formatFailuresForRetryHint, type SimplicityFailure } from '../_shared/simplicityCheck';
 import {
   BREAKING_NEWS_SYSTEM_PROMPT,
   buildBreakingNewsUserPrompt,
@@ -138,12 +138,19 @@ export async function generateForTicker(
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not configured');
 
-  const geminiBody = {
+  // The retry hint must reach the model: before 2026-10-17 attempt 2 re-sent
+  // the exact same prompt at temperature 0.3, got the same 15-word sentences
+  // and failed again — every ticker, every day.
+  const userPrompt = buildBreakingNewsUserPrompt(ticker, bundle, market);
+  let retryHint = '';
+  // Held in an object so TS keeps the type across the withRetry closure.
+  const attempts: { best: { summary: BreakingNewsSummary; failures: SimplicityFailure[] } | null } = { best: null };
+  const buildGeminiBody = () => ({
     system_instruction: { parts: [{ text: BREAKING_NEWS_SYSTEM_PROMPT }] },
     contents: [
       {
         role: 'user',
-        parts: [{ text: buildBreakingNewsUserPrompt(ticker, bundle, market) }],
+        parts: [{ text: retryHint ? `${userPrompt}\n\n${retryHint}` : userPrompt }],
       },
     ],
     generationConfig: {
@@ -160,21 +167,23 @@ export async function generateForTicker(
       responseMimeType: 'application/json',
       thinkingConfig: { thinkingBudget: 0 },
     },
-  };
+  });
 
   // Wrap the Gemini call + parse + simplicity gate in withRetry. Same
   // pattern as daily-news-challenge: when the model returns dry
   // journalistic Hebrew that fails simplicityCheck, re-roll up to 2
   // more times. shouldRetry covers transient HTTP errors AND the
   // simplicity_failed message so 1 path retries everything.
-  const summary = await withRetry<BreakingNewsSummary>(
+  let summary: BreakingNewsSummary;
+  try {
+  summary = await withRetry<BreakingNewsSummary>(
     async () => {
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(geminiBody),
+          body: JSON.stringify(buildGeminiBody()),
         },
       );
 
@@ -193,7 +202,13 @@ export async function generateForTicker(
         .map((p) => p.text ?? '')
         .join('')
         .trim();
-      const rawJson = rawText.replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
+      const rawJson = rawText
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/```$/i, '')
+        .trim()
+        // An ASCII quote between two Hebrew letters is a gershayim (ת"א), never
+        // a JSON delimiter — left unescaped it breaks JSON.parse.
+        .replace(/([֐-׿])"([֐-׿])/g, '$1״$2');
       if (!rawJson) throw new Error('Gemini returned empty content');
 
       const parsed = JSON.parse(rawJson) as unknown;
@@ -202,7 +217,11 @@ export async function generateForTicker(
       // Simplicity gate. 2+ failures = re-roll. 0-1 = accept (1 is noise).
       const failures = checkBreakingNewsSimplicity(normalized);
       if (failures.length >= 2) {
-        throw new Error(`simplicity_failed: ${formatFailuresForRetryHint(failures)}`);
+        if (!attempts.best || failures.length < attempts.best.failures.length) {
+          attempts.best = { summary: normalized, failures };
+        }
+        retryHint = formatFailuresForRetryHint(failures);
+        throw new Error(`simplicity_failed: ${retryHint}`);
       }
 
       return normalized;
@@ -220,6 +239,20 @@ export async function generateForTicker(
       label: `gemini/breaking-news/${ticker}`,
     },
   );
+  } catch (err) {
+    // Out of attempts. A slightly long sentence beats an empty news card, so
+    // publish the best attempt when every failure is a soft style rule.
+    // Undefined jargon or a vague claim without a number still blocks.
+    const best = attempts.best;
+    const softOnly = best?.failures.every(
+      (f) => f.rule === 'sentence_too_long' || f.rule === 'too_many_commas',
+    );
+    if (!best || !softOnly) throw err;
+    console.warn(
+      `[breaking-news] ${ticker}: publishing best attempt with ${best.failures.length} soft simplicity failures`,
+    );
+    summary = best.summary;
+  }
 
   // 3) Persist. `onConflictDoUpdate` so a forced re-run during the day
   //    overwrites the previous summary cleanly.
