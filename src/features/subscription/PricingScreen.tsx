@@ -412,6 +412,18 @@ export function PricingScreen() {
     }
   })();
   const hasTrial = trialDays > 0;
+  // Display-only trial length (Yoav 18.10.26). A guest — or anyone whose offering
+  // has not resolved — saw NO trial copy at all: PostHog 90d, 17 of 23 guest
+  // viewers got `cta_state=unavailable`, so hasTrial was false and the button
+  // read "להירשם עכשיו" with the 7 free days nowhere on the screen. The trial is
+  // live on both stores (RevenueCat: iOS P1W intro offer; `has_trial=True` on
+  // every resolved view since 11.10), so the offer is shown from this constant
+  // until the real package says otherwise. The purchase itself, the receipt and
+  // the "after the trial" price line still use the real `trialDays`/`priceString`
+  // and only render when they exist.
+  const TRIAL_DAYS_FALLBACK = 7;
+  const shownTrialDays = hasTrial ? trialDays : offerState === 'ready' ? 0 : TRIAL_DAYS_FALLBACK;
+  const showTrialOffer = shownTrialDays > 0;
 
   // Fired once per settled state. Since 9.8 also carries WHAT the user was
   // offered (trial / price / package) — 28 paywall viewers → 0 conversions in
@@ -686,10 +698,10 @@ export function PricingScreen() {
                 entering={FadeInDown.delay(350).duration(420)}
                 style={styles.trialBubble}
                 accessibilityRole="text"
-                accessibilityLabel={hasTrial ? `הצעה: נסו ${trialDays} ימים בחינם, ללא סיכון` : 'הצעה: ביטול חופשי בכל עת, בלי התחייבות'}
+                accessibilityLabel={showTrialOffer ? `הצעה: נסו ${shownTrialDays} ימים בחינם, ללא סיכון` : 'הצעה: ביטול חופשי בכל עת, בלי התחייבות'}
               >
                 <Text style={styles.trialBubbleText} allowFontScaling={false}>
-                  {hasTrial ? `נסו ${trialDays} ימים בחינם,\nללא סיכון` : 'ביטול חופשי בכל עת,\nבלי התחייבות'}
+                  {showTrialOffer ? `נסו ${shownTrialDays} ימים בחינם,\nללא סיכון` : 'ביטול חופשי בכל עת,\nבלי התחייבות'}
                 </Text>
                 <View style={styles.trialBubbleTail} pointerEvents="none" />
               </Animated.View>
@@ -714,12 +726,12 @@ export function PricingScreen() {
             {/* Trial timeline (Yoav 14.10.26): the single biggest fear on a
                 trial is "I'll forget and get charged". Say exactly what happens
                 and when — Blinkist's pattern. Renders only when a trial exists. */}
-            {hasTrial && !isCurrentlyPro ? (
+            {showTrialOffer && !isCurrentlyPro ? (
               <Animated.View entering={FadeInDown.delay(250).duration(400)} style={trialStyles.wrap} accessibilityRole="summary">
                 {([
                   { n: "1", when: "היום", what: "כל Pro נפתח: אנרגיה בלי סוף, בלי פרסומות, צ'אט חופשי.", color: "#0ea5e9" },
-                  { n: "2", when: `יום ${Math.max(1, trialDays - 2)}`, what: "תזכורת מאיתנו, יומיים לפני שמשהו קורה.", color: "#f59e0b" },
-                  { n: "3", when: `יום ${trialDays}`, what: priceString ? `${priceString} ${periodLabel}. לא רוצים? ביטול בלחיצה, בלי שאלות.` : "החיוב מתחיל. לא רוצים? ביטול בלחיצה, בלי שאלות.", color: "#10b981" },
+                  { n: "2", when: `יום ${Math.max(1, shownTrialDays - 2)}`, what: "תזכורת מאיתנו, יומיים לפני שמשהו קורה.", color: "#f59e0b" },
+                  { n: "3", when: `יום ${shownTrialDays}`, what: priceString ? `${priceString} ${periodLabel}. לא רוצים? ביטול בלחיצה, בלי שאלות.` : "החיוב מתחיל. לא רוצים? ביטול בלחיצה, בלי שאלות.", color: "#10b981" },
                 ] as const).map((r) => (
                   <View key={r.n} style={trialStyles.row}>
                     <View style={[trialStyles.dot, { backgroundColor: r.color }]}><Text style={trialStyles.dotText} allowFontScaling={false}>{r.n}</Text></View>
@@ -821,7 +833,7 @@ export function PricingScreen() {
                     onPress={isGuest ? handleUpgrade : (offerState === 'unavailable' ? loadOffering : handleUpgrade)}
                     disabled={isLoading || (!isGuest && offerState === 'loading')}
                     accessibilityRole="button"
-                    accessibilityLabel={isGuest ? 'להירשם עכשיו' : (offerState === 'unavailable' ? 'נסו שוב' : 'שדרג עכשיו ל-PRO')}
+                    accessibilityLabel={isGuest ? (showTrialOffer ? `התחל ${shownTrialDays} ימים חינם` : 'להירשם עכשיו') : (offerState === 'unavailable' ? 'נסו שוב' : 'שדרג עכשיו ל-PRO')}
                     accessibilityState={{ disabled: isLoading || (!isGuest && offerState === 'loading') }}
                     style={({ pressed }) => [
                       styles.ctaButtonBase,
@@ -851,7 +863,7 @@ export function PricingScreen() {
                               loop
                             />
                           </View>
-                          <Text style={styles.ctaText}>להירשם עכשיו</Text>
+                          <Text style={styles.ctaText}>{showTrialOffer ? `התחל ${shownTrialDays} ימים חינם` : 'להירשם עכשיו'}</Text>
                         </View>
                       ) : offerState === 'unavailable' ? (
                         <Text style={styles.ctaText}>נסו שוב</Text>
@@ -878,7 +890,7 @@ export function PricingScreen() {
                     friendly, non-blocking, never a hard error alert. */}
                 {isGuest ? (
                   <Text style={[styles.priceMain, { color: theme.textMuted, fontSize: 12, marginTop: 6 }]}>
-                    כדי להפעיל Pro צריך חשבון — חינם, לוקח שנייה
+                    {showTrialOffer ? 'הניסיון בחינם. צריך רק חשבון, זה לוקח שנייה, ואז חוזרים לכאן.' : 'כדי להפעיל Pro צריך חשבון — חינם, לוקח שנייה'}
                   </Text>
                 ) : offerState === 'unavailable' ? (
                   <Text style={[styles.priceMain, { color: theme.textMuted, fontSize: 12, marginTop: 6 }]}>

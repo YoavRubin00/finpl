@@ -14,13 +14,15 @@ import { useIsPro } from "./useSubscription";
 import { useUsageStore } from "./useUsageStore";
 import { israelDayKey } from "../../utils/dateUtils";
 
-/** Chests opened before Pro is worth mentioning.
- *  3 → 2 (Yoav 17.10.26): of the 38 learners who opened any chest in 14 days,
+/** Completed modules before the trial offer appears: 1 (Yoav 18.10.26). 5 of the
+ *  8 trials ever started on day 0, and 17 of 38 chest-openers stop after a single
+ *  module — any higher threshold hides the offer from exactly the people who buy.
+ *  History: 3 → 2 (17.10.26): of the 38 learners who opened any chest in 14 days,
  *  17 stopped at one and 9 at two — a threshold of 3 hid the offer from 26 of
  *  38 engaged users (68%). At 2 it reaches 21 of 38. Meanwhile only 2 of 46 new
  *  users ever reached the pricing screen, so the problem was never that the
  *  offer came too early; it was that it never arrived at all. */
-const CHESTS_BEFORE_OFFER = 2;
+const CHESTS_BEFORE_OFFER = 1;
 
 /**
  * Soft Pro invitation on the learn map after the 3rd chest (Yoav 11.10.26).
@@ -99,7 +101,7 @@ export function ThirdChestProBanner() {
 
         <View style={styles.inner}>
           <View style={styles.textWrap}>
-            <Text style={styles.title} allowFontScaling={false}>3 תיבות. אתם רציניים.</Text>
+            <Text style={styles.title} allowFontScaling={false}>סיימתם שיעור. מוכנים ליותר?</Text>
             <Text style={styles.sub}>
               אנרגיה בלי סוף, בלי פרסומות, וצ'אט חופשי עם שארק.{"\n"}7 ימים חינם, ביטול בכל רגע.
             </Text>
