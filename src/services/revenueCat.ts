@@ -230,6 +230,14 @@ export async function purchaseGemBundle(
     ]);
   };
 
+  // What each strategy actually returned or threw. The final error used to hide
+  // all of it ("not available"), so two failed Android purchases on 20.10.26
+  // could not be diagnosed. The trail rides along in the message, which only
+  // ever reaches PostHog (the user sees friendly Hebrew copy).
+  const trail: string[] = [];
+  const note = (label: string, e: unknown) =>
+    trail.push(`${label}=${(e as { message?: string } | null)?.message ?? String(e)}`.slice(0, 160));
+
   // ── Strategy 1: typed getProducts (matches the working Starter Pack flow) ──
   let products: PurchasesStoreProduct[] = [];
   try {
@@ -237,8 +245,9 @@ export async function purchaseGemBundle(
       Purchases.getProducts([productId], NON_SUBSCRIPTION_TYPE),
       8000,
     );
-  } catch {
-    /* swallow — try next strategy */
+    if (!products || products.length === 0) trail.push('s1=empty');
+  } catch (e) {
+    note('s1', e);
   }
 
   // ── Strategy 2: untyped getProducts ──
@@ -250,8 +259,9 @@ export async function purchaseGemBundle(
         Purchases.getProducts([productId]),
         8000,
       );
-    } catch {
-      /* swallow */
+      if (!products || products.length === 0) trail.push('s2=empty');
+    } catch (e) {
+      note('s2', e);
     }
   }
 
@@ -274,13 +284,16 @@ export async function purchaseGemBundle(
         const { customerInfo } = await Purchases.purchasePackage(pkg);
         return customerInfo;
       }
+      trail.push(`s3=no_pkg(${offering.availablePackages?.length ?? 0} pkgs)`);
+    } else {
+      trail.push('s3=no_offering');
     }
-  } catch {
-    /* swallow — we'll throw the user-facing error below */
+  } catch (e) {
+    note('s3', e);
   }
 
   throw new Error(
-    `Product "${productId}" not available. Verify it's Active + Consumable + has an ILS price in Play Console / App Store Connect.`
+    `Product "${productId}" not available. Verify it's Active + Consumable + has an ILS price in Play Console / App Store Connect. [diag ${trail.join(' | ')}]`
   );
 }
 
