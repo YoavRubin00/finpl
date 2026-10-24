@@ -24,6 +24,10 @@ import { israelDayKey } from "../../utils/dateUtils";
  *  offer came too early; it was that it never arrived at all. */
 const CHESTS_BEFORE_OFFER = 1;
 
+/** A dismissal hides the banner for 3 days; the 3rd dismissal ends it. */
+const DISMISS_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000;
+const MAX_DISMISSALS = 3;
+
 /**
  * Soft Pro invitation on the learn map after the 3rd chest (Yoav 11.10.26).
  *
@@ -38,7 +42,8 @@ export function ThirdChestProBanner() {
   const isPro = useIsPro();
   const isWalkthroughActive = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const completedIds = useCompletedModulesStore((s) => s.completedIds);
-  const dismissed = useUsageStore((s) => s.thirdChestProBannerDismissed);
+  const dismissCount = useUsageStore((s) => s.thirdChestProBannerDismissCount);
+  const dismissedAt = useUsageStore((s) => s.thirdChestProBannerDismissedAt);
   const markDismissed = useUsageStore((s) => s.markThirdChestProBannerDismissed);
   const markShownToday = useUsageStore((s) => s.markProBannerShownToday);
   const lastShownDate = useUsageStore((s) => s.proBannerLastShownDate);
@@ -48,9 +53,13 @@ export function ThirdChestProBanner() {
   // from 21 users, one of them 39 times. A yellow card seen 39 times is
   // wallpaper, not an offer.
   const alreadyShownToday = lastShownDate === israelDayKey();
+  // Users who dismissed under the old "gone forever" rule have no timestamp and
+  // no count, so they see the offer again — intended, they never got a second look.
+  const dismissedRecently = dismissedAt != null && Date.now() - dismissedAt < DISMISS_COOLDOWN_MS;
   const wants =
     !isPro
-    && !dismissed
+    && dismissCount < MAX_DISMISSALS
+    && !dismissedRecently
     && !isWalkthroughActive
     && !alreadyShownToday
     && completedIds.length >= CHESTS_BEFORE_OFFER;

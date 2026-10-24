@@ -58,7 +58,9 @@ export const BANNER_PRIORITY = {
   noFreezeUpsell: 80,
   toolsDiscovery: 70,
   proPromoExpiring: 60,
-  thirdChestPro: 50,
+  // 85 (was 50, 24.10.26): only 23 users saw the banner in 45 days because the
+  // lower slot lost to other banners. Still below streakAtRisk and firstLesson.
+  thirdChestPro: 85,
 } as const;
 
 export function useBannerSlot(id: string, wants: boolean, priority: number): boolean {

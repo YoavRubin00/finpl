@@ -74,6 +74,10 @@ export const GEM_PRODUCT_IDS: Record<string, string> = {
 /* ── Initialization ────────────────────────────────────────────────── */
 
 let configuredFor: string | null = null;
+// True only after Purchases.configure actually ran. `configuredFor` can't tell
+// "never configured" from "configured anonymously" (both null), and logIn before
+// configure throws "There is no singleton instance" (9 users in 45 days).
+let sdkConfigured = false;
 
 export function configureRevenueCat(appUserId?: string): void {
   if (IS_WEB || !Purchases) return;
@@ -97,6 +101,7 @@ export function configureRevenueCat(appUserId?: string): void {
   }
 
   configuredFor = targetId;
+  sdkConfigured = true;
 }
 
 /* ── User identification ───────────────────────────────────────────── */
@@ -104,13 +109,20 @@ export function configureRevenueCat(appUserId?: string): void {
 /** Link a logged-in user to RevenueCat so purchases persist across devices */
 export async function loginRevenueCat(appUserId: string): Promise<CustomerInfo | null> {
   if (IS_WEB || !Purchases) return null;
+  // Configure first when a caller (e.g. RegisterScreen) got here before the
+  // lifecycle did. Configuring with the id already identifies the user.
+  if (!sdkConfigured) {
+    configureRevenueCat(appUserId);
+    if (!sdkConfigured) return null;
+    return Purchases.getCustomerInfo();
+  }
   const { customerInfo } = await Purchases.logIn(appUserId);
   return customerInfo;
 }
 
 /** Reset to anonymous user (on sign-out) */
 export async function logoutRevenueCat(): Promise<void> {
-  if (IS_WEB || !Purchases) return;
+  if (IS_WEB || !Purchases || !sdkConfigured) return;
   await Purchases.logOut();
 }
 

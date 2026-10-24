@@ -80,6 +80,11 @@ interface UsageState {
   promoExpiryBannerLastShownDate: string | null;
   // Soft Pro banner after the 3rd chest (Yoav 11.10.26) — dismissed once = gone.
   thirdChestProBannerDismissed: boolean;
+  // Dismiss no longer means gone for good (24.10.26): 1 of 23 users who saw the
+  // banner tapped it, and a single X-tap hid the only Pro offer forever. Each
+  // dismissal now hides it for a few days; it stops after the 3rd.
+  thirdChestProBannerDismissCount: number;
+  thirdChestProBannerDismissedAt: number | null;
   // IL calendar-day the Pro banner last appeared. The banner lives on the learn
   // map, which mounts and unmounts constantly, so a per-mount ref let it fire an
   // impression on every remount: 145 impressions from 21 users in six days, one
@@ -128,6 +133,8 @@ const initialState: UsageState = {
   promoWelcomeSeenForExpiry: null,
   promoExpiryBannerLastShownDate: null,
   thirdChestProBannerDismissed: false,
+  thirdChestProBannerDismissCount: 0,
+  thirdChestProBannerDismissedAt: null,
   proBannerLastShownDate: null,
 };
 
@@ -316,7 +323,11 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         set({ promoExpiryBannerLastShownDate: todayISO() });
       },
 
-      markThirdChestProBannerDismissed: () => set({ thirdChestProBannerDismissed: true }),
+      markThirdChestProBannerDismissed: () => set((s) => ({
+        thirdChestProBannerDismissed: true,
+        thirdChestProBannerDismissCount: s.thirdChestProBannerDismissCount + 1,
+        thirdChestProBannerDismissedAt: Date.now(),
+      })),
 
       markProBannerShownToday: (): boolean => {
         const today = todayISO();
@@ -348,6 +359,8 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         promoWelcomeSeenForExpiry: state.promoWelcomeSeenForExpiry,
         promoExpiryBannerLastShownDate: state.promoExpiryBannerLastShownDate,
         thirdChestProBannerDismissed: state.thirdChestProBannerDismissed,
+        thirdChestProBannerDismissCount: state.thirdChestProBannerDismissCount,
+        thirdChestProBannerDismissedAt: state.thirdChestProBannerDismissedAt,
         proBannerLastShownDate: state.proBannerLastShownDate,
       }),
     },
