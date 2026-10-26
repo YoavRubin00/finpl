@@ -36,7 +36,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { ParentalConsentGate } from "../legal/ParentalConsentGate";
 import { ParentalEmailModal } from "../legal/ParentalEmailModal";
 import { selectHasActiveParentalConsent, useParentalConsentStore } from "../legal/useParentalConsent";
-import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases, isPurchaseCancelledError, purchaseErrorCode } from "../../services/revenueCat";
+import { getOffering, getOfferingFailureReason, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases, isPurchaseCancelledError, purchaseErrorCode } from "../../services/revenueCat";
 import type { PurchasesPackage } from "../../services/revenueCat";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
@@ -444,6 +444,8 @@ export function PricingScreen() {
         package_type: activePackage?.packageType ?? null,
         package_id: activePackage?.identifier ?? null,
         intro_price: introPrice ? introPrice.price : null,
+        fail_reason: offerState === 'unavailable' ? getOfferingFailureReason() ?? 'threw' : null,
+        platform: Platform.OS,
       },
     });
   }, [offerState, source, hasTrial, trialDays, priceString, activePackage, introPrice]);

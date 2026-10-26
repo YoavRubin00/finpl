@@ -152,19 +152,34 @@ async function getOfferingsWithTimeout(ms: number): Promise<PurchasesOffering | 
   ]);
 }
 
+/** Why the last getOffering() came back without packages: 'timeout' (no answer
+ *  in 4s), 'no_current' (offerings loaded, no current offering),
+ *  'empty_packages' (current offering shell with zero packages), or the SDK
+ *  error code. Sent with paywall_cta_state{unavailable} so PostHog shows which
+ *  one it is instead of us guessing. Null when the last call succeeded. */
+let lastOfferingFailure: string | null = null;
+export function getOfferingFailureReason(): string | null {
+  return lastOfferingFailure;
+}
+
 export async function getOffering(): Promise<PurchasesOffering | null> {
   if (IS_WEB || !Purchases) return null;
   const MAX_ATTEMPTS = 5;
   let lastCurrent: PurchasesOffering | null = null;
+  lastOfferingFailure = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
       const current = await getOfferingsWithTimeout(4000);
       if (current) lastCurrent = current;
       // Only accept a fully-hydrated offering. An offering with no packages is
       // treated as "not ready yet" and retried (the cold-BillingClient case).
-      if (current && (current.availablePackages?.length ?? 0) > 0) return current;
-    } catch {
-      // swallow — retry
+      if (current && (current.availablePackages?.length ?? 0) > 0) {
+        lastOfferingFailure = null;
+        return current;
+      }
+      lastOfferingFailure = current ? 'empty_packages' : 'timeout_or_no_current';
+    } catch (err) {
+      lastOfferingFailure = purchaseErrorCode(err);
     }
     if (attempt < MAX_ATTEMPTS - 1) {
       // Backoff: 0.6s, 1.2s, 1.8s, 2.4s — gives the store time to hydrate.
