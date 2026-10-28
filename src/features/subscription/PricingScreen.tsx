@@ -36,7 +36,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { ParentalConsentGate } from "../legal/ParentalConsentGate";
 import { ParentalEmailModal } from "../legal/ParentalEmailModal";
 import { selectHasActiveParentalConsent, useParentalConsentStore } from "../legal/useParentalConsent";
-import { getOffering, getOfferingFailureReason, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases, isPurchaseCancelledError, purchaseErrorCode } from "../../services/revenueCat";
+import { getOffering, getOfferingFailureReason, loginRevenueCat, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases, isPurchaseCancelledError, purchaseErrorCode } from "../../services/revenueCat";
 import type { PurchasesPackage } from "../../services/revenueCat";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
@@ -329,6 +329,7 @@ export function PricingScreen() {
   // Soft, non-blocking notice for a genuine (non-cancel) purchase failure —
   // replaces the old Alert("שגיאת תשלום", rawSdkString).
   const [purchaseNotice, setPurchaseNotice] = useState<string | null>(null);
+  const [activationPending, setActivationPending] = useState(false);
   const [toast, setToast] = useState<PricingToast | null>(null);
   // Guest → register in-app sheet (replaces the native "רגע לפני Pro" Alert).
   const [guestSheetVisible, setGuestSheetVisible] = useState(false);
@@ -455,6 +456,7 @@ export function PricingScreen() {
   const proBadgeStyle = useProBadgePulse();
 
   const handleUpgrade = useCallback(async () => {
+    if (isLoading || activationPending) return;
     // #9 (Yoav 2026-06-15): a guest can't really go Pro — their RevenueCat
     // app_user_id is anonymous, so a purchase can't be attributed to an account
     // and is lost on reinstall. Send them to register first, then bounce back
@@ -489,7 +491,20 @@ export function PricingScreen() {
 
     setIsLoading(true);
     setPurchaseNotice(null);
+    let storeConfirmed = false;
     try {
+      // Registration identifies RevenueCat in the background. Checkout must
+      // wait for identification rather than purchasing under the guest ID.
+      const account = useAuthStore.getState();
+      if (account.isGuest || !account.userId) return;
+      const existingInfo = await loginRevenueCat(account.userId);
+      if (!existingInfo) throw new Error('RevenueCat account initialization failed');
+      if (existingInfo.entitlements.active[RC_ENTITLEMENT_PRO]) {
+        storeConfirmed = true;
+        await syncFromRC(existingInfo);
+        router.replace((returnTo || '/pro-welcome') as never);
+        return;
+      }
       // The CTA only reaches here when offerState === 'ready', so activePackage
       // is already a valid purchasable package. Re-fetch only as a fallback
       // (e.g. the minor email-modal path re-invokes this). If still nothing,
@@ -518,6 +533,7 @@ export function PricingScreen() {
       track({ name: 'purchase_initiated', props: { bundle_id: pkg.identifier, bundle_type: 'subscription', real_money: true, source } });
 
       const customerInfo = await purchasePackage(pkg);
+      storeConfirmed = true;
       const entitlement = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO];
       const isPro = entitlement !== undefined;
 
@@ -575,6 +591,9 @@ export function PricingScreen() {
           return;
         }
         router.replace("/pro-welcome" as never);
+      } else if (mountedRef.current) {
+        setActivationPending(true);
+        setPurchaseNotice("הרכישה אושרה בחנות. ההרשאות עדיין מתעדכנות — אפשר לשחזר את הרכישה.");
       }
     } catch (err: unknown) {
       // Cancellation detection is centralized in isPurchaseCancelledError —
@@ -594,13 +613,16 @@ export function PricingScreen() {
         // 2.1a treats a hard error on a purchase attempt as a blocker. The user
         // can just tap the CTA again.
         if (mountedRef.current) {
-          setPurchaseNotice("התשלום לא הושלם. אפשר לנסות שוב בעוד רגע.");
+          setActivationPending(storeConfirmed);
+          setPurchaseNotice(storeConfirmed
+            ? "הרכישה אושרה בחנות. ההרשאות עדיין מתעדכנות — אפשר לשחזר את הרכישה."
+            : "התשלום לא הושלם. אפשר לנסות שוב בעוד רגע.");
         }
       }
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, isGuest, source, useHardGateFallback, hasParentalConsent, minorNeedsHybridModal, isMinor, notifyPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo, activePackage]);
+  }, [displayName, isGuest, source, useHardGateFallback, hasParentalConsent, minorNeedsHybridModal, isMinor, notifyPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo, activePackage, isLoading, activationPending]);
 
   // Guest came back from registration with resume=purchase: open the store
   // sheet without another tap. Once per mount; only when there is a real
@@ -621,6 +643,8 @@ export function PricingScreen() {
       const restored = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined;
       if (restored) {
         await syncFromRC(customerInfo);
+        setActivationPending(false);
+        setPurchaseNotice(null);
         if (mountedRef.current) setToast(PRICING_TOASTS.restored);
       } else if (mountedRef.current) {
         setToast(PRICING_TOASTS.notFound);
@@ -832,10 +856,10 @@ export function PricingScreen() {
                     // guest the real blocker is the missing account — route them to
                     // register (handleUpgrade already handles the guest→register
                     // flow), and don't gate the button on the offering loading.
-                    onPress={isGuest ? handleUpgrade : (offerState === 'unavailable' ? loadOffering : handleUpgrade)}
+                    onPress={activationPending ? handleRestore : isGuest ? handleUpgrade : (offerState === 'unavailable' ? loadOffering : handleUpgrade)}
                     disabled={isLoading || (!isGuest && offerState === 'loading')}
                     accessibilityRole="button"
-                    accessibilityLabel={isGuest ? (showTrialOffer ? `התחל ${shownTrialDays} ימים חינם` : 'להירשם עכשיו') : (offerState === 'unavailable' ? 'נסו שוב' : 'שדרג עכשיו ל-PRO')}
+                    accessibilityLabel={activationPending ? 'לשחזור הרכישה' : isGuest ? (showTrialOffer ? `התחל ${shownTrialDays} ימים חינם` : 'להירשם עכשיו') : (offerState === 'unavailable' ? 'נסו שוב' : 'שדרג עכשיו ל-PRO')}
                     accessibilityState={{ disabled: isLoading || (!isGuest && offerState === 'loading') }}
                     style={({ pressed }) => [
                       styles.ctaButtonBase,
@@ -855,6 +879,8 @@ export function PricingScreen() {
                             <Text style={styles.ctaText}>טוען מסלולים…</Text>
                           ) : null}
                         </View>
+                      ) : activationPending ? (
+                        <Text style={styles.ctaText}>לשחזור הרכישה</Text>
                       ) : isGuest ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
                           <View accessible={false}>

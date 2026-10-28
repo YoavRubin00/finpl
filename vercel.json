@@ -2,6 +2,9 @@
   "framework": null,
   "buildCommand": "",
   "outputDirectory": "public",
+  "redirects": [
+    { "source": "/", "destination": "https://finplay.me", "permanent": false }
+  ],
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 120,

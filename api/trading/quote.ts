@@ -22,6 +22,7 @@ const YAHOO_TICKER_MAP: Record<string, string> = {
   ETH: 'ETH-USD',
   XAU: 'GC=F',
   XAG: 'SI=F',
+  'TA125.TA': '^TA125.TA',
 };
 
 const toYahooTicker = (assetId: string): string =>
@@ -50,7 +51,42 @@ interface QuoteResponse {
   chart: ChartPoint[];
 }
 
-const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart';
+interface YahooChartResponse {
+  chart?: {
+    error?: { description?: string };
+    result?: Array<{
+      meta: { regularMarketPrice: number; previousClose?: number; chartPreviousClose?: number; currency?: string };
+      timestamp?: number[];
+      indicators?: { quote?: Array<{ open?: Array<number | null>; high?: Array<number | null>; low?: Array<number | null>; close?: Array<number | null>; volume?: Array<number | null> }> };
+    }>;
+  };
+}
+
+const YAHOO_HOSTS = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'] as const;
+
+/** Retry a transient provider failure on Yahoo's alternate chart host.
+ * Every attempt is bounded; invalid symbols are not retried or fabricated.
+ */
+async function fetchChart(path: string): Promise<Response> {
+  for (let index = 0; index < YAHOO_HOSTS.length; index++) {
+    const host = YAHOO_HOSTS[index];
+    try {
+      const response = await fetch(`https://${host}/v8/finance/chart/${path}`, {
+        // Expo also declares fetch/AbortSignal for native. This endpoint runs
+        // on Node; both declarations describe the same runtime signal here.
+        signal: AbortSignal.timeout(8_000) as unknown as NonNullable<RequestInit['signal']>,
+        headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+      });
+      if (response.ok || response.status === 404 || index === YAHOO_HOSTS.length - 1) return response;
+      console.warn('[trading/quote] Upstream response; trying alternate host', { host, status: response.status });
+      await response.body?.cancel();
+    } catch (error: unknown) {
+      console.warn('[trading/quote] Upstream request failed', { host, reason: error instanceof Error ? error.name : 'unknown' });
+      if (index === YAHOO_HOSTS.length - 1) throw error;
+    }
+  }
+  throw new Error('Quote provider unavailable');
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -58,14 +94,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const ticker = req.query.ticker as string | undefined;
-    const timeframe = (req.query.timeframe as string) ?? '1D';
+    const ticker = typeof req.query.ticker === 'string' ? req.query.ticker.trim().toUpperCase() : '';
+    const timeframe = req.query.timeframe ?? '1D';
 
     if (!ticker) {
       return res.status(400).json({ error: 'Missing ticker query parameter' });
     }
+    if (!/^[A-Z0-9^][A-Z0-9.^=_-]{0,39}$/.test(ticker)) {
+      return res.status(400).json({ error: 'Invalid ticker query parameter' });
+    }
 
-    if (!VALID_TIMEFRAMES.has(timeframe)) {
+    if (typeof timeframe !== 'string' || !VALID_TIMEFRAMES.has(timeframe)) {
       return res.status(400).json({
         error: `Invalid timeframe. Must be one of: ${Array.from(VALID_TIMEFRAMES).join(', ')}`,
       });
@@ -74,23 +113,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const tf = timeframe as Timeframe;
     const yahooTicker = toYahooTicker(ticker);
     const params = TIMEFRAME_PARAMS[tf];
-    const yahooUrl = `${YAHOO_BASE}/${encodeURIComponent(yahooTicker)}?interval=${params.interval}&range=${params.range}`;
-
-    const yahooRes = await fetch(yahooUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        Accept: 'application/json',
-      },
-    });
+    const yahooRes = await fetchChart(`${encodeURIComponent(yahooTicker)}?interval=${params.interval}&range=${params.range}`);
 
     if (!yahooRes.ok) {
-      return res.status(502).json({
+      console.warn('[trading/quote] No quote available', { ticker, status: yahooRes.status });
+      return res.status(yahooRes.status === 404 ? 404 : 502).json({
         error: `Yahoo Finance returned HTTP ${yahooRes.status}`,
       });
     }
 
-    const json = await yahooRes.json();
+    const json = await yahooRes.json() as YahooChartResponse;
     const result = json?.chart?.result?.[0];
 
     if (!result) {
@@ -99,6 +131,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const currentPrice: number = result.meta.regularMarketPrice;
+    if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+      console.warn('[trading/quote] Invalid provider price', { ticker });
+      return res.status(502).json({ error: 'Quote provider returned no valid price' });
+    }
     const rawPrevClose = result.meta.previousClose ?? result.meta.chartPreviousClose ?? null;
     const previousClose: number | null =
       typeof rawPrevClose === 'number' && isFinite(rawPrevClose) ? rawPrevClose : null;
@@ -142,9 +178,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       chart,
     };
 
+    res.setHeader('Cache-Control', 'public, s-maxage=5, max-age=0');
     return res.status(200).json(body);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal server error';
-    return res.status(500).json({ error: message });
+    console.warn('[trading/quote] Quote unavailable', { reason: err instanceof Error ? err.name : 'unknown' });
+    return res.status(502).json({ error: 'Quote provider temporarily unavailable' });
   }
 }

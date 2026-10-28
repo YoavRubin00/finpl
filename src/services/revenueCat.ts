@@ -78,12 +78,22 @@ let configuredFor: string | null = null;
 // "never configured" from "configured anonymously" (both null), and logIn before
 // configure throws "There is no singleton instance" (9 users in 45 days).
 let sdkConfigured = false;
+let identityQueue: Promise<void> = Promise.resolve();
+
+function withIdentity<T>(action: () => Promise<T>): Promise<T> {
+  const pending = identityQueue.then(action, action);
+  identityQueue = pending.then(() => undefined, () => undefined);
+  return pending;
+}
 
 export function configureRevenueCat(appUserId?: string): void {
   if (IS_WEB || !Purchases) return;
 
+  // configure() must run once even for a guest. Initially both IDs were null,
+  // so the old equality guard skipped guest initialization altogether.
+  // Subsequent account switches go through logIn/logOut, never configure().
+  if (sdkConfigured) return;
   const targetId = appUserId ?? null;
-  if (configuredFor === targetId) return;
 
   const apiKey = Platform.OS === 'ios' ? RC_API_KEY_APPLE : RC_API_KEY_GOOGLE;
   if (!apiKey) {
@@ -109,21 +119,29 @@ export function configureRevenueCat(appUserId?: string): void {
 /** Link a logged-in user to RevenueCat so purchases persist across devices */
 export async function loginRevenueCat(appUserId: string): Promise<CustomerInfo | null> {
   if (IS_WEB || !Purchases) return null;
-  // Configure first when a caller (e.g. RegisterScreen) got here before the
-  // lifecycle did. Configuring with the id already identifies the user.
-  if (!sdkConfigured) {
-    configureRevenueCat(appUserId);
-    if (!sdkConfigured) return null;
-    return Purchases.getCustomerInfo();
-  }
-  const { customerInfo } = await Purchases.logIn(appUserId);
-  return customerInfo;
+  return withIdentity(async () => {
+    // Configure first when a caller got here before the lifecycle did.
+    // Configuring with the id already identifies the user.
+    if (!sdkConfigured) {
+      configureRevenueCat(appUserId);
+      if (!sdkConfigured) return null;
+      return Purchases.getCustomerInfo();
+    }
+    if (configuredFor === appUserId) return Purchases.getCustomerInfo();
+    const { customerInfo } = await Purchases.logIn(appUserId);
+    configuredFor = appUserId;
+    return customerInfo;
+  });
 }
 
 /** Reset to anonymous user (on sign-out) */
 export async function logoutRevenueCat(): Promise<void> {
-  if (IS_WEB || !Purchases || !sdkConfigured) return;
-  await Purchases.logOut();
+  if (IS_WEB || !Purchases) return;
+  return withIdentity(async () => {
+    if (!sdkConfigured || configuredFor === null) return;
+    await Purchases.logOut();
+    configuredFor = null;
+  });
 }
 
 /* ── Offerings ─────────────────────────────────────────────────────── */
@@ -164,6 +182,11 @@ export function getOfferingFailureReason(): string | null {
 
 export async function getOffering(): Promise<PurchasesOffering | null> {
   if (IS_WEB || !Purchases) return null;
+  if (!sdkConfigured) configureRevenueCat();
+  if (!sdkConfigured) {
+    lastOfferingFailure = 'sdk_not_configured';
+    return null;
+  }
   const MAX_ATTEMPTS = 5;
   let lastCurrent: PurchasesOffering | null = null;
   lastOfferingFailure = null;
@@ -198,8 +221,10 @@ export async function purchasePackage(
   pkg: PurchasesPackage,
 ): Promise<CustomerInfo> {
   if (IS_WEB || !Purchases) throw new Error('Purchases not available on web');
-  const { customerInfo } = await Purchases.purchasePackage(pkg);
-  return customerInfo;
+  return withIdentity(async () => {
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    return customerInfo;
+  });
 }
 
 /** Classify a purchase error as a USER CANCELLATION (not a real failure).

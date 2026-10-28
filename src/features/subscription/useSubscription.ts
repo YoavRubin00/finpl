@@ -37,6 +37,7 @@ export function useIsPro(): boolean {
 export function useSyncFromRevenueCat() {
   const qc = useQueryClient();
   return useMutation({
+    retry: 2,
     mutationFn: async (customerInfo: CustomerInfo | null) => {
       const isPro = customerInfo
         ? customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined

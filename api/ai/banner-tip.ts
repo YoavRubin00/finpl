@@ -12,7 +12,8 @@ interface BannerTipRequestBody {
 
 interface GeminiResponse {
   candidates: Array<{
-    content: { parts: Array<{ text: string }> };
+    content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+    finishReason?: string;
   }>;
 }
 
@@ -76,12 +77,17 @@ XP: ${xp.toLocaleString()}
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
+        signal: AbortSignal.timeout(15_000) as unknown as NonNullable<RequestInit['signal']>,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: userMessage }] }],
           generationConfig: {
-            maxOutputTokens: 60,
+            // Gemini 2.5 counts reasoning against maxOutputTokens. A 60-token
+            // cap with dynamic thinking can leave no visible tip at all.
+            // https://ai.google.dev/gemini-api/docs/generate-content/thinking
+            maxOutputTokens: 128,
+            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
       },
@@ -93,9 +99,12 @@ XP: ${xp.toLocaleString()}
     }
 
     const data = (await upstream.json()) as GeminiResponse;
-    const message = (data.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
+    const message = (data.candidates?.[0]?.content?.parts ?? [])
+      .filter((part) => !part.thought && typeof part.text === 'string')
+      .map((part) => part.text).join('').trim();
 
     if (!message) {
+      console.warn('[ai/banner-tip] Empty response', { finishReason: data.candidates?.[0]?.finishReason ?? 'missing_candidate' });
       return res.status(502).json({ error: 'Empty response.' });
     }
 
