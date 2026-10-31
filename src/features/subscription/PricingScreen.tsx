@@ -47,6 +47,7 @@ import { track } from "../../lib/analytics/events";
 import { logTrialStart, logPurchase } from "../../utils/fbEvents";
 import * as Notifications from "expo-notifications";
 import { useNotificationStore, resolveOneShotFireDate } from "../notifications/useNotificationStore";
+import { tapHaptic } from "../../utils/haptics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -149,13 +150,21 @@ const FEATURES: FeatureRow[] = [
  *  carries BOTH packages — today it has one ($rc_monthly), so the picker is
  *  dormant until an annual product is added in the stores + RevenueCat. */
 const planStyles = StyleSheet.create({
-  row: { flexDirection: "row-reverse", gap: 10, marginBottom: 12 },
-  pill: { flex: 1, borderRadius: 14, borderWidth: 2, borderColor: "#cbd5e1", paddingVertical: 10, paddingHorizontal: 10, alignItems: "center", backgroundColor: "#ffffff" },
-  pillActive: { borderColor: "#0ea5e9", backgroundColor: "#f0f9ff" },
-  pillTitle: { fontSize: 14, fontWeight: "900", color: "#0f172a", writingDirection: "rtl" },
-  pillPrice: { fontSize: 12.5, fontWeight: "700", color: "#475569", marginTop: 2, writingDirection: "rtl" },
-  badge: { position: "absolute", top: -10, alignSelf: "center", backgroundColor: "#f59e0b", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeText: { fontSize: 10.5, fontWeight: "900", color: "#ffffff" },
+  row: { flexDirection: "row-reverse", gap: 10, marginBottom: 12, marginTop: 8 },
+  pill: { flex: 1, minHeight: 92, borderRadius: 16, borderWidth: 2, borderColor: "#e2e8f0", paddingTop: 16, paddingBottom: 10, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
+  pillActive: { borderColor: "#0ea5e9", backgroundColor: "#f0f9ff", shadowColor: "#0ea5e9", shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
+  radio: { position: "absolute", top: 8, right: 8, width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#cbd5e1", alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
+  radioActive: { borderColor: "#0ea5e9", backgroundColor: "#0ea5e9" },
+  pillTitle: { fontSize: 15, fontWeight: "900", color: "#0f172a", writingDirection: "rtl" },
+  pillPrice: { fontSize: 13, fontWeight: "800", color: "#334155", marginTop: 2, writingDirection: "rtl" },
+  pillSub: { fontSize: 11.5, fontWeight: "700", color: "#0369a1", marginTop: 2, writingDirection: "rtl" },
+  // The discount, shown as a sign rather than words: the full price crossed out next to a red "-69%" tag.
+  dealRow: { flexDirection: "row-reverse", alignItems: "center", gap: 6, marginTop: 3 },
+  wasPrice: { fontSize: 11.5, fontWeight: "700", color: "#94a3b8", textDecorationLine: "line-through", writingDirection: "rtl" },
+  offTag: { backgroundColor: "#ef4444", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, transform: [{ rotate: "-4deg" }] },
+  offTagText: { fontSize: 11, fontWeight: "900", color: "#ffffff" },
+  badge: { position: "absolute", top: -11, alignSelf: "center", backgroundColor: "#f59e0b", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  badgeText: { fontSize: 11, fontWeight: "900", color: "#ffffff" },
 });
 
 function savingPct(monthly: PurchasesPackage, annual: PurchasesPackage): number {
@@ -163,6 +172,15 @@ function savingPct(monthly: PurchasesPackage, annual: PurchasesPackage): number 
   const a = annual.product.price;
   if (!m || !a || m <= 0) return 0;
   return Math.max(0, Math.round((1 - a / (m * 12)) * 100));
+}
+
+/** A store price formatted in the store's currency (twelve monthly payments, for the crossed-out "was" price). */
+function formatStorePrice(amount: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat("he-IL", { style: "currency", currency: currencyCode, maximumFractionDigits: 2 }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currencyCode}`;
+  }
 }
 
 /** Local "your trial ends in 2 days" reminder (Yoav 14.10.26). The trial
@@ -822,23 +840,39 @@ export function PricingScreen() {
                       { pkg: planPackages.monthly, title: "חודשי", best: false },
                     ] as const).map(({ pkg, title, best }) => {
                       const active = activePackage?.identifier === pkg.identifier;
-                      const pct = best ? savingPct(planPackages.monthly!, planPackages.annual!) : 0;
+                      const monthlyPkg = planPackages.monthly!;
+                      const pct = best ? savingPct(monthlyPkg, planPackages.annual!) : 0;
+                      // Twelve monthly payments, crossed out next to the annual price.
+                      const wasPrice = pct > 0 ? formatStorePrice(monthlyPkg.product.price * 12, monthlyPkg.product.currencyCode) : '';
+                      const perMonth = best ? pkg.product.pricePerMonthString : null;
                       return (
                         <Pressable
                           key={pkg.identifier}
-                          onPress={() => { setActivePackage(pkg); captureEvent('paywall_plan_selected', { plan: pkg.packageType, source }); }}
+                          onPress={() => { if (!active) tapHaptic(); setActivePackage(pkg); captureEvent('paywall_plan_selected', { plan: pkg.packageType, source }); }}
                           accessibilityRole="radio"
                           accessibilityState={{ selected: active }}
-                          accessibilityLabel={`${title}, ${pkg.product.priceString}${pct > 0 ? `, חיסכון ${pct}%` : ''}`}
-                          style={[planStyles.pill, active && planStyles.pillActive]}
+                          accessibilityLabel={`${title}, ${pkg.product.priceString}${pct > 0 ? `, במקום ${wasPrice}, הנחה של ${pct}%` : ''}`}
+                          style={({ pressed }) => [planStyles.pill, active && planStyles.pillActive, pressed && { transform: [{ scale: 0.98 }] }]}
                         >
+                          <View style={[planStyles.radio, active && planStyles.radioActive]} pointerEvents="none">
+                            {active ? <Check size={12} color="#ffffff" strokeWidth={4} /> : null}
+                          </View>
                           {pct > 0 ? (
-                            <View style={planStyles.badge}><Text style={planStyles.badgeText} allowFontScaling={false}>{`הכי משתלם · חיסכון ${pct}%`}</Text></View>
+                            <View style={planStyles.badge}><Text style={planStyles.badgeText} allowFontScaling={false}>הכי משתלם</Text></View>
                           ) : null}
                           <Text style={planStyles.pillTitle} allowFontScaling={false}>{title}</Text>
+                          {pct > 0 ? (
+                            <View style={planStyles.dealRow}>
+                              <Text style={planStyles.wasPrice} allowFontScaling={false}>{wasPrice}</Text>
+                              <View style={planStyles.offTag}><Text style={planStyles.offTagText} allowFontScaling={false}>{`-${pct}%`}</Text></View>
+                            </View>
+                          ) : null}
                           <Text style={planStyles.pillPrice} allowFontScaling={false}>
                             {best ? `${pkg.product.priceString} לשנה` : `${pkg.product.priceString} לחודש`}
                           </Text>
+                          {perMonth ? (
+                            <Text style={planStyles.pillSub} allowFontScaling={false}>{`רק ${perMonth} לחודש`}</Text>
+                          ) : null}
                         </Pressable>
                       );
                     })}
