@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import { FriendsHubScreen } from '../../src/features/friends-hub/FriendsHubScreen';
 import { captureEvent } from '../../src/lib/posthog';
+import { Redirect } from 'expo-router';
+import { SOCIAL_FEATURES_ENABLED } from '../../src/config/social';
 
 // 20s-dwell value qualifier (Yoav 2026-07-03): a friends visit counts as VALUE
 // only when the user actually stays ~20s on the page — an engaged visit, not a
@@ -32,5 +34,6 @@ export default function FriendsTab(): React.ReactElement {
     return () => clearTimeout(t);
   }, [isFocused]);
 
+  if (!SOCIAL_FEATURES_ENABLED) return <Redirect href="/(tabs)" />;
   return <FriendsHubScreen />;
 }

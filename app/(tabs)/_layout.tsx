@@ -5,6 +5,7 @@ import { GlobalWealthHeader } from "../../src/components/ui/GlobalWealthHeader";
 import { AnimatedTabBar } from "../../src/components/ui/AnimatedTabBar";
 import { RetentionToasts } from "../../src/features/retention-loops/RetentionToasts";
 import { BoostBanner } from "../../src/components/ui/BoostBanner";
+import { SOCIAL_FEATURES_ENABLED } from "../../src/config/social";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -43,7 +44,8 @@ export default function TabsLayout() {
           <Tabs.Screen name="index" />
           {/* Friends tab — kept visible but its screen content is gated/blocked
               as it was on dev. Do NOT swap to feature/flag's open Friends Hub. */}
-          <Tabs.Screen name="friends" />
+          {/* Hidden while social features are off (src/config/social.ts) — 4 tabs. */}
+          <Tabs.Screen name="friends" options={SOCIAL_FEATURES_ENABLED ? undefined : { href: null }} />
           <Tabs.Screen name="chat" />
           {/* The legacy Feed/learn screen is no longer reachable from the tab
               bar — its useful content is migrating into the learning modules

@@ -30,6 +30,7 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { useWalkthroughGlowTab } from "../../features/onboarding/AppWalkthroughOverlay";
 
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
+import { SOCIAL_FEATURES_ENABLED } from "../../config/social";
 
 // ---------------------------------------------------------------------------
 // Tab config
@@ -46,13 +47,15 @@ interface TabConfig {
 // The array reads right-to-left in RTL, so array[0] = rightmost tab visually.
 // The "learn" key (feed) was dropped and replaced by "tools" — the Financial
 // Tools hub is the new entry point on the right.
-const TABS: TabConfig[] = [
+const ALL_TABS: TabConfig[] = [
   { key: "tools",       label: "כלים",    Icon: Wrench },
   { key: "investments", label: "השקעות",  Icon: TrendingUp },
   { key: "index",       label: "למידה",   Icon: BookOpen },
   { key: "friends",     label: "חברים",   Icon: Users },
   { key: "chat",        label: "צ'אט",   Icon: MessageCircle },
 ];
+// Social features off (src/config/social.ts) → the friends tab leaves the bar.
+const TABS: TabConfig[] = SOCIAL_FEATURES_ENABLED ? ALL_TABS : ALL_TABS.filter((t) => t.key !== "friends");
 
 // Unified accent color across all tabs. Active tab pops cyan; inactive tabs
 // stay a quiet slate gray so the bar doesn't shout. Default state = silent.

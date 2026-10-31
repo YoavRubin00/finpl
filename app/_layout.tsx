@@ -132,6 +132,7 @@ import { Day0ExitRitualHost } from "../src/features/retention-loops/Day0ExitRitu
 import { TomorrowChestReadyHost } from "../src/features/retention-loops/TomorrowChestReadyHost";
 import { StarterCapitalGrantHost } from "../src/features/retention-loops/StarterCapitalGrantHost";
 import { PredictionResultsHost } from "../src/features/crowd-wisdom/PredictionResultsHost";
+import { SOCIAL_FEATURES_ENABLED } from "../src/config/social";
 import { GuestValueGateHost } from "../src/features/auth/guestValueGate";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { ensureFirstRunAssignment, MODULE_FIRST_ENABLED } from "../src/features/onboarding/firstRunExperiment";
@@ -924,7 +925,7 @@ function RootLayoutInner() {
               <StarterCapitalGrantHost />
               {/* Credits + announces predictions that settled while away
                   ("צדקתם בזמן שהייתם בחוץ"). Claims once on open; server dedupes. */}
-              <PredictionResultsHost />
+              {SOCIAL_FEATURES_ENABLED && <PredictionResultsHost />}
               {/* Guest value-action register gate (Yoav 2026-07-03 policy):
                   every completed value action → signup gate, 2-min cooldown.
                   Call sites fire requestGuestGate('<trigger>'). */}

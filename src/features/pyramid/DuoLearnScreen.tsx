@@ -619,6 +619,7 @@ function ModuleNode({
   journalBadge,
   onLoungePress,
   loungeBadge,
+  onProPress,
 }: {
   module: Module;
   state: "completed" | "active" | "locked";
@@ -654,6 +655,8 @@ function ModuleNode({
    *  (Yoav 2026-07-04). */
   onLoungePress?: () => void;
   loungeBadge?: boolean;
+  /** Opens the paywall. Passed only for non-Pro users. */
+  onProPress?: () => void;
 }) {
   const colors = ARENA_COLORS[arenaId];
 
@@ -707,7 +710,8 @@ function ModuleNode({
   // Positioned BELOW the module-title pill (same mirror side) — logos only.
   // Physical order inside the row: [🛋️ טרקלין][📅 יומן] — the lounge sits
   // LEFT of the journal (Yoav's explicit placement).
-  const CHIP_ROW_W = onLoungePress ? 42 * 2 + 8 : 44;
+  const chipCount = 1 + (onLoungePress ? 1 : 0) + (onProPress ? 1 : 0);
+  const CHIP_ROW_W = chipCount > 1 ? 42 * chipCount + 8 * (chipCount - 1) : 44;
   const journalLeft = finnGoesRight
     ? Math.max(nodeCenter - NODE_SIZE / 2 - CHIP_ROW_W - 10, 0)
     : Math.min(nodeCenter + NODE_SIZE / 2 + 10, CONTENT_W - CHIP_ROW_W);
@@ -752,6 +756,25 @@ function ModuleNode({
               entering={FadeInDown.delay(160).duration(400)}
               style={{ position: 'absolute', top: 70, zIndex: 20, left: journalLeft, width: CHIP_ROW_W, flexDirection: 'row', gap: 8 }}
             >
+              {onProPress && (
+                <Pressable
+                  onPress={onProPress}
+                  accessibilityRole="button"
+                  accessibilityLabel="שדרוג ל-PRO"
+                  hitSlop={8}
+                  style={{ borderRadius: 999, shadowColor: '#f59e0b', shadowOpacity: 0.55, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 7 }}
+                >
+                  <LinearGradient
+                    colors={['#0a2540', '#164e63']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#facc15' }}
+                  >
+                    <Crown size={16} color="#facc15" fill="#facc15" />
+                    <Text style={{ fontSize: 9, fontWeight: '900', color: '#facc15', marginTop: -1, letterSpacing: 0.5 }} allowFontScaling={false}>PRO</Text>
+                  </LinearGradient>
+                </Pressable>
+              )}
               {onLoungePress && (
                 <Pressable
                   onPress={onLoungePress}
@@ -1096,6 +1119,7 @@ const ChapterSection = React.memo(function ChapterSection({
   journalBadge,
   onLoungePress,
   loungeBadge,
+  onProPress,
   newsBadgeNode,
   isGlobalActiveChapter,
   activeIndexOverride,
@@ -1163,6 +1187,8 @@ const ChapterSection = React.memo(function ChapterSection({
   /** Opens the Streak Lounge (הטרקלין) — chip left of the journal chip. */
   onLoungePress?: () => void;
   loungeBadge?: boolean;
+  /** Opens the paywall. Passed only for non-Pro users. */
+  onProPress?: () => void;
   /** When present, renders this node (the Daily News Challenge button) on the
    *  opposite side of the active module — the "dead space" the user's eye
    *  lands on when they open the learn screen. Only the chapter containing
@@ -1366,6 +1392,7 @@ const ChapterSection = React.memo(function ChapterSection({
                 onJournalPress={isActive ? onJournalPress : undefined}
                 journalBadge={isActive ? journalBadge : undefined}
                 onLoungePress={isActive ? onLoungePress : undefined}
+                onProPress={isActive ? onProPress : undefined}
                 loungeBadge={isActive ? loungeBadge : undefined}
                 onPress={() => {
                   if (isLocked) {
@@ -2999,6 +3026,12 @@ export function DuoLearnScreen() {
     try { captureEvent("mondial_carousel_opened", { source: "learn_map" }); } catch { /* non-fatal */ }
   }, [mondialMarkOpened]);
 
+  const handleProChipPress = useCallback(() => {
+    tapHaptic();
+    try { captureEvent('pro_entry_tapped', { source: 'learn_map_chip' }); } catch { /* non-fatal */ }
+    router.push('/pricing?source=learn_map_chip' as never);
+  }, [router]);
+
   const handleStreakClubPress = useCallback(() => {
     setClubSheetVisible(true);
   }, []);
@@ -3384,6 +3417,7 @@ export function DuoLearnScreen() {
                 onJournalPress={hasActiveModule ? handleJournalPress : undefined}
                 journalBadge={hasActiveModule ? journalBadge : undefined}
                 onLoungePress={hasActiveModule ? handleStreakClubPress : undefined}
+                onProPress={hasActiveModule && !isPro ? handleProChipPress : undefined}
                 loungeBadge={hasActiveModule ? clubHasUnseen : undefined}
                 newsBadgeNode={hasActiveModule ? activeNewsBadgeNode : undefined}
                 onPearlPress={handlePearlPress}
