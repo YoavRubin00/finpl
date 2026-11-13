@@ -85,6 +85,15 @@ function multiplierForStreak(streak: number): number {
   return 1;
 }
 
+/** Coin multiplier the NEXT chest pays if it is opened now - the same math
+ *  recordChestOpen applies, read without mutating. The end-of-lesson CTA shows
+ *  it ("the next chest pays ×1.5") so the number on screen is the number paid. */
+export function nextChestCoinMultiplier(now: number = Date.now()): number {
+  const { chestStreak, lastChestAtMs } = useTopicProgressStore.getState();
+  const within = lastChestAtMs > 0 && now - lastChestAtMs < STREAK_WINDOW_MS;
+  return multiplierForStreak(within ? chestStreak + 1 : 1);
+}
+
 export const useTopicProgressStore = create<TopicProgressState>()(
   persist(
     (set, get) => ({

@@ -50,6 +50,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
         name: 'paywall_viewed',
         props: {
           paywall: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
+          source: 'shop',
           bundle_id: bundle.id,
         },
       });
@@ -143,6 +144,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
         name: 'paywall_dismissed',
         props: {
           paywall: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
+          source: 'shop',
           bundle_id: bundle.id,
         },
       });

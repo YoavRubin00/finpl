@@ -387,7 +387,34 @@ export type AppEvent =
   | { name: 'tomorrow_chest_cta_tapped'; props: { cta: 'continue_lesson' | 'later'; next_module_id?: string } }
   // Burned unclaimed after the 48h ready-window (overnight-interest economics,
   // מוני 8.7) — measures how many day-2 appointments are missed entirely.
-  | { name: 'tomorrow_chest_expired'; props: { opens_on: string; armed_on: string } };
+  | { name: 'tomorrow_chest_expired'; props: { opens_on: string; armed_on: string } }
+  // ── Post-lesson loop (13.11.26) ─────────────────────────────────────────
+  // `lesson_summary_viewed` used to fire only from LessonFlowScreen's hidden
+  // `summary` phase, which the topic-tree flow almost never reaches (the lesson
+  // returns to the map at the chest threshold). It now fires from the chest
+  // celebration itself - the screen that really shows the result - so every
+  // presented completion has one. `surface` tells the two apart.
+  | { name: 'lesson_summary_viewed'; props: { lesson_id: string; chapter_id?: string | null; surface: 'chest' | 'legacy_summary'; source?: 'inline' | 'accordion' } }
+  // The "next lesson" CTA at the end of a lesson. `to_lesson` is null when
+  // there is no accessible next lesson (end of free content / locked chapter)
+  // and the primary button falls back to the map.
+  | { name: 'next_lesson_cta_shown'; props: { from_lesson: string; to_lesson: string | null; minutes?: number; next_chest_multiplier?: number; quests_done?: number; quests_total?: number } }
+  | { name: 'next_lesson_cta_tapped'; props: { from_lesson: string; to_lesson: string } }
+  // Every modal that opens after a lesson, with its position in the sequence
+  // (1 = the chest). `index` >= 3 means stacking. See postLessonSequence.ts.
+  | { name: 'post_lesson_modal_shown'; props: { kind: PostLessonModalKind; index: number; module_id: string } };
+
+export type PostLessonModalKind =
+  | 'chest'
+  | 'double_or_nothing'
+  | 'signup_gate'
+  | 'profile_question'
+  | 'tool_nudge'
+  | 'rate_prompt'
+  | 'pro_teaser'
+  | 'paywall'
+  | 'day0_wager'
+  | 'streak';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event

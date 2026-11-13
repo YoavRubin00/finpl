@@ -12,6 +12,7 @@ import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { FINN_FIRE } from '../retention-loops/finnMascotConfig';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
 import { track } from '../../lib/analytics/events';
+import { useNudgeQueueStore as useNudgeQueue } from '../../stores/useNudgeQueueStore';
 
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
@@ -76,6 +77,7 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
   const pendingFirstChest = useTutorialStore((s) => s.pendingPostWalkthroughFirstChest);
   const pendingProTeaser = useTutorialStore((s) => s.pendingPostWalkthroughProTeaser);
   const pendingRegisterCTA = useTutorialStore((s) => s.pendingPostWalkthroughCTA);
+  const inLesson = useNudgeQueue((s) => s.inLesson);
 
   // Reconcile the cached flag with the real OS state so a stale
   // permissionGranted=true doesn't suppress the prompt forever.
@@ -107,7 +109,11 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
     hasCompletedFirstModule &&
     !pendingFirstChest &&
     !pendingProTeaser &&
-    !pendingRegisterCTA;
+    !pendingRegisterCTA &&
+    // Never over a lesson or its chest (13.11.26): eligibility flips the moment
+    // mod-0-1 completes, i.e. while the first chest is still on screen, and the
+    // chest can now lead straight into lesson 2. The ask waits for the map.
+    !inLesson;
 
   const [visible, setVisible] = useState(false);
   const [selectedChip, setSelectedChip] = useState<(typeof TIME_CHIPS)[number]['key']>(defaultChipForNow);
@@ -121,6 +127,7 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
     // is the highest-value ask we have, so it WAITS (up to ~12s) rather than
     // skips.
     let cancelled = false;
+    let shown = false;
     let t: ReturnType<typeof setTimeout>;
     const tryShow = (waited: number) => {
       if (cancelled) return;
@@ -147,11 +154,19 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
       // re-run's cleanup only clears an already-fired timer.
       markNotifPromptShown();
       useNotificationStore.getState().dismissBanner();
+      shown = true;
       setVisible(true);
       try { track({ name: 'notification_banner_shown', props: { source: 'permission_modal' } }); } catch { /* non-fatal */ }
     };
     t = setTimeout(() => tryShow(0), 1200);
-    return () => { cancelled = true; clearTimeout(t); };
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      // Cancelled before it showed (the user walked into a lesson during the
+      // wait): stay armed, so the ask comes back the next time they are on the
+      // map instead of being lost for the session.
+      if (!shown) firedRef.current = false;
+    };
   }, [eligible, markNotifPromptShown]);
 
   const handleAllow = async () => {

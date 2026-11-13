@@ -109,7 +109,7 @@ const CONTENT: Record<Exclude<NotificationChannelId, "fantasy">, Notifications.N
   upgradeNudge: {
     title: "קפטן שארק שם לב אליכם",
     body: "ניסיתם להשתמש בפיצ'רים PRO. בואו נסגור את זה?",
-    data: { screen: "/pricing" },
+    data: { screen: "/pricing?source=push_upgrade_nudge" },
   },
   // Tool-of-the-day discovery push. title/body/screen are overridden per-call
   // (scheduleToolDiscovery) with the actual rotated tool — this is the fallback.

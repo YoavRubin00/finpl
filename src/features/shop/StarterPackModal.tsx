@@ -62,7 +62,7 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
 
   useEffect(() => {
     if (visible) {
-      track({ name: 'paywall_viewed', props: { paywall: 'starter_pack', pack_id: pack.id, is_minor: isMinor } });
+      track({ name: 'paywall_viewed', props: { paywall: 'starter_pack', source: 'shop_daily_deals', pack_id: pack.id, is_minor: isMinor } });
     }
   }, [visible, pack.id, isMinor]);
 

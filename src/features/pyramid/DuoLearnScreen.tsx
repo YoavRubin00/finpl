@@ -105,6 +105,8 @@ import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeA
 import { FINN_STANDARD, FINN_DAILY_CHALLENGE } from "../retention-loops/finnMascotConfig";
 import { EnergyStationCard } from "../energy/EnergyStationCard";
 import { TomorrowChestCard } from "../retention-loops/TomorrowChestCard";
+import { getNextLessonAfter } from "../retention-loops/nextLessonTarget";
+import { reportPostLessonModal } from "../retention-loops/postLessonSequence";
 import { useHeartsStore } from "../subscription/useHeartsStore";
 // FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
 // entry lives in the Daily News Challenge card (added in Stage A).
@@ -2814,43 +2816,54 @@ export function DuoLearnScreen() {
   }, [insets.top]);
 
   const handleTopicTreeContinueAfterChest = useCallback(() => {
-    // 70% chest, module not finished: keep the accordion OPEN and land the
-    // shark-call card near the top with the pearl + next module below.
+    // "חזרה למפה" on the chest, module not finished: keep the accordion OPEN
+    // and land the shark-call card near the top with the pearl + next module
+    // below.
     scrollEndCardsNearTop();
-  }, [scrollEndCardsNearTop]);
-
-  // "המשך" after chest — keep accordion OPEN, scroll end-of-module cards
-  // (report + shark call) near the top (~20% from top) so the next module
-  // node is visible in the lower portion. The user sees what they completed
-  // and can tap the next module when ready, instead of being auto-navigated.
-  const handleTopicTreeAdvanceToNextModule = useCallback(() => {
-    const current = topicTreeModule;
-    if (!current) return;
-    const ch = ALL_CHAPTERS.find((c) => c.id === current.chapterId);
-    if (!ch) return;
-    // Day-0 trial moment after mod-0-1b — BACK, with the data (Yoav 14.10.26).
-    // The 11.10 removal read "34 viewers, 0 purchases" off the pre-redirect
-    // event; the redirect itself fired `paywall_viewed{subscription_pricing}`,
-    // and 52 of the 86 pricing viewers in 90d came through here — including
-    // both September trials (day 0, 1–2 chests). 5 of 8 trials ever started on
-    // day 0. Same once-only gate, now with a real `source` so the attribution
-    // holds, and the paywall leads with the 7-day trial. Skipping is one tap.
+    // Day-0 trial moment after mod-0-1b (Yoav 14.10.26: both September trials
+    // came through it; 5 of 8 trials ever started on day 0). It used to hijack
+    // the chest's PRIMARY button - the tap meant to start the next lesson
+    // opened a full-screen paywall instead. It now belongs to this path only:
+    // the user chose to stop and look at the map, so the once-only offer shows
+    // here, pushed OVER the map (closing it returns to the map, not into a
+    // lesson). Same once-only flag and the same `source`. mod-0-1b arms no
+    // signup gate / profile question / tool nudge, so nothing stacks with it.
+    const current = topicTreeModuleRef.current;
     if (
-      current.module.id === 'mod-0-1b'
+      current?.module.id === 'mod-0-1b'
       && !isPro
       && !useUsageStore.getState().hasSeenMod01bPaywall
     ) {
-      setTopicTreeModule(null);
       useUsageStore.getState().markMod01bPaywallSeen();
-      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree';
-      router.replace(`/pricing?source=post_mod_0_1b&returnTo=${encodeURIComponent(returnTo)}` as never);
+      reportPostLessonModal('paywall');
+      router.push('/pricing?source=post_mod_0_1b' as never);
+    }
+  }, [scrollEndCardsNearTop, isPro, router]);
+
+  // PRIMARY "לשיעור הבא" on the chest (13.11.26): START the next lesson.
+  // This used to keep the accordion open and scroll the map, leaving the user
+  // to find and tap the next node - 55 first-lesson completers, 30 second
+  // lessons. ChestCelebrationModal resolves the same getNextLessonAfter target
+  // and only shows this button when one exists; the map fallback below covers
+  // a target that disappeared in between.
+  const handleTopicTreeAdvanceToNextModule = useCallback(() => {
+    const current = topicTreeModule;
+    if (!current) return;
+    const next = getNextLessonAfter(current.module.id);
+    if (!next || isNavigatingRef.current) {
+      scrollEndCardsNearTop();
       return;
     }
-    // Keep the accordion open; land the end-of-module cards near the top with
-    // the pearl + next module visible below — same landing as the 70%-chest
-    // continue path (Yoav 2026-06-29).
-    scrollEndCardsNearTop();
-  }, [topicTreeModule, router, isPro, scrollEndCardsNearTop]);
+    isNavigatingRef.current = true;
+    setCurrentChapter(storeKey(next.chapterId));
+    // The accordion follows the lesson: when the user comes back to the map,
+    // the lesson they are in is the one that is open.
+    if (shouldUseTopicTree(next.module)) setTopicTreeModule({ module: next.module, chapterId: next.chapterId });
+    else setTopicTreeModule(null);
+    const nextIntroUri = next.module.introAudio?.uri;
+    if (nextIntroUri && !isBundledIntroAudio(nextIntroUri)) prefetchModuleAudio(nextIntroUri);
+    router.push(next.route as never);
+  }, [topicTreeModule, router, scrollEndCardsNearTop, setCurrentChapter]);
 
   // Generic module-completed handler — invoked when the user picks
   // "next module" inside the chest. Closes the accordion.

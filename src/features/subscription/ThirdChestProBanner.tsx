@@ -13,6 +13,7 @@ import { BANNER_PRIORITY, useBannerSlot } from "../../stores/useBannerSlotStore"
 import { useIsPro } from "./useSubscription";
 import { useUsageStore } from "./useUsageStore";
 import { israelDayKey } from "../../utils/dateUtils";
+import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
 
 /** Completed modules before the trial offer appears: 1 (Yoav 18.10.26). 5 of the
  *  8 trials ever started on day 0, and 17 of 38 chest-openers stop after a single
@@ -27,6 +28,27 @@ const CHESTS_BEFORE_OFFER = 1;
 /** A dismissal hides the banner for 3 days; the 3rd dismissal ends it. */
 const DISMISS_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000;
 const MAX_DISMISSALS = 3;
+
+/** One impression every 3 Israeli days (was: every day). Two months of this
+ *  offer: 255 paywall views, 51 people, 0 subscriptions - the same few users
+ *  met it again and again. Fewer, better-timed impressions. */
+const MIN_DAYS_BETWEEN_IMPRESSIONS = 3;
+/** Quiet window after a lesson chest. The user has just been pointed at the
+ *  next lesson; an offer card on top of the map at that second competes with
+ *  it. The banner belongs to the moments in between (app open, browsing). */
+const POST_LESSON_QUIET_MS = 10 * 60 * 1000;
+
+/** True once the banner took its impression in THIS app session. See the
+ *  self-hiding bug note in the component. Session-only on purpose. */
+let shownThisSession = false;
+
+function daysBetween(fromDay: string | null, toDay: string): number {
+  if (!fromDay) return Number.POSITIVE_INFINITY;
+  const from = Date.parse(`${fromDay}T12:00:00Z`);
+  const to = Date.parse(`${toDay}T12:00:00Z`);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return Number.POSITIVE_INFINITY;
+  return Math.round((to - from) / 86_400_000);
+}
 
 /**
  * Soft Pro invitation on the learn map after the 3rd chest (Yoav 11.10.26).
@@ -48,11 +70,21 @@ export function ThirdChestProBanner() {
   const markShownToday = useUsageStore((s) => s.markProBannerShownToday);
   const lastShownDate = useUsageStore((s) => s.proBannerLastShownDate);
 
-  // Once per IL day, not once per mount: the learn map remounts this constantly,
-  // so the banner used to reappear (and re-report) all day long — 145 reports
-  // from 21 users, one of them 39 times. A yellow card seen 39 times is
-  // wallpaper, not an offer.
-  const alreadyShownToday = lastShownDate === israelDayKey();
+  // One impression per MIN_DAYS_BETWEEN_IMPRESSIONS, not one per mount: the
+  // learn map remounts this constantly, so the banner used to reappear (and
+  // re-report) all day long — 145 reports from 21 users, one of them 39 times.
+  //
+  // BUG FIXED HERE (13.11.26): the old gate was `!alreadyShownToday`, and the
+  // impression effect below stamps today the first time the banner is visible.
+  // So the stamp flipped the banner's own gate on the very next render and it
+  // unmounted a frame after appearing: `pro_banner_shown` kept counting
+  // (319 from 65 people) for a card nobody had time to read or tap. The cap
+  // now decides whether a NEW impression may start; once this session took
+  // its impression, the banner stays for the session.
+  const capAllows = shownThisSession || daysBetween(lastShownDate, israelDayKey()) >= MIN_DAYS_BETWEEN_IMPRESSIONS;
+  // Never in the lesson → next-lesson path: quiet right after a chest.
+  const lastChestAtMs = useTopicProgressStore((s) => s.lastChestAtMs);
+  const justFinishedLesson = lastChestAtMs > 0 && Date.now() - lastChestAtMs < POST_LESSON_QUIET_MS;
   // Users who dismissed under the old "gone forever" rule have no timestamp and
   // no count, so they see the offer again — intended, they never got a second look.
   const dismissedRecently = dismissedAt != null && Date.now() - dismissedAt < DISMISS_COOLDOWN_MS;
@@ -61,15 +93,18 @@ export function ThirdChestProBanner() {
     && dismissCount < MAX_DISMISSALS
     && !dismissedRecently
     && !isWalkthroughActive
-    && !alreadyShownToday
+    && capAllows
+    && !justFinishedLesson
     && completedIds.length >= CHESTS_BEFORE_OFFER;
   const visible = useBannerSlot("third_chest_pro", wants, BANNER_PRIORITY.thirdChestPro);
 
   useEffect(() => {
     if (!visible) return;
-    // `markShownToday` is the idempotent guard — it returns false if another
-    // mount already stamped today, so no remount can double-report.
-    if (!markShownToday()) return;
+    // One report per session: the module-level flag survives the map's
+    // remounts, and the persisted day-stamp starts the 3-day cap.
+    if (shownThisSession) return;
+    shownThisSession = true;
+    markShownToday();
     // NOT `paywall_viewed`: a banner impression is not a paywall view, and
     // mixing them made this banner the app's top "paywall source" while the
     // real pricing screen saw 3 users in six days. Its own event keeps the

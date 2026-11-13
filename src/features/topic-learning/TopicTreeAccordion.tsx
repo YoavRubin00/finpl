@@ -14,6 +14,7 @@ import { InModuleProfileQuestion, type ProfileQuestionKind } from '../onboarding
 import { ModuleEndSignupGate } from '../auth/ModuleEndSignupGate';
 import { RateAppPromptModal } from '../retention-loops/RateAppPromptModal';
 import { useTomorrowChestStore } from '../retention-loops/useTomorrowChestStore';
+import { reportPostLessonModal } from '../retention-loops/postLessonSequence';
 import { openStoreReview } from '../../lib/openStoreReview';
 import { shouldShowRatePrompt } from '../retention-loops/rateAppPrompt';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
@@ -301,10 +302,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
      *  so the "הכל או כלום" prompt actually surfaces ~25% of chests
      *  (was firing on every chest because onDoNResolve was always wired). */
     offerDoN: boolean;
-    /** Yoav 2026-06-12: playful "I'm bailing" CTA label rolled at chest
-     *  open. Set on ~30% of post-mod-0-1b chests; null otherwise so
-     *  the modal hides the button. */
-    quitLabel: string | null;
   } | null>(null);
   const upsertProgress = useUpsertModuleProgress();
   const { playSound } = useSoundEffect();
@@ -505,22 +502,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // the first chests stay clean (no gamble prompt), like quitLabel below.
     const offerDoN = module.id !== 'mod-0-1' && module.id !== 'mod-0-1b' && Math.random() < 0.25;
 
-    // Yoav 2026-06-12: playful "I'm bailing to Netflix" CTA — 30% of chest
-    // opens, mod-0-2 onwards (mod-0-1 + mod-0-1b stay clean during onboarding).
-    const POST_QUIT_LABELS = [
-      'עפתי לנטפליקס 📺',
-      'עפתי לאינסטגרם 📱',
-      'עפתי לטיקטוק 🎵',
-      'אני הולך לישון 😴',
-      'יש לי שווארמה שמחכה 🌯',
-      'יש לי פיצה שמתקררת 🍕',
-    ];
-    const isOnboardingModule = module.id === 'mod-0-1' || module.id === 'mod-0-1b';
-    const quitLabel = !isOnboardingModule && Math.random() < 0.3
-      ? POST_QUIT_LABELS[Math.floor(Math.random() * POST_QUIT_LABELS.length)]
-      : null;
-
-    setChestState({ xp: totalXp, coins: totalCoins, energy: CHEST_ENERGY_REWARD, isFinale: false, rarity, offerDoN, quitLabel });
+    // The playful "עפתי לנטפליקס" exit button (30% of chests) is gone
+    // (13.11.26): it offered a way OUT at the one moment built to pull the
+    // user into the next lesson. `offered_quit` stays in chest_opened as false.
+    setChestState({ xp: totalXp, coins: totalCoins, energy: CHEST_ENERGY_REWARD, isFinale: false, rarity, offerDoN });
 
     // Tomorrow-chest (RETENTION-SPRINT 2026-07-06): today's module chest arms
     // a sealed chest that opens the next Israel day — the literal object
@@ -550,7 +535,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           xp: totalXp,
           coins: totalCoins,
           offered_don: offerDoN,
-          offered_quit: quitLabel !== null,
+          offered_quit: false,
           // Mystery reveal shipped 2026-06-17: rarity is now hidden until the
           // user taps. Tag the cohort so we can compare post-chest engagement
           // (next lesson within 24h) against the pre-mystery 'legacy' baseline.
@@ -630,7 +615,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     if (!next) return false;
     // Delay so the chest modal is fully gone before this one fades in.
     if (profileQTimerRef.current) clearTimeout(profileQTimerRef.current);
-    profileQTimerRef.current = setTimeout(() => setProfileQuestionKind(next), 450);
+    profileQTimerRef.current = setTimeout(() => { reportPostLessonModal('profile_question'); setProfileQuestionKind(next); }, 450);
     return true;
   }, [module.id]);
 
@@ -653,6 +638,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // which locked guests out of the gate forever — pre-release audit P1).
     profileQTimerRef.current = setTimeout(() => {
       useTutorialStore.getState().markModuleEndGateShown(module.id);
+      reportPostLessonModal('signup_gate');
       setSignupGateVisible(true);
     }, 450);
   }, [module.id]);
@@ -669,6 +655,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     if (rateTimerRef.current) clearTimeout(rateTimerRef.current);
     rateTimerRef.current = setTimeout(() => {
       useTutorialStore.getState().markRatePromptShown();
+      reportPostLessonModal('rate_prompt');
       setRatePromptVisible(true);
       try {
         track({ name: 'rate_prompt_shown', props: { trigger: 'module_complete', module_id: module.id, completed_modules: useCompletedModulesStore.getState().completedIds.length } });
@@ -689,6 +676,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       if (!useNudgeQueueStore.getState().canShow('tools')) return false;
     } catch { return false; }
     try { useToolNudgeStore.getState().markShown(); } catch { /* non-fatal */ }
+    reportPostLessonModal('tool_nudge');
     setShowToolCTA(true);
     return true;
   }, [module.id]);
@@ -873,15 +861,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             }
             // Guests get the signup gate (#8, skipped for mod-0-1), registered
             // users any pending staged profile question (#6). Mutually exclusive.
-            // Which post-chest surface (if any) is about to open — decides
-            // whether we may jump straight into the next chip below.
-            let popupShown = false;
+            // At most ONE follow-up surface, and only on this "back to the
+            // map" path - never between the chest and the next lesson.
             if (isGuest) {
-              popupShown = module.id !== 'mod-0-1b' && !useTutorialStore.getState().moduleEndGateShown[module.id];
               maybeShowSignupGate();
-            } else {
-              popupShown = maybeShowProfileQuestion() || maybeShowToolNudge();
-              if (!popupShown) { popupShown = shouldShowRatePrompt(); maybeShowRatePrompt(); }
+            } else if (!maybeShowProfileQuestion() && !maybeShowToolNudge()) {
+              maybeShowRatePrompt();
             }
             // The 70% chest keeps the accordion open so the user can
             // finish the remaining 30% — but when the chest fired at 100%
@@ -891,19 +876,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             if (summary.pct >= 100) {
               completeWithDeckMoment(() => onModuleCompleted?.());
             } else {
+              // This button now reads "חזרה למפה" and does exactly that: the
+              // accordion stays open on the remaining chips (the gold chip is
+              // one tap away and runs them continuously). It no longer jumps
+              // into the next chip by itself - the way forward is the primary
+              // "לשיעור הבא" above it (13.11.26).
               onContinueAfterChest?.();
-              // Shorter, more immediate (Yoav 11.10.26): "המשך" on the 70%
-              // chest opens the NEXT chip right away instead of dropping the
-              // user back on the map. PostHog 30d: 34 of 73 mod-0-1 learners
-              // stopped at exactly 4/7 chips — the chest was an exit, not a
-              // continue. The chip runs with returnTo=topic-tree, so the
-              // continuous flow carries the last 30% to the 100% chest. Only
-              // when no post-chest modal is about to open on the map.
-              const next = summary.nextTopic;
-              if (!popupShown && next && next.kind !== 'carousel') {
-                try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'continue' } }); } catch { /* non-fatal */ }
-                onTopicSelected(next);
-              }
             }
           }}
           // Hardware back / system dismiss: close WITHOUT chest_cta_tapped —
@@ -935,28 +913,19 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'continue' } }); } catch { /* non-fatal */ }
             try { track({ name: 'chest_closed', props: { module_id: module.id, source: 'accordion', cta: 'continue' } }); } catch { /* non-fatal */ }
             setChestState(null);
-            // 2026-07-03 (root cause of "no gate + no shark wager after the
-            // mod-0-1 chest"): this PRIMARY "המשך" CTA was the ONLY chest-close
-            // path that armed nothing — guests who tapped it never saw a
-            // register surface, and Day0ExitRitualHost (gated on the
-            // moduleEndGateShown['mod-0-1'] stamp since 0a373e86) could never
-            // fire. Mirror the other close paths here.
+            // PRIMARY "לשיעור הבא" (13.11.26): the parent starts the next
+            // lesson right now. Nothing may open between this tap and that
+            // lesson - no signup gate, no Pro teaser, no profile question, no
+            // tool nudge, no rate prompt, no deck-flight animation. Those all
+            // live on the "חזרה למפה" path (onContinueModule / onDismiss),
+            // one at a time. A guest who keeps tapping "next lesson" meets the
+            // signup gate the first time they stop and go back to the map.
             if (module.id === 'mod-0-1') {
               try { useTutorialStore.getState().setPendingPostWalkthroughFirstChest(false); } catch { /* non-fatal */ }
-              if (!isGuest) { try { useTutorialStore.getState().setPendingPostWalkthroughProTeaser(true); } catch { /* non-fatal */ } }
             }
+            // The deck is still collected, silently.
+            try { useCardCollectionStore.getState().collectDeck(module.id); } catch { /* non-fatal */ }
             onAdvanceToNextModule?.();
-            if (isGuest) {
-              // Arm the end-of-module register gate and KEEP the accordion
-              // mounted — onModuleCompleted unmounts it, which clears the gate's
-              // 450ms timer (cleanup above) and the modal host with it.
-              // Deck: collect SILENTLY (no flight moment) — the signup gate is
-              // a conversion surface and nothing should animate over it.
-              try { useCardCollectionStore.getState().collectDeck(module.id); } catch { /* non-fatal */ }
-              maybeShowSignupGate();
-            } else {
-              completeWithDeckMoment(() => onModuleCompleted?.());
-            }
           }}
           // Yoav 2026-06-12: DoN gated on the 25% roll captured in chestState.
           // Passing undefined skips the entire DoN flow inside the modal so
@@ -990,30 +959,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
                 } catch { /* non-fatal */ }
               }
             : undefined}
-          // Yoav 2026-06-12: playful "I'm bailing" CTA. Surfaced on ~30%
-          // of chests starting from mod-0-2. On tap → close modal and
-          // exit the learning map to the home tab.
-          quitLabel={chestState?.quitLabel ?? null}
-          onQuit={() => {
-            try {
-              track({
-                name: 'chest_cta_tapped',
-                props: {
-                  module_id: module.id,
-                  chapter_id: chapterIdFromModuleId(module.id),
-                  cta: 'quit',
-                  quit_label: chestState?.quitLabel ?? undefined,
-                },
-              });
-            } catch { /* non-fatal */ }
-            setChestState(null);
-            router.replace('/(tabs)/index' as never);
-          }}
-          // Yoav 2026-06-29: live summary-call option ABOVE "המשך". Tapping
-          // closes the chest and starts the call (consent → call → report).
-          summaryCallAvailable={sharkCall.available}
-          summaryCallEligible={sharkCall.eligible}
-          onStartSummaryCall={() => { setChestState(null); sharkCall.openCall(); }}
+          // The live summary-call button left the chest (13.11.26): for most
+          // users it was a "· PRO" upsell sitting above the continue button.
+          // The call itself is unchanged and one tap away on the map
+          // (ModuleSharkCallCard, in the end-cards band above).
         />
 
         {/* Live summary-call modals (consent → call → report) for the chest
