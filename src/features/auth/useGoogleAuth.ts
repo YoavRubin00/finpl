@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { Platform } from "react-native";
 import { useAuthStore } from "./useAuthStore";
-import { useGoogleAuthStore } from "./useGoogleAuthStore";
+import { useGoogleAuthStore, type GoogleSignInOutcome } from "./useGoogleAuthStore";
 import { getApiBase } from "../../db/apiBase";
 import { captureEvent } from "../../lib/posthog";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
@@ -85,10 +85,12 @@ export function useGoogleAuth() {
       details.hasIdToken = !!response.authentication?.idToken;
     }
     if (response.type === 'cancel' || response.type === 'dismiss') {
-      captureEvent('auth_cancelled', { method: 'google' });
+      captureEvent('auth_cancelled', { method: 'google', result_type: response.type });
+      useGoogleAuthStore.setState({ isSigningIn: false, lastOutcome: 'cancelled' });
     } else {
       captureEvent('auth_failed', { method: 'google', error_code: String(details.errorCode ?? details.type) });
       useAuthStore.getState().setAuthError("הכניסה עם Google נכשלה. נסה שוב או בחר שיטה אחרת.");
+      useGoogleAuthStore.setState({ isSigningIn: false, lastOutcome: 'failed' });
     }
     console.error("[GoogleAuth] OAuth response failed", details);
   }, [response]);
@@ -130,6 +132,9 @@ export function useGoogleAuth() {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const fetchUserInfo = async (token: string, _isJwt: boolean) => {
+    // Resolved in `finally` so every exit (link, verify failure, throw, success)
+    // releases the "connecting" state screens show while this runs.
+    let outcome: GoogleSignInOutcome = 'failed';
     try {
       // Already signed in → connect-account action, not login.
       const alreadySignedIn = !!(await tokenStore.get());
@@ -137,6 +142,7 @@ export function useGoogleAuth() {
         try {
           await linkProvider({ provider: 'google', token });
           useAuthStore.getState().setAuthError(null);
+          outcome = 'success';
         } catch {
           useAuthStore.getState().setAuthError('קישור החשבון נכשל. נסו שוב.');
         }
@@ -168,6 +174,7 @@ export function useGoogleAuth() {
         verified.profile.displayName = googleUser.name;
       }
       await signInWithProfile(verified.profile, verified.token, 'google');
+      outcome = 'success';
 
       // Yoav 2026-06-11: consume the "existing-account intent" flag set by
       // the IntroStep login sub-step. If the user explicitly tapped "כבר
@@ -201,6 +208,8 @@ export function useGoogleAuth() {
       console.error("[GoogleAuth] fetchUserInfo threw", error);
       captureEvent('auth_failed', { method: 'google', error_code: 'fetchUserInfo_threw' });
       useAuthStore.getState().setAuthError("שגיאת רשת בכניסה. בדוק את החיבור ונסה שוב.");
+    } finally {
+      useGoogleAuthStore.setState({ isSigningIn: false, lastOutcome: outcome });
     }
   };
 
@@ -213,9 +222,21 @@ export function useGoogleAuth() {
           useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
           return;
         }
+        useGoogleAuthStore.setState({ isSigningIn: true, lastOutcome: null });
         try {
-          await promptAsync();
+          const result = await promptAsync();
+          // Success keeps isSigningIn=true: the token exchange + server verify
+          // continue in the `response` effect above and release it in
+          // fetchUserInfo's finally. Anything else ends the attempt here (the
+          // effect sets the same values; this does not depend on it running).
+          if (result.type !== 'success') {
+            useGoogleAuthStore.setState({
+              isSigningIn: false,
+              lastOutcome: result.type === 'cancel' || result.type === 'dismiss' ? 'cancelled' : 'failed',
+            });
+          }
         } catch (error) {
+          useGoogleAuthStore.setState({ isSigningIn: false, lastOutcome: 'failed' });
           captureEvent('auth_failed', { method: 'google', error_code: 'promptAsync_threw' });
           useAuthStore.getState().setAuthError("שגיאה בפתיחת חלון הכניסה. נסה שוב.");
           console.error("[GoogleAuth] promptAsync threw", error);

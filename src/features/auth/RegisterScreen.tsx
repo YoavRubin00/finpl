@@ -563,7 +563,7 @@ export function RegisterScreen() {
               <Pressable
                 onPress={() => {
                   captureEvent('signup_skipped_for_guest');
-                  enterGuestMode();
+                  enterGuestMode('register_screen_skip');
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="התחל ללא חשבון"
