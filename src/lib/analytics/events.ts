@@ -96,6 +96,19 @@ export type AppEvent =
   // state check / code exchange; 'code_exchange_timeout' = the normal path's
   // exchange never returned.
   | { name: 'auth_redirect_recovered'; props: { method: 'google'; after: 'cancel' | 'dismiss'; delay_ms: number } }
+  // Email sign-in with a mailed 6-digit code (EmailCodeStep, 2026-11-13).
+  // Funnel: requested → step_viewed → verified (failed carries the server code,
+  // e.g. EMAIL_CODE_INVALID / EMAIL_CODE_EXPIRED / NETWORK).
+  | { name: 'auth_email_code_requested'; props: { source: 'register' | 'login' | 'onboarding_login' } }
+  | { name: 'auth_email_code_request_failed'; props: { source: 'register' | 'login' | 'onboarding_login'; error_code: string } }
+  | { name: 'auth_email_code_step_viewed'; props: { source: 'register' | 'login' | 'onboarding_login' } }
+  | { name: 'auth_email_code_verified'; props: { source: 'register' | 'login' | 'onboarding_login' } }
+  | { name: 'auth_email_code_failed'; props: { source: 'register' | 'login' | 'onboarding_login'; error_code: string } }
+  // Cold boot found an email session that can no longer be re-minted silently
+  // (pre-JWT `auth-store-v2` session, or an email "ghost" with no JWT): email
+  // sign-in now needs a mailed code. Counts who has to sign in again.
+  | { name: 'legacy_session_needs_code'; props: Record<string, never> }
+  | { name: 'ghost_session_needs_code'; props: Record<string, never> }
 
   // ── Lesson / Module ────────────────────────────────────────────────────
   // SCHEMA UNIFICATION (Yoav 11.7): the emitters historically sent module_id

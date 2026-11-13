@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -22,14 +23,15 @@ import { useAppleAuth } from "./useAppleAuth";
 import { AvatarImage } from "../avatars/AvatarImage";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { captureEvent } from "../../lib/posthog";
-import { loginRevenueCat } from "../../services/revenueCat";
+import { signInWithProfile } from "../../lib/auth/lifecycle";
+import type { VerifiedSession } from "../../lib/api/auth";
+import { EmailCodeStep, sendEmailCode } from "./EmailCodeStep";
 
-// The form is name + email. It used to also ask for a password and a
-// confirmation, with a strength meter — but email accounts are passwordless
-// (verifyEmail(email, name) is all that reaches the server): the two fields
-// were never sent or stored anywhere, they only gated the button. Asking for a
-// secret the app then throws away is both friction and misleading, so they are
-// gone (2026-11).
+// The form is name + email + one button. Email accounts have no password: the
+// button mails a 6-digit code and the account is created (or signed in) only
+// once that code is entered (2026-11-13). Before, the app signed the user in
+// locally and asked the server for a session with the email alone, which let
+// anyone sign in as anyone.
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -57,7 +59,6 @@ export function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { returnTo, onboarding } = useLocalSearchParams<{ returnTo?: string; onboarding?: string }>();
-  const signIn = useAuthStore((s) => s.signIn);
   const convertGuestToUser = useAuthStore((s) => s.convertGuestToUser);
   const isGuest = useAuthStore((s) => s.isGuest);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -72,6 +73,11 @@ export function RegisterScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  // "form" → name + email; "code" → the mailed code (EmailCodeStep).
+  const [phase, setPhase] = useState<"form" | "code">("form");
+  const [codeEmail, setCodeEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const emailInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -96,6 +102,40 @@ export function RegisterScreen() {
   // don't gate the register button on it a second time.
   const isValid = name.trim().length >= 2 && isValidEmail(email.trim());
 
+  async function handleRegister() {
+    if (!isValid || sending || showSuccess) return;
+    captureEvent('signup_method_clicked', { method: 'email' });
+    const normalized = email.trim().toLowerCase();
+    setSending(true);
+    setFormError(null);
+    clearAuthError();
+    const failure = await sendEmailCode(normalized, 'register');
+    setSending(false);
+    if (failure) {
+      setFormError(failure);
+      return;
+    }
+    setCodeEmail(normalized);
+    setPhase("code");
+  }
+
+  // The server accepted the code: only now does the app become signed in.
+  async function handleVerified(session: VerifiedSession) {
+    if (isGuest) {
+      // ?onboarding=1 means we arrived from the signup-gate email button: keep
+      // onboarding incomplete so returnTo bounces back to /(auth)/onboarding →
+      // celebration → streak → mod-0-1 (the flag is flipped by enterFirstModule).
+      // Fires guest_converted_to_user / registration attribution as before.
+      convertGuestToUser(name.trim(), session.profile.email ?? codeEmail, { completeOnboarding: onboarding !== "1" });
+    }
+    // Stores the JWT, logs RevenueCat in with the profile id, pushes guest-era
+    // local progress (backfill) and fires user_signed_in.
+    await signInWithProfile(session.profile, session.token, 'email');
+    // Navigation is deferred to the effect above, which waits for the store to
+    // reflect isAuthenticated so _layout.tsx can't bounce us back mid-update.
+    setShowSuccess(true);
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
       {/* Back chevron. When we arrived from an in-game register CTA (returnTo set),
@@ -104,7 +144,8 @@ export function RegisterScreen() {
           they just finished and feels stuck. No returnTo → onboarding choice. */}
       <Pressable
         onPress={() => {
-          if (returnTo) router.replace(decodeURIComponent(returnTo) as never);
+          if (phase === "code") setPhase("form");
+          else if (returnTo) router.replace(decodeURIComponent(returnTo) as never);
           else if (router.canGoBack()) router.back();
           else router.replace("/(auth)/onboarding" as never);
         }}
@@ -202,6 +243,16 @@ export function RegisterScreen() {
               </View>
             )}
 
+            {phase === "code" ? (
+              <EmailCodeStep
+                email={codeEmail}
+                displayName={name.trim() || null}
+                source="register"
+                onVerified={handleVerified}
+                onChangeEmail={() => setPhase("form")}
+              />
+            ) : (
+            <>
             {/* Full Name */}
             <TextInput
               style={{ ...inputStyle, marginBottom: 8 }}
@@ -226,7 +277,7 @@ export function RegisterScreen() {
               placeholder="אימייל"
               placeholderTextColor="#64748b"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(v) => { setEmail(v); if (formError) setFormError(null); }}
               maxLength={254}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -234,8 +285,19 @@ export function RegisterScreen() {
               autoComplete="email"
               textContentType="emailAddress"
               returnKeyType="done"
+              onSubmitEditing={() => void handleRegister()}
               accessibilityLabel="אימייל"
               accessibilityHint="הזן כתובת אימייל תקינה" />
+
+            {formError && (
+              <Text
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                style={{ fontSize: 13, fontWeight: "600", color: "#dc2626", textAlign: "right", writingDirection: "rtl", marginBottom: 10 }}
+              >
+                {formError}
+              </Text>
+            )}
 
             {/* Terms reminder — implicit consent on Register tap; this is just
                 a discoverable link to read them. No checkbox: the gate already
@@ -253,77 +315,16 @@ export function RegisterScreen() {
             </Pressable>
 
             {/* Register Button */}
+            {/* Register Button — mails the code; the account exists only after
+                the code is entered (handleVerified). RevenueCat is logged in
+                there with the real profile id, so no email-keyed RC login and
+                no "ghost" local-only account any more. */}
             <Pressable
-              disabled={!isValid || showSuccess}
-              onPress={() => {
-                if (isValid && !showSuccess) {
-                  captureEvent('signup_method_clicked', { method: 'email' });
-                  if (isGuest) {
-                    // ?onboarding=1 means we arrived from the signup-gate email
-                    // button: keep onboarding incomplete so returnTo bounces
-                    // back to /(auth)/onboarding → celebration → streak →
-                    // mod-0-1 (the flag is flipped by enterFirstModule).
-                    convertGuestToUser(name.trim(), email.trim(), { completeOnboarding: onboarding !== "1" });
-                  } else {
-                    // New registrations: use email as authId placeholder until server profile is created
-                    signIn({ userId: email.trim(), authId: email.trim(), displayName: name.trim(), email: email.trim() });
-                    // Mirror the user_signed_in emission from the lifecycle/guest paths
-                    // so the Activation Funnel step 3 fires for this non-guest registration
-                    // path too. (Convert-guest path already fires it from the store action.)
-                    captureEvent('user_signed_in', { method: 'email' });
-                  }
-                  // ── RevenueCat attribution (both branches) ──
-                  // Email registration NEVER flows through signInWithProfile,
-                  // which is the only place that calls loginRevenueCat for the
-                  // OAuth / email-login / cold-boot paths. Without this, an
-                  // in-session Pro/gem purchase (the PricingScreen guest-gate
-                  // sends guests straight here, then back to /pricing) attaches
-                  // to RevenueCat's ANONYMOUS app_user_id, and the webhook —
-                  // which resolves userProfiles by id-or-email — can never match
-                  // it → Pro silently never granted server-side. Identify RC by
-                  // email now (the same key the server profile + PostHog use for
-                  // this path); the next real sign-in re-logs in with the
-                  // canonical profile.id (UUID) and RevenueCat aliases
-                  // email→UUID, transferring the entitlement. Fire-and-forget —
-                  // a failed RC login must never block the celebration/nav.
-                  loginRevenueCat(email.trim()).then(
-                    () => captureEvent('rc_login_succeeded', { path: 'email_register' }),
-                    (err: unknown) => captureEvent('rc_login_failed', { path: 'email_register', reason: err instanceof Error ? err.message : String(err) }),
-                  );
-                  // ── Mint a real JWT + server profile row (ghost-account fix) ──
-                  // convertGuestToUser / signIn above only set LOCAL auth state.
-                  // Without a JWT, /api/sync/economy 401s and nothing persists →
-                  // the account is a "ghost" whose balance resets every cold
-                  // start (28% of email signups, incident 2026-06-16).
-                  // verifyEmail creates/finds the row by email and returns a JWT;
-                  // signInWithProfile stores it, upgrades the local email
-                  // placeholder authId to the real profile.id, runs the one-time
-                  // backfill (pushes guest-era local progress to the server) and
-                  // re-logs RevenueCat with the canonical UUID. Fire-and-forget —
-                  // nav isn't blocked, and any failure self-heals on next cold
-                  // boot via bootFromToken's ghost-heal path.
-                  void (async () => {
-                    try {
-                      const { verifyEmail } = await import('../../lib/api/auth');
-                      const res = await verifyEmail(email.trim(), name.trim());
-                      if (res?.ok && res.profile && res.token) {
-                        const { signInWithProfile } = await import('../../lib/auth/lifecycle');
-                        await signInWithProfile(res.profile, res.token, 'email');
-                      }
-                    } catch {
-                      /* healed at next boot */
-                    }
-                  })();
-                  // Navigation deferred to the useEffect below — it waits for
-                  // the zustand state to actually reflect isAuthenticated before
-                  // replacing, so the routing layer in _layout.tsx can't bounce
-                  // us back to register during a mid-update render window.
-                  setShowSuccess(true);
-                }
-              }}
+              disabled={!isValid || showSuccess || sending}
+              onPress={() => void handleRegister()}
               accessibilityRole="button"
               accessibilityLabel="הירשם"
-              accessibilityState={{ disabled: !isValid }}
+              accessibilityState={{ disabled: !isValid, busy: sending }}
               style={{
                 width: "100%",
                 borderRadius: 14,
@@ -339,16 +340,20 @@ export function RegisterScreen() {
                 elevation: isValid ? 6 : 2,
               }}
             >
-              <Text
-                style={{
-                  textAlign: "center",
-                  fontSize: 15,
-                  fontWeight: "700",
-                  color: isValid ? "#ffffff" : "#64748b",
-                }}
-              >
-                הירשם
-              </Text>
+              {sending ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text
+                  style={{
+                    textAlign: "center",
+                    fontSize: 15,
+                    fontWeight: "700",
+                    color: isValid ? "#ffffff" : "#64748b",
+                  }}
+                >
+                  הירשם
+                </Text>
+              )}
             </Pressable>
 
             {/* Divider */}
@@ -471,6 +476,9 @@ export function RegisterScreen() {
                   התחל ללא חשבון
                 </Text>
               </Pressable>
+            )}
+
+            </>
             )}
 
             {/* The bottom "back to game" link was removed. The top chevron
