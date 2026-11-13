@@ -1,16 +1,21 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
+import { TrendingUp } from 'lucide-react-native';
 import { CompoundSimScreen } from '../src/features/chapter-1-content/simulations/CompoundSimScreen';
+import { ToolHeader } from '../src/features/financial-tools/components/ToolHeader';
 import { ToolTutorialMount } from '../src/features/financial-tools/components/ToolTutorialMount';
 import { useToolInstrumentation } from '../src/features/financial-tools/hooks/useToolInstrumentation';
 import { useTutorialStore } from '../src/stores/useTutorialStore';
-import { tapHaptic } from '../src/utils/haptics';
 
 /**
- * Compound-interest tutorial route. SafeArea-aware top bar reserves space
- * for the back button so the user always has an obvious exit.
+ * Compound-interest calculator route.
+ *
+ * Uses the shared ToolHeader, the same top bar as the other seven calculators
+ * (it had a one-off bar: floating white circle + centred emoji title).
+ * ToolHeader is rendered WITHOUT `toolKey` on purpose: analytics and the
+ * first-visit tutorial stay with useToolInstrumentation + ToolTutorialMount
+ * below, so nothing fires twice.
  */
 export default function CompoundCalculatorRoute() {
   useToolInstrumentation('compound');
@@ -21,33 +26,14 @@ export default function CompoundCalculatorRoute() {
   // suppress flag flips false and the sim's useEffect re-runs to start audio.
   const hasSeenCompoundTutorial = useTutorialStore((s) => s.hasSeenToolTutorial['compound'] ?? false);
   const goToTools = () => {
-    tapHaptic();
     router.replace('/(tabs)/tools' as never);
   };
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-      <View style={styles.topBar}>
-        <Pressable
-          onPress={goToTools}
-          style={styles.backCircle}
-          accessibilityRole="button"
-          accessibilityLabel="חזרה לכלים"
-          hitSlop={10}
-        >
-          <ChevronRight size={20} color="#0f172a" strokeWidth={2.8} />
-        </Pressable>
-        <View style={styles.titleWrap} pointerEvents="none">
-          <Text style={styles.titleEmoji}>📈</Text>
-          <Text style={styles.title} accessibilityRole="header">
-            ריבית דריבית
-          </Text>
-        </View>
-        {/* Spacer mirrors the back button so the title sits perfectly centered. */}
-        <View style={styles.backCircleSpacer} />
-      </View>
+      <ToolHeader title="ריבית דריבית" Icon={TrendingUp} accentColor="#15803d" />
 
-      <View style={{ flex: 1 }}>
+      <View style={styles.body}>
         <CompoundSimScreen onComplete={goToTools} suppressAudio={!hasSeenCompoundTutorial} />
       </View>
 
@@ -57,50 +43,7 @@ export default function CompoundCalculatorRoute() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0fdf4',
-  },
-  topBar: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.94)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-  },
-  backCircleSpacer: {
-    width: 38,
-    height: 38,
-  },
-  titleWrap: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-  },
-  titleEmoji: {
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '900',
-    color: '#0f172a',
-    writingDirection: 'rtl',
-    letterSpacing: -0.3,
-  },
+  // White behind the status bar so it joins the white ToolHeader bar.
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  body: { flex: 1, backgroundColor: '#f0fdf4' },
 });

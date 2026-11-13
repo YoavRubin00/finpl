@@ -5,8 +5,8 @@ import {
     ScrollView,
     Pressable,
     StyleSheet,
-    ActivityIndicator,
 } from 'react-native';
+import { LoadingState } from '../../components/ui/LoadingState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -467,10 +467,7 @@ export function TradingHubScreen() {
                             // Defer mounting the WebView until the user has chosen a mode.
                             // Otherwise the chart would load in 'simple' and immediately reload
                             // after the onboarding choice, causing a visible flicker.
-                            <View style={styles.chartLoading}>
-                                <ActivityIndicator color={CALM.accent} size="small" />
-                                <Text style={styles.chartLoadingText}>טוען גרף...</Text>
-                            </View>
+                            <LoadingState size="small" label="טוענים את הגרף…" style={styles.chartLoading} />
                         ) : (
                             <TradingChart
                                 ohlcv={chartData}

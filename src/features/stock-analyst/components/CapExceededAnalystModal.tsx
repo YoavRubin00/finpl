@@ -78,6 +78,7 @@ export function CapExceededAnalystModal({ visible, mode, isPro, onClose }: Props
                   router.push('/pricing?source=analyst_cap' as never);
                 }}
                 accessibilityRole="button"
+                accessibilityLabel="שדרגו ל-PRO"
                 style={{ borderRadius: 14, overflow: 'hidden' }}
               >
                 <LinearGradient
@@ -86,7 +87,7 @@ export function CapExceededAnalystModal({ visible, mode, isPro, onClose }: Props
                   end={{ x: 1, y: 1 }}
                   style={{ paddingVertical: 13, alignItems: 'center' }}
                 >
-                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>שדרג ל-PRO 👑</Text>
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>שדרגו ל-PRO 👑</Text>
                 </LinearGradient>
               </Pressable>
             ) : null}
@@ -96,10 +97,10 @@ export function CapExceededAnalystModal({ visible, mode, isPro, onClose }: Props
                 onClose();
               }}
               accessibilityRole="button"
-              style={{ paddingVertical: isProDeepCap ? 14 : 10, alignItems: 'center' }}
+              style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
             >
               <Text style={{ color: isProDeepCap ? '#fff' : '#94a3b8', fontSize: isProDeepCap ? 15 : 13, fontWeight: '700' }}>
-                {isProDeepCap ? 'הבנתי' : 'חזרה'}
+                {isProDeepCap ? 'הבנתי' : 'לא עכשיו'}
               </Text>
             </Pressable>
           </View>

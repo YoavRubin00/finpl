@@ -22,6 +22,7 @@ import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SUBTITLE_TEXT } from "../../constants/theme";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { getPyramidStatus } from "../../utils/progression";
+import { formatNumber, formatPercentValue } from "../../utils/format";
 import {
   useEntranceAnimation,
   fadeInUp,
@@ -120,7 +121,8 @@ export function AssetsScreen() {
               <Briefcase size={22} color="#854d0e" />
               <Text style={styles.pageTitle} accessibilityRole="header">הנכסים שלי</Text>
             </View>
-            <View style={{ width: 32 }} />
+            {/* Same width as the 44pt BackButton so the title stays centred. */}
+            <View style={{ width: 44 }} />
           </View>
           <Text style={[SUBTITLE_TEXT, { color: "#64748b", textAlign: "center", textShadowColor: "transparent" }]}>
             ניהול התיק וההון האישי שלך
@@ -167,7 +169,7 @@ export function AssetsScreen() {
               <View>
                 {pending > 0 && (
                   <AnimatedPressable onPress={collectInc} style={styles.collectBtn} accessibilityRole="button" accessibilityLabel="גבה הכנסה">
-                    <Text style={styles.collectBtnText}>גבה הכנסה: +{Math.floor(pending).toLocaleString('he-IL')}</Text>
+                    <Text style={styles.collectBtnText}>גבה הכנסה: +{formatNumber(Math.floor(pending))}</Text>
                   </AnimatedPressable>
                 )}
                 <View style={styles.ownedGrid}>
@@ -202,7 +204,7 @@ export function AssetsScreen() {
             <View style={styles.sectionHeader} accessibilityRole="header">
               <Text style={styles.sectionTitle}>📈 תיק השקעות</Text>
               {!tradingUnlocked && (
-                <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '700' }}>🔒 נפתח ברמה 2</Text>
+                <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '700' }}>🔒 נפתח בשלב 2</Text>
               )}
             </View>
 
@@ -231,11 +233,11 @@ export function AssetsScreen() {
                       <StockIcon assetId={pos.assetId} size={32} />
                       <View style={{ flex: 1, alignItems: "flex-end", marginRight: 8 }}>
                         <Text style={styles.holdingName}>{asset?.name ?? pos.assetId}</Text>
-                        <Text style={styles.holdingSub}>${pos.amountInvested.toLocaleString('he-IL')} השקעה</Text>
+                        <Text style={styles.holdingSub}>${formatNumber(pos.amountInvested)} השקעה</Text>
                       </View>
                       <View style={[styles.pnlBadge, { backgroundColor: isUp ? "#dcfce7" : "#fee2e2" }]}>
                         <Text style={[styles.pnlText, { color: isUp ? "#16a34a" : "#ef4444" }]}>
-                          {isUp ? "+" : ""}{pnlPct.toFixed(1)}%
+                          {formatPercentValue(pnlPct, 1, true)}
                         </Text>
                       </View>
                     </View>

@@ -12,6 +12,7 @@ import { useEconomy, useSpendCoins } from "../economy/useEconomy";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useStreak } from "../economy/useStreak";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { formatNumber } from "../../utils/format";
 import { BANNER_PRIORITY, useBannerSlot } from '../../stores/useBannerSlotStore';
 
 const DISMISSED_KEY = "no_freeze_upsell_dismissed_date";
@@ -76,7 +77,8 @@ export function NoFreezeUpsellBanner() {
         <Pressable
           onPress={dismiss}
           style={styles.closeBtn}
-          hitSlop={8}
+          // 22pt visual + 12 slop per side = 46pt target (was 38, under the 44 minimum).
+          hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="סגור באנר מגן רצף"
         >
@@ -113,10 +115,11 @@ export function NoFreezeUpsellBanner() {
           disabled={!canAfford}
           style={[styles.buyBtn, !canAfford && styles.buyBtnDisabled]}
           accessibilityRole="button"
-          accessibilityLabel={`קנה מגן רצף ב-${FREEZE_COST_COINS} מטבעות`}
+          accessibilityLabel={`קנה מגן רצף ב-${formatNumber(FREEZE_COST_COINS)} מטבעות`}
+          accessibilityState={{ disabled: !canAfford }}
         >
           <Text style={[styles.buyBtnText, !canAfford && styles.buyBtnTextDisabled]}>
-            קנה מגן ({FREEZE_COST_COINS} מטבעות) 🛡️
+            קנה מגן ({formatNumber(FREEZE_COST_COINS)} מטבעות) 🛡️
           </Text>
         </Pressable>
 

@@ -30,6 +30,7 @@ import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useTradingStore } from "../trading-hub/useTradingStore";
 import { useRealAssetsStore } from "../assets/useRealAssetsStore";
 import { getPyramidStatus } from "../../utils/progression";
+import { formatNumber, formatSigned } from "../../utils/format";
 import { tapHaptic } from "../../utils/haptics";
 import { Lock } from "lucide-react-native";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
@@ -239,7 +240,7 @@ export function InvestmentsHubScreen() {
               <Text style={s.portfolioTitle}>המטבעות שלך למסחר</Text>
               <View style={s.portfolioRow}>
                 <GoldCoinIcon size={22} />
-                <Text style={s.portfolioValue}>{coins.toLocaleString()}</Text>
+                <Text style={s.portfolioValue}>{formatNumber(coins)}</Text>
               </View>
               {/* UX-04: a real button (was a role="text" Pressable with no
                   onPress), correct sign (was "+-120" on a loss), and a
@@ -248,11 +249,11 @@ export function InvestmentsHubScreen() {
                 style={s.pnlPill}
                 onPress={() => { tapHaptic(); router.push("/trading-hub" as never); }}
                 accessibilityRole="button"
-                accessibilityLabel={`רווח והפסד ${pnl}, פתיחת זירת המסחר`}
-                hitSlop={6}
+                accessibilityLabel={`רווח והפסד ${formatSigned(pnl)}, פתיחת המסחר בשוק ההון`}
+                hitSlop={10}
               >
                 <Text style={[s.pnlText, { color: pnl >= 0 ? "#15803d" : "#dc2626" }]}>
-                  {pnl >= 0 ? "+" : ""}{pnl} רווח/הפסד
+                  {formatSigned(pnl)} רווח/הפסד
                 </Text>
                 <ChevronLeft size={14} color="#64748b" />
               </Pressable>
@@ -279,7 +280,7 @@ export function InvestmentsHubScreen() {
         {/* Trading Hub */}
         <Animated.View style={[tradingStyle, tradingGlowStyle]}>
           {isTradingUnlocked ? (
-            <Pressable onPress={() => router.push("/trading-hub" as never)} style={s.navCard} accessibilityRole="button" accessibilityLabel="זירת המסחר">
+            <Pressable onPress={() => { tapHaptic(); router.push("/trading-hub" as never); }} style={s.navCard} accessibilityRole="button" accessibilityLabel="מסחר בשוק ההון">
               <View style={[s.navIconBox, { backgroundColor: "#f1f5f9" }]}>
                 <TrendingUp size={26} color="#64748b" />
               </View>
@@ -299,7 +300,7 @@ export function InvestmentsHubScreen() {
               <View style={s.navTextCol}>
                 <Text style={s.navTitle}>מסחר בשוק ההון</Text>
                 <View style={s.lockRow}>
-                  <Text style={s.navDesc}>נפתח בהגעה לרמה 2</Text>
+                  <Text style={s.navDesc}>נפתח בשלב 2</Text>
                   <Lock size={12} color="#64748b" />
                 </View>
               </View>
@@ -310,7 +311,7 @@ export function InvestmentsHubScreen() {
 
         {/* Real Assets Market */}
         <Animated.View style={marketStyle}>
-          <Pressable onPress={handleAssetsPress} style={s.navCard} accessibilityRole="button" accessibilityLabel="שוק הנכסים">
+          <Pressable onPress={handleAssetsPress} style={s.navCard} accessibilityRole="button" accessibilityLabel="זירת הנכסים">
             <View style={[s.navIconBox, { backgroundColor: "#eff6ff" }]}>
               <Building2 size={26} color="#3b82f6" />
             </View>
@@ -324,7 +325,7 @@ export function InvestmentsHubScreen() {
 
         {/* My Portfolio (in-game assets) */}
         <Animated.View style={portfolioStyle}>
-          <Pressable onPress={() => router.push("/assets" as never)} style={s.navCard} accessibilityRole="button" accessibilityLabel="הנכסים שלי">
+          <Pressable onPress={() => { tapHaptic(); router.push("/assets" as never); }} style={s.navCard} accessibilityRole="button" accessibilityLabel="הנכסים שלי">
             <View style={[s.navIconBox, { backgroundColor: "#eff6ff" }]}>
               <Briefcase size={26} color="#3b82f6" />
             </View>

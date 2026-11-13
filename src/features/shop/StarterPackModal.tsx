@@ -25,6 +25,7 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { getAvatarById } from '../avatars/avatarData';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
+import { formatNumber } from '../../utils/format';
 import { logPurchase } from '../../utils/fbEvents';
 import { track } from '../../lib/analytics/events';
 import { purchaseGemBundle } from '../../services/revenueCat';
@@ -116,7 +117,7 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
       });
       Alert.alert(
         'נרכש בהצלחה!',
-        `קיבלתם ${pack.coins.toLocaleString()} מטבעות, ${pack.gems} יהלומים, ו-${pack.avatarIds.length} אווטרים.`,
+        `קיבלתם ${formatNumber(pack.coins)} מטבעות, ${formatNumber(pack.gems)} יהלומים ו-${pack.avatarIds.length} אווטארים.`,
       );
       onPurchaseSuccess?.();
       onDismiss();
@@ -180,7 +181,7 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
               <View style={styles.contentsBox}>
                 <BundleRow
                   icon={<GoldCoinIcon size={26} />}
-                  label={`${pack.coins.toLocaleString()} מטבעות`}
+                  label={`${formatNumber(pack.coins)} מטבעות`}
                 />
                 <View style={styles.divider} />
                 <BundleRow

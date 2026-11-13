@@ -7,6 +7,7 @@ import { economyQueryKey } from '../economy/useEconomy';
 import { fireEconomyDelta } from '../economy/useEconomyUIStore';
 import type { Economy } from '../../lib/api/economy';
 import { BRIDGE_BENEFITS } from './bridgeData';
+import { formatShekel } from '../../utils/format';
 
 interface BridgeState {
   redeemedBenefitIds: string[];
@@ -53,7 +54,7 @@ export const useBridgeStore = create<BridgeState>()(
       getTotalSavedValue: (): string => {
         const count = get().redeemedBenefitIds.length;
         // Mock estimate, real value would come from partners
-        return `₪${(count * 75).toLocaleString()}`;
+        return formatShekel(count * 75);
       },
 
       reset: () => set({ redeemedBenefitIds: [] }),

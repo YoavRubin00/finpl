@@ -59,7 +59,9 @@ export function AnimatedPressable({
     if (!noHaptic) {
       tapHaptic();
     }
-  }, [noScale, noHaptic, scale]);
+    // reduceMotion was missing here: toggling the OS setting while a screen was
+    // mounted kept the stale value, so the press-in scale ignored it.
+  }, [noScale, noHaptic, reduceMotion, scale]);
 
   const handlePressOut = useCallback(() => {
     if (!noScale && !reduceMotion) {

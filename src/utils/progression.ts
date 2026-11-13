@@ -14,6 +14,33 @@ const LAYER_NAMES: Record<PyramidLayer, string> = {
   5: "Freedom",
 };
 
+/**
+ * Hebrew stage ("שלב") names shown to the user — the ONE copy.
+ * The header popup and the profile each kept their own map, so stage 1 was
+ * "הישרדות ושליטה" in one and "יסודות" in the other. These short names match
+ * the chapter names on the learning map. The user-facing word for a pyramid
+ * layer is always "שלב" (not "רמה").
+ */
+export const STAGE_NAMES_HE: Record<number, string> = {
+  1: "יסודות",
+  2: "ביטחון",
+  3: "יציבות",
+  4: "צמיחה",
+  5: "חופש כלכלי",
+};
+
+/**
+ * Tier metal printed on the player card (ChampionCard), unisex.
+ * One rule for every surface: the shop used to call stage 3 "זהב" while the
+ * profile called the same player "כסף".
+ */
+export function getStageTierTitle(layer: number): string {
+  if (layer >= 5) return "פלטינה";
+  if (layer >= 4) return "זהב";
+  if (layer >= 2) return "כסף";
+  return "ברונזה";
+}
+
 export function getLevelFromXP(xp: number): number {
   let level = 0;
   for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {

@@ -14,7 +14,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
-import LottieView from "lottie-react-native";
+// SafeLottie = LottieView that freezes looping icons under the OS "reduce motion"
+// setting (PRD-ACCESSIBILITY R7). Same props, so the alias keeps the JSX untouched.
+import { SafeLottie as LottieView } from "../../components/ui/SafeLottie";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 
 import { tapHaptic } from "../../utils/haptics";
@@ -28,7 +30,7 @@ import { AVATAR_LIST, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
 import type { CompanionId } from "../auth/types";
 import { SIM4, RTL, SHADOW_LIGHT, SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
-import { BackButton } from "../../components/ui/BackButton";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { GlowCard } from "../../components/ui/GlowCard";
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 
@@ -116,7 +118,8 @@ function SettingsRow({ icon, label, onPress, right, subtitle, isFirst, isLast }:
 
   if (onPress) {
     return (
-      <AnimatedPressable onPress={() => { tapHaptic(); onPress(); }} style={styles.pressableRow} accessibilityRole="button" accessibilityLabel={label}>
+      // AnimatedPressable fires the tap haptic itself; calling it again doubled the buzz.
+      <AnimatedPressable onPress={onPress} style={styles.pressableRow} accessibilityRole="button" accessibilityLabel={label}>
         {content}
       </AnimatedPressable>
     );
@@ -273,7 +276,7 @@ export function SettingsScreen() {
 
   function handleContactSupport() {
     Linking.openURL("mailto:support@finplay.me?subject=FinPlay%20Support").catch(() => {
-      Alert.alert("שגיאה", "לא ניתן לפתוח את אפליקציית האימייל. ניתן לפנות ל-support@finplay.me");
+      Alert.alert("אפליקציית המייל לא נפתחה", "אפשר לכתוב לנו ל-support@finplay.me");
     });
   }
 
@@ -287,24 +290,24 @@ export function SettingsScreen() {
   function handleDeleteAccount() {
     Alert.alert(
       "מחיקת חשבון",
-      "פעולה זו תמחק לצמיתות את כל הנתונים שלך, התקדמות, מטבעות, פרופיל והישגים. לא ניתן לשחזר. להמשיך?",
+      "הפעולה תמחק לצמיתות את כל הנתונים שלכם: התקדמות, מטבעות, פרופיל והישגים. לא ניתן לשחזר. להמשיך?",
       [
         { text: "ביטול", style: "cancel" },
         {
-          text: "מחק לצמיתות",
+          text: "מחיקה לצמיתות",
           style: "destructive",
           onPress: () => {
-            Alert.alert("אישור אחרון", "האם אתם בטוחים לחלוטין?", [
+            Alert.alert("אישור אחרון", "למחוק את החשבון לצמיתות?", [
               { text: "ביטול", style: "cancel" },
               {
-                text: "כן, מחק",
+                text: "כן, למחוק",
                 style: "destructive",
                 onPress: async () => {
                   try {
                     await deleteAccount();
                     router.replace("/(auth)/sign-in");
                   } catch {
-                    Alert.alert("שגיאה", "המחיקה נכשלה. נסה שוב או צור קשר עם התמיכה.");
+                    Alert.alert("המחיקה נכשלה", "נסו שוב, או פנו לתמיכה.");
                   }
                 },
               },
@@ -326,12 +329,7 @@ export function SettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#f0f9ff' }}>
       <SafeAreaView style={styles.safe} edges={['top']}>
-        {/* Header, matches MoreScreen */}
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
-          <BackButton color="#0369a1" />
-          <Text style={[RTL, { fontSize: 18, fontWeight: '900', color: '#0369a1' }]}>הגדרות</Text>
-          <View style={{ width: 32 }} />
-        </View>
+        <ScreenHeader title="הגדרות" tint="#0369a1" />
 
         <ScrollView
           style={styles.scroll}
@@ -375,7 +373,7 @@ export function SettingsScreen() {
                         }}
                         style={styles.editBtn}
                         accessibilityRole="button"
-                        accessibilityLabel="ערוך שם תצוגה"
+                        accessibilityLabel="עריכת שם תצוגה"
                       >
                         <Text style={[styles.valueText, RTL]} numberOfLines={1} ellipsizeMode="tail">
                           {displayName ?? "---"}
@@ -466,7 +464,7 @@ export function SettingsScreen() {
                       loop
                     />
                   }
-                  label="סטריק בסכנה"
+                  label="רצף בסכנה"
                   subtitle={permissionGranted ? "אזהרה לפני שהרצף נשבר" : "התראות כבויות"}
                   right={
                     <Switch
@@ -475,7 +473,7 @@ export function SettingsScreen() {
                       trackColor={{ false: STITCH_BLUE.dim, true: STITCH_BLUE.success }}
                       thumbColor="#ffffff"
                       ios_backgroundColor={STITCH_BLUE.dim}
-                      accessibilityLabel="סטריק בסכנה"
+                      accessibilityLabel="רצף בסכנה"
                       accessibilityRole="switch"
                     />
                   }
@@ -516,7 +514,7 @@ export function SettingsScreen() {
                     />
                   }
                   label="תזכורת חזרה"
-                  subtitle="קפטן שארק מתגעגע אם לא באת"
+                  subtitle="קפטן שארק מתגעגע כשלא נכנסים"
                   right={
                     <Switch
                       value={preferences.inactivity}
@@ -570,7 +568,7 @@ export function SettingsScreen() {
                     />
                   }
                   label="הכלי הפיננסי של היום"
-                  subtitle="כל יום כלי אחר שיכול לחסוך לך כסף"
+                  subtitle="כל יום כלי אחר שיכול לחסוך לכם כסף"
                   right={
                     <Switch
                       value={preferences.tools}
@@ -666,8 +664,8 @@ export function SettingsScreen() {
                     micStatus === "granted"
                       ? "מאושר — אפשר לדבר עם שארק"
                       : micStatus === "denied"
-                        ? "חסום — הקש לפתיחת הגדרות המכשיר"
-                        : "אפשר גישה כדי לדבר עם שארק"
+                        ? "חסום — הקישו לפתיחת הגדרות המכשיר"
+                        : "אפשרו גישה כדי לדבר עם שארק"
                   }
                   onPress={() => { void handleMicPress(); }}
                   right={
@@ -761,7 +759,7 @@ export function SettingsScreen() {
                       loop
                     />
                   }
-                  label="צור קשר עם התמיכה"
+                  label="פנייה לתמיכה"
                   subtitle="support@finplay.me"
                   onPress={handleContactSupport}
                 />
@@ -770,7 +768,7 @@ export function SettingsScreen() {
                   <>
                     <SettingsRow
                       icon={<Text style={{ fontSize: 20 }}>🍎</Text>}
-                      label="חבר חשבון Apple"
+                      label="חיבור חשבון Apple"
                       subtitle="התחברות נוספת לאותו חשבון"
                       onPress={() => { void promptAppleSignIn(); }}
                     />
@@ -781,7 +779,7 @@ export function SettingsScreen() {
                   <>
                     <SettingsRow
                       icon={<Text style={{ fontSize: 20 }}>🔵</Text>}
-                      label="חבר חשבון Google"
+                      label="חיבור חשבון Google"
                       subtitle="התחברות נוספת לאותו חשבון"
                       onPress={() => { void promptGoogleSignIn(); }}
                     />
@@ -797,7 +795,7 @@ export function SettingsScreen() {
                       loop
                     />
                   }
-                  label="התנתק"
+                  label={SIGN_OUT_DIALOG.title}
                   onPress={handleSignOut}
                 />
                 <Divider />
@@ -811,8 +809,8 @@ export function SettingsScreen() {
                       loop
                     />
                   }
-                  label="מחק חשבון לצמיתות"
-                  subtitle="מוחק את כל הנתונים שלך"
+                  label="מחיקת חשבון לצמיתות"
+                  subtitle="מוחקת את כל הנתונים שלכם"
                   onPress={handleDeleteAccount}
                 />
               </View>
@@ -825,10 +823,10 @@ export function SettingsScreen() {
         {/* Chat tone picker modal, Stitched Aesthetic */}
         {showChatPicker && (
           <Animated.View entering={FadeInDown} style={styles.modalOverlay}>
-            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowChatPicker(false)} accessibilityRole="button" accessibilityLabel="סגור בחירת סגנון צ׳אט" />
+            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowChatPicker(false)} accessibilityRole="button" accessibilityLabel="סגור" />
             <GlowCard chapterGlow={STITCH_BLUE.glow} style={styles.modalCard} pressable={false}>
               <View style={styles.modalInner}>
-                <Text style={[styles.modalTitle, RTL]}>בחר סגנון צ׳אט</Text>
+                <Text style={[styles.modalTitle, RTL]}>בחירת סגנון צ'אט</Text>
                 <View style={styles.modalOptions}>
                   {(Object.entries(CHAT_STYLE_NAMES) as [CompanionId, string][]).map(([id, label]) => {
                     const isSelected = id === companionId;

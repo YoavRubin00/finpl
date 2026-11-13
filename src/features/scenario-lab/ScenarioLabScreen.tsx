@@ -171,7 +171,7 @@ import { useScenarioSim } from './useScenarioSim';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
-import { BackButton } from '../../components/ui/BackButton';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useEconomy } from '../economy/useEconomy';
@@ -299,12 +299,7 @@ export function ScenarioLabScreen() {
       />
 
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        {/* Header */}
-        <View style={s.header}>
-          <BackButton color="#334155" onPress={() => router.replace('/(tabs)' as never)} />
-          <Text style={[s.headerTitle, { color: '#0c4a6e' }]}>מעבדת התרחישים</Text>
-          <View style={{ width: 32 }} />
-        </View>
+        <ScreenHeader title="מעבדת התרחישים" onLeadingPress={() => router.replace('/(tabs)' as never)} />
 
         <ScrollView
           style={{ flex: 1 }}

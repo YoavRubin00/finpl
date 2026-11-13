@@ -26,7 +26,8 @@ import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useFunStore } from "../../stores/useFunStore";
 import { FINN_DAD_JOKES, FINN_FUN_FACTS } from "../../features/fun/finnJokesData";
 import { AvatarImage } from "../../features/avatars/AvatarImage";
-import { getPyramidStatus } from "../../utils/progression";
+import { getPyramidStatus, STAGE_NAMES_HE } from "../../utils/progression";
+import { formatNumber } from "../../utils/format";
 import { SPRING_SMOOTH } from "../../utils/animations";
 import { heavyHaptic, tapHaptic } from "../../utils/haptics";
 import { CLASH, STITCH } from "../../constants/theme";
@@ -86,13 +87,17 @@ interface AnimatedNumberProps {
 
 function AnimatedNumber({ value, color, fontSize }: AnimatedNumberProps) {
   const animatedVal = useAnimatedCounter(value);
-  const [display, setDisplay] = useState(value.toLocaleString());
+  // formatNumber (shared, deterministic "1,250"), not the bare toLocaleString()
+  // that followed the DEVICE locale. The string is built on the JS thread
+  // (setDisplayValue), never inside the worklet.
+  const [display, setDisplay] = useState(() => formatNumber(value));
+  const setDisplayValue = useCallback((n: number) => setDisplay(formatNumber(n)), []);
 
   useAnimatedReaction(
     () => Math.round(animatedVal.value),
     (current, prev) => {
       if (current !== prev) {
-        runOnJS(setDisplay)(current.toLocaleString());
+        runOnJS(setDisplayValue)(current);
       }
     },
     [animatedVal],
@@ -461,8 +466,10 @@ export function GlobalWealthHeader({ compact = false, lockNavigation = false }: 
               onPress={walkthroughActive ? undefined : () => { tapHaptic(); router.push("/(tabs)/more" as never); }}
               style={[s.shortcutBtnCompact, { width: d.shortcutSize, height: d.shortcutSize, borderRadius: d.shortcutRadius }]}
               accessibilityRole="button"
-              accessibilityLabel="הגדרות"
-              hitSlop={8}
+              // Opens the menu screen (shop, saved items, settings, support),
+              // not Settings itself.
+              accessibilityLabel="תפריט והגדרות"
+              hitSlop={10}
             >
               <Settings size={d.shortcutIcon} color="#64748b" />
             </Pressable>
@@ -477,7 +484,7 @@ export function GlobalWealthHeader({ compact = false, lockNavigation = false }: 
           glowColor={CLASH.goldLight}
           onPress={walkthroughActive || lockNavigation ? undefined : navigateToShop}
           trackedValue={coins}
-          accessibilityLabel={`${coins} מטבעות`}
+          accessibilityLabel={`${formatNumber(coins)} מטבעות, פתיחת החנות`}
           pillStyle={pillStyle}
           iconFrameStyle={iconFrameStyle}
         >
@@ -495,7 +502,7 @@ export function GlobalWealthHeader({ compact = false, lockNavigation = false }: 
           glowColor="#67e8f9"
           onPress={walkthroughActive || lockNavigation ? undefined : navigateToShop}
           trackedValue={gems}
-          accessibilityLabel={`${gems} יהלומים`}
+          accessibilityLabel={`${formatNumber(gems)} יהלומים, פתיחת החנות`}
           pillStyle={pillStyle}
           iconFrameStyle={iconFrameStyle}
         >
@@ -513,7 +520,7 @@ export function GlobalWealthHeader({ compact = false, lockNavigation = false }: 
           icon={<LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number} size={d.lottieSize} autoPlay loop={false} burstEveryMs={8_000} active={appActive} />}
           glowColor="#fb923c"
           trackedValue={streak}
-          accessibilityLabel={`רצף ${streak} ימים, פתח לוח שנה`}
+          accessibilityLabel={`רצף ${streak} ימים, פתיחת לוח הרצף`}
           onPress={() => setShowStreakModal(true)}
           pillStyle={pillStyle}
           iconFrameStyle={iconFrameStyle}
@@ -530,8 +537,11 @@ export function GlobalWealthHeader({ compact = false, lockNavigation = false }: 
           }}
           style={[s.levelRingWrapper, { width: d.ringSize, height: d.ringSize }]}
           accessibilityRole="button"
-          accessibilityLabel={`רמה ${level}`}
-          accessibilityHint="הצג התקדמות רמה"
+          // `layer`: the number printed inside the ring (level is 0-based, so
+          // screen readers announced one less than what is shown).
+          accessibilityLabel={`שלב ${layer}`}
+          accessibilityHint="הצגת ההתקדמות בשלב"
+          hitSlop={6}
         >
           <Svg width={d.ringSize} height={d.ringSize} style={s.ringSvg}>
             {/* Background track */}
@@ -577,7 +587,7 @@ export function GlobalWealthHeader({ compact = false, lockNavigation = false }: 
             disabled={lockNavigation}
             accessibilityRole={lockNavigation ? "text" : "button"}
             accessibilityLabel="פרופיל"
-            accessibilityHint={lockNavigation ? undefined : "עבור לעמוד הפרופיל"}
+            accessibilityHint={lockNavigation ? undefined : "מעבר לעמוד הפרופיל"}
             style={{ flexShrink: 1, minWidth: 0 }}
           >
             <Animated.View style={[
@@ -680,13 +690,10 @@ export function GlobalWealthHeader({ compact = false, lockNavigation = false }: 
 // ---------------------------------------------------------------------------
 // Layer names in Hebrew for the popup
 // ---------------------------------------------------------------------------
-const LAYER_NAMES_HE: Record<number, string> = {
-  1: "הישרדות ושליטה",
-  2: "ביטחון והגנה",
-  3: "יציבות והרגלים",
-  4: "צמיחה",
-  5: "חופש כלכלי",
-};
+// One shared map (utils/progression). This popup used to carry its own names
+// ("הישרדות ושליטה" …) and call the stage "רמה", while the profile, the player
+// card and the level-up banner said "שלב 1 · יסודות" for the same thing.
+const LAYER_NAMES_HE = STAGE_NAMES_HE;
 
 const LAYER_LOTTIES: Record<number, number> = {
   1: require("../../../assets/lottie/wired-flat-63-home-hover-3d-roll.json"),
@@ -718,7 +725,7 @@ function LevelProgressPopup({
   const hebrewLayerName = LAYER_NAMES_HE[layer] ?? _layerName;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose} accessibilityViewIsModal={true} accessibilityLabel="התקדמות רמה">
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose} accessibilityViewIsModal={true} accessibilityLabel="התקדמות שלב">
       <Pressable style={popupStyles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="סגור">
         {/* accessible={false}: without it the whole popup collapses into one
             unlabeled element for screen readers (UX-10). */}
@@ -733,7 +740,7 @@ function LevelProgressPopup({
           <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, justifyContent: "center" }}>
             <View><LottieIcon source={LAYER_LOTTIES[layer]} size={28} /></View>
             <Text style={popupStyles.layerName}>
-              רמה {layer}: {hebrewLayerName}
+              שלב {layer} · {hebrewLayerName}
             </Text>
           </View>
 
@@ -742,9 +749,9 @@ function LevelProgressPopup({
             <View style={[popupStyles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
           </View>
           <Text style={popupStyles.xpText}>
-            {xpToNext > 0 ? `עוד ${xpToNext} XP לרמה הבאה` : "השגת את הרמה הגבוהה ביותר!"}
+            {xpToNext > 0 ? `עוד ${formatNumber(xpToNext)} XP לשלב הבא` : "הגעת לשלב הגבוה ביותר!"}
           </Text>
-          <Text style={popupStyles.xpTotal}>{xp} XP סה״כ</Text>
+          <Text style={popupStyles.xpTotal}>{formatNumber(xp)} XP סה״כ</Text>
 
           {/* Layer roadmap */}
           <View style={popupStyles.roadmap}>
@@ -758,7 +765,7 @@ function LevelProgressPopup({
                   </View>
                   <View style={{ flex: 1, alignItems: "flex-end" }}>
                     <Text style={[popupStyles.roadmapLabel, reached && { color: "#0ea5e9" }, isCurrent && { fontWeight: "900" }]}>
-                      רמה {l}: {LAYER_NAMES_HE[l]}
+                      שלב {l} · {LAYER_NAMES_HE[l]}
                     </Text>
                   </View>
                   {reached && <Text style={popupStyles.checkmark}>✓</Text>}
@@ -888,6 +895,8 @@ const popupStyles = StyleSheet.create({
   closeBtn: {
     backgroundColor: STITCH.surfaceVariant,
     borderRadius: 14,
+    minHeight: 44,
+    justifyContent: "center",
     paddingVertical: 10,
     paddingHorizontal: 32,
     marginTop: 4,

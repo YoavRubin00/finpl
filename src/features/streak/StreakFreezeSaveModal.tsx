@@ -32,8 +32,10 @@ export function StreakFreezeSaveModal({ visible, onDismiss }: StreakFreezeSaveMo
       animationType="fade"
       onRequestClose={onDismiss}
     >
-      <Pressable style={styles.overlay} onPress={onDismiss}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+      <Pressable style={styles.overlay} onPress={onDismiss} accessibilityRole="button" accessibilityLabel="סגור">
+        {/* accessible={false}: keeps the title and both buttons individually
+            reachable by screen readers instead of one collapsed element. */}
+        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
           <Animated.View entering={FadeIn.duration(300)} style={styles.content}>
             {/* Finn empathic */}
             <ExpoImage
@@ -53,7 +55,7 @@ export function StreakFreezeSaveModal({ visible, onDismiss }: StreakFreezeSaveMo
 
             {/* Subtitle */}
             <Text style={styles.subtitle}>
-              עכשיו נשארו לך {streakFreezes} מגיני רצף. שמור אותם טוב.
+              עכשיו נשארו לך {streakFreezes} מגיני רצף. שווה לשמור עליהם.
             </Text>
 
             {/* Primary CTA */}
@@ -61,10 +63,10 @@ export function StreakFreezeSaveModal({ visible, onDismiss }: StreakFreezeSaveMo
               onPress={handleContinue}
               style={styles.primaryBtn}
               accessibilityRole="button"
-              accessibilityLabel="המשך ללמוד"
+              accessibilityLabel="ממשיכים ללמוד"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.primaryBtnText}>המשך ללמוד</Text>
+              <Text style={styles.primaryBtnText}>ממשיכים ללמוד</Text>
             </Pressable>
 
             {/* Secondary CTA */}
@@ -72,10 +74,10 @@ export function StreakFreezeSaveModal({ visible, onDismiss }: StreakFreezeSaveMo
               onPress={handleBuyMore}
               style={styles.secondaryBtn}
               accessibilityRole="button"
-              accessibilityLabel="קנה עוד מגיני רצף בחנות"
+              accessibilityLabel="עוד מגיני רצף בחנות"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.secondaryBtnText}>קנה עוד מגינים</Text>
+              <Text style={styles.secondaryBtnText}>עוד מגינים בחנות</Text>
             </Pressable>
           </Animated.View>
         </Pressable>

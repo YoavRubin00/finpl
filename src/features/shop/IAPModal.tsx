@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X } from 'lucide-react-native';
+import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
+import { formatNumber } from '../../utils/format';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { useEconomy, useAwardGems, useAwardCoins, useSpendGems } from '../economy/useEconomy';
@@ -57,8 +57,26 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     }
   }, [visible, bundle]);
 
+  // Double-submission guard. The CTA had none: a second tap while the store
+  // sheet was loading, or during the 1.8s confetti after a successful purchase,
+  // started a second purchase of a consumable (real money). The ref blocks
+  // re-entry synchronously; the state drives the disabled look + "מעבד…".
+  const purchasingRef = useRef(false);
+  const [purchasing, setPurchasing] = useState(false);
+  const releasePurchaseLock = useCallback(() => {
+    purchasingRef.current = false;
+    setPurchasing(false);
+  }, []);
+  useEffect(() => {
+    // A fresh open (or a different bundle) always starts unlocked.
+    releasePurchaseLock();
+  }, [visible, bundle, releasePurchaseLock]);
+
   const handlePurchase = useCallback(async () => {
     if (!bundle) return;
+    if (purchasingRef.current) return;
+    purchasingRef.current = true;
+    setPurchasing(true);
     tapHaptic();
 
     track({
@@ -75,6 +93,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
       const currentGems = economyDataIAP?.gems ?? 0;
       if (currentGems < bundle.gemCost) {
         track({ name: 'purchase_failed', props: { bundle_id: bundle.id, bundle_type: 'coin_bundle', reason: 'insufficient_gems' } });
+        releasePurchaseLock();
         return;
       }
       spendGems(bundle.gemCost);
@@ -116,6 +135,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           /cancel|user.{0,2}cancell/i.test(msg)
         ) {
           track({ name: 'purchase_cancelled', props: { bundle_id: bundle.id, bundle_type: 'gem_bundle' } });
+          releasePurchaseLock();
           return;
         }
         track({ name: 'purchase_failed', props: { bundle_id: bundle.id, bundle_type: 'gem_bundle', error_message: msg } });
@@ -123,12 +143,15 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
         // (often English, e.g. "Product ... not available"). App Review 2.1a
         // treats a hard error on a purchase as a blocker (2026-06-13).
         Alert.alert('הרכישה לא הושלמה', 'לא הצלחנו להשלים את הרכישה כרגע. נסו שוב בעוד רגע.');
+        releasePurchaseLock();
         return;
       }
     }
 
-    // Premium haptic choreography
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Success. The lock stays on until the sheet closes (released by the
+    // effect above on the next open). successHaptic() respects the user's
+    // "רטט" setting; the raw Haptics call that used to sit here ignored it
+    // and fired a second buzz on top.
     successHaptic();
     setShowConfetti(true);
     setTimeout(() => {
@@ -136,7 +159,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
       onPurchaseSuccess();
       onDismiss();
     }, 1800);
-  }, [bundle, addGems, addCoins, spendGems, onPurchaseSuccess, onDismiss]);
+  }, [bundle, addGems, addCoins, spendGems, onPurchaseSuccess, onDismiss, economyDataIAP, releasePurchaseLock]);
 
   const handleDismiss = useCallback(() => {
     if (bundle) {
@@ -156,8 +179,8 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
 
   const isCoins = isCoinBundle(bundle);
   const amountLabel = isCoins
-    ? ` ${bundle.coins.toLocaleString()} מטבעות`
-    : `💎 ${(bundle as GemBundle).gems.toLocaleString()} ג'מס`;
+    ? `${formatNumber(bundle.coins)} מטבעות`
+    : `💎 ${formatNumber((bundle as GemBundle).gems)} יהלומים`;
   const accentColor = isCoins ? '#d4a017' : '#0891b2';
 
   return (
@@ -181,15 +204,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
         <View style={[styles.sheet, { borderColor: `${accentColor}55`, paddingBottom: 32 + insets.bottom }]}>
           {/* Close X — replaces tap-outside-to-dismiss to avoid the
               Pressable-backdrop hit-test bug that broke the CTA on Android. */}
-          <Pressable
-            onPress={handleDismiss}
-            style={styles.closeBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityRole="button"
-            accessibilityLabel="סגור"
-          >
-            <X size={20} color="#94a3b8" />
-          </Pressable>
+          <SheetCloseButton onPress={handleDismiss} style={styles.closeBtn} />
 
           {/* Handle */}
           <View style={styles.handle} />
@@ -224,13 +239,16 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           <View style={[styles.buyBtnGlow, isCoins ? styles.buyBtnGlowCoins : styles.buyBtnGlowGems]} pointerEvents="none" />
           <Pressable
             onPress={handlePurchase}
+            disabled={purchasing}
             style={({ pressed }) => [
               styles.buyBtn,
               isCoins ? styles.buyBtnCoins : styles.buyBtnGems,
               pressed && { transform: [{ scale: 0.97 }] },
+              purchasing && { opacity: 0.7 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={isCoins ? 'המר לזהב' : 'קנה עכשיו'}
+            accessibilityState={{ disabled: purchasing, busy: purchasing }}
+            accessibilityLabel={purchasing ? 'מעבד' : isCoins ? 'המרה למטבעות' : 'קנה עכשיו'}
           >
             <LinearGradient
               colors={isCoins
@@ -260,7 +278,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
               minimumFontScale={0.7}
               allowFontScaling={false}
             >
-              {isCoins ? '💎 המר לזהב' : '🛒 קנה עכשיו'}
+              {purchasing ? 'מעבד…' : isCoins ? '💎 המרה למטבעות' : '🛒 קנה עכשיו'}
             </Text>
           </Pressable>
 
@@ -293,14 +311,8 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     position: 'absolute',
-    top: 12,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(148,163,184,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: 10,
+    right: 12,
     zIndex: 2,
   },
   handle: {
