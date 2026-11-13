@@ -86,8 +86,10 @@ function computeRefund(input: TaxRefundInput): TaxRefundResult {
       : annualGross;
   const theoreticalTaxFull = calculateIncomeTax(annualizedGross, totalCreditPoints);
   const theoreticalTaxProRata = theoreticalTaxFull * (input.monthsWorked / 12);
-  // 2026 annual זיכוי cap on קופ"ג deposits — re-indexed ~3% from 2025 (₪7,700).
-  const depositCredit = Math.min(extraDeposits * 0.35, 7_920);
+  // 2026: 35% credit (סעיף 45א) on deposits up to ₪12,804/year (5.5% of the ₪232,800
+  // qualifying income) = max credit ₪4,481. Source: supermarker.themarker.com
+  // /Gemel/MaximumDepositsAndAmounts.aspx (cites the Tax Authority 2026 booklet); audit 2026-11-13.
+  const depositCredit = Math.min(extraDeposits, 12_804) * 0.35;
   const refund = Math.max(0, actualTax - theoreticalTaxProRata) + depositCredit;
 
   return {

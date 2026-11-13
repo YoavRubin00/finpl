@@ -8,16 +8,16 @@
  *
  * Scenario A — Junior single, no kids:
  *   Input:  gross=10,000/month, creditPoints=2.25
- *   Output: net ≈ ₪8,878/month (effective ≈ 11.2%)
- *   Note: Hilan with mandatory pension shown gives ≈ ₪8,278 (Δ ~7% from us).
+ *   Output: net ≈ ₪8,816/month (effective ≈ 11.8%)
+ *   Note: with the ~6% mandatory employee pension deducted the payslip net is ≈ ₪8,216.
  *
  * Scenario B — Mid-level married:
  *   Input:  gross=20,000/month, creditPoints=2.75
- *   Output: net ≈ ₪15,382/month (effective ≈ 23.1%)
+ *   Output: net ≈ ₪15,614/month (effective ≈ 21.9%)
  *
  * Scenario C — Senior single, no kids:
  *   Input:  gross=40,000/month, creditPoints=2.25
- *   Output: net ≈ ₪25,955/month (effective ≈ 35.1%)
+ *   Output: net ≈ ₪26,263/month (effective ≈ 34.3%)
  *
  * משותף בין: SalaryNetCalculator (#4), TaxRefundCalculator (#1), HishtalmutCalculator (#5).
  */
@@ -52,26 +52,27 @@ export interface TaxCalculationResult {
 export const TAX_BRACKETS_2026: readonly TaxBracket[] = [
   { from: 0,        to: 84_120,   rate: 0.10 },
   { from: 84_120,   to: 120_720,  rate: 0.14 },
-  { from: 120_720,  to: 193_800,  rate: 0.20 },
-  { from: 193_800,  to: 269_280,  rate: 0.31 },
-  { from: 269_280,  to: 560_280,  rate: 0.35 },
+  { from: 120_720,  to: 228_000,  rate: 0.20 },
+  { from: 228_000,  to: 301_200,  rate: 0.31 },
+  { from: 301_200,  to: 560_280,  rate: 0.35 },
   { from: 560_280,  to: 721_560,  rate: 0.47 },
   { from: 721_560,  to: null,     rate: 0.50 },
 ];
 
-// Re-indexed for 2026 (Warren 2026-05): credit point ~₪255/mo, BL break = 60%
-// of average wage (~₪13,300), BL ceiling = 5× average wage. Refresh after the
-// official MoF + ביטוח לאומי tables for 2026 publish.
-export const CREDIT_POINT_VALUE_ANNUAL = 3_060;
-export const BL_MAX_MONTHLY = 52_220;
-export const BL_BREAK_MONTHLY = 7_980;
+// Audit 2026-11-13. Sources: kolzchut.org.il/he/מדרגות_מס_הכנסה (updated 5.4.2026;
+// brackets 3-4 widened from 1.1.2026, credit point ₪242/mo = ₪2,904/yr);
+// btl.gov.il employee rates page (reduced-rate threshold ₪7,703, max insured
+// income ₪51,910, from 1.1.2026; employee BL+health 4.27% / 12.17%).
+export const CREDIT_POINT_VALUE_ANNUAL = 2_904;
+export const BL_MAX_MONTHLY = 51_910;
+export const BL_BREAK_MONTHLY = 7_703;
 // Employee-only Bituach Leumi rates (excluding Mas Briut, which is its own line).
-// Combined BL+Health is 3.5% / 12% — that's the figure paychecks display in one row,
+// Combined BL+Health is 4.27% / 12.17% — that's the figure paychecks display in one row,
 // but the calculator splits them so each appears separately in the breakdown UI.
-export const BL_RATE_LOW = 0.004;
+export const BL_RATE_LOW = 0.0104;
 export const BL_RATE_HIGH = 0.07;
-export const HEALTH_RATE_LOW = 0.031;
-export const HEALTH_RATE_HIGH = 0.05;
+export const HEALTH_RATE_LOW = 0.0323;
+export const HEALTH_RATE_HIGH = 0.0517;
 
 // ─── Pure calculation functions ───────────────────────────────────────
 

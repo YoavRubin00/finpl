@@ -38,14 +38,15 @@ const SALARY_STEP = 250;
  * Employer-side costs on top of gross salary (Israel 2026):
  *   - Employer pension contribution: 6.5% (חוק פנסיה חובה — 6.5% on gross up to ~₪50k cap)
  *   - Severance reserve: 6.0% (השלמה לפיצויים — 6% standard; can be 8.33% in new tracks)
- *   - Employer Bituach Leumi: 3.55% up to BL break, 7.6% above it (employer-only rates)
+ *   - Employer Bituach Leumi: 4.51% up to BL break (₪7,703), 7.6% above it (employer-only rates)
+ *     (source: btl.gov.il "לעובדים שכירים" + employer circular 2026; audit 2026-11-13)
  * Sum ≈ 16-17% on top of gross — the gap between "ברוטו" and "עלות מעסיק".
  */
 const EMPLOYER_PENSION = 0.065;
 const EMPLOYER_SEVERANCE = 0.06;
-const EMPLOYER_BL_LOW = 0.0355;
+const EMPLOYER_BL_LOW = 0.0451;
 const EMPLOYER_BL_HIGH = 0.076;
-const BL_MONTHLY_BREAK = 7522;
+const BL_MONTHLY_BREAK = 7703;
 
 function employerBlCost(monthlyGross: number): number {
   if (monthlyGross <= 0) return 0;

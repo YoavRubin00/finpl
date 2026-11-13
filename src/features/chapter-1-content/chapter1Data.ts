@@ -297,10 +297,10 @@ export const chapter1Data: Chapter = {
               visual: {
                 kind: 'compare-bars',
                 items: [
-                  { label: 'ריבית הפריים', value: 5, valueLabel: '5%' },
+                  { label: 'ריבית הפריים', value: 4.75, valueLabel: '4.75%' },
                   { label: 'מינוס בדרגה עמוקה', value: 15, valueLabel: '15%' },
                 ],
-                caption: 'פריים 5% (יולי 2026) מול הריבית בעומק המינוס — פי 3',
+                caption: 'פריים 4.75% (אוקטובר 2026) מול הריבית בעומק המינוס — פי 3',
               },
               finnLine: 'ככל שאתם חורגים עמוק יותר במסגרת, הריבית מזנקת באגרסיביות.',
             },
@@ -1301,10 +1301,10 @@ export const chapter1Data: Chapter = {
               visual: {
                 kind: 'compare-bars',
                 items: [
-                  { label: 'ריבית בנק ישראל', value: 3.5, valueLabel: '3.5%' },
-                  { label: 'פריים', value: 5, valueLabel: '5%' },
+                  { label: 'ריבית בנק ישראל', value: 3.25, valueLabel: '3.25%' },
+                  { label: 'פריים', value: 4.75, valueLabel: '4.75%' },
                 ],
-                caption: 'נכון ליולי 2026: 3.5% + 1.5% = פריים 5%',
+                caption: 'נכון לאוקטובר 2026: 3.25% + 1.5% = פריים 4.75%',
               },
               finnLine: "ריבית הפריים היא הריבית ש'מנהלת את העניינים' במשק.",
             },
