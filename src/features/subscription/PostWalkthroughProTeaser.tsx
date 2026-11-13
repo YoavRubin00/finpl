@@ -20,6 +20,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { captureEvent } from "../../lib/posthog";
 import { tapHaptic } from "../../utils/haptics";
+import { reportPostLessonModal } from "../retention-loops/postLessonSequence";
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -33,6 +34,7 @@ function PostWalkthroughProTeaser(): React.JSX.Element {
   const isGuest = useAuthStore((s) => s.isGuest);
 
   useEffect(() => {
+    reportPostLessonModal('pro_teaser');
     // Restores the post_walkthrough paywall-view metric (124/week → 0 regression).
     try {
       captureEvent("paywall_viewed", {

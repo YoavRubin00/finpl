@@ -127,6 +127,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { isModuleFirstArm } from "../onboarding/firstRunExperiment";
 import { ChestCelebrationModal } from "../topic-learning/ChestCelebrationModal";
+import { getNextLessonAfter } from "../retention-loops/nextLessonTarget";
 import {
   CHEST_RARITY_BONUS,
   MODULE_TT_XP,
@@ -2302,20 +2303,26 @@ export function LessonFlowScreen() {
    *  returning to the map (Yoav 11.7). */
   const postChestResumeRef = useRef<TopicKind | null>(null);
 
-  function closeHandoffChest() {
-    try { track({ name: 'chest_closed', props: { module_id: 'mod-0-1', source: 'inline' } }); } catch { /* non-fatal */ }
-    // In-lesson continuation: resume straight into the next chip.
-    const resumeFrom = postChestResumeRef.current;
-    if (resumeFrom) {
-      postChestResumeRef.current = null;
-      setHandoffChest(null);
-      advanceFromChip(resumeFrom);
-      return;
-    }
+  function closeHandoffChest(cta: 'continue' | 'finish_module' | 'dismiss' = 'dismiss') {
+    try { track({ name: 'chest_closed', props: { module_id: 'mod-0-1', source: 'inline', cta } }); } catch { /* non-fatal */ }
+    // Post-lesson loop (13.11.26): the chest has ONE primary action, "לשיעור
+    // הבא", and a quiet "חזרה למפה". Neither resumes the leftover post-chest
+    // chips in-lesson any more - on the map they are one tap away (gold chip).
+    postChestResumeRef.current = null;
     setHandoffChest(null);
     if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'profiling') {
       router.replace('/(auth)/onboarding' as never);
       return;
+    }
+    // PRIMARY: start the second lesson right here. `replace` swaps this lesson
+    // for the next one; the map stays mounted underneath and re-opens on the
+    // new lesson when it returns. No map detour between lesson 1 and lesson 2.
+    if (cta === 'continue') {
+      const next = getNextLessonAfter('mod-0-1');
+      if (next) {
+        router.replace(next.route as never);
+        return;
+      }
     }
     if (router.canGoBack()) {
       useTopicTreeReturnStore.getState().signalReturn({
@@ -3404,11 +3411,16 @@ export function LessonFlowScreen() {
   // (some users see the summary then bail before claiming the chest).
   const summaryViewedFiredRef = useRef(false);
   useEffect(() => {
-    if (phase === "summary" && mod && !summaryViewedFiredRef.current) {
+    // Topic-tree lessons (every lesson today) show their result on the chest
+    // celebration, which fires this event itself. Their `summary` phase renders
+    // nothing and is only reached when the chips run to the very end, so firing
+    // here counted a blank seam for some completions and nothing for the rest
+    // (113 lesson_completed vs 51 lesson_summary_viewed). Legacy linear only.
+    if (phase === "summary" && mod && !summaryViewedFiredRef.current && returnTo !== 'topic-tree') {
       summaryViewedFiredRef.current = true;
-      try { captureEvent('lesson_summary_viewed', { lesson_id: mod.id, chapter_id: chapterId ?? null }); } catch { /* non-fatal */ }
+      try { track({ name: 'lesson_summary_viewed', props: { lesson_id: mod.id, chapter_id: chapterId ?? null, surface: 'legacy_summary' } }); } catch { /* non-fatal */ }
     }
-  }, [phase, mod, chapterId]);
+  }, [phase, mod, chapterId, returnTo]);
 
   // Detect navigation away mid-lesson (user tapped a tab, swipe-back, deep
   // link, etc.) — distinct from `forceExit` which only covers the explicit
@@ -6200,9 +6212,12 @@ export function LessonFlowScreen() {
           rarity={handoffChest.rarity}
           thresholdPct={handoffChest.thresholdPct}
           isFinale={false}
-          onContinueModule={closeHandoffChest}
-          onAdvanceToNextModule={() => { postChestResumeRef.current = null; closeHandoffChest(); }}
-          onDismiss={() => { postChestResumeRef.current = null; closeHandoffChest(); }}
+          onContinueModule={() => closeHandoffChest('finish_module')}
+          onAdvanceToNextModule={() => closeHandoffChest('continue')}
+          onDismiss={() => closeHandoffChest('dismiss')}
+          // Module-first arm, still pre-onboarding: the next step is the
+          // profiling questions, not a lesson - one plain "ממשיכים" button.
+          soloCtaLabel={isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'profiling' ? 'ממשיכים' : undefined}
           analyticsModuleId="mod-0-1"
           analyticsSource="inline"
           ahaLine={ahaLineFor('mod-0-1')}

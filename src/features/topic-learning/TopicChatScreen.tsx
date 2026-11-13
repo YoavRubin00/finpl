@@ -456,7 +456,7 @@ export function TopicChatScreen(): React.ReactElement {
               <Pressable
                 onPress={() => {
                   tapHaptic();
-                  router.push('/pricing' as never);
+                  router.push('/pricing?source=topic_chat_limit' as never);
                 }}
                 style={limitStyles.upgradeBtn}
                 accessibilityRole="button"

@@ -20,6 +20,8 @@ import { useBanditStore } from '../bandit/useBanditStore';
 import { getVariantPayload } from '../bandit/banditConfig';
 import { setPersonProperties } from '../../lib/posthog';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { useNudgeQueueStore as useNudgeQueue } from '../../stores/useNudgeQueueStore';
+import { reportPostLessonModal } from './postLessonSequence';
 
 /** Amount + the app's gold-coin glyph (the one in the top wallet) inline. */
 function CoinAmount({ amount }: { amount: number }): React.ReactElement {
@@ -66,6 +68,11 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
   const pendingProTeaser = useTutorialStore((s) => s.pendingPostWalkthroughProTeaser);
   const pendingRegisterCTA = useTutorialStore((s) => s.pendingPostWalkthroughCTA);
   const lastDailyTaskDate = useEconomyUIStore((s) => s.lastDailyTaskDate);
+  // Never over a lesson (13.11.26). The offer becomes eligible the moment
+  // mod-0-1 completes - which is while the lesson and its chest are still on
+  // screen - and the chest's primary button now starts lesson 2 directly, so
+  // without this the wager would open on top of the next lesson's intro.
+  const inLesson = useNudgeQueue((s) => s.inLesson);
 
   const permissionGranted = useNotificationStore((s) => s.permissionGranted);
   const preferredReminderHour = useNotificationStore((s) => s.preferredReminderHour);
@@ -96,6 +103,7 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
     (mod01GateShown || !isGuest) &&
     !pendingFirstChest &&
     !pendingProTeaser &&
+    !inLesson &&
     // isFirstDay gate removed 2026-07-03 (Yoav): the wager now reaches ALL
     // mod-0-1-chest completers, split ~50/50 by the day0_wager bandit at fire
     // time below — not just the day-0 first-session slice (which was ~1/day).
@@ -138,6 +146,7 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
       useSharkWagerStore.getState().markOfferConsumed();
       if (!showWager) return; // control holdout — assigned + measured, but not shown
       setOfferVisible(true);
+      reportPostLessonModal('day0_wager');
       const streak = useEconomyUIStore.getState().activeDates.length;
       try { track({ name: 'day0_exit_ritual_shown', props: { streak } }); } catch { /* non-fatal */ }
       try { track({ name: 'streak_wager_offered', props: { stake: WAGER_STAKE, payout: WAGER_PAYOUT } }); } catch { /* non-fatal */ }

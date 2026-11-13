@@ -14,6 +14,7 @@ import { StreakCelebrationScreen } from "../features/streak/StreakCelebrationScr
 import { useNudgeQueueStore } from "../stores/useNudgeQueueStore";
 import { useTutorialStore } from "../stores/useTutorialStore";
 import { israelDayKey } from "../utils/dateUtils";
+import { reportPostLessonModal } from "../features/retention-loops/postLessonSequence";
 
 /** Exported so same-day landing rituals (TomorrowChestReadyHost) can stamp
  *  today and suppress this nudge — one landing popup, not two. Value format
@@ -79,6 +80,8 @@ export function StreakCelebrationProvider({
         setTimeout(() => {
           setVisible(true);
           useNudgeQueueStore.getState().markStreakShown();
+          // Counted only when it lands right after a lesson chest (no-op otherwise).
+          reportPostLessonModal('streak');
         }, 600);
       }
     });

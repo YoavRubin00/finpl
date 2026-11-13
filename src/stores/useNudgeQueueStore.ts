@@ -100,6 +100,9 @@ const MAX_AUTO_POPUPS_PER_SESSION = 1;
 /** …and per Israeli calendar day, across sessions. */
 const MAX_AUTO_POPUPS_PER_DAY = 2;
 
+/** How many LessonFlowScreen instances are mounted right now (session-only). */
+let lessonsMounted = 0;
+
 function emptyMap<T>(defaultVal: T): Record<NudgeType, T> {
   return { bridge: defaultVal, referral: defaultVal, tools: defaultVal };
 }
@@ -119,7 +122,14 @@ export const useNudgeQueueStore = create<NudgeState>()(
       lastAutoPopupDateKey: null,
       autoPopupsToday: 0,
 
-      setInLesson: (v) => set({ inLesson: v }),
+      // Counted, not assigned (13.11.26): the chest can now replace lesson 1
+      // with lesson 2, and the new screen mounts (true) BEFORE the old one
+      // unmounts (false). A plain assignment left `inLesson` false for the
+      // whole second lesson, letting map-only popups open over it.
+      setInLesson: (v) => {
+        lessonsMounted = Math.max(0, lessonsMounted + (v ? 1 : -1));
+        set({ inLesson: lessonsMounted > 0 });
+      },
       // The streak popup is PRIORITY 1 (Yoav 2026-07-08): it always shows, and
       // reserves the popup stage the moment it does — so every promo popup
       // (buy-asset splash, bridge/tools banners) waits behind it instead of

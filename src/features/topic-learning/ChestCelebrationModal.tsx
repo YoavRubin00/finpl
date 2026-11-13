@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
   FadeInUp,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
   withSpring,
@@ -26,7 +27,10 @@ import {
 } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useWisdomStore } from '../wisdom-flashes/useWisdomStore';
-import { useTopicProgressStore } from './useTopicProgressStore';
+import { useTopicProgressStore, nextChestCoinMultiplier } from './useTopicProgressStore';
+import { getNextLessonAfter } from '../retention-loops/nextLessonTarget';
+import { beginPostLessonSequence, endPostLessonSequence, reportPostLessonModal } from '../retention-loops/postLessonSequence';
+import { useDailyQuestsStore } from '../daily-quests/useDailyQuestsStore';
 import { ParticleBurst } from '../../components/ui/ParticleBurst';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
@@ -51,7 +55,12 @@ interface ChestCelebrationModalProps {
   /** Energy (⚡) awarded by the chest. The real grantEnergy already happened
    *  upstream — this drives the display pill + fly-out (Yoav 2026-06-22). */
   energy?: number;
+  /** Quiet secondary "חזרה למפה": close the chest and land on the map with the
+   *  lesson's accordion open. Also the primary when there is no next lesson. */
   onContinueModule: () => void;
+  /** Primary "לשיעור הבא": close the chest and START the next lesson. The
+   *  modal resolves that lesson itself (getNextLessonAfter) and only calls
+   *  this when one exists, so the caller can navigate without re-checking. */
   onAdvanceToNextModule: () => void;
   /** Called after the user resolves the Double-or-Nothing prompt with
    *  the multiplier (0 = lost, 1 = kept, 2 = doubled). Parent applies
@@ -72,27 +81,12 @@ interface ChestCelebrationModalProps {
    *  rare, none for common). The coin bonus is already baked into `coins`
    *  by the caller; this is purely a visual treatment. */
   rarity?: ChestRarity;
-  /** Yoav 2026-06-12: optional playful "I'm bailing" CTA below the main two.
-   *  When `quitLabel` is set (the parent rolled the 30%-of-opens gate and
-   *  the module is past mod-0-1b), the modal surfaces a small tertiary
-   *  button — e.g. "עפתי לנטפליקס 📺" — that fires `onQuit` on tap. */
-  quitLabel?: string | null;
-  onQuit?: () => void;
   /** Hardware-back / system dismiss. Closes the modal WITHOUT firing the
    *  parent's CTA analytics — wiring onRequestClose to onContinueModule
    *  made every Android back press register as a fake
    *  chest_cta_tapped='finish_module' (code-review 2026-06-12). Falls back
    *  to onContinueModule when not provided (legacy callers). */
   onDismiss?: () => void;
-  /** Live summary-call ("שיחת סיכום לייב") option, surfaced as a button ABOVE
-   *  "המשך" once the chest is opened (Yoav 2026-06-29). `available` gates the
-   *  whole button on the live-voice SDK being present; `eligible` (Pro / free
-   *  trial left) flips the copy + style between "start" and a PRO upsell. Tapping
-   *  fires `onStartSummaryCall` — the parent closes the chest and starts the
-   *  call. All three optional so legacy callers render unchanged. */
-  summaryCallAvailable?: boolean;
-  summaryCallEligible?: boolean;
-  onStartSummaryCall?: () => void;
   /** Chest-lifecycle attribution (Yoav 11.7). When set, the modal fires
    *  `chest_presented` the first time it actually RENDERS visible — from
    *  inside the modal, not the caller, so a render-layer regression that
@@ -105,6 +99,11 @@ interface ChestCelebrationModalProps {
    *  anchors the win to the user's life, not only to the coins (Yoav 11.7:
    *  "התיבה היא חיזוק; ה-aha הוא הסיבה לחזור"). */
   ahaLine?: string;
+  /** When set, the next-lesson card is suppressed and the single button shows
+   *  this label and fires onContinueModule. For the one caller whose next step
+   *  is not a lesson (module-first arm: the chest leads to the profiling
+   *  questions). Default: next-lesson card, or "חזרה למפה" when none exists. */
+  soloCtaLabel?: string;
 }
 
 /**
@@ -113,11 +112,15 @@ interface ChestCelebrationModalProps {
  * visual from LessonFlowScreen (~lines 4340-4416) so the topic-tree
  * pilot doesn't pull in 2.5k lines of host state.
  *
- * Two CTAs after the user taps the chest:
- *  - "המשך עם המודולה" — close modal, return to accordion to finish
- *    the remaining 30% of topics.
- *  - "לשיעור הבא בפרק" — close modal AND collapse accordion AND
- *    navigate to the next module in chapter (mod-1-2 for the pilot).
+ * This modal IS the end-of-lesson screen (13.11.26): result (what was learned
+ * + XP/coins/energy) → one reward moment (the chest tap, with an optional
+ * double-or-nothing) → ONE primary action:
+ *  - "לשיעור הבא" — a card naming the next lesson, its length and what its
+ *    chest pays right now; tapping starts that lesson directly.
+ *  - "חזרה למפה" — quiet secondary; lands on the map with the accordion open.
+ * The wisdom quote, the live-call upsell and the "I'm off to Netflix" exit
+ * used to sit here too. Five competing buttons after the win, and the
+ * primary one only scrolled the map. They are gone from this screen.
  */
 export function ChestCelebrationModal({
   visible,
@@ -130,15 +133,11 @@ export function ChestCelebrationModal({
   isFinale = false,
   thresholdPct = 70,
   rarity = 'common',
-  quitLabel = null,
-  onQuit,
   onDismiss,
-  summaryCallAvailable = false,
-  summaryCallEligible = false,
-  onStartSummaryCall,
   analyticsModuleId,
   analyticsSource,
   ahaLine,
+  soloCtaLabel,
 }: ChestCelebrationModalProps): React.ReactElement | null {
   // Native SafeAreaView inside a RN Modal drops the top inset on iOS (new
   // arch) — the "כל הכבוד" heading rendered under the Dynamic Island.
@@ -162,6 +161,24 @@ export function ChestCelebrationModal({
         props: { module_id: analyticsModuleId, source: analyticsSource ?? 'accordion' },
       });
     } catch { /* non-fatal */ }
+    // The chest is the screen that shows the lesson's result, so the summary
+    // view is counted HERE. It used to fire only from LessonFlowScreen's hidden
+    // `summary` phase, which the topic-tree flow rarely reaches - fewer than
+    // half of completions ever had one.
+    try {
+      const chapterMatch = /^mod-(\d+)-/.exec(analyticsModuleId);
+      track({
+        name: 'lesson_summary_viewed',
+        props: {
+          lesson_id: analyticsModuleId,
+          chapter_id: chapterMatch ? `chapter-${chapterMatch[1]}` : null,
+          surface: 'chest',
+          source: analyticsSource ?? 'accordion',
+        },
+      });
+    } catch { /* non-fatal */ }
+    // Opens the post-lesson modal sequence and reports this chest as index 1.
+    beginPostLessonSequence(analyticsModuleId);
   }, [visible, analyticsModuleId, analyticsSource]);
   const [donResolved, setDonResolved] = useState(false);
   const [donMultiplier, setDonMultiplier] = useState(1);
@@ -200,6 +217,31 @@ export function ChestCelebrationModal({
   // pre-open chest body so the multiplier is legible BEFORE they tap.
   // Read-only here — the bump happens upstream in TopicTreeAccordion.
   const chestStreak = useTopicProgressStore((s) => s.chestStreak);
+  const reducedMotion = useReducedMotion();
+
+  // The "one more" hook. Resolved when the chest shows (the completion record
+  // is already written by then), so the card names a lesson that really opens.
+  const nextLesson = useMemo(
+    () => (visible && analyticsModuleId && !soloCtaLabel ? getNextLessonAfter(analyticsModuleId) : null),
+    [visible, analyticsModuleId, soloCtaLabel],
+  );
+  // What that lesson's chest pays if it is opened now - the existing chest
+  // streak multiplier (×1.5 / ×2 / ×2.5), read from the store, never invented.
+  const nextMultiplier = useMemo(
+    () => (visible ? nextChestCoinMultiplier() : 1),
+    // chestStreak is the input the multiplier is derived from.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [visible, chestStreak],
+  );
+  // Today's goal, in place of a modal 18 people open: the daily quests'
+  // progress. The "lesson" quest is credited when the map regains focus, which
+  // is after this screen, so a lesson finished just now is counted in here.
+  const quests = useDailyQuestsStore((s) => s.quests);
+  const questsTotal = quests.length;
+  const questsDone = Math.min(
+    questsTotal,
+    quests.filter((q) => q.isCompleted).length + (quests.some((q) => q.type === 'module' && !q.isCompleted) ? 1 : 0),
+  );
 
   // Chest animation shared values — mirrors LessonFlowScreen's
   // chestGlowScale / chestGlowOpacity / chestBodyScale rhythm.
@@ -278,6 +320,7 @@ export function ChestCelebrationModal({
       const firstDay = useEconomyUIStore.getState().activeDates.length <= 1;
       if (onDoNResolve && !firstDay) {
         setShowDoN((prev) => prev || true);
+        reportPostLessonModal('double_or_nothing');
       } else {
         setDonResolved(true);
         if (onDoNResolve) {
@@ -286,15 +329,11 @@ export function ChestCelebrationModal({
         }
       }
     }, 700);
-    // T2: Wisdom popup appears as a parallel ornament. If DoN is still
-    // open, the global wisdom popup z-orders above and the user can tap
-    // through it; once dismissed, DoN remains underneath.
-    const tWisdom = setTimeout(() => {
-      if (mountedRef.current) useWisdomStore.getState().showRandomWisdom();
-    }, 1800);
+    // The wisdom quote that used to pop 1.8s in is gone (13.11.26): it landed
+    // ON the reward, sometimes over the double-or-nothing prompt, and had to be
+    // dismissed before the next action. One reward moment, then the CTA.
     return () => {
       clearTimeout(tDoN);
-      clearTimeout(tWisdom);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, visible]);
@@ -312,6 +351,7 @@ export function ChestCelebrationModal({
     // Same first-day mute as the primary DoN trigger above.
     if (onDoNResolve && useEconomyUIStore.getState().activeDates.length > 1) {
       setShowDoN(true);
+      reportPostLessonModal('double_or_nothing');
     } else {
       setDonResolved(true);
       if (onDoNResolve) {
@@ -413,13 +453,43 @@ export function ChestCelebrationModal({
 
   const handleAdvance = useCallback(() => {
     successHaptic();
+    if (analyticsModuleId && nextLesson) {
+      try { track({ name: 'next_lesson_cta_tapped', props: { from_lesson: analyticsModuleId, to_lesson: nextLesson.moduleId } }); } catch { /* non-fatal */ }
+    }
+    // The user is leaving the end-of-lesson moment for the next lesson - any
+    // modal from here on belongs to that lesson, not to this sequence.
+    endPostLessonSequence();
     onAdvanceToNextModule();
-  }, [onAdvanceToNextModule]);
+  }, [onAdvanceToNextModule, analyticsModuleId, nextLesson]);
 
-  const handleSummaryCall = useCallback(() => {
-    tapHaptic();
-    onStartSummaryCall?.();
-  }, [onStartSummaryCall]);
+  // next_lesson_cta_shown - once per chest, when the CTA is really on screen
+  // (chest opened and the double-or-nothing, if any, resolved).
+  const ctaShownFiredRef = useRef(false);
+  useEffect(() => {
+    if (!visible) { ctaShownFiredRef.current = false; return; }
+    if (!opened || !donResolved || ctaShownFiredRef.current || !analyticsModuleId) return;
+    ctaShownFiredRef.current = true;
+    try {
+      track({
+        name: 'next_lesson_cta_shown',
+        props: {
+          from_lesson: analyticsModuleId,
+          to_lesson: nextLesson?.moduleId ?? null,
+          minutes: nextLesson?.minutes,
+          next_chest_multiplier: nextMultiplier,
+          quests_done: questsDone,
+          quests_total: questsTotal,
+        },
+      });
+    } catch { /* non-fatal */ }
+  }, [visible, opened, donResolved, analyticsModuleId, nextLesson, nextMultiplier, questsDone, questsTotal]);
+
+  const goalLabel = questsTotal > 0 && questsDone >= questsTotal
+    ? 'כל משימות היום הושלמו'
+    : `משימות היום: ${questsDone} מתוך ${questsTotal}`;
+  const nextRewardLabel = nextMultiplier > 1
+    ? `התיבה הבאה: ×${nextMultiplier} מטבעות`
+    : 'תיבה חדשה בסוף';
 
   if (!visible) return null;
 
@@ -494,7 +564,7 @@ export function ChestCelebrationModal({
                 {chestStreak >= 2 && (
                   <View style={styles.streakBadge}>
                     <Text style={styles.streakBadgeText} allowFontScaling={false}>
-                      {`🔥 ${chestStreak} ימים ברצף`}
+                      {`🔥 תיבה ${chestStreak} ברצף`}
                     </Text>
                   </View>
                 )}
@@ -559,94 +629,95 @@ export function ChestCelebrationModal({
           {/* Captain's Forecast ("מחר התיבה") removed per Yoav 2026-06-11 —
               the tomorrow-chest teaser was cluttering the reward moment. */}
 
-          {/* CTAs — only after the chest is opened AND wisdom+DoN finished.
-              Yoav 2026-06-11: relabeled to "המשך" (move on to the next
-              lesson in the chapter) and "סיים את כל המודולה" (stay in the
-               module's expanded map to finish the remaining chips). The
-               secondary CTA is hidden for the 100% master chest since
-               there's nothing left to complete inside the module. */}
+          {/* End-of-lesson actions, shown once the chest is opened and the
+              double-or-nothing (if offered) is resolved. ONE primary: the next
+              lesson, made concrete (title, length, what its chest pays now).
+              Under it a quiet row: back to the map, and the rewarded-ad bonus
+              as a small extra, not a button that outshouts the primary. */}
           {opened && donResolved && (
-            <Animated.View entering={FadeIn.delay(300).duration(400)} style={styles.ctaWrap}>
-              {/* Yoav 2026-06-15: rewarded-ad bonus — watch a video for +500
-                  coins. Non-Pro only; gold to read as a "treasure" bonus,
-                  distinct from the blue continue CTA. Shows a loading state
-                  rather than hiding while the ad preloads, and flips to a
-                  confirmation once claimed (one claim per chest). */}
-              {!isPro && (
-                adClaimed ? (
-                  <View style={styles.adBonusClaimed}>
-                    <Text style={styles.adBonusClaimedText} allowFontScaling={false}>
-                      {`✓ קיבלתם +${AD_BONUS_COINS} מטבעות!`}
+            <Animated.View entering={reducedMotion ? undefined : FadeIn.delay(300).duration(400)} style={styles.ctaWrap}>
+              {questsTotal > 0 && (
+                <View style={styles.goalRow} accessible accessibilityLabel={goalLabel}>
+                  <Text style={[styles.goalText, RTL]} allowFontScaling={false}>
+                    {goalLabel}
+                  </Text>
+                  <View style={styles.goalDots}>
+                    {quests.map((q, i) => (
+                      <View key={q.id} style={[styles.goalDot, i < questsDone && styles.goalDotDone]} />
+                    ))}
+                  </View>
+                </View>
+              )}
+              {nextLesson ? (
+                <Pressable
+                  onPress={handleAdvance}
+                  accessibilityRole="button"
+                  accessibilityLabel={`לשיעור הבא: ${nextLesson.title}. כ-${nextLesson.minutes} דקות. ${nextRewardLabel}`}
+                  style={styles.nextCard}
+                >
+                  <Text style={[styles.nextEyebrow, RTL]} allowFontScaling={false}>
+                    השיעור הבא
+                  </Text>
+                  <Text style={[styles.nextTitle, RTL]} numberOfLines={2} allowFontScaling={false}>
+                    {nextLesson.title}
+                  </Text>
+                  <Text style={[styles.nextMeta, RTL]} allowFontScaling={false}>
+                    {`כ-${nextLesson.minutes} דק׳ · ${nextRewardLabel}`}
+                  </Text>
+                  <View style={[styles.cta, styles.ctaPrimary, styles.nextCardButton]}>
+                    <ChevronLeft size={20} color="#ffffff" strokeWidth={2.6} />
+                    <Text style={[styles.ctaText, RTL]} allowFontScaling={false}>
+                      לשיעור הבא
                     </Text>
                   </View>
-                ) : (
-                  <Pressable
-                    onPress={adReady ? handleWatchAdBonus : undefined}
-                    disabled={!adReady}
-                    accessibilityRole="button"
-                    accessibilityLabel={adReady ? `צפו בפרסומת וקבלו ${AD_BONUS_COINS} מטבעות` : 'המודעה נטענת'}
-                    accessibilityState={{ disabled: !adReady }}
-                    style={[styles.cta, styles.ctaAdBonus, !adReady && { opacity: 0.6 }]}
-                  >
-                    <Text style={[styles.ctaAdBonusText, RTL_CENTER]} allowFontScaling={false}>
-                      {adReady ? `🎬 צפו בפרסומת — קבלו +${AD_BONUS_COINS} מטבעות` : 'טוען פרסומת...'}
-                    </Text>
-                  </Pressable>
-                )
-              )}
-              {/* Yoav 2026-06-29: live summary-call option, ABOVE "המשך" (DoN
-                  already ran before the CTAs appear). Tapping closes the chest
-                  and starts the call; non-eligible users get the PRO upsell. */}
-              {summaryCallAvailable && (
-                <Pressable
-                  onPress={handleSummaryCall}
-                  accessibilityRole="button"
-                  accessibilityLabel={summaryCallEligible ? 'שיחת סיכום לייב עם שארק' : 'שדרגו ל-PRO לשיחת סיכום לייב'}
-                  style={[styles.cta, summaryCallEligible ? styles.ctaSummary : styles.ctaSummaryPro]}
-                >
-                  <Text style={[styles.ctaSummaryText, RTL]} allowFontScaling={false}>
-                    {summaryCallEligible ? '🎙️ שיחת סיכום לייב' : '🎙️ שיחת סיכום לייב · PRO'}
-                  </Text>
                 </Pressable>
-              )}
-              <Pressable
-                onPress={handleAdvance}
-                accessibilityRole="button"
-                accessibilityLabel="המשך"
-                style={[styles.cta, styles.ctaPrimary]}
-              >
-                <ChevronLeft size={20} color="#ffffff" strokeWidth={2.6} />
-                <Text style={[styles.ctaText, RTL]} allowFontScaling={false}>
-                  המשך
-                </Text>
-              </Pressable>
-              {!isFinale && (
+              ) : (
                 <Pressable
                   onPress={handleContinue}
                   accessibilityRole="button"
-                  accessibilityLabel="סיים את כל השיעור"
-                  style={[styles.cta, styles.ctaSecondary]}
+                  accessibilityLabel={soloCtaLabel ?? 'חזרה למפה'}
+                  style={[styles.cta, styles.ctaPrimary]}
                 >
-                  <Text style={[styles.ctaSecondaryText, RTL]} allowFontScaling={false}>
-                    סיים את כל השיעור
+                  <Text style={[styles.ctaText, RTL]} allowFontScaling={false}>
+                    {soloCtaLabel ?? 'חזרה למפה'}
                   </Text>
                 </Pressable>
               )}
-              {/* Yoav 2026-06-12: playful "I'm bailing" CTA. Surfaced on
-                  ~30% of post-mod-0-1b chests via parent's chestState
-                  roll. Tertiary visual weight (light bg, small text). */}
-              {quitLabel && onQuit && (
-                <Pressable
-                  onPress={() => { tapHaptic(); onQuit(); }}
-                  accessibilityRole="button"
-                  accessibilityLabel={quitLabel}
-                  style={styles.ctaQuit}
-                >
-                  <Text style={[styles.ctaQuitText, RTL]} allowFontScaling={false}>
-                    {quitLabel}
+              <View style={styles.quietRow}>
+                {nextLesson && (
+                  <Pressable
+                    onPress={handleContinue}
+                    accessibilityRole="button"
+                    accessibilityLabel="חזרה למפה"
+                    hitSlop={8}
+                    style={styles.quietBtn}
+                  >
+                    <Text style={[styles.quietText, RTL]} allowFontScaling={false}>
+                      חזרה למפה
+                    </Text>
+                  </Pressable>
+                )}
+                {/* Rewarded-ad bonus (+500 coins, non-Pro, one claim per chest).
+                    Hidden until an ad is actually loaded - it used to show a
+                    disabled "טוען פרסומת..." button above the primary. */}
+                {!isPro && (adClaimed ? (
+                  <Text style={[styles.quietClaimed, RTL]} allowFontScaling={false}>
+                    {`✓ קיבלתם +${AD_BONUS_COINS} מטבעות`}
                   </Text>
-                </Pressable>
-              )}
+                ) : adReady ? (
+                  <Pressable
+                    onPress={handleWatchAdBonus}
+                    accessibilityRole="button"
+                    accessibilityLabel={`צפו בפרסומת וקבלו ${AD_BONUS_COINS} מטבעות`}
+                    hitSlop={8}
+                    style={styles.quietBtn}
+                  >
+                    <Text style={[styles.quietAdText, RTL]} allowFontScaling={false}>
+                      {`🎬 פרסומת = +${AD_BONUS_COINS} מטבעות`}
+                    </Text>
+                  </Pressable>
+                ) : null)}
+              </View>
             </Animated.View>
           )}
         </View>
@@ -910,80 +981,90 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 10,
   },
-  ctaSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: 'rgba(224, 242, 254, 0.55)',
-  },
-  // Live summary-call CTA — cyan to read as the "voice/shark" action, distinct
-  // from the blue "המשך". PRO variant is an outline (locked-premium feel).
-  ctaSummary: {
-    backgroundColor: '#0891b2',
-    borderBottomWidth: 4,
-    borderBottomColor: '#155e75',
-    shadowColor: '#0891b2',
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
-  },
-  ctaSummaryPro: {
-    backgroundColor: 'rgba(8, 145, 178, 0.18)',
-    borderWidth: 2,
-    borderColor: 'rgba(103, 232, 249, 0.6)',
-  },
-  ctaSummaryText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#ffffff',
-  },
   ctaText: {
     fontSize: 17,
     fontWeight: '900',
     color: '#ffffff',
   },
-  ctaSecondaryText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#e0f2fe',
-  },
-  // Gold rewarded-ad bonus button — dark amber text on the gold fill (white
-  // on #f59e0b is ~2:1 contrast / WCAG fail). Reads as "coins/treasure".
-  ctaAdBonus: {
-    backgroundColor: '#f59e0b',
-    borderBottomWidth: 4,
-    borderBottomColor: '#b45309',
-    shadowColor: '#f59e0b',
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
-  },
-  ctaAdBonusText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#78350f',
-  },
-  adBonusClaimed: {
-    paddingVertical: 12,
+  // "Today's goal" line above the next-lesson card: daily-quest progress.
+  goalRow: {
+    flexDirection: 'row-reverse',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
-  adBonusClaimedText: {
-    fontSize: 14,
+  goalText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#bae6fd',
+  },
+  goalDots: {
+    flexDirection: 'row-reverse',
+    gap: 5,
+  },
+  goalDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: 'rgba(186, 230, 253, 0.25)',
+  },
+  goalDotDone: {
+    backgroundColor: '#fcd34d',
+  },
+  // Next-lesson card: the whole card is the primary tap target.
+  nextCard: {
+    borderRadius: 20,
+    padding: 14,
+    gap: 4,
+    backgroundColor: 'rgba(14, 116, 144, 0.32)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(125, 211, 252, 0.55)',
+  },
+  nextEyebrow: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#7dd3fc',
+  },
+  nextTitle: {
+    fontSize: 18,
     fontWeight: '900',
-    color: '#fcd34d',
-    writingDirection: 'rtl',
+    color: '#ffffff',
+    lineHeight: 24,
   },
-  ctaQuit: {
-    marginTop: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+  nextMeta: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fcd34d',
+  },
+  nextCardButton: {
+    marginTop: 10,
+    paddingVertical: 14,
+  },
+  quietRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    minHeight: 44,
+  },
+  quietBtn: {
+    minHeight: 44,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ctaQuitText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: 'rgba(224,242,254,0.65)',
+  quietText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: 'rgba(224, 242, 254, 0.8)',
+  },
+  quietAdText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#fcd34d',
+  },
+  quietClaimed: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#fcd34d',
   },
 });
