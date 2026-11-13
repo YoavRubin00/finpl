@@ -67,6 +67,35 @@ export type AppEvent =
   | { name: 'signup_gate_method_clicked'; props: { method: 'apple' | 'google' | 'email' | 'guest'; source: string } }
   | { name: 'signup_gate_skipped'; props: { source: string } }
   | { name: 'signup_gate_abandoned'; props: { source: string; time_open_ms?: number } }
+  // Onboarding activation pass (2026-11). The gate's exits were only partly
+  // measured: `onboarding_step_completed('signup-gate')` fired for the guest and
+  // Apple exits but never for Google or email (both leave through a re-mount),
+  // so the step looked like a 38% drop when the real loss was ~20%.
+  // `signup_gate_completed` fires ONCE per gate pass on every exit, with the
+  // exit that was actually taken; `via: 'resume'` marks exits detected on the
+  // re-mount after OAuth / register / an app relaunch.
+  // Related untyped props added in the same pass (raw captureEvent call sites):
+  //   onboarding_started        + entry_step: 'intro' | 'dream' | 'celebration'
+  //                               (only 'intro' is a brand-new user)
+  //   onboarding_step_completed + direction: 'forward' | 'back'
+  //   auth_cancelled            + result_type: 'cancel' | 'dismiss'
+  | { name: 'signup_gate_completed'; props: { source: string; outcome: 'apple' | 'google' | 'email' | 'guest' | 'account'; via: 'in_place' | 'resume'; time_open_ms?: number } }
+  // Fires on the real signed-out → guest transition (useAuthStore.enterGuestMode).
+  // Every new user enters guest mode at the welcome CTA; an account is optional.
+  | { name: 'guest_mode_entered'; props: { source: 'welcome_cta' | 'welcome_dream_card' | 'signup_gate_email' | 'enter_first_module' | 'module_first_hook' | 'register_screen_skip' | string } }
+  // The /oauthredirect landing screen left by itself instead of spinning
+  // forever: the Google sign-in it was waiting for was not in flight any more
+  // (cancel / dismiss / failure / app cold-started by the deep link), or it
+  // took longer than the hard timeout.
+  | { name: 'oauth_redirect_recovered'; props: { reason: 'no_sign_in_in_flight' | 'timeout' } }
+  // Android Google sign-in: the browser promise ended as cancel/dismiss, but the
+  // OAuth redirect still arrived and the sign-in was completed from it
+  // (useGoogleAuth, PendingGoogleAttempt). `delay_ms` is measured from the tap.
+  // Read with: auth_cancelled{method:google} = real cancels after this fix;
+  // auth_failed error_code 'redirect_*' = a recovered redirect that failed its
+  // state check / code exchange; 'code_exchange_timeout' = the normal path's
+  // exchange never returned.
+  | { name: 'auth_redirect_recovered'; props: { method: 'google'; after: 'cancel' | 'dismiss'; delay_ms: number } }
 
   // ── Lesson / Module ────────────────────────────────────────────────────
   // SCHEMA UNIFICATION (Yoav 11.7): the emitters historically sent module_id

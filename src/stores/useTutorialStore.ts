@@ -97,6 +97,13 @@ interface TutorialState {
    *  mod-0-1-completion gate, so existing users who predate the welcome chest
    *  still qualify via completion. Yoav 2026-06-26 (D1 lever). */
   firstChestOpened: boolean;
+  /** One-shot durable flag: the onboarding-completion reward (XP + coins, and
+   *  the `onboarding_completed` event) was already given on this install.
+   *  ProfilingFlow resumes at the celebration screen after a re-mount or an app
+   *  relaunch, and its "start" tap is what grants — without this flag, closing
+   *  the app on the streak screen and reopening granted the reward again.
+   *  Cleared by reset() (sign-out), together with the local economy. */
+  onboardingRewardGranted: boolean;
   /** One-shot (UX-54): the welcome chest's coins+XP were shown FLYING into the
    *  header on the learn map. The chest itself grants behind an opaque backdrop,
    *  so this is the first time the user actually SEES the balance move. */
@@ -162,6 +169,7 @@ interface TutorialState {
   setPendingPostWalkthroughProTeaser: (value: boolean) => void;
   setPendingPostWalkthroughFirstChest: (value: boolean) => void;
   markFirstChestOpened: () => void;
+  markOnboardingRewardGranted: () => void;
   markFirstChestRewardShown: () => void;
   markMod01KnowledgeResolved: () => void;
   markEnergyIntroSeen: () => void;
@@ -212,6 +220,7 @@ export const useTutorialStore = create<TutorialState>()(
       pendingPostWalkthroughProTeaser: false,
       pendingPostWalkthroughFirstChest: false,
       firstChestOpened: false,
+      onboardingRewardGranted: false,
       firstChestRewardShown: false,
       mod01KnowledgeResolved: false,
       hasSeenEnergyIntro: false,
@@ -249,6 +258,7 @@ export const useTutorialStore = create<TutorialState>()(
       setPendingPostWalkthroughProTeaser: (value: boolean) => set({ pendingPostWalkthroughProTeaser: value }),
       setPendingPostWalkthroughFirstChest: (value: boolean) => set({ pendingPostWalkthroughFirstChest: value }),
       markFirstChestOpened: () => set({ firstChestOpened: true }),
+      markOnboardingRewardGranted: () => set({ onboardingRewardGranted: true }),
       markFirstChestRewardShown: () => set({ firstChestRewardShown: true }),
       markMod01KnowledgeResolved: () => set({ mod01KnowledgeResolved: true }),
       markEnergyIntroSeen: () => set({ hasSeenEnergyIntro: true }),
@@ -259,7 +269,7 @@ export const useTutorialStore = create<TutorialState>()(
       setFirstRunArm: (arm) => set({ firstRunArm: arm }),
       setFirstRunStage: (stage) => set({ firstRunStage: stage }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughLaunchCount: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false, pendingFirstLessonCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, firstChestRewardShown: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenFriendsHubIntro: false, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, firstRunArm: null, firstRunStage: null, appWalkthroughStep: 0, walkthroughLaunchCount: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingFirstLessonCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, firstChestRewardShown: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, tradingHubFirstEntryDone: false, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenFriendsHubIntro: false, moduleEndGateShown: {}, hasSeenMod05BridgeCTA: false, hasUsedFreeSharkCall: false, hasAcceptedSharkVoicePrivacy: false, hasSeenPearlTooltip: false, ratePromptHandled: false, lastRatePromptAt: null, ratePromptCount: 0, notifPromptShown: false, firstRunArm: null, firstRunStage: null, appWalkthroughStep: 0, walkthroughLaunchCount: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, pendingFirstLessonCTA: false, pendingPostWalkthroughProTeaser: false, pendingPostWalkthroughFirstChest: false, firstChestOpened: false, onboardingRewardGranted: false, firstChestRewardShown: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",

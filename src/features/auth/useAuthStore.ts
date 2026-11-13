@@ -50,8 +50,11 @@ interface SessionActions {
   signIn: (params: { userId: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean }) => void;
   setOnboardingCompleted: (value: boolean) => void;
   setIsGuest: (value: boolean) => void;
-  /** Enter guest mode (legacy onboarding path). */
-  enterGuestMode: () => void;
+  /** Enter guest mode. This is the DEFAULT first-run path: the welcome CTA
+   *  makes every new user a guest, and an account is only offered later (the
+   *  signup gate / post-lesson CTAs). `source` labels the `guest_mode_entered`
+   *  event, which fires only on the real signed-out → guest transition. */
+  enterGuestMode: (source?: string) => void;
   /** Convert an existing guest session into a real user account.
    *  Pass `{ completeOnboarding: false }` when converting mid-onboarding (the
    *  signup-gate email path) so the celebration → streak → mod-0-1 sequence
@@ -119,8 +122,15 @@ export const useAuthStore = create<SessionState & SessionActions>()(
       setOnboardingCompleted: (value) => set({ hasCompletedOnboarding: value }),
       setIsGuest: (value) => set({ isGuest: value }),
 
-      enterGuestMode: () => {
+      enterGuestMode: (source?: string) => {
+        // Several call sites call this defensively ("make sure the user is at
+        // least a guest"), so only the first call — signed-out → guest — is a
+        // real entry worth an event.
+        const wasSignedOut = !useAuthStore.getState().isAuthenticated;
         set({ isAuthenticated: true, isGuest: true, displayName: 'אורח' });
+        if (wasSignedOut) {
+          try { captureEvent('guest_mode_entered', { source: source ?? 'unknown' }); } catch { /* non-fatal */ }
+        }
         // Tag the anonymous distinct_id with is_guest=true so PostHog can
         // segment DAU/retention by guest vs registered without needing to
         // wait for a sign-in. Re-identify (with no userId) is invalid, so we

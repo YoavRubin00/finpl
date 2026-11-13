@@ -1,5 +1,3 @@
-export type PasswordStrength = "weak" | "medium" | "strong";
-
 export type FinancialGoal =
   | "cash-flow"
   | "investing"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, AppState } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, AppState, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -40,7 +40,7 @@ import { useStreak, markDailyActivityCompleted } from "../economy/useStreak";
 import { StreakCelebrationScreen } from "../streak/StreakCelebrationScreen";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
-import { SignupGateStep } from "./SignupGateStep";
+import { SignupGateStep, reportSignupGateCompleted, getSignupGateLastMethod } from "./SignupGateStep";
 import { isModuleFirstArm } from "./firstRunExperiment";
 import { getApiBase } from "../../db/apiBase";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
@@ -1976,6 +1976,17 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   const [showDreamBurst, setShowDreamBurst] = useState(false);
   const pickedDreamRef = useRef(false);
   const idleScale = useSharedValue(1);
+  // Fit the welcome screen to the window height (layout only; the arm's copy,
+  // cards and conversion tap are untouched). The choice cards are the primary
+  // action, so the mascot and the gaps give way first. Three sizes: full
+  // (880pt+ windows, unchanged), compact (700–879pt: most Android phones and
+  // the standard iPhones), tight (iPhone SE class / 640pt-tall Android).
+  const { height: windowHeight } = useWindowDimensions();
+  const welcomeFit = !isActiveLayout || windowHeight >= 880
+    ? { mascotBg: 200, mascot: 160, finnWrap: null, textGap: 28, loginGap: 36, shell: null }
+    : windowHeight >= 700
+      ? { mascotBg: 132, mascot: 106, finnWrap: { marginBottom: 14 }, textGap: 18, loginGap: 18, shell: { paddingTop: 12, paddingBottom: 12 } }
+      : { mascotBg: 96, mascot: 78, finnWrap: { marginBottom: 10 }, textGap: 14, loginGap: 10, shell: { paddingTop: 8, paddingBottom: 8 } };
   useEffect(() => {
     trackWelcomeImpression();
     // Screen-1 view event with the arm baked in: welcome_viewed → welcome_primary_clicked
@@ -2109,17 +2120,40 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   // "כבר יש לי חשבון" → "login" subStep.
   if (subStep === "welcome") {
     return (
-      <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
-        <Animated.View style={[introStyles.finnWrap, isActiveLayout ? finnActiveStyle : finnStyle]}>
-          <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }} edges={["top", "bottom"]}>
+        {/* Scrolls only when the content is taller than the screen. Before, the
+            shell was a fixed, centered column with no scroll: the active layout
+            is ~765pt tall, so on any screen shorter than that it overflowed
+            equally off the top and the bottom — the mascot was cut and the
+            terms line + "יש לי כבר חשבון" fell off-screen with no way to reach
+            them. */}
+        <ScrollView
+          style={{ flex: 1 }}
+          // Same box as introStyles.shell, with flexGrow instead of flex so it
+          // can grow past the viewport and scroll.
+          contentContainerStyle={[
+            { flexGrow: 1, backgroundColor: "#ffffff", alignItems: "center", justifyContent: "center", paddingHorizontal: 28, paddingTop: 24, paddingBottom: 24 },
+            welcomeFit.shell,
+          ]}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+        >
+        <Animated.View style={[introStyles.finnWrap, welcomeFit.finnWrap, isActiveLayout ? finnActiveStyle : finnStyle]}>
+          <LinearGradient
+            colors={["#ecfeff", "#f0fdfa"]}
+            style={[introStyles.finnBg, { width: welcomeFit.mascotBg, height: welcomeFit.mascotBg, borderRadius: welcomeFit.mascotBg / 2 }]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <ExpoImage source={FINN_HELLO} style={{ width: welcomeFit.mascot, height: welcomeFit.mascot }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
           </LinearGradient>
         </Animated.View>
         {showDreamBurst ? (
           <ParticleBurst color="gold" onComplete={() => setShowDreamBurst(false)} />
         ) : null}
 
-        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
+        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: welcomeFit.textGap }]}>
           <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
             {welcomeCopy.eyebrow}
           </Text>
@@ -2190,13 +2224,15 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
             }}
             accessibilityRole="link"
             accessibilityLabel="יש לי כבר חשבון"
-            style={{ marginTop: 36, paddingVertical: 6 }}
+            hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
+            style={{ marginTop: welcomeFit.loginGap, paddingVertical: 6 }}
           >
             <Text style={{ fontSize: 13, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center" }}>
               {"יש לי כבר חשבון"}
             </Text>
           </Pressable>
         </Animated.View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -2744,6 +2780,14 @@ type FlowStep =
   | "learning-style" | "deadline" | "daily-goal" | "companion" | "finance-experts"
   | "avatar" | "building-profile" | "profile-summary" | "celebration" | "streak";
 
+// Position of each LIVE step, used only to label a slide() as forward or back
+// for analytics. Steps that are not rendered any more are left out (→ 0).
+const FLOW_STEP_ORDER: Partial<Record<FlowStep, number>> = {
+  intro: 0, dream: 1, goal: 2, age: 3, "signup-gate": 4,
+  knowledge: 5, "daily-goal": 5, "profile-summary": 6, "building-profile": 7,
+  celebration: 8, streak: 9,
+};
+
 interface Collected {
   financialDream: FinancialDream | null;
   financialGoal: FinancialGoal | null;
@@ -2797,11 +2841,17 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   // Post-OAuth-mid-signup recovery: when a user completes OAuth from the signup-gate, useGoogleAuth /
   // useAppleAuth do router.replace("/(auth)/onboarding") which re-mounts this component with
   // isAuthenticated=true. saveCollected() already wrote dream/goal/age into useAuthStore.profile
-  // before the OAuth prompt, so existingProfile.financialDream being truthy is the signal that the
-  // user is mid-signup, not starting fresh — skip straight to celebration instead of dream.
+  // before the OAuth prompt, so a profile that exists while onboarding is still incomplete is the
+  // signal that the user already got past the questions — skip straight to celebration instead of dream.
+  // (The signal used to be `profile.financialDream` being truthy. The dream question has an
+  // easy-exit that stores financialDream=null, so those users were sent back to question 1 right
+  // after signing up. The profile blob is only ever created by the gate's seed, by
+  // completeOnboarding, or by convertGuestToUser — never by a plain sign-in — so its existence
+  // is the reliable signal.)
+  const resumedPastGate = !isRedo && isAuthenticated && existingProfile != null;
   const [step, setStep] = useState<FlowStep>(() => {
     if (isRedo) return "dream";
-    if (isAuthenticated && existingProfile?.financialDream) return "celebration";
+    if (resumedPastGate) return "celebration";
     if (isAuthenticated || isGuest) return "dream";
     return "intro";
   });
@@ -2815,8 +2865,26 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       // fires on the post-module re-mount (stage 'profiling') instead, so the
       // started→completed guardrail denominator stays comparable across arms.
       if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'hook') return;
-      captureEvent('onboarding_started');
+      // `entry_step` tells the mounts apart. This event fires on EVERY mount of
+      // the flow, and only 'intro' is a brand-new user: 'dream' is a guest or a
+      // signed-in user coming back mid-flow, 'celebration' is the re-mount after
+      // OAuth / email register. Without it the started→completed rate counts
+      // returning users and re-mounts in the denominator.
+      captureEvent('onboarding_started', { entry_step: step });
+      // Resuming at the celebration means the user got past the signup gate on
+      // a path that left this component (Google, email register, or an app
+      // relaunch after the gate). Those exits never ran slide(), so the gate's
+      // funnel step was never recorded for them.
+      if (step === "celebration") {
+        const tapped = getSignupGateLastMethod();
+        reportSignupGateCompleted(
+          isGuest ? "guest" : (tapped && tapped !== "guest" ? tapped : "account"),
+          "resume",
+        );
+      }
     }
+    // Mount-only by design: `step` and `isGuest` are read once, as the entry state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRedo]);
   const [returnToSummary, setReturnToSummary] = useState(false);
   const [collected, setCollected] = useState<Collected>(() => {
@@ -2825,8 +2893,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // saveCollected() call in SignupGateStep), re-seed `collected` so
     // enterFirstModule's completeOnboarding(...) ships their answers to the
     // server instead of writing the empty defaults below.
-    const hasMidSignupProfile = !isRedo && isAuthenticated && !!existingProfile?.financialDream;
-    if ((isRedo || hasMidSignupProfile) && existingProfile) {
+    if ((isRedo || resumedPastGate) && existingProfile) {
       return {
         financialDream: existingProfile.financialDream ?? null,
         financialGoal: existingProfile.financialGoal ?? null,
@@ -2888,11 +2955,19 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
 
     function doUpdate() {
       try {
-        captureEvent('onboarding_step_completed', {
-          step_name: step,
-          next_step: nextStep,
-          mode: isRedo ? 'redo' : 'new',
-        });
+        // The gate → celebration exit is reported by reportSignupGateCompleted
+        // (once per gate pass, shared with the re-mount exits) — not here.
+        if (!(step === "signup-gate" && nextStep === "celebration")) {
+          captureEvent('onboarding_step_completed', {
+            step_name: step,
+            next_step: nextStep,
+            mode: isRedo ? 'redo' : 'new',
+            // Back taps and edit-from-summary hops run through slide() too.
+            // Funnels should count 'forward' only; before this prop a Back tap
+            // counted as completing the step.
+            direction: (FLOW_STEP_ORDER[nextStep] ?? 0) < (FLOW_STEP_ORDER[step] ?? 0) ? 'back' : 'forward',
+          });
+        }
       } catch { /* non-fatal */ }
       try { playSound('bubble_transition'); } catch { /* non-fatal */ }
 
@@ -2937,16 +3012,29 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       onRedoComplete?.();
       return;
     }
+    // Once per install. This flow resumes at the celebration after a re-mount
+    // or an app relaunch, and this function runs on its "start" tap — so
+    // closing the app on the streak screen and reopening used to grant the XP
+    // and coins again and fire onboarding_completed a second time. The flag is
+    // persisted (tutorial store) and set BEFORE granting.
+    let firstCompletion = true;
     try {
-      captureEvent('onboarding_completed', {
-        duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
-        total_steps: TOTAL_STEPS,
-      });
-    } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
-    try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
-    // Flat +50 coins for onboarding completion (2026-05-27 redesign — variable
-    // rewards removed; clean path into mod-0-1).
-    try { addCoins(ONBOARDING_COINS); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+      const tutorial = useTutorialStore.getState();
+      firstCompletion = !tutorial.onboardingRewardGranted;
+      if (firstCompletion) tutorial.markOnboardingRewardGranted();
+    } catch { /* non-fatal: fall through and grant */ }
+    if (firstCompletion) {
+      try {
+        captureEvent('onboarding_completed', {
+          duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
+          total_steps: TOTAL_STEPS,
+        });
+      } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
+      try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
+      // Flat +50 coins for onboarding completion (2026-05-27 redesign — variable
+      // rewards removed; clean path into mod-0-1).
+      try { addCoins(ONBOARDING_COINS); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    }
     // Board 2026-06-18: have-streak>=2 is only ~5% — the free freeze used to
     // arrive at day-7 (almost nobody reaches it), AFTER the first-72h danger
     // window. Grant 2 free freezes ONCE here so new users are protected from
@@ -2987,7 +3075,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // Otherwise `_layout`'s auth redirect bounces them back to /(auth)/onboarding
     // (because isAuthenticated=false → first branch always wins).
     if (!isAuthenticated) {
-      enterGuestMode();
+      enterGuestMode('enter_first_module');
     }
     // CRITICAL: pass `null` (not defaults) for the three DEFERRED questions
     // — knowledgeLevel, learningTime, dailyGoalMinutes — so LessonFlowScreen's
@@ -3030,6 +3118,43 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     setTimeout(() => { try { router.replace("/(tabs)" as Href); } catch { /* non-fatal */ } }, 80);
   }
 
+  // Store the answers collected so far WITHOUT completing onboarding. Called
+  // before every exit from the signup gate (OAuth prompt, guest exit) so that a
+  // re-mount of this flow — after OAuth, after the register screen, or after
+  // the app was closed — finds the profile and resumes at the celebration
+  // instead of asking the questions again.
+  // Must not use completeOnboarding: that flips hasCompletedOnboarding before
+  // the OAuth prompt, so useGoogleAuth / useAppleAuth route to /(tabs) and the
+  // celebration → streak → mod-0-1 sequence is skipped. The flag stays false
+  // until enterFirstModule.
+  // null for the deferred-question fields (knowledgeLevel / learningTime /
+  // dailyGoalMinutes) so the mod-0-1 / 0-3 / 0-4 guards still fire — same
+  // reason as enterFirstModule above.
+  function persistCollected() {
+    const seed = {
+      displayName,
+      financialDream: collected.financialDream ?? null,
+      financialGoal: collected.financialGoal ?? "unsure" as const,
+      knowledgeLevel: collected.knowledgeLevel ?? null,
+      ageGroup: collected.ageGroup ?? "adult" as const,
+      birthYear: collected.birthYear ?? (CY - 22),
+      learningTime: collected.learningTime ?? null,
+      learningStyle: collected.learningStyle ?? "no-preference" as const,
+      deadlineStress: collected.deadlineStress ?? "maybe" as const,
+      dailyGoalMinutes: collected.dailyGoalMinutes ?? null,
+      companionId: collected.companionId ?? "warren-buffett" as const,
+      avatarId: collected.avatarId ?? null,
+      ownedAvatars: [] as string[],
+    };
+    // For a guest with no profile object yet `updateProfile` only buffers a
+    // patch, so the profile has to be seeded outright.
+    if (existingProfile) {
+      updateProfile(seed);
+    } else {
+      seedProfile(seed);
+    }
+  }
+
   function editSummaryStep(target: EditableStep) {
     setReturnToSummary(true);
     slide(target as FlowStep, {});
@@ -3068,7 +3193,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     <ModuleFirstHook
       onStart={() => {
         try { captureEvent('onboarding_module_first_hook_tapped'); } catch { /* non-fatal */ }
-        enterGuestMode();
+        enterGuestMode('module_first_hook');
         try { useTutorialStore.getState().setFirstRunStage('module'); } catch { /* non-fatal */ }
         router.replace("/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree" as never);
       }}
@@ -3078,11 +3203,11 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     <IntroStep
       onRegister={() => router.push("/register" as never)}
       onGuest={() => {
-        enterGuestMode();
+        enterGuestMode('welcome_cta');
         slide("dream", {});
       }}
       onPickDream={(dream) => {
-        enterGuestMode();
+        enterGuestMode('welcome_dream_card');
         slide("goal", { financialDream: dream });
       }}
       onLoginSuccess={() => router.replace("/" as never)}
@@ -3139,12 +3264,29 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
           // signup. Route them straight to profile-summary so they can
           // review/save edits without seeing a sign-up wall (QA report
           // 2026-06-03).
-          onNext={(ag, by) => slide(isRedo ? "profile-summary" : "signup-gate", { ageGroup: ag, birthYear: by })}
+          // A user who already has a real account (signed in from the welcome
+          // screen's login link, or a session restored on a reinstall) has
+          // nothing to be offered at the gate — go straight to celebration.
+          onNext={(ag, by) => slide(
+            isRedo ? "profile-summary" : (isAuthenticated && !isGuest) ? "celebration" : "signup-gate",
+            { ageGroup: ag, birthYear: by },
+          )}
           onBack={() => slide("goal", {})}
         />}
         {step === "signup-gate" && <SignupGateStep
-          onSignupSuccess={() => slide("celebration", {})}
-          onSkip={() => slide("celebration", {})}
+          onSignupSuccess={(method) => {
+            reportSignupGateCompleted(method, "in_place");
+            slide("celebration", {});
+          }}
+          onSkip={() => {
+            // Persist the answers for the guest exit too. Without this, a guest
+            // who closed the app on the celebration / streak screens (before
+            // enterFirstModule stored the profile) came back to question 1 with
+            // everything they had answered gone.
+            persistCollected();
+            reportSignupGateCompleted("guest", "in_place");
+            slide("celebration", {});
+          }}
           onBack={() => slide("age", {})}
           // Persist dream/goal/age/birthYear locally BEFORE any OAuth prompt
           // so the post-OAuth router.replace (for existing users) and any
@@ -3153,50 +3295,19 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
           // is a no-op (state.profile ? ... : state.profile) — must seed the
           // profile via completeOnboarding instead (mirrors onEmailPress).
           // The "celebration" step still runs after OAuth because the post-
-          // OAuth re-mount detects profile.financialDream and slides straight
-          // to celebration (see useState seed at top of this component).
-          saveCollected={() => {
-            // null for deferred-question fields (knowledgeLevel/learningTime/
-            // dailyGoalMinutes) so mod-0-1/0-3/0-4 guards still fire — same
-            // reason as enterFirstModule above.
-            const seed = {
-              displayName,
-              financialDream: collected.financialDream ?? null,
-              financialGoal: collected.financialGoal ?? "unsure" as const,
-              knowledgeLevel: collected.knowledgeLevel ?? null,
-              ageGroup: collected.ageGroup ?? "adult" as const,
-              birthYear: collected.birthYear ?? (CY - 22),
-              learningTime: collected.learningTime ?? null,
-              learningStyle: collected.learningStyle ?? "no-preference" as const,
-              deadlineStress: collected.deadlineStress ?? "maybe" as const,
-              dailyGoalMinutes: collected.dailyGoalMinutes ?? null,
-              companionId: collected.companionId ?? "warren-buffett" as const,
-              avatarId: collected.avatarId ?? null,
-              ownedAvatars: [] as string[],
-            };
-            if (existingProfile) {
-              updateProfile(seed);
-            } else {
-              // Seed the profile WITHOUT completing onboarding. Using
-              // completeOnboarding here flipped hasCompletedOnboarding=true
-              // before the OAuth prompt, so useGoogleAuth/useAppleAuth routed
-              // to /(tabs) (completed=true) and skipped the celebration → streak
-              // → mod-0-1 sequence. seedProfile lets the post-OAuth re-mount
-              // detect profile.financialDream and resume at "celebration" while
-              // the flag stays false until enterFirstModule.
-              seedProfile(seed);
-            }
-          }}
+          // OAuth re-mount detects the seeded profile and starts at
+          // celebration (see useState seed at top of this component).
+          saveCollected={persistCollected}
           // Email path: must mark onboarding complete with the FULL collected
           // profile before pushing to /register. Without this, the layout's
           // !hasCompletedOnboarding redirect kicks in after register completes
           // and resets ProfilingFlow back to dream (collected={} again).
           onEmailPress={() => {
             if (!isAuthenticated) {
-              enterGuestMode();
+              enterGuestMode('signup_gate_email');
             }
             // Seed (don't complete) so the post-register re-mount of this flow
-            // detects profile.financialDream and resumes at "celebration"
+            // detects the seeded profile and resumes at "celebration"
             // (→ streak → mod-0-1). Completing here would flip the flag and
             // skip the streak. RegisterScreen, told via ?onboarding=1, calls
             // convertGuestToUser with completeOnboarding:false to match, and
