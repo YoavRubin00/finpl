@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, AppState } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, AppState, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -1976,6 +1976,17 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   const [showDreamBurst, setShowDreamBurst] = useState(false);
   const pickedDreamRef = useRef(false);
   const idleScale = useSharedValue(1);
+  // Fit the welcome screen to the window height (layout only; the arm's copy,
+  // cards and conversion tap are untouched). The choice cards are the primary
+  // action, so the mascot and the gaps give way first. Three sizes: full
+  // (880pt+ windows, unchanged), compact (700–879pt: most Android phones and
+  // the standard iPhones), tight (iPhone SE class / 640pt-tall Android).
+  const { height: windowHeight } = useWindowDimensions();
+  const welcomeFit = !isActiveLayout || windowHeight >= 880
+    ? { mascotBg: 200, mascot: 160, finnWrap: null, textGap: 28, loginGap: 36, shell: null }
+    : windowHeight >= 700
+      ? { mascotBg: 132, mascot: 106, finnWrap: { marginBottom: 14 }, textGap: 18, loginGap: 18, shell: { paddingTop: 12, paddingBottom: 12 } }
+      : { mascotBg: 96, mascot: 78, finnWrap: { marginBottom: 10 }, textGap: 14, loginGap: 10, shell: { paddingTop: 8, paddingBottom: 8 } };
   useEffect(() => {
     trackWelcomeImpression();
     // Screen-1 view event with the arm baked in: welcome_viewed → welcome_primary_clicked
@@ -2109,17 +2120,40 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   // "כבר יש לי חשבון" → "login" subStep.
   if (subStep === "welcome") {
     return (
-      <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
-        <Animated.View style={[introStyles.finnWrap, isActiveLayout ? finnActiveStyle : finnStyle]}>
-          <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }} edges={["top", "bottom"]}>
+        {/* Scrolls only when the content is taller than the screen. Before, the
+            shell was a fixed, centered column with no scroll: the active layout
+            is ~765pt tall, so on any screen shorter than that it overflowed
+            equally off the top and the bottom — the mascot was cut and the
+            terms line + "יש לי כבר חשבון" fell off-screen with no way to reach
+            them. */}
+        <ScrollView
+          style={{ flex: 1 }}
+          // Same box as introStyles.shell, with flexGrow instead of flex so it
+          // can grow past the viewport and scroll.
+          contentContainerStyle={[
+            { flexGrow: 1, backgroundColor: "#ffffff", alignItems: "center", justifyContent: "center", paddingHorizontal: 28, paddingTop: 24, paddingBottom: 24 },
+            welcomeFit.shell,
+          ]}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+        >
+        <Animated.View style={[introStyles.finnWrap, welcomeFit.finnWrap, isActiveLayout ? finnActiveStyle : finnStyle]}>
+          <LinearGradient
+            colors={["#ecfeff", "#f0fdfa"]}
+            style={[introStyles.finnBg, { width: welcomeFit.mascotBg, height: welcomeFit.mascotBg, borderRadius: welcomeFit.mascotBg / 2 }]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <ExpoImage source={FINN_HELLO} style={{ width: welcomeFit.mascot, height: welcomeFit.mascot }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
           </LinearGradient>
         </Animated.View>
         {showDreamBurst ? (
           <ParticleBurst color="gold" onComplete={() => setShowDreamBurst(false)} />
         ) : null}
 
-        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
+        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: welcomeFit.textGap }]}>
           <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
             {welcomeCopy.eyebrow}
           </Text>
@@ -2190,13 +2224,15 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
             }}
             accessibilityRole="link"
             accessibilityLabel="יש לי כבר חשבון"
-            style={{ marginTop: 36, paddingVertical: 6 }}
+            hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
+            style={{ marginTop: welcomeFit.loginGap, paddingVertical: 6 }}
           >
             <Text style={{ fontSize: 13, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center" }}>
               {"יש לי כבר חשבון"}
             </Text>
           </Pressable>
         </Animated.View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -2976,16 +3012,29 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       onRedoComplete?.();
       return;
     }
+    // Once per install. This flow resumes at the celebration after a re-mount
+    // or an app relaunch, and this function runs on its "start" tap — so
+    // closing the app on the streak screen and reopening used to grant the XP
+    // and coins again and fire onboarding_completed a second time. The flag is
+    // persisted (tutorial store) and set BEFORE granting.
+    let firstCompletion = true;
     try {
-      captureEvent('onboarding_completed', {
-        duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
-        total_steps: TOTAL_STEPS,
-      });
-    } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
-    try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
-    // Flat +50 coins for onboarding completion (2026-05-27 redesign — variable
-    // rewards removed; clean path into mod-0-1).
-    try { addCoins(ONBOARDING_COINS); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+      const tutorial = useTutorialStore.getState();
+      firstCompletion = !tutorial.onboardingRewardGranted;
+      if (firstCompletion) tutorial.markOnboardingRewardGranted();
+    } catch { /* non-fatal: fall through and grant */ }
+    if (firstCompletion) {
+      try {
+        captureEvent('onboarding_completed', {
+          duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
+          total_steps: TOTAL_STEPS,
+        });
+      } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
+      try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
+      // Flat +50 coins for onboarding completion (2026-05-27 redesign — variable
+      // rewards removed; clean path into mod-0-1).
+      try { addCoins(ONBOARDING_COINS); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    }
     // Board 2026-06-18: have-streak>=2 is only ~5% — the free freeze used to
     // arrive at day-7 (almost nobody reaches it), AFTER the first-72h danger
     // window. Grant 2 free freezes ONCE here so new users are protected from

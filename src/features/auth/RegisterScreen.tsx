@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
 import {
   View,
@@ -16,8 +16,6 @@ import { ChevronRight } from "lucide-react-native";
 import { GoogleLogo } from "../../components/ui/GoogleLogo";
 import { AppleLogo } from "../../components/ui/AppleLogo";
 import { FINN_HELLO, FINN_DANCING } from "../retention-loops/finnMascotConfig";
-import { getPasswordStrength } from "./password-utils";
-import type { PasswordStrength } from "./types";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
@@ -26,29 +24,12 @@ import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { captureEvent } from "../../lib/posthog";
 import { loginRevenueCat } from "../../services/revenueCat";
 
-const strengthLabels: Record<PasswordStrength, string> = {
-  weak: "סיסמה חלשה",
-  medium: "סיסמה בינונית",
-  strong: "סיסמה חזקה",
-};
-
-const strengthBarColors: Record<PasswordStrength, string> = {
-  weak: "#f87171",
-  medium: "#eab308",
-  strong: "#22c55e",
-};
-
-const strengthTextColors: Record<PasswordStrength, string> = {
-  weak: "#ef4444",
-  medium: "#eab308",
-  strong: "#22c55e",
-};
-
-const strengthWidthPercent: Record<PasswordStrength, `${number}%`> = {
-  weak: "33%",
-  medium: "66%",
-  strong: "100%",
-};
+// The form is name + email. It used to also ask for a password and a
+// confirmation, with a strength meter — but email accounts are passwordless
+// (verifyEmail(email, name) is all that reaches the server): the two fields
+// were never sent or stored anywhere, they only gated the button. Asking for a
+// secret the app then throws away is both friction and misleading, so they are
+// gone (2026-11).
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -90,13 +71,8 @@ export function RegisterScreen() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-
-  const passwordStrength = getPasswordStrength(password);
+  const emailInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     captureEvent('signup_form_viewed', { is_guest: isGuest });
@@ -118,12 +94,7 @@ export function RegisterScreen() {
   // Terms were already accepted implicitly when the user tapped one of the
   // CTAs on the previous Welcome screen (per Duolingo/Spotify pattern). We
   // don't gate the register button on it a second time.
-  const isValid =
-    name.trim().length >= 2 &&
-    isValidEmail(email) &&
-    passwordStrength !== "weak" &&
-    password === confirmPassword &&
-    confirmPassword.length > 0;
+  const isValid = name.trim().length >= 2 && isValidEmail(email.trim());
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
@@ -240,12 +211,18 @@ export function RegisterScreen() {
               onChangeText={setName}
               autoCapitalize="words"
               autoCorrect={false}
-            accessibilityLabel="שם מלא"
+              autoComplete="name"
+              textContentType="name"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => emailInputRef.current?.focus()}
+              accessibilityLabel="שם מלא"
               accessibilityHint="הזן את שמך המלא" />
 
-            {/* Email */}
+            {/* Email — the last field. System autofill offers the saved address. */}
             <TextInput
-              style={{ ...inputStyle, marginBottom: 8 }}
+              ref={emailInputRef}
+              style={{ ...inputStyle, marginBottom: 12 }}
               placeholder="אימייל"
               placeholderTextColor="#64748b"
               value={email}
@@ -254,90 +231,11 @@ export function RegisterScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-            accessibilityLabel="אימייל"
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="done"
+              accessibilityLabel="אימייל"
               accessibilityHint="הזן כתובת אימייל תקינה" />
-
-            {/* Password */}
-            <View style={{ marginBottom: 4 }}>
-              <TextInput
-                style={{ ...inputStyle, paddingStart: 44 }}
-                placeholder="סיסמה"
-                placeholderTextColor="#64748b"
-                value={password}
-                onChangeText={setPassword}
-                maxLength={128}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                accessibilityLabel="סיסמה"
-                accessibilityHint="הזן סיסמה עם לפחות 6 תווים" />
-              <Pressable
-                onPress={() => setShowPassword((v) => !v)}
-                style={{ position: "absolute", start: 12, top: 0, bottom: 0, justifyContent: "center" }}
-                accessibilityRole="button"
-                accessibilityLabel={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={{ fontSize: 12, color: "#0891b2", fontWeight: "600" }}>
-                  {showPassword ? "הסתר" : "הצג"}
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Password Strength */}
-            {password.length > 0 && (
-              <View style={{ marginBottom: 8 }}>
-                <View style={{ height: 6, width: "100%", borderRadius: 3, backgroundColor: "#f1f5f9" }}>
-                  <View
-                    style={{
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: strengthBarColors[passwordStrength],
-                      width: strengthWidthPercent[passwordStrength],
-                    }}
-                  />
-                </View>
-                <Text
-                  style={{
-                    marginTop: 2,
-                    fontSize: 12,
-                    color: strengthTextColors[passwordStrength],
-                    writingDirection: "rtl",
-                    textAlign: "right",
-                  }}
-                >
-                  {strengthLabels[passwordStrength]}
-                </Text>
-              </View>
-            )}
-            {password.length === 0 && <View style={{ marginBottom: 8 }} />}
-
-            {/* Confirm Password */}
-            <View style={{ marginBottom: 12 }}>
-              <TextInput
-                style={{ ...inputStyle, paddingStart: 44 }}
-                placeholder="אישור סיסמה"
-                placeholderTextColor="#64748b"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                maxLength={128}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                accessibilityLabel="אישור סיסמה"
-                accessibilityHint="הזן שוב את הסיסמה לאימות" />
-              <Pressable
-                onPress={() => setShowConfirmPassword((v) => !v)}
-                style={{ position: "absolute", start: 12, top: 0, bottom: 0, justifyContent: "center" }}
-                accessibilityRole="button"
-                accessibilityLabel={showConfirmPassword ? "הסתר אישור סיסמה" : "הצג אישור סיסמה"}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={{ fontSize: 12, color: "#0891b2", fontWeight: "600" }}>
-                  {showConfirmPassword ? "הסתר" : "הצג"}
-                </Text>
-              </Pressable>
-            </View>
 
             {/* Terms reminder — implicit consent on Register tap; this is just
                 a discoverable link to read them. No checkbox: the gate already

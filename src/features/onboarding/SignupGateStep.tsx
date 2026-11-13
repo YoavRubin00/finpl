@@ -171,11 +171,28 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
     if (googleOutcome === "cancelled") setNotCompleted(true);
   }, [busy, googleSigningIn, googleOutcome]);
 
+  // A Google sign-in can also be in flight without a tap on this screen being
+  // the thing that is waiting for it: useGoogleAuth completes an attempt from a
+  // redirect that arrives after the browser already reported "dismissed".
+  // Treat that as busy too, so the user cannot start a second path meanwhile.
+  const [watchdogFired, setWatchdogFired] = React.useState(false);
+  const inFlight = busy !== null || googleSigningIn;
   React.useEffect(() => {
-    if (!busy) return;
-    const timer = setTimeout(() => setBusy(null), BUSY_WATCHDOG_MS);
+    if (!inFlight) {
+      setWatchdogFired(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setBusy(null);
+      setWatchdogFired(true);
+    }, BUSY_WATCHDOG_MS);
     return () => clearTimeout(timer);
-  }, [busy]);
+  }, [inFlight]);
+  React.useEffect(() => {
+    if (googleSigningIn) setNotCompleted(false);
+  }, [googleSigningIn]);
+  const googleBusy = !watchdogFired && (busy === "google" || googleSigningIn);
+  const disabled = busy !== null || googleBusy;
 
   const startAttempt = (method: SignupGateMethod) => {
     useAuthStore.getState().setAuthError(null);
@@ -187,7 +204,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
   };
 
   const handleApple = async () => {
-    if (busy) return;
+    if (disabled) return;
     startAttempt("apple");
     // Persist the in-progress dream/goal/age BEFORE the OAuth prompt so the
     // post-sign-in route change can't strand the collected fields.
@@ -204,7 +221,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
   };
 
   const handleGoogle = async () => {
-    if (busy) return;
+    if (disabled) return;
     if (!googleReady || !promptGoogleSignIn) {
       setNotCompleted(false);
       useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. אפשר לנסות שוב בעוד רגע.");
@@ -229,7 +246,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
   };
 
   const handleEmail = () => {
-    if (busy) return;
+    if (disabled) return;
     startAttempt("email");
     if (onEmailPress) {
       onEmailPress();
@@ -239,7 +256,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
   };
 
   const handleSkip = () => {
-    if (busy || advancedRef.current) return;
+    if (disabled || advancedRef.current) return;
     advancedRef.current = true;
     decisionMadeRef.current = true;
     gateSession.lastMethod = "guest";
@@ -249,7 +266,6 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
     onSkip();
   };
 
-  const disabled = busy !== null;
   const message = authError ?? (notCompleted ? "ההתחברות לא הושלמה. אפשר לנסות שוב או להמשיך בלי חשבון." : null);
 
   return (
@@ -348,7 +364,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel="המשך עם Google"
-            accessibilityState={{ disabled, busy: busy === "google" }}
+            accessibilityState={{ disabled, busy: googleBusy }}
             style={{
               width: "100%",
               minHeight: 54,
@@ -361,10 +377,10 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               paddingVertical: 15,
               borderBottomWidth: 3,
               borderBottomColor: "#0284c7",
-              opacity: (disabled && busy !== "google") || !googleReady ? 0.5 : 1,
+              opacity: (disabled && !googleBusy) || !googleReady ? 0.5 : 1,
             }}
           >
-            {busy === "google" ? (
+            {googleBusy ? (
               <>
                 <ActivityIndicator size="small" color="#ffffff" />
                 <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff", writingDirection: "rtl" }}>{"מתחברים…"}</Text>

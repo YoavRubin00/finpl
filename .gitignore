@@ -109,6 +109,8 @@ updateAllSummaries.js
 updateFlashcards.js
 script_update_pro.js
 tasks_output.txt
+# typecheck dumps (one was committed under a mangled Windows temp path)
+*tsc-out.txt
 test.html
 scratch/
 dev

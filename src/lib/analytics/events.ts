@@ -88,6 +88,14 @@ export type AppEvent =
   // (cancel / dismiss / failure / app cold-started by the deep link), or it
   // took longer than the hard timeout.
   | { name: 'oauth_redirect_recovered'; props: { reason: 'no_sign_in_in_flight' | 'timeout' } }
+  // Android Google sign-in: the browser promise ended as cancel/dismiss, but the
+  // OAuth redirect still arrived and the sign-in was completed from it
+  // (useGoogleAuth, PendingGoogleAttempt). `delay_ms` is measured from the tap.
+  // Read with: auth_cancelled{method:google} = real cancels after this fix;
+  // auth_failed error_code 'redirect_*' = a recovered redirect that failed its
+  // state check / code exchange; 'code_exchange_timeout' = the normal path's
+  // exchange never returned.
+  | { name: 'auth_redirect_recovered'; props: { method: 'google'; after: 'cancel' | 'dismiss'; delay_ms: number } }
 
   // ── Lesson / Module ────────────────────────────────────────────────────
   // SCHEMA UNIFICATION (Yoav 11.7): the emitters historically sent module_id
