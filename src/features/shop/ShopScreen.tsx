@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { ScrollView, View, Text, Image, StyleSheet, Pressable, Alert, ImageSourcePropType } from 'react-native';
+import { ScrollView, View, Text, Image, StyleSheet, Pressable, ImageSourcePropType } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import Animated, {
@@ -17,7 +17,6 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X } from 'lucide-react-native';
 import { useEconomy, useSpendCoins, useSpendGems } from '../economy/useEconomy';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useStreak } from '../economy/useStreak';
@@ -30,6 +29,9 @@ import { ShopItemCard } from './ShopItemCard';
 import { ConfirmModal } from './ConfirmModal';
 import { IAPModal } from './IAPModal';
 import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { formatNumber } from '../../utils/format';
 import { FINN_EMPATHIC, FINN_TALKING } from '../retention-loops/finnMascotConfig';
 import { SHOP_ITEMS, SHOP_CATEGORIES } from './shopItems';
 import { GEM_BUNDLES } from './gemBundles';
@@ -43,11 +45,34 @@ import { ProBadge } from '../../components/ui/ProBadge';
 import { ChampionCard } from '../../components/ui/ChampionCard';
 import { MysteryBoxCard } from '../../components/ui/MysteryBoxCard';
 import { AvatarImage } from '../avatars/AvatarImage';
-import { getPyramidStatus } from '../../utils/progression';
+import { getPyramidStatus, getStageTierTitle } from '../../utils/progression';
 import { track } from '../../lib/analytics/events';
 import type { ShopCategory, ShopItem, GemBundle, CoinBundle } from './types';
 
 type AnyBundle = GemBundle | CoinBundle;
+
+interface ShopToast {
+  title: string;
+  body: string;
+  accentColor: string;
+}
+
+const TOAST_WARN = '#f59e0b';
+
+/** Voice (docs/BRAND.md): system speaks → plural, fact + next action. */
+function missingCurrencyToast(currency: 'coins' | 'gems', missing: number): ShopToast {
+  return currency === 'gems'
+    ? {
+        title: 'אין מספיק יהלומים',
+        body: `חסרים ${formatNumber(missing)} 💎. אפשר להשלים בחבילות היהלומים כאן בחנות.`,
+        accentColor: TOAST_WARN,
+      }
+    : {
+        title: 'אין מספיק מטבעות',
+        body: `חסרים ${formatNumber(missing)} מטבעות. כל שיעור מוסיף עוד.`,
+        accentColor: TOAST_WARN,
+      };
+}
 
 // ── Section background themes ───────────────────────────────────────────────
 const SECTION_COLORS = {
@@ -279,7 +304,7 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
         </View>
 
         {/* Big amount + label */}
-        <Text style={styles2.gemAmountBig} maxFontSizeMultiplier={1.3}>{bundle.gems.toLocaleString('he-IL')}</Text>
+        <Text style={styles2.gemAmountBig} maxFontSizeMultiplier={1.3}>{formatNumber(bundle.gems)}</Text>
         <Text style={styles2.gemAmountLabel} maxFontSizeMultiplier={1.3}>יהלומים</Text>
 
         {/* Green price button */}
@@ -330,7 +355,11 @@ export function ShopScreen() {
   const [activeCategory, setActiveCategory] = useState<ShopCategory>('hearts');
   const [pendingItem, setPendingItem] = useState<ShopItem | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<AnyBundle | null>(null);
-  const [mysteryToast, setMysteryToast] = useState<'noGems' | 'comingSoon' | null>(null);
+  // ONE in-app toast for every "can't do that right now" on this screen
+  // (not enough coins / gems, mystery box not open yet). Before, the same
+  // situation was a silent dead button on item cards, a native Alert on the
+  // gem exchange and a shark toast on the mystery box.
+  const [shopToast, setShopToast] = useState<ShopToast | null>(null);
   const shopScrollRef = useRef<ScrollView>(null);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
 
@@ -404,7 +433,13 @@ export function ShopScreen() {
       // SVG lookup. Stripping the prefix orphans the ownership check.
       if (ownedAvatars.includes(item.id)) { setAvatar(item.id); successHaptic(); return; }
     }
-    if (!canAfford) return;
+    if (!canAfford) {
+      // Was a silent no-op behind a greyed-out price pill: say what is missing.
+      setShopToast(isGem
+        ? missingCurrencyToast('gems', (item.gemCost ?? 0) - gems)
+        : missingCurrencyToast('coins', item.coinCost - coins));
+      return;
+    }
     setPendingItem(item);
   }, [coins, gems, ownedAvatars, setAvatar]);
 
@@ -474,7 +509,7 @@ export function ShopScreen() {
       props: { gems_cost: gemsNeeded, coins_reward: coinsReward, can_afford: canAfford },
     });
     if (!canAfford) {
-      Alert.alert('אין מספיק ג\'מס', `צריך ${gemsNeeded} 💎 להמרה זו.`);
+      setShopToast(missingCurrencyToast('gems', gemsNeeded - gems));
       return;
     }
     spendGemsHook(gemsNeeded);
@@ -494,13 +529,13 @@ export function ShopScreen() {
       <View style={{ flex: 1 }}>
 
         {/* ── HEADER: Title + Balance bar + close ── */}
-        <View style={styles.topBar}>
-          <View style={{ flex: 1 }} />
-          <Text style={[styles.topBarTitle, { color: theme.text }]}>חנות</Text>
-          <Pressable onPress={() => router.replace('/(tabs)' as never)} style={[styles.closeBtn, { backgroundColor: theme.surface, borderColor: theme.border }]} accessibilityRole="button" accessibilityLabel="סגור חנות" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <X size={18} color={theme.textMuted} />
-          </Pressable>
-        </View>
+        <ScreenHeader
+          title="חנות"
+          leading="close"
+          leadingLabel="סגור חנות"
+          onLeadingPress={() => router.replace('/(tabs)' as never)}
+          tint={theme.text}
+        />
 
         <ScrollView ref={shopScrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
@@ -514,7 +549,7 @@ export function ShopScreen() {
                 style={styles.vipBannerGradient}
               >
                 <ProBadge size="md" />
-                <Text style={styles.vipBannerText}>חבר PRO, הנחה 20% על כל הפריטים</Text>
+                <Text style={styles.vipBannerText}>מנויי PRO: 20% הנחה על כל הפריטים</Text>
               </LinearGradient>
             </Animated.View>
           )}
@@ -577,6 +612,7 @@ export function ShopScreen() {
                         item={item}
                         canAfford={canAffordItem(item)}
                         onBuyPress={() => handleBuyPress(item)}
+                        onUnaffordablePress={() => handleBuyPress(item)}
                         isEquipped={isAvatar && avatarId === item.id}
                         isOwned={isAvatar && ownedAvatars.includes(item.id)}
                       />
@@ -584,9 +620,7 @@ export function ShopScreen() {
                   );
                 })}
                 {visibleItems.length === 0 && (
-                  <View style={styles.emptyState}>
-                    <Text style={[styles.emptyText, { color: theme.textMuted }]}>אין פריטים בקטגוריה זו</Text>
-                  </View>
+                  <EmptyState compact title="אין כרגע פריטים בקטגוריה הזו" body="נסו קטגוריה אחרת למעלה." />
                 )}
               </View>
             </LinearGradient>
@@ -614,7 +648,7 @@ export function ShopScreen() {
               <View style={{ position: 'absolute', left: 16, bottom: 16, opacity: 0.08 }} pointerEvents="none">
                 <LottieIcon source={require('../../../assets/lottie/wired-flat-1103-confetti-hover-pinch.json')} size={80} autoPlay loop active={isFocused} />
               </View>
-              <SectionHeader title="ג'מס פרימיום" subtitle="רכישה אמיתית · מיידי" />
+              <SectionHeader title="חבילות יהלומים" subtitle="רכישה בכסף אמיתי · מיידי" />
               <View style={styles2.gemBundleGrid}>
                 {GEM_BUNDLES.map((b, i) => (
                   <GemBundleCard key={b.id} bundle={b} index={i} onPress={() => setSelectedBundle(b)} />
@@ -636,11 +670,7 @@ export function ShopScreen() {
                     level={layer}
                     xp={xp}
                     streak={streak}
-                    title={
-                      layer >= 5 ? 'פלטינה' :
-                      layer >= 3 ? 'זהב' :
-                      layer >= 2 ? 'כסף' : 'ברונזה'
-                    }
+                    title={getStageTierTitle(layer)}
                     avatar={
                       <AvatarImage avatarId={avatarId} size={70} />
                     }
@@ -651,10 +681,15 @@ export function ShopScreen() {
                     cost={50}
                     possibleRewards={['XP', '💎', '🪙', '❤️', '⚡']}
                     totalRewardCount={12}
-                    onPress={() => {
-                      if (gems < 50) { setMysteryToast('noGems'); return; }
-                      setMysteryToast('comingSoon');
-                    }}
+                    // The mystery box is not purchasable yet. It used to answer
+                    // "אין מספיק יהלומים, צבר עוד קצת!" under 50 gems, sending
+                    // users to collect gems for something they still could not
+                    // open. One honest answer for everyone, with a real next step.
+                    onPress={() => setShopToast({
+                      title: 'תיבות ההפתעה עוד סגורות',
+                      body: 'בינתיים שווה להציץ בדילים היומיים, הם מתחלפים כל יום.',
+                      accentColor: '#a855f7',
+                    })}
                   />
                 </View>
               </View>
@@ -668,7 +703,7 @@ export function ShopScreen() {
             <LinearGradient colors={[...SECTION_COLORS.exchange.gradient]} style={styles.sectionBlock}>
               <DiamondPattern />
               <SectionBgLottie source={require('../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json')} active={isFocused} />
-              <SectionHeader title="המרת ג'מס" subtitle={`יש לך ${gems} 💎`} />
+              <SectionHeader title="המרת יהלומים" subtitle={`יש לכם ${formatNumber(gems)} 💎`} />
               <View style={styles2.exchangeCardGrid}>
                 {GEM_EXCHANGE_RATES.map((rate, i) => {
                   const can = gems >= rate.gems;
@@ -678,7 +713,7 @@ export function ShopScreen() {
                         onPress={() => handleGemExchange(rate.gems, rate.coins)}
                         style={[styles.goldCard, !can && { opacity: 0.5 }]}
                         accessibilityRole="button"
-                        accessibilityLabel={`המר ${rate.gems} ג׳מס ל-${rate.coins.toLocaleString()} מטבעות`}
+                        accessibilityLabel={`המרת ${formatNumber(rate.gems)} יהלומים ל-${formatNumber(rate.coins)} מטבעות`}
                         accessibilityState={{ disabled: !can }}
                       >
                         {rate.best && (
@@ -695,7 +730,7 @@ export function ShopScreen() {
                           />
                         </View>
                         <View style={styles.goldPriceRow}>
-                          <Text style={styles.goldPriceNum}>{rate.gems}</Text>
+                          <Text style={styles.goldPriceNum}>{formatNumber(rate.gems)}</Text>
                           <Text style={{ fontSize: 14 }}>💎</Text>
                         </View>
                       </AnimatedPressable>
@@ -715,7 +750,7 @@ export function ShopScreen() {
                   <DiamondPattern />
                   <SectionBgLottie source={require('../../../assets/lottie/wired-flat-407-crown-king-lord-hover-roll.json')} active={isFocused} />
                   <SectionHeader title="PRO אקסקלוסיבי" />
-                  <Pressable onPress={() => router.push('/pricing?source=shop' as never)} style={({ pressed }) => [pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="שדרג ל-PRO">
+                  <Pressable onPress={() => router.push('/pricing?source=shop' as never)} style={({ pressed }) => [pressed && { opacity: 0.85 }]} accessibilityRole="button" accessibilityLabel="שדרגו ל-PRO: אנרגיה אינסופית ובוסט XP">
                     <LinearGradient
                       colors={['#0a2540', '#164e63', '#0a2540']}
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -741,7 +776,7 @@ export function ShopScreen() {
                           </View>
                           <View style={{ alignItems: "flex-end" }}>
                             <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 2, color: "#facc15", textTransform: "uppercase" }}>שדרגו ל-PRO</Text>
-                            <Text style={{ fontSize: 15, fontWeight: "700", color: "#ffffff", marginTop: 2 }}>לבבות אינסופיים + בוסט XP</Text>
+                            <Text style={{ fontSize: 15, fontWeight: "700", color: "#ffffff", marginTop: 2 }}>אנרגיה אינסופית + בוסט XP</Text>
                             <Text style={{ fontSize: 11, color: "rgba(103,232,249,0.8)", marginTop: 2 }}>✦ ללא הגבלות ✦ בלעדי לחברים ✦</Text>
                           </View>
                         </View>
@@ -778,20 +813,12 @@ export function ShopScreen() {
       />
 
       <SharkInsightToast
-        visible={mysteryToast === 'noGems'}
-        shark={FINN_EMPATHIC}
-        title="אין מספיק יהלומים"
-        body="צריך 50 💎 לפתיחת תיבת הפתעה. צבר עוד קצת!"
-        accentColor="#f59e0b"
-        onDismiss={() => setMysteryToast(null)}
-      />
-      <SharkInsightToast
-        visible={mysteryToast === 'comingSoon'}
-        shark={FINN_TALKING}
-        title="בקרוב!"
-        body="תיבות הפתעה יושקו בעדכון הבא. תישארו מחוברים!"
-        accentColor="#a855f7"
-        onDismiss={() => setMysteryToast(null)}
+        visible={shopToast !== null}
+        shark={shopToast?.accentColor === TOAST_WARN ? FINN_EMPATHIC : FINN_TALKING}
+        title={shopToast?.title ?? ''}
+        body={shopToast?.body ?? ''}
+        accentColor={shopToast?.accentColor}
+        onDismiss={() => setShopToast(null)}
       />
     </View>
   );

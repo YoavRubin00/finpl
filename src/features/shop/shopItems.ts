@@ -25,8 +25,8 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   {
     id: 'streak-freeze',
     category: 'protection',
-    name: 'הקפאת סטריק',
-    description: 'מגן על הסטריק שלך ליום אחד שפספסת. הופעל אוטומטית.',
+    name: 'הקפאת רצף',
+    description: 'שומרת על הרצף שלכם ביום אחד שפספסתם. מופעלת אוטומטית.',
     coinCost: 3000,
     emoji: '🧊',
     lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json'),
@@ -34,8 +34,8 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   {
     id: 'streak-freeze-bundle',
     category: 'protection',
-    name: 'הקפאת סטריק (×3)',
-    description: 'שלוש הקפאות סטריק. שמור על המומנטום שלך.',
+    name: 'הקפאת רצף (×3)',
+    description: 'שלוש הקפאות רצף. שומרים על המומנטום.',
     coinCost: 7500,
     emoji: '🛡️',
     lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json'),

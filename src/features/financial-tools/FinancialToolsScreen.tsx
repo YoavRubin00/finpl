@@ -7,7 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft, Sparkles, TrendingUp, UserCog, Wrench } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
-import { formatShekel } from '../../utils/format';
+import { formatPercentValue, formatShekel } from '../../utils/format';
 import { tapHaptic } from '../../utils/haptics';
 import { useNetWorthStore } from '../net-worth-dashboard/useNetWorthStore';
 import { TOOLS_REGISTRY } from './toolsRegistry';
@@ -163,7 +163,7 @@ function HeroStatStrip(): React.ReactElement {
 
   const yoyText =
     hasAssets && yoyDeltaPct > 0
-      ? `+${(yoyDeltaPct * 100).toFixed(1)}% השנה הקרובה (משוער)`
+      ? `${formatPercentValue(yoyDeltaPct * 100, 1, true)} השנה הקרובה (משוער)`
       : null;
 
   function handlePress() {
@@ -179,7 +179,7 @@ function HeroStatStrip(): React.ReactElement {
         accessibilityLabel={
           hasAssets
             ? `שווי נכסים ${formatShekel(totalValue)}, פתיחת דשבורד הנכסים`
-            : 'הוספת הנכסים הראשונים שלך'
+            : 'הוספת הנכסים הראשונים שלכם'
         }
       >
         <LinearGradient
@@ -191,7 +191,7 @@ function HeroStatStrip(): React.ReactElement {
           <View style={styles.heroRow}>
             <View style={styles.heroRight}>
               <Text style={styles.heroLabel}>
-                {hasAssets ? 'שווי נכסים כולל' : 'דשבורד הנכסים שלך'}
+                {hasAssets ? 'שווי נכסים כולל' : 'דשבורד הנכסים שלכם'}
               </Text>
               {hasAssets ? (
                 <CountUpNumber
@@ -264,11 +264,11 @@ function FinancialProfileCta(): React.ReactElement {
           </View>
           <View style={styles.profileCtaBody}>
             <Text style={styles.profileCtaTitle}>
-              {hasData ? 'הפרופיל הפיננסי שלך' : 'בנה פרופיל פיננסי'}
+              {hasData ? 'הפרופיל הפיננסי שלכם' : 'בניית פרופיל פיננסי'}
             </Text>
             <Text style={styles.profileCtaSubtitle}>
               {hasData
-                ? `${freshness ?? 'נשמר'} · ההצעות וההמלצות מתאימות אישית אליך`
+                ? `${freshness ?? 'נשמר'} · ההצעות וההמלצות מותאמות אישית אליכם`
                 : 'מילוי חד-פעמי · הצעות והמלצות מותאמות בכל הכלים'}
             </Text>
           </View>

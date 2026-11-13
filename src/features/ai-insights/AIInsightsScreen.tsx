@@ -13,7 +13,7 @@ import { Image as ExpoImage } from "expo-image";
 import { Lock, RefreshCw } from "lucide-react-native";
 import { useWeeklyInsightStore } from "./useWeeklyInsightStore";
 
-import { BackButton } from "../../components/ui/BackButton";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { useIsPro } from "../subscription/useSubscription";
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
@@ -305,22 +305,23 @@ export function AIInsightsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: 12 + topInset }]}>
-        <BackButton color="#0f172a" />
-        <Text style={styles.headerTitle}>תובנות AI</Text>
-        {isPro ? (
-          <TouchableOpacity
-            onPress={fetchPro}
-            disabled={proLoading}
-            style={[styles.refreshBtn, proLoading && { opacity: 0.3 }]}
-            accessibilityRole="button"
-            accessibilityLabel="רענן תובנות"
-          >
-            <RefreshCw size={18} color="#0ea5e9" />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
+      <View style={[styles.header, { paddingTop: topInset }]}>
+        <ScreenHeader
+          title="תובנות AI"
+          tint="#0f172a"
+          trailing={isPro ? (
+            <TouchableOpacity
+              onPress={fetchPro}
+              disabled={proLoading}
+              style={[styles.refreshBtn, proLoading && { opacity: 0.3 }]}
+              accessibilityRole="button"
+              accessibilityLabel="רענון התובנות"
+              accessibilityState={{ disabled: proLoading, busy: proLoading }}
+            >
+              <RefreshCw size={18} color="#0ea5e9" />
+            </TouchableOpacity>
+          ) : undefined}
+        />
       </View>
 
       {/* ── PRO FLOW ── */}
@@ -389,18 +390,12 @@ export function AIInsightsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f9ff' },
   header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#bae6fd',
   },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', textAlign: 'center' },
   refreshBtn: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 12,
     backgroundColor: '#f0f9ff', justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: '#bae6fd',
   },

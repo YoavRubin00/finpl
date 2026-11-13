@@ -2,6 +2,7 @@ import { View, Text, Pressable, Modal } from 'react-native';
 import { Diamond } from 'lucide-react-native';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { formatNumber } from '../../utils/format';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -36,10 +37,16 @@ export function ConfirmModal({
       <Pressable
         style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 24 }}
         onPress={onCancel}
+        accessibilityRole="button"
+        accessibilityLabel="ביטול"
       >
+        {/* accessible={false}: otherwise the whole card collapses into one
+            unlabeled element and the buttons inside are unreachable by screen
+            readers (same fix as the level popup, UX-10). */}
         <Pressable
           style={{ width: '100%', borderRadius: 24, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', padding: 24 }}
           onPress={() => { }}
+          accessible={false}
         >
           <Text style={[RTL, { fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 4 }]}>
             {itemName}
@@ -50,10 +57,10 @@ export function ConfirmModal({
           {originalCoinCost && (
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 20 }}>
               <Text style={{ fontSize: 12, color: '#9ca3af', textDecorationLine: 'line-through' }}>
-                {originalCoinCost.toLocaleString()}
+                {formatNumber(originalCoinCost)}
               </Text>
               <Text style={{ fontSize: 13, fontWeight: '800', color: '#16a34a' }}>
-                {coinCost.toLocaleString()} ✓ הנחת PRO 20%
+                {formatNumber(coinCost)} ✓ הנחת PRO 20%
               </Text>
             </View>
           )}
@@ -87,14 +94,14 @@ export function ConfirmModal({
                 <>
                   <Diamond size={18} color="#ffffff" />
                   <Text style={{ fontSize: 16, fontWeight: '900', color: '#ffffff' }}>
-                    {gemCost}
+                    {formatNumber(gemCost ?? 0)}
                   </Text>
                 </>
               ) : (
                 <>
                   <GoldCoinIcon size={18} />
                   <Text style={{ fontSize: 16, fontWeight: '900', color: '#ffffff' }}>
-                    {coinCost.toLocaleString()}
+                    {formatNumber(coinCost)}
                   </Text>
                 </>
               )}

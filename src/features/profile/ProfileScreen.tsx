@@ -16,7 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   Zap, Star, Target, ChevronRight,
-  Crown, Pencil, X, Layers,
+  Crown, Pencil, Layers,
 } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
@@ -24,7 +24,9 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { tapHaptic } from "../../utils/haptics";
 import { useIsPro } from "../subscription/useSubscription";
 import { HeartsDisplay } from "../subscription/HeartsUI";
-import { getPyramidStatus } from "../../utils/progression";
+import { getPyramidStatus, getStageTierTitle, STAGE_NAMES_HE } from "../../utils/progression";
+import { formatNumber } from "../../utils/format";
+import { SheetCloseButton } from "../../components/ui/SheetCloseButton";
 import { TransitionOverlay } from "../../components/ui/TransitionOverlay";
 import {
   useEntranceAnimation,
@@ -59,19 +61,25 @@ import { FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { useCardCollectionStore } from "../card-collection/useCardCollectionStore";
 import { useCollectionBackfill } from "../card-collection/useCollectionBackfill";
 
+// UX-37: "טרם נשאל" exposed an internal state ("not asked yet") as if it were
+// the user's answer. The button right under the chips fills it in.
+const NOT_SET_LABEL = "עוד לא נבחר";
+
 const GOAL_LABELS: Record<string, string> = {
   "cash-flow": "💸 תזרים מזומנים",
   "investing": "📈 השקעות",
   "army-release": "🪖 שחרור מצה\"ל",
   "expand-horizons": "🌍 הרחבת אופקים",
-  "unsure": "🤷 עוד לא בטוח",
+  "unsure": "🤷 עדיין לא ברור לי",
 };
 
+// Gender-neutral (docs/BRAND.md), same wording the onboarding summary uses
+// for these answers. Was "מתחיל לגמרי / יודע קצת / מבין בסיס" (masculine).
 const KNOWLEDGE_LABELS: Record<string, string> = {
-  none: "🤔 מתחיל לגמרי",
-  beginner: "📖 יודע קצת",
-  some: "💡 מבין בסיס",
-  experienced: "🧠 מנוסה",
+  none: "🤔 אפס ידע",
+  beginner: "📖 ידע בסיסי",
+  some: "💡 ידע ממוצע",
+  experienced: "🧠 ידע מתקדם",
   expert: "🐺 זאב וול סטריט",
 };
 
@@ -89,13 +97,9 @@ const DAILY_LABELS: Record<number, string> = {
   30: "30 דק׳ ביום",
 };
 
-const LAYER_NAMES_HE: Record<number, string> = {
-  1: "יסודות",
-  2: "ביטחון",
-  3: "יציבות",
-  4: "צמיחה",
-  5: "חופש כלכלי",
-};
+// Stage names live in ONE place (utils/progression) so the header popup and
+// this screen can't drift apart again.
+const LAYER_NAMES_HE = STAGE_NAMES_HE;
 
 // Real, redeemable Bridge partners (never a 0-coin "בקרוב" placeholder slot).
 const REAL_BRIDGE_PARTNERS = BRIDGE_BENEFITS.filter(
@@ -148,7 +152,7 @@ export function ProfileScreen() {
   const referralTier = computeReferralTier(referredFriends.length);
   const hasGoldFrame = referredFriends.length >= 3;
   const hasWhaleBadge = referredFriends.length >= 5;
-  const { level, layer, xpToNextLevel, progressToNextLevel } = getPyramidStatus(xp);
+  const { layer, xpToNextLevel, progressToNextLevel } = getPyramidStatus(xp);
   // Zustand v5: primitive selector (no fresh object per call — see
   // zustand_v5_selector_crash). Counts collected card decks for the badge.
   const collectedDecksCount = useCardCollectionStore((s) => Object.keys(s.collected).length);
@@ -207,9 +211,7 @@ export function ProfileScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={[]}>
         {/* Sticky close button, always visible */}
         <View style={styles.stickyCloseRow}>
-          <Pressable onPress={() => router.replace('/(tabs)/' as never)} style={[styles.closeBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.85)" }]} accessibilityRole="button" accessibilityLabel="סגור פרופיל" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <X size={20} color={theme.textMuted} />
-          </Pressable>
+          <SheetCloseButton onPress={() => router.replace('/(tabs)/' as never)} accessibilityLabel="סגור פרופיל" />
         </View>
         <ScrollView
           style={{ flex: 1 }}
@@ -326,7 +328,7 @@ export function ProfileScreen() {
                 onPress={() => setEditModalVisible(true)}
                 style={styles.editBtn}
                 accessibilityRole="button"
-                accessibilityLabel="ערוך שם תצוגה"
+                accessibilityLabel="עריכת שם תצוגה"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Pencil size={14} color="#a78bfa" />
@@ -493,13 +495,13 @@ export function ProfileScreen() {
               onPress={() => setTransitionTarget('referral')}
               style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
               accessibilityRole="button"
-              accessibilityLabel="רשת העושר, הזמן חברים וקבל פרסים"
+              accessibilityLabel="רשת העושר, הזמינו חברים וקבלו פרסים"
             >
               <View style={styles.actionCardInner}>
                 <ChevronRight size={20} color={theme.textMuted} style={{ transform: [{ scaleX: -1 }] }} />
                 <View style={{ alignItems: "flex-end", flex: 1 }}>
                   <Text style={[styles.actionCardSubtitle, { color: theme.textMuted }]}>רשת העושר</Text>
-                  <Text style={[styles.actionCardTitle, { color: theme.text }]}>הזמן חברים וקבל פרסים</Text>
+                  <Text style={[styles.actionCardTitle, { color: theme.text }]}>הזמינו חברים וקבלו פרסים</Text>
                 </View>
                 <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(124,58,237,0.15)" : "#f5f3ff", borderColor: isDark ? "rgba(167,139,250,0.3)" : "#ddd6fe" }]} accessible={false}>
                   <LottieIcon source={require("../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json")} size={28} autoPlay loop={false} replayOnActive active={isFocused} />
@@ -519,8 +521,8 @@ export function ProfileScreen() {
                   <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 }}>
                     {[
                       { label: "מטרה", value: GOAL_LABELS[profile.financialGoal] ?? profile.financialGoal },
-                      { label: "ידע", value: profile.knowledgeLevel ? (KNOWLEDGE_LABELS[profile.knowledgeLevel] ?? profile.knowledgeLevel) : "טרם נשאל" },
-                      { label: "יעד יומי", value: profile.dailyGoalMinutes ? (DAILY_LABELS[profile.dailyGoalMinutes] ?? `${profile.dailyGoalMinutes} דק׳`) : "טרם נשאל" },
+                      { label: "ידע", value: profile.knowledgeLevel ? (KNOWLEDGE_LABELS[profile.knowledgeLevel] ?? profile.knowledgeLevel) : NOT_SET_LABEL },
+                      { label: "יעד יומי", value: profile.dailyGoalMinutes ? (DAILY_LABELS[profile.dailyGoalMinutes] ?? `${profile.dailyGoalMinutes} דק׳`) : NOT_SET_LABEL },
                       { label: "מלווה", value: COMPANION_LABELS[profile.companionId] ?? profile.companionId },
                     ].map((item) => (
                       <View key={item.label} style={[styles.profileChip, { backgroundColor: theme.bg, borderColor: theme.border }]}>
@@ -533,9 +535,11 @@ export function ProfileScreen() {
                     onPress={() => setRedoOnboardingVisible(true)}
                     style={{ marginTop: 12, alignSelf: "center", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 12, backgroundColor: "rgba(8,145,178,0.12)", borderWidth: 1, borderColor: "rgba(8,145,178,0.3)" }}
                     accessibilityRole="button"
-                    accessibilityLabel="עדכן פרופיל פיננסי"
+                    accessibilityLabel="עדכון פרופיל פיננסי"
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                   >
-                    <Text style={{ color: "#22d3ee", fontSize: 13, fontWeight: "700", writingDirection: "rtl" }}>עדכן פרופיל פיננסי</Text>
+                    {/* #0e7490, not #22d3ee: bright cyan on the light chip was ~1.8:1 (fails AA). */}
+                    <Text style={{ color: "#0e7490", fontSize: 13, fontWeight: "700", writingDirection: "rtl" }}>עדכון פרופיל פיננסי</Text>
                   </Pressable>
                 </View>
               </Animated.View>
@@ -590,7 +594,7 @@ export function ProfileScreen() {
             {!isPro && (
               <ProUpgradeCard
                 onPress={() => router.push("/pricing?source=profile" as never)}
-                headline="לבבות אינסופיים + בוסט XP"
+                headline="אנרגיה אינסופית + בוסט XP"
                 active={isFocused}
               />
             )}
@@ -619,7 +623,7 @@ export function ProfileScreen() {
 
       <TransitionOverlay
         visible={transitionTarget === 'referral'}
-        message={'כאן תוכל להזמין חברים למשחק, ולצבור דיבידנד יומי על הרווחים שלהם באפליקציה!\n5% על כל הפעילות של החברים'}
+        message={'כאן מזמינים חברים למשחק וצוברים דיבידנד יומי על הרווחים שלהם באפליקציה!\n5% על כל הפעילות של החברים'}
         image={{ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/finn/finn-referral.png' }}
         onDismiss={() => {
           setTransitionTarget(null);
@@ -631,15 +635,16 @@ export function ProfileScreen() {
       <Modal visible={showStagePopup} transparent animationType="fade" onRequestClose={() => setShowStagePopup(false)} accessibilityViewIsModal>
         <Pressable style={stagePopupStyles.backdrop} onPress={() => setShowStagePopup(false)} accessibilityRole="button" accessibilityLabel="סגור חלון התקדמות">
           <Pressable style={stagePopupStyles.card} onPress={() => {}} accessibilityRole="none">
-            <Pressable onPress={() => setShowStagePopup(false)} style={stagePopupStyles.closeBtn} accessibilityRole="button" accessibilityLabel="סגור" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <X size={20} color="#64748b" />
-            </Pressable>
+            <SheetCloseButton onPress={() => setShowStagePopup(false)} style={stagePopupStyles.closeBtn} />
             <Text style={stagePopupStyles.emoji}>
               {LAYER_EMOJIS[layer] ?? "🌱"}
             </Text>
-            <Text style={stagePopupStyles.title}>שלב {level} · {LAYER_NAMES_HE[layer] ?? ""}</Text>
+            {/* `layer`, not `level`: the pill that opens this popup, the header
+                ring and the player card all show the layer (level is 0-based,
+                so a brand-new user read "שלב 1" on the pill and "שלב 0" here). */}
+            <Text style={stagePopupStyles.title}>שלב {layer} · {LAYER_NAMES_HE[layer] ?? ""}</Text>
             <Text style={stagePopupStyles.subtitle}>
-              {layer < 5 ? `עוד ${xpToNextLevel.toLocaleString('he-IL')} XP לשלב הבא` : "הגעת לשלב הגבוה ביותר!"}
+              {layer < 5 ? `עוד ${formatNumber(xpToNextLevel)} XP לשלב הבא` : "הגעת לשלב הגבוה ביותר!"}
             </Text>
             <View style={stagePopupStyles.progressTrack}>
               {/* RTL fill — anchored to the right edge so the bar grows from
@@ -671,11 +676,7 @@ export function ProfileScreen() {
                 level={layer}
                 xp={xp}
                 streak={streak}
-                title={
-                  layer >= 5 ? 'פלטינה' :
-                  layer >= 4 ? 'זהב' :
-                  layer >= 2 ? 'כסף' : 'ברונזה'
-                }
+                title={getStageTierTitle(layer)}
                 avatar={
                   <AvatarImage
                     avatarId={profile?.avatarId ?? null}
@@ -719,9 +720,9 @@ const stagePopupStyles = StyleSheet.create({
   },
   closeBtn: {
     position: "absolute",
-    top: 12,
-    right: 12,
-    padding: 4,
+    top: 8,
+    right: 8,
+    zIndex: 2,
   },
   emoji: {
     fontSize: 48,

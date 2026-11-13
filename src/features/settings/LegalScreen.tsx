@@ -8,10 +8,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
 import { RTL } from "../chapter-4-content/simulations/simTheme";
-import { BackButton } from "../../components/ui/BackButton";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 
 // ---------------------------------------------------------------------------
 // Section Component
@@ -38,12 +38,7 @@ export function LegalScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#f0f9ff' }}>
       <SafeAreaView style={styles.safe} edges={['top']}>
-        {/* Header */}
-        <Animated.View entering={FadeInDown.duration(300)} style={styles.header}>
-          <View style={styles.headerSpacer} />
-          <Text style={[RTL, styles.headerTitle]}>משפטי ופרטיות</Text>
-          <BackButton />
-        </Animated.View>
+        <ScreenHeader title="משפטי ופרטיות" />
 
         <ScrollView
           style={styles.scroll}

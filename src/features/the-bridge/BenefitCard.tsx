@@ -15,6 +15,7 @@ import { Lock, Check, ExternalLink, GraduationCap } from 'lucide-react-native';
 import { SparkleOverlay } from '../../components/ui/SparkleOverlay';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { formatNumber } from '../../utils/format';
 
 import type { Benefit } from './types';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
@@ -235,9 +236,9 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
 
         {/* Partner URL (after redemption) */}
         {isRedeemed && benefit.partnerUrl && (
-          <Pressable onPress={handleOpenPartnerUrl} style={styles.partnerUrlBtn}>
+          <Pressable onPress={handleOpenPartnerUrl} style={styles.partnerUrlBtn} hitSlop={8} accessibilityRole="link" accessibilityLabel="מעבר לאתר השותף">
             <ExternalLink size={14} color="#ffffff" />
-            <Text style={styles.partnerUrlText}>פתח באתר השותף</Text>
+            <Text style={styles.partnerUrlText}>מעבר לאתר השותף</Text>
           </Pressable>
         )}
 
@@ -253,7 +254,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
                 <Pressable
                   onPress={onPurchase}
                   accessibilityRole="button"
-                  accessibilityLabel={`רכישה תמורת ${benefit.costCoins} מטבעות`}
+                  accessibilityLabel={`מימוש ההטבה תמורת ${formatNumber(benefit.costCoins)} מטבעות`}
                   hitSlop={8}
                   style={({ pressed }) => [
                     styles.costButton,
@@ -262,7 +263,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
                 >
                   <GoldCoinIcon size={16} />
                   <Text style={styles.costButtonText}>
-                    עלות {benefit.costCoins.toLocaleString()}
+                    עלות {formatNumber(benefit.costCoins)}
                   </Text>
                 </Pressable>
               );
@@ -278,7 +279,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
                 ) : (
                   <>
                     <GoldCoinIcon size={14} />
-                    <Text style={styles.costText}>{benefit.costCoins.toLocaleString()}</Text>
+                    <Text style={styles.costText}>{formatNumber(benefit.costCoins)}</Text>
                   </>
                 )}
               </View>
@@ -288,7 +289,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
           {lockedByPro && (
             <View style={styles.proLockBadge}>
               <Lock size={10} color="#0369a1" />
-              <Text style={styles.proLockText}>Pro בלבד</Text>
+              <Text style={styles.proLockText}>PRO בלבד</Text>
             </View>
           )}
 
@@ -320,7 +321,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
 
         {!canAfford && !isRedeemed && benefit.isAvailable && !lockedByPro && (
           <>
-            <Text style={styles.coinsNeededText}>חסרים {coinsNeeded.toLocaleString()} מטבעות</Text>
+            <Text style={styles.coinsNeededText}>חסרים {formatNumber(coinsNeeded)} מטבעות</Text>
             {/* Completion paths — the "חסרים X" dead-end fix. The static hint
                 became a real door: tapping goes straight to the learn map. */}
             <Pressable

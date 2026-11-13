@@ -100,7 +100,7 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
       setTooltip({ text: `✓ השלמת שיעור ב-${d} ${m}`, key: date });
     } else if (status === "frozen") {
       tapHaptic();
-      setTooltip({ text: "🧊 הקפאת סטריק הופעלה", key: date });
+      setTooltip({ text: "🧊 הקפאת רצף הופעלה", key: date });
     }
   }, []);
 

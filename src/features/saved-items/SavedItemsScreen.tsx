@@ -9,9 +9,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Trash2, BookOpen, Gamepad2, Newspaper } from "lucide-react-native";
-import LottieView from "lottie-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+// SafeLottie: same props as LottieView, but looping icons freeze under "reduce motion".
+import { SafeLottie as LottieView } from "../../components/ui/SafeLottie";
 import { LinearGradient } from "expo-linear-gradient";
-import { BackButton } from "../../components/ui/BackButton";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { useTheme } from "../../hooks/useTheme";
 import { useSavedItemsStore } from "./useSavedItemsStore";
 import { useIsPro } from "../subscription/useSubscription";
@@ -40,6 +43,7 @@ function formatRelativeDate(iso: string): string {
 export function SavedItemsScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isPro = useIsPro();
   const items = useSavedItemsStore((s) => s.items);
   const removeItem = useSavedItemsStore((s) => s.removeItem);
@@ -48,10 +52,10 @@ export function SavedItemsScreen() {
     items.filter((i) => i.type === type);
 
   const handleDelete = (item: SavedItem) => {
-    Alert.alert("מחיקה", `להסיר את "${item.title}" מהשמורים?`, [
+    Alert.alert("הסרה מהשמורים", `להסיר את "${item.title}" מהשמורים?`, [
       { text: "ביטול", style: "cancel" },
       {
-        text: "מחק",
+        text: "הסרה",
         style: "destructive",
         onPress: () => removeItem(item.id),
       },
@@ -78,20 +82,20 @@ export function SavedItemsScreen() {
         style={StyleSheet.absoluteFillObject}
       />
 
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <View style={styles.headerRow}>
-          <BackButton color="#0e7490" />
-          <Text style={[styles.headerTitle, { color: theme.text }]}>פריטים שמורים</Text>
-          {isPro ? (
+      {/* Real safe-area inset instead of the old hardcoded paddingTop: 56,
+          which sat under the Dynamic Island on tall iPhones and wasted
+          ~30px on Android. */}
+      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <ScreenHeader
+          title="פריטים שמורים"
+          trailing={isPro ? (
             <View style={[styles.counterChip, { borderColor: counterColor + "40" }]}>
               <Text style={[styles.counterText, { color: counterColor }]}>
                 {items.length}/{MAX_SAVED_ITEMS}
               </Text>
             </View>
-          ) : (
-            <View style={styles.headerSpacer} />
-          )}
-        </View>
+          ) : undefined}
+        />
       </View>
 
       {!isPro ? (
@@ -104,15 +108,15 @@ export function SavedItemsScreen() {
           />
           <Text style={[styles.upsellTitle, { color: theme.text }]}>פריטים שמורים</Text>
           <Text style={[styles.upsellSubtitle, { color: theme.textMuted }]}>
-            שמור שיעורים, סימולציות ופריטי פיד לגישה מהירה.{"\n"}
-            זמין למנויי PRO בלבד.
+            שומרים שיעורים, סימולציות ופריטי פיד לגישה מהירה.{"\n"}
+            זמין למנויי PRO.
           </Text>
           <TouchableOpacity
             style={styles.upsellButton}
             onPress={() => router.push("/pricing?source=saved_items" as never)}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="שדרג לפרו"
+            accessibilityLabel="שדרגו ל-PRO"
           >
             <View style={styles.upsellButtonInner}>
               <LottieView
@@ -121,7 +125,7 @@ export function SavedItemsScreen() {
                 loop
                 style={{ width: 28, height: 28 }}
               />
-              <Text style={styles.upsellButtonText}>שדרג לפרו</Text>
+              <Text style={styles.upsellButtonText}>שדרגו ל-PRO</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -132,27 +136,22 @@ export function SavedItemsScreen() {
           showsVerticalScrollIndicator={false}
         >
           {isEmpty ? (
-            <View style={styles.emptyState}>
-              <LottieView
-                source={require("../../../assets/lottie/wired-flat-400-bookmark-hover-flutter.json")}
-                autoPlay
-                loop
-                style={styles.emptyLottie}
-              />
-              <Text style={[styles.emptyText, { color: theme.text }]}>עוד לא אספת אוצרות</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>
-                שמור פריטים בפיד עם סימן הסימנייה
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyCta}
-                onPress={() => router.push("/(tabs)/learn" as never)}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="חזור לפיד"
-              >
-                <Text style={styles.emptyCtaText}>חזור לפיד</Text>
-              </TouchableOpacity>
-            </View>
+            <EmptyState
+              illustration={
+                <LottieView
+                  source={require("../../../assets/lottie/wired-flat-400-bookmark-hover-flutter.json")}
+                  autoPlay
+                  loop
+                  style={styles.emptyLottie}
+                />
+              }
+              title="עוד לא שמרתם אוצרות"
+              body="סמנו שיעור או פריט בסימנייה, והוא יחכה לכם כאן."
+              actionLabel="חזרה ללמידה"
+              // The legacy feed (/(tabs)/learn) left the tab bar; the learning
+              // map is where a user can actually find something to save.
+              onAction={() => router.replace("/(tabs)" as never)}
+            />
           ) : (
             SECTION_ORDER.map((section) => {
               const sectionItems = getByType(section.type);
@@ -200,7 +199,7 @@ export function SavedItemsScreen() {
                           onPress={() => handleDelete(item)}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           accessibilityRole="button"
-                          accessibilityLabel={`מחק ${item.title}`}
+                          accessibilityLabel={`הסרת ${item.title} מהשמורים`}
                           style={styles.deleteBtn}
                         >
                           <Trash2 size={16} color="#ef4444" />
@@ -228,9 +227,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    paddingTop: 56,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
   },
   headerRow: {
     flexDirection: "row-reverse",

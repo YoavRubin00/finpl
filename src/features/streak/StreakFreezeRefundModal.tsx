@@ -45,8 +45,10 @@ export function StreakFreezeRefundModal({ visible, count, onDismiss }: StreakFre
       animationType="fade"
       onRequestClose={onDismiss}
     >
-      <Pressable style={styles.overlay} onPress={onDismiss}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+      <Pressable style={styles.overlay} onPress={onDismiss} accessibilityRole="button" accessibilityLabel="סגור">
+        {/* accessible={false}: keeps the title and the button individually
+            reachable by screen readers instead of one collapsed element. */}
+        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
           <Animated.View entering={FadeIn.duration(300)} style={styles.content}>
             <ExpoImage
               source={FINN_HAPPY}
@@ -68,7 +70,7 @@ export function StreakFreezeRefundModal({ visible, count, onDismiss }: StreakFre
               onPress={handleContinue}
               style={styles.primaryBtn}
               accessibilityRole="button"
-              accessibilityLabel="סגירה והמשך"
+              accessibilityLabel="מעולה, ממשיכים"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <View style={styles.primaryBtnInner}>

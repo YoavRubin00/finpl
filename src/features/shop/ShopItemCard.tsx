@@ -8,6 +8,7 @@ import { getShopSvgIcon } from '../../components/svg/shop/ShopIcons';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { EnergyBatteryIcon } from '../../components/ui/EnergyBatteryIcon';
+import { formatNumber } from '../../utils/format';
 
 const DIAMOND_LOTTIE = require('../../../assets/lottie/Diamond.json');
 import type { ShopItem } from './types';
@@ -61,16 +62,19 @@ interface ShopItemCardProps {
   item: ShopItem;
   canAfford: boolean;
   onBuyPress: () => void;
+  /** Called when the price is tapped but the user can't afford the item. Omit → the pill stays disabled. */
+  onUnaffordablePress?: () => void;
   isEquipped?: boolean;
   isOwned?: boolean;
   effectiveCoinCost?: number;
 }
 
-export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, onBuyPress, isEquipped, isOwned, effectiveCoinCost }: ShopItemCardProps) {
+export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, onBuyPress, onUnaffordablePress, isEquipped, isOwned, effectiveCoinCost }: ShopItemCardProps) {
   const isGemItem = (item.gemCost ?? 0) > 0;
   const hasProDiscount = !isGemItem && effectiveCoinCost !== undefined && effectiveCoinCost < item.coinCost;
   const tier = getTierLabel(item.id);
   const duration = getDurationLabel(item.id);
+  const priceLabel = formatNumber(isGemItem ? (item.gemCost ?? 0) : (effectiveCoinCost ?? item.coinCost));
 
   return (
     <View style={styles.cardWrap}>
@@ -156,22 +160,24 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
               <Text style={styles.equippedText}>✓ מצויד</Text>
             </View>
           ) : isOwned ? (
-            <AnimatedPressable onPress={onBuyPress} style={styles.ownedBtn}>
-              <Text style={styles.ownedText}>החלף</Text>
+            <AnimatedPressable onPress={onBuyPress} style={styles.ownedBtn} accessibilityLabel={`החלפה לאווטאר ${item.name}`}>
+              <Text style={styles.ownedText}>החלפה</Text>
             </AnimatedPressable>
           ) : (
             <AnimatedPressable
-              onPress={canAfford ? onBuyPress : undefined}
-              disabled={!canAfford}
+              // Unaffordable: still tappable when the host can explain why
+              // (onUnaffordablePress), instead of a greyed-out dead button.
+              onPress={canAfford ? onBuyPress : onUnaffordablePress}
+              disabled={!canAfford && !onUnaffordablePress}
               style={[styles.pricePill, !canAfford && { opacity: 0.5 }]}
+              accessibilityLabel={`קנייה: ${item.name}, ${priceLabel} ${isGemItem ? 'יהלומים' : 'מטבעות'}${canAfford ? '' : ', אין מספיק'}`}
+              accessibilityState={{ disabled: !canAfford }}
             >
               {hasProDiscount && (
-                <Text style={styles.priceStrike}>{item.coinCost.toLocaleString()}</Text>
+                <Text style={styles.priceStrike}>{formatNumber(item.coinCost)}</Text>
               )}
               <Text style={styles.priceText} allowFontScaling={false}>
-                {isGemItem
-                  ? `${item.gemCost}`
-                  : `${(effectiveCoinCost ?? item.coinCost).toLocaleString()}`}
+                {priceLabel}
               </Text>
               {isGemItem ? (
                 <LottieIcon source={DIAMOND_LOTTIE} size={28} />

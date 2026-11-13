@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
@@ -17,6 +17,7 @@ import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
 import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { successHaptic } from '../../utils/haptics';
+import { formatNumber } from '../../utils/format';
 import { useAppActive } from '../../hooks/useAppActive';
 import type { DailyDeal } from './types';
 
@@ -78,10 +79,16 @@ export function DailyDealsSection() {
   const setAvatar = useAuthStore((s) => s.setAvatar);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
 
-  const handleClaimFreeGems = useCallback(() => {
+  // Double-tap guard: `purchasedIds` only flips on the next render, so two fast
+  // taps on "אסוף" used to award the free gems twice.
+  const freeGemsClaimedKeyRef = useRef<string | null>(null);
+  const handleClaimFreeGems = useCallback((): boolean => {
+    if (freeGemsClaimedKeyRef.current === dateKey) return false;
+    freeGemsClaimedKeyRef.current = dateKey;
     addGemsHookDD(5);
     successHaptic();
-  }, [addGemsHookDD]);
+    return true;
+  }, [addGemsHookDD, dateKey]);
 
   const handleProClaim = useCallback((deal: DailyDeal) => {
     const itemId = deal.item.id;
@@ -116,11 +123,14 @@ export function DailyDealsSection() {
 
     if (!canAfford) {
       setPendingDeal(null);
+      // Same wording as the rest of the shop ("יהלומים" / "מטבעות"). The old
+      // coins line offered to "buy gold for ₪", which the shop does not sell:
+      // coins come from lessons or from the gem exchange.
       Alert.alert(
-        isGem ? 'אין מספיק ג\'מים' : 'אין מספיק מטבעות',
+        isGem ? 'אין מספיק יהלומים' : 'אין מספיק מטבעות',
         isGem
-          ? 'אפשר לרכוש ג\'מים בחנות 💎'
-          : 'אפשר לרכוש זהב בחנות ₪',
+          ? 'אפשר להשלים בחבילות היהלומים כאן בחנות.'
+          : 'כל שיעור מוסיף מטבעות, ואפשר גם להמיר יהלומים כאן בחנות.',
       );
       return;
     }
@@ -206,8 +216,8 @@ export function DailyDealsSection() {
               {/* Price display for gem deals only (shown above PRO button) */}
               {!isFreeGems && !purchased && isGem && (
                 <View style={styles.priceBlock}>
-                  <Text style={styles.originalPrice}>{deal.originalCost.toLocaleString()}</Text>
-                  <Text style={styles.discountedPrice}>💎 {deal.discountedCost}</Text>
+                  <Text style={styles.originalPrice}>{formatNumber(deal.originalCost)}</Text>
+                  <Text style={styles.discountedPrice}>💎 {formatNumber(deal.discountedCost)}</Text>
                 </View>
               )}
 
@@ -219,7 +229,7 @@ export function DailyDealsSection() {
               ) : isFreeGems ? (
                 <Pressable
                   onPress={() => {
-                    handleClaimFreeGems();
+                    if (!handleClaimFreeGems()) return;
                     setPurchasedIds((prev) => new Set(prev).add(deal.id));
                   }}
                   style={({ pressed }) => [styles.freeClaimBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
@@ -233,7 +243,7 @@ export function DailyDealsSection() {
                   onPress={() => router.push('/pricing?source=daily_deals' as never)}
                   style={({ pressed }) => [styles.proBadgeBtn, pressed && { opacity: 0.8 }]}
                   accessibilityRole="button"
-                  accessibilityLabel="שדרג ל-PRO"
+                  accessibilityLabel="שדרגו ל-PRO"
                 >
                   <Text style={styles.proBadgeText}>PRO ✦</Text>
                 </Pressable>
@@ -251,12 +261,12 @@ export function DailyDealsSection() {
                   onPress={() => setPendingDeal(deal)}
                   style={({ pressed }) => [styles.priceBuyBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
                   accessibilityRole="button"
-                  accessibilityLabel={`קנה ${deal.item.name} ב-${deal.discountedCost.toLocaleString()} מטבעות`}
+                  accessibilityLabel={`קנה ${deal.item.name} ב-${formatNumber(deal.discountedCost)} מטבעות`}
                 >
-                  <Text style={styles.originalPriceBtn}>{deal.originalCost.toLocaleString()}</Text>
+                  <Text style={styles.originalPriceBtn}>{formatNumber(deal.originalCost)}</Text>
                   <View style={styles.discountedRow}>
                     <GoldCoinIcon size={16} />
-                    <Text style={styles.discountedPriceBtn}>{deal.discountedCost.toLocaleString()}</Text>
+                    <Text style={styles.discountedPriceBtn}>{formatNumber(deal.discountedCost)}</Text>
                   </View>
                 </Pressable>
               )}

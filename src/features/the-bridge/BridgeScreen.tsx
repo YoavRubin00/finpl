@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Info, X } from 'lucide-react-native';
+import { Info } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { FINN_DANCING, FINN_HAPPY, FINN_TABLET } from '../retention-loops/finnMascotConfig';
 import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
@@ -44,7 +44,10 @@ import { bridgeToastFor, type BridgeToast } from './bridgeToast';
 import { BenefitCard } from './BenefitCard';
 import { RedemptionModal } from './RedemptionModal';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
-import { BackButton } from '../../components/ui/BackButton';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { formatNumber } from '../../utils/format';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { CATEGORY_LABELS } from './types';
@@ -556,12 +559,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       />
 
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        {/* Header */}
-        <View style={styles.headerBar}>
-          <BackButton onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/investments' as never)} />
-          <Text style={styles.screenTitle}>הגשר להטבות</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <ScreenHeader
+          title="הגשר להטבות"
+          onLeadingPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/investments' as never)}
+        />
 
         <ScrollView
           ref={scrollViewRef}
@@ -595,7 +596,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                       ))}
                     </View>
                     <View style={styles.coinLabelBlock}>
-                      <Text style={styles.coinCount}>{coins.toLocaleString()}</Text>
+                      <Text style={styles.coinCount}>{formatNumber(coins)}</Text>
                       <Text style={styles.coinLabel}>המטבעות שלכם</Text>
                     </View>
                   </View>
@@ -605,6 +606,8 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     <Pressable
                       onPress={() => setStatModalKind('redeemed')}
                       style={styles.statRow}
+                      accessibilityRole="button"
+                      accessibilityLabel={`הטבות מומשו: ${redeemedCount}. הקישו לפירוט`}
                     >
                       <View style={styles.statValueRow}>
                         <Text style={styles.statValue}>{redeemedCount}</Text>
@@ -618,6 +621,8 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     <Pressable
                       onPress={() => setStatModalKind('savings')}
                       style={styles.statRow}
+                      accessibilityRole="button"
+                      accessibilityLabel={`חסכתם ${savedValue}. הקישו לפירוט`}
                     >
                       <View style={styles.statValueRow}>
                         <Text style={[styles.statValue, { color: '#0369a1' }]}>{savedValue}</Text>
@@ -631,6 +636,8 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     <Pressable
                       onPress={() => scrollViewRef.current?.scrollTo({ y: 500, animated: true })}
                       style={styles.statRow}
+                      accessibilityRole="button"
+                      accessibilityLabel="הטבות זמינות. הקישו לגלילה לרשימה"
                     >
                       <View style={styles.statValueRow}>
                         <Text style={[styles.statValue, { color: '#0284c7' }]}>
@@ -711,9 +718,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
           ))}
 
           {visibleBenefits.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>אין הטבות בקטגוריה הזו כרגע</Text>
-            </View>
+            <EmptyState compact title="אין כרגע הטבות בקטגוריה הזו" body="נסו קטגוריה אחרת למעלה." />
           )}
 
           {/* PRO upsell card */}
@@ -721,6 +726,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
             <AnimatedPressable
               onPress={() => router.push('/pricing?source=bridge' as never)}
               style={{ marginTop: 20, marginBottom: 8 }}
+              accessibilityLabel="שדרגו ל-PRO: אנרגיה אינסופית ובוסט XP"
             >
               <Animated.View style={[styles.proCard, proBorderStyle]}>
                 <LinearGradient
@@ -735,7 +741,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
                         <Text style={styles.proLabel}>שדרגו ל-PRO</Text>
-                        <Text style={styles.proTitle}>לבבות אינסופיים + בוסט XP</Text>
+                        <Text style={styles.proTitle}>אנרגיה אינסופית + בוסט XP</Text>
                       </View>
                     </View>
                     <View style={styles.proBadge}>
@@ -838,15 +844,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
 
           <Animated.View entering={FadeIn.duration(220)} style={styles.statModalCard}>
             {/* X close — top-right RTL corner, matches RedemptionModal / FinnMailModal */}
-            <Pressable
-              onPress={() => setStatModalKind(null)}
-              accessibilityRole="button"
-              accessibilityLabel="סגור"
-              hitSlop={12}
-              style={styles.statModalCloseBtn}
-            >
-              <X size={18} color="#64748b" />
-            </Pressable>
+            <SheetCloseButton onPress={() => setStatModalKind(null)} style={styles.statModalCloseBtn} />
             {statModalKind === 'redeemed' && (() => {
               const redeemed = BRIDGE_BENEFITS.filter(b => isBenefitRedeemed(b.id));
               return (
@@ -899,7 +897,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                   contentFit="contain"
                   accessible={false}
                 />
-                <Text style={styles.statModalTitle}>החיסכון שלך</Text>
+                <Text style={styles.statModalTitle}>החיסכון שלכם</Text>
                 <Text style={styles.statModalBigValue}>{savedValue}</Text>
                 <Text style={styles.statModalBody}>
                   {redeemedCount > 0
@@ -907,7 +905,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     : 'עוד לא מימשתם הטבות, אז החיסכון שלכם עומד על ₪0. אבל עוד כמה מטבעות ואתם שם — ההטבה הראשונה שלכם מחכה.\n\nכל הטבה תוסיף לחיסכון שלכם כאן.'}
                 </Text>
                 <Text style={styles.statModalDisclaimer}>
-                  הערכה בלבד. הערך בפועל תלוי בתנאי השותף ובשימוש שלך.
+                  הערכה בלבד. הערך בפועל תלוי בתנאי השותף ובשימוש שלכם.
                 </Text>
               </>
             )}
@@ -1283,14 +1281,8 @@ const styles = StyleSheet.create({
   // dimensions as RedemptionModal / FinnMailModal so all modals feel uniform.
   statModalCloseBtn: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: 10,
+    right: 10,
     zIndex: 10,
   },
   statModalImage: {

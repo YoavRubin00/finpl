@@ -154,9 +154,9 @@ function QuestButton({
           accessibilityLabel={
             isDone
               ? allowRedo
-                ? `${titleHe}, הושלם — לחץ לבצע שוב`
+                ? `${titleHe}, הושלם — הקישו כדי לשחק שוב`
                 : `${titleHe}, הושלם`
-              : `${titleHe}, לחץ לביצוע`
+              : `${titleHe}, הקישו להתחלה`
           }
           style={({ pressed }) => [
             questStyles.card,
@@ -188,7 +188,7 @@ function QuestButton({
                   adjustsFontSizeToFit
                   style={[questStyles.descText, isDone && questStyles.descTextDone, { marginTop: 2 }]}
                 >
-                  {isDone && allowRedo ? "סיימת היום — לחץ לבצע שוב 🔄" : descriptionHe}
+                  {isDone && allowRedo ? "סיימתם היום — הקישו כדי לשחק שוב 🔄" : descriptionHe}
                 </Text>
               )}
             </View>
@@ -523,7 +523,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
-      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="סגור משימות יומיות">
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="סגור משימות יומיות">
         <Pressable style={[styles.sheet]} onPress={() => {}} accessible={false}>
           {/* Handle fixed at top */}
           <View style={styles.handle} accessible={false} />
@@ -595,7 +595,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                 onPress={handleClaim}
                 disabled={rewardClaimed || showClaimAnim || !allDone}
                 accessibilityRole="button"
-                accessibilityLabel={rewardClaimed ? "תיבה רגילה נפתחה" : allDone ? `לחצו לפתיחת תיבה רגילה. בפנים: ${preview.coins} מטבעות` : "התיבה הרגילה נעולה"}
+                accessibilityLabel={rewardClaimed ? "תיבה רגילה נפתחה" : allDone ? `הקישו לפתיחת תיבה רגילה. בפנים: ${preview.coins} מטבעות` : "התיבה הרגילה נעולה"}
                 style={({ pressed }) => [
                   chestCardStyles.card,
                   chestCardStyles.cardRegular,
@@ -630,7 +630,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                 onPress={handleClaimPro}
                 disabled={proRewardClaimed || showProClaimAnim || (isPro && !allDone)}
                 accessibilityRole="button"
-                accessibilityLabel={!isPro ? `תיבת PRO נעולה. בפנים: ${previewPro.coins} מטבעות ו-${previewPro.gems} יהלומים. לחץ לשדרג` : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
+                accessibilityLabel={!isPro ? `תיבת PRO נעולה. בפנים: ${previewPro.coins} מטבעות ו-${previewPro.gems} יהלומים. הקישו לשדרוג` : proRewardClaimed ? "תיבת PRO נפתחה" : allDone ? "הקישו לפתיחת תיבת ה-PRO" : "תיבת ה-PRO נעולה"}
                 style={({ pressed }) => [
                   chestCardStyles.card,
                   chestCardStyles.cardPro,
@@ -694,7 +694,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
               <Pressable
                 onPress={() => { tapHaptic(); router.push('/pricing?source=daily_chest_pro' as never); }}
                 accessibilityRole="button"
-                accessibilityLabel="שדרג ל-PRO"
+                accessibilityLabel="שדרגו ל-PRO: אנרגיה אינסופית ובוסט XP"
                 // marginHorizontal: -40 negates the sheet's paddingHorizontal: 24
                 // and the section's paddingHorizontal: 16 so the banner reaches
                 // edge-to-edge of the modal (user request 2026-06-04: "ימלא
@@ -735,7 +735,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                             שדרגו ל-PRO
                           </Text>
                           <Text style={{ fontSize: 15, fontWeight: "700", color: "#ffffff", marginTop: 2 }}>
-                            לבבות אינסופיים + בוסט XP
+                            אנרגיה אינסופית + בוסט XP
                           </Text>
                           <Text style={{ fontSize: 11, color: "rgba(103,232,249,0.8)", marginTop: 2 }}>
                             ✦ ללא הגבלות ✦ בלעדי לחברים ✦

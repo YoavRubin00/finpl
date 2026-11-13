@@ -16,13 +16,12 @@ import { SafeLottie } from "../../components/ui/SafeLottie";
 import { SvgXml } from "react-native-svg";
 import Animated, { FadeInUp } from "react-native-reanimated";
 
-import { tapHaptic } from "../../utils/haptics";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signOut as lifecycleSignOut } from "../../lib/auth/lifecycle";
 import { RTL, SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { GlowCard } from "../../components/ui/GlowCard";
-import { BackButton } from "../../components/ui/BackButton";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { useFunStore } from "../../stores/useFunStore";
 import { FinnMailModal } from "../fun/FinnMailModal";
 import { track } from "../../lib/analytics/events";
@@ -143,7 +142,9 @@ function MoreRow({ icon, label, onPress, badge, badgeColor = STITCH_BLUE.textSec
   );
 
   return (
-    <AnimatedPressable onPress={() => { if (disabled) return; tapHaptic(); onPress(); }} disabled={disabled} style={disabled && { opacity: 0.5 }} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }}>
+    // AnimatedPressable already fires the tap haptic on press-in; a second
+    // tapHaptic() here made every row buzz twice.
+    <AnimatedPressable onPress={() => { if (disabled) return; onPress(); }} disabled={disabled} style={disabled && { opacity: 0.5 }} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }}>
       {content}
     </AnimatedPressable>
   );
@@ -199,9 +200,7 @@ export function MoreScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#f0f9ff' }}>
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={{ alignItems: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 }}>
-          <BackButton color={STITCH_BLUE.textPrimary} />
-        </View>
+        <ScreenHeader title="תפריט" tint={STITCH_BLUE.textPrimary} />
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -249,7 +248,7 @@ export function MoreScreen() {
                 <MoreRow
                   isLast
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="רשת העושר, הזמן חברים"
+                  label="רשת העושר: מזמינים חברים"
                   onPress={() => router.push("/referral")}
                 />
               </View>
@@ -264,11 +263,10 @@ export function MoreScreen() {
                 <MoreRow
                   isFirst
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="פנו אלינו לתמיכה"
+                  label="פנייה לתמיכה"
                   onPress={() => {
                     // In-app support chat (SupportChatScreen) instead of
                     // bouncing to the mail composer / an email-address Alert.
-                    tapHaptic();
                     router.push("/support" as never);
                   }}
                 />
@@ -321,7 +319,7 @@ export function MoreScreen() {
                     icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-1432-erase-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                     label="איפוס התקדמות (dev)"
                     onPress={() => {
-                      Alert.alert("איפוס", "כל ההתקדמות תימחק. בטוח?", [
+                      Alert.alert("איפוס", "כל ההתקדמות תימחק. להמשיך?", [
                         { text: "ביטול", style: "cancel" },
                         {
                           text: "אפס",
@@ -337,7 +335,7 @@ export function MoreScreen() {
                   isFirst={!__DEV__}
                   isLast
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-3335-door-sign-hover-attempt.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="יציאה מהחשבון"
+                  label={SIGN_OUT_DIALOG.title}
                   onPress={handleSignOut}
                   danger
                 />

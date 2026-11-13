@@ -97,12 +97,14 @@ export function StreakAtRiskBanner() {
         <Pressable
           onPress={() => router.push("/(tabs)/" as never)}
           style={styles.inner}
+          accessibilityRole="button"
+          accessibilityLabel={`עוד לא למדתם היום. ${streak} ימים ברצף. מעבר ללמידה`}
         >
-          {/* Text on right (RTL) */}
+          {/* Text on right (RTL). In-app banner = system voice → plural (docs/BRAND.md). */}
           <View style={styles.textWrap}>
-            <Text style={styles.title}>עוד לא השלמת פרק לימוד היום</Text>
+            <Text style={styles.title}>עוד לא למדתם היום</Text>
             <Text style={styles.sub}>
-              {streak} ימים ברצף, בוא נשמור על הקצב!
+              {streak} ימים ברצף, בואו נשמור על הקצב!
             </Text>
           </View>
           {/* Finn on left */}
@@ -124,9 +126,9 @@ export function StreakAtRiskBanner() {
             }}
             style={styles.adFreezeBtn}
             accessibilityRole="button"
-            accessibilityLabel="צפה בפרסומת לקבל הקפאת סטריק"
+            accessibilityLabel="צפייה בפרסומת תמורת הקפאת רצף חינם"
           >
-            <Text style={styles.adFreezeBtnText}>🎬 צפה בפרסומת, הקפאה חינם</Text>
+            <Text style={styles.adFreezeBtnText}>🎬 צפו בפרסומת, הקפאת רצף חינם</Text>
           </Pressable>
         )}
       </Animated.View>

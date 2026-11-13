@@ -2,8 +2,9 @@ import { View, Text, Image, Pressable, Modal, StyleSheet, ScrollView } from 'rea
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X } from 'lucide-react-native';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
+import { formatNumber } from '../../utils/format';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 
 import type { Benefit } from './types';
@@ -31,7 +32,7 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
       <View style={styles.overlay}>
         {/* Soft backdrop above the sheet — taking only the remaining space so it
             never steals taps from the sheet below it. */}
-        <Pressable style={styles.backdropTouchable} onPress={onCancel}>
+        <Pressable style={styles.backdropTouchable} onPress={onCancel} accessibilityRole="button" accessibilityLabel="סגור">
           <Animated.View entering={FadeIn.duration(220)} style={styles.backdrop} />
         </Pressable>
 
@@ -47,9 +48,7 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
           <View style={styles.handleBar} />
 
           {/* Close button */}
-          <Pressable onPress={onCancel} style={styles.closeBtn} hitSlop={12}>
-            <X size={18} color="#64748b" />
-          </Pressable>
+          <SheetCloseButton onPress={onCancel} style={styles.closeBtn} />
 
           {/* Scrollable content — keeps CTA reachable on small viewports
               (iPhone SE / 8 / mini) where description + info row could
@@ -90,7 +89,7 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
                   ) : (
                     <>
                       <GoldCoinIcon size={16} />
-                      <Text style={styles.costValue}>{benefit.costCoins.toLocaleString()}</Text>
+                      <Text style={styles.costValue}>{formatNumber(benefit.costCoins)}</Text>
                     </>
                   )}
                 </View>
@@ -113,7 +112,7 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
             }
             accessibilityRole="button"
             accessibilityState={{ disabled: !canAfford && !isRedeemed }}
-            accessibilityLabel={isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
+            accessibilityLabel={isRedeemed ? 'מעבר לאתר השותף' : canAfford ? 'מימוש ההטבה' : 'אין מספיק מטבעות'}
           >
             {!canAfford && !isRedeemed ? (
               <Text style={styles.confirmBtnTextDisabled}>אין מספיק מטבעות</Text>
@@ -128,15 +127,15 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
                 />
                 <View style={styles.confirmBtnRim} pointerEvents="none" />
                 <Text style={styles.confirmBtnText}>
-                  {isRedeemed ? 'למעבר לאתר השותף' : 'המרה כעת'}
+                  {isRedeemed ? 'מעבר לאתר השותף' : 'מימוש ההטבה'}
                 </Text>
               </View>
             )}
           </Pressable>
 
           {/* Cancel */}
-          <Pressable onPress={onCancel} style={styles.cancelBtn} hitSlop={8}>
-            <Text style={styles.cancelBtnText}>חזרה</Text>
+          <Pressable onPress={onCancel} style={styles.cancelBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel="ביטול">
+            <Text style={styles.cancelBtnText}>ביטול</Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -179,14 +178,8 @@ const styles = StyleSheet.create({
 
   closeBtn: {
     position: 'absolute',
-    top: 12,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: 10,
+    right: 12,
     zIndex: 10,
   },
 
@@ -349,7 +342,9 @@ const styles = StyleSheet.create({
 
   cancelBtn: {
     alignSelf: 'center',
-    paddingVertical: 6,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   cancelBtnText: {
     fontSize: 13,

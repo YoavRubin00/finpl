@@ -166,7 +166,7 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
-      accessibilityHint={`עבור ללשונית ${label}`}
+      accessibilityHint={`מעבר ללשונית ${label}`}
       style={styles.tabItem}
     >
       {/* Ultra-Premium SVG Optical Glow (No hard circles) */}

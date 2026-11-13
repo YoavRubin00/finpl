@@ -36,7 +36,8 @@ import Animated, {
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Send, ArrowLeft } from "lucide-react-native";
+import { Send } from "lucide-react-native";
+import { BackButton } from "../../components/ui/BackButton";
 import { getApiBase } from "../../db/apiBase";
 import { useAuthStore } from "../auth/useAuthStore";
 import { FINN_STANDARD, FINN_TALKING } from "../retention-loops/finnMascotConfig";
@@ -48,9 +49,11 @@ interface ChatMsg {
   content: string;
 }
 
-const INITIAL_MSG = "שלום! אני קפטן שארק\nאיך החוויה שלך באפליקציה עד עכשיו? ספר/י לי על משהו שאהבת, משהו שמטריד, או כל הצעה לשיפור.";
-const THANK_YOU_MSG = "תודה! קיבלנו את ההודעה ונחזור אליך במייל אם צריך. אתה עוזר לנו לבנות אפליקציה טובה יותר 💙";
-const ERROR_MSG = "אופס, ההודעה לא נשלחה. בדוק את החיבור ונסה שוב.";
+// Captain Shark speaks one-to-one → singular with no gendered verb forms
+// (docs/BRAND.md). Was "ספר/י לי", "אתה עוזר לנו", "בדוק… ונסה".
+const INITIAL_MSG = "שלום! אני קפטן שארק\nאיך החוויה שלך באפליקציה עד עכשיו? אשמח לשמוע על משהו שאהבת, משהו שמטריד, או כל הצעה לשיפור.";
+const THANK_YOU_MSG = "תודה! קיבלנו את ההודעה ונחזור אליך במייל אם צריך. העזרה שלך בונה אפליקציה טובה יותר 💙";
+const ERROR_MSG = "ההודעה לא נשלחה. שווה לבדוק את החיבור ולנסות שוב.";
 
 const APP_VERSION = ((): string => {
   try {
@@ -154,7 +157,7 @@ export function SupportChatScreen() {
     } catch {
       setLoading(false);
       setMessages((prev) => [...prev, { role: "assistant", content: ERROR_MSG }]);
-      Alert.alert("שגיאה", "ההודעה לא נשלחה. נסה שוב או צור קשר באינסטגרם.");
+      Alert.alert("ההודעה לא נשלחה", "אפשר לנסות שוב, או לכתוב לנו באינסטגרם.");
     }
   }, [input, loading, sent, authId, email]);
 
@@ -171,15 +174,10 @@ export function SupportChatScreen() {
           entering={FadeIn.duration(200)}
           style={[st.header, { paddingTop: Math.max(safeInsets.top + 10, 44) }]}
         >
-          <Pressable
-            onPress={goBack}
-            style={st.closeBtn}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="חזור"
-          >
-            <ArrowLeft size={22} color="#0e7490" />
-          </Pressable>
+          {/* Shared BackButton: chevron pointing RIGHT = back for a Hebrew
+              reader. This was an ArrowLeft sitting on the right edge, i.e. an
+              arrow pointing "forward" on the back control. */}
+          <BackButton color="#0e7490" onPress={goBack} />
           <View style={st.avatarHeader}>
             <ExpoImage source={FINN_STANDARD} style={st.avatarHeaderImage} contentFit="contain" />
           </View>
@@ -235,7 +233,7 @@ export function SupportChatScreen() {
             style={st.textInput}
             value={input}
             onChangeText={setInput}
-            placeholder={sent ? "תודה! נחזור אליך." : "כתוב/י את ההודעה שלך..."}
+            placeholder={sent ? "תודה! נחזור אליך." : "ההודעה שלך..."}
             placeholderTextColor="#64748b"
             multiline
             maxLength={4000}
@@ -247,7 +245,7 @@ export function SupportChatScreen() {
             onPress={sendMessage}
             disabled={!canSend}
             accessibilityRole="button"
-            accessibilityLabel="שלח הודעה"
+            accessibilityLabel="שליחת ההודעה"
             accessibilityState={{ disabled: !canSend }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={[st.sendBtn, !canSend && st.sendBtnDisabled]}
