@@ -12,6 +12,7 @@ import {
   type SharkSkinId,
 } from './useCosmeticsStore';
 import { useStreak } from '../economy/useStreak';
+import { useOpenSlot, OPEN_PRIORITY } from '../../stores/useNudgeQueueStore';
 import { SharkSkinPickerModal } from './SharkSkinPickerModal';
 
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -44,6 +45,10 @@ export function SharkSkinsGate(): React.ReactElement {
     unlocked.includes('gold') &&
     unlocked.includes('fire');
 
+  // Both are greetings on app open: one interrupt per open (13.11).
+  const pickerGranted = useOpenSlot('skinsPicker', pickerEligible, OPEN_PRIORITY.skins);
+  const lostGranted = useOpenSlot('skinLost', !!pendingSkinLost, OPEN_PRIORITY.skins);
+
   const handlePick = (skin: SharkSkinId) => {
     selectSkin(skin);
   };
@@ -65,13 +70,13 @@ export function SharkSkinsGate(): React.ReactElement {
   return (
     <>
       <SharkSkinPickerModal
-        visible={pickerEligible}
+        visible={pickerGranted}
         unlocked={unlocked}
         current={selected}
         onSelect={handlePick}
         onDismiss={handleDismissPicker}
       />
-      {pendingSkinLost && (
+      {pendingSkinLost && lostGranted && (
         <SkinLostModal
           lostSkin={pendingSkinLost}
           onReequip={handleReequip}

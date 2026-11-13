@@ -22,4 +22,7 @@
  * 1.3.7+ binaries, never the old exposdk:55.0.0 ones (which already got their
  * final flag=false OTA).
  */
-export const LIVE_VOICE_AVAILABLE = true;
+// 2026-11-13: shelved in production (Yoav: "תגנוז לגמרי את השיחה לייב עם קפטן שארק מהפרודקשן").
+// Every entry point (module call card, chat call button, /shark-voice route, chest button, paywall row)
+// reads this flag. The native SDK still ships in the binary, so turning it back on is this one line + OTA.
+export const LIVE_VOICE_AVAILABLE = false;

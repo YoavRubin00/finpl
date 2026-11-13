@@ -578,7 +578,7 @@ export function TimelineOrderCard({
                     <Text style={styles.itemLabel}>{item.label}</Text>
                   </View>
                 ) : (
-                  <Text style={styles.itemLabel} numberOfLines={2}>
+                  <Text style={styles.itemLabel} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>
                     {item?.label ?? itemId}
                   </Text>
                 )}

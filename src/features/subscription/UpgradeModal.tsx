@@ -54,7 +54,8 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
   },
   "lesson-report": {
     title: "דוח סיכום שיעור, הגעתם למכסה השבועית",
-    body: `ב‑Free מקבלים ${BASIC_LIMITS["lesson-report"]} דוח סיכום שיעור בשבוע.\nב‑PRO מקבלים דוח הבנה איכותי אחרי כל שיעור — עם נקודות לשיפור ושיחה עם קפטן שארק על הדוח.`,
+    // The live call is shelved (13.11), so the report no longer promises "a call with the shark about it".
+    body: `ב‑Free מקבלים ${BASIC_LIMITS["lesson-report"]} דוח סיכום שיעור בשבוע.\nב‑PRO מקבלים דוח הבנה איכותי אחרי כל שיעור, עם נקודות לשיפור.`,
   },
 };
 

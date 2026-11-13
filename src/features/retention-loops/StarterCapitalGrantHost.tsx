@@ -114,7 +114,8 @@ export function StarterCapitalGrantHost(): React.ReactElement | null {
       // Global popup stage — the streak celebration (milestone) reserves it
       // when it fires, so this also sequences us behind the isHabitDay ritual.
       const nudges = useNudgeQueueStore.getState();
-      if (!nudges.canTakePopupSlot('earned')) { scheduleRetry(); return; }
+      // 'launch' = it shares the open's single greeting (13.11).
+      if (!nudges.canTakePopupSlot('launch')) { scheduleRetry(); return; }
       // Wager must STILL be settled at fire time (a resolution can appear
       // between effect eval and now).
       const wagerState = useSharkWagerStore.getState();
@@ -138,7 +139,7 @@ export function StarterCapitalGrantHost(): React.ReactElement | null {
           ? ('habit_day_2' as const)
           : ('second_active_day' as const);
       try { track({ name: 'starter_capital_granted', props: { day, source } }); } catch { /* non-fatal */ }
-      nudges.takePopupSlot('earned');
+      nudges.takePopupSlot('launch', 'starterCapital');
       setGrantDay(day);
       setVisible(true);
       successHaptic();

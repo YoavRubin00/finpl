@@ -67,17 +67,24 @@ export function ProPromoGrantedModal() {
     let slotTimer: ReturnType<typeof setTimeout> | undefined;
     const presenceTimer = setTimeout(() => {
       const seqDelay = Math.max(0, useNudgeQueueStore.getState().popupBusyUntil - Date.now());
-      slotTimer = setTimeout(() => {
+      const attempt = (waited: number) => {
         if (shownRef.current) return;
+        // One interrupt per open (13.11): if another popup greeted the user, wait a little, then
+        // leave it for the next open (it stays unseen until it actually shows).
+        if (!useNudgeQueueStore.getState().canTakePopupSlot('launch')) {
+          if (waited < 10000) slotTimer = setTimeout(() => attempt(waited + 1500), 1500);
+          return;
+        }
         shownRef.current = true;
-        useNudgeQueueStore.getState().takePopupSlot('earned');
+        useNudgeQueueStore.getState().takePopupSlot('launch', 'proPromoGranted');
         // Mark seen at SHOW time — "shown once" must survive a force-kill.
         markSeen(expiryKey);
         setVisible(true);
         captureEvent("pro_promo_granted_seen", {
           expires_at: subscription?.proExpiresAt ?? null,
         });
-      }, seqDelay);
+      };
+      slotTimer = setTimeout(() => attempt(0), seqDelay);
     }, PRESENCE_DELAY_MS);
 
     return () => {

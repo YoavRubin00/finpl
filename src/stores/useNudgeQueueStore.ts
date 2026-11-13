@@ -8,6 +8,7 @@
  *
  * Persisted via AsyncStorage so cooldowns survive app kills.
  */
+import { useEffect } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../lib/zustandStorage';
@@ -16,9 +17,38 @@ import { getIsraelDateISO } from '../utils/israelTime';
 
 export type NudgeType = 'bridge' | 'referral' | 'tools';
 
-/** 'auto' = uninvited popup (marketing / reminder / discovery) — budgeted.
- *  'earned' = a moment the user created (reward, chest, grant) — never budgeted. */
-export type PopupKind = 'auto' | 'earned';
+/** 'auto' = uninvited popup (marketing / reminder / discovery) — budgeted per open AND per day.
+ *  'launch' = a popup that greets the user on app open (streak, chest-ready, grants, permission
+ *            primer…). Not caused by a tap in this open, so it shares the ONE-per-open budget.
+ *  'earned' = a moment the user created right now (post-lesson chest, end-of-module gate) — only
+ *            the gap applies. */
+export type PopupKind = 'auto' | 'launch' | 'earned';
+
+/** ONE interrupt per app open (Yoav 13.11.26: "המשתמש צריך לקבל רק באנר אחד שהוא נכנס. לא אלף").
+ *  For the first OPEN_SETTLE_MS of an open, popups that want the stage register with a priority;
+ *  then the highest one gets it and everyone else stays quiet until the next open. After the
+ *  settle window the first claimer wins. Higher number = more important. */
+export const OPEN_PRIORITY = {
+  streakRepair: 100,
+  wagerResult: 95,
+  streak: 90,
+  comeback: 85,
+  tomorrowChest: 80,
+  freezeSave: 75,
+  starterCapital: 70,
+  notifPrimer: 65,
+  levelUp: 60,
+  proPromoGranted: 55,
+  day0Ritual: 50,
+  skins: 45,
+  upgradeNudge: 20,
+  aiInsight: 10,
+  toast: 5,
+} as const;
+const OPEN_SETTLE_MS = 1800; // ≈ the 1.5s intro splash, so the winner appears as it lifts
+/** Requests registered during the settle window (session-only, never persisted). */
+let openRequests: Record<string, number> = {};
+let settleTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface NudgeState {
   /** last 2 dismissal timestamps per CTA type (most recent first). Empty array if never dismissed. */
@@ -63,7 +93,20 @@ interface NudgeState {
   /** Reserve the stage for POPUP_GAP_MS and spend one popup of the session/day
    *  budget. Call the moment a popup becomes visible — earned moments spend it
    *  too, so nothing stacks on top of them. */
-  takePopupSlot: (kind?: PopupKind) => void;
+  takePopupSlot: (kind?: PopupKind, id?: string) => void;
+
+  // ── One interrupt per app open (13.11.26) ──
+  /** Who owns this open's single interrupt (null = nobody yet). Session-only. */
+  openOwner: string | null;
+  /** When the current open began (cold start, or foreground after a long background). */
+  openStartedAt: number;
+  /** Start a new open: fresh one-interrupt budget. */
+  startOpen: () => void;
+  /** Ask for this open's interrupt. Returns true if `id` owns it now. During the settle window it
+   *  registers the request and returns false; the store then grants the top priority. */
+  requestOpenSlot: (id: string, priority: number) => boolean;
+  /** Drop a pending request (the host no longer wants to show). */
+  releaseOpenRequest: (id: string) => void;
 
   /** Record dismissal and return whether this user is now "cooled-down" */
   recordDismiss: (type: NudgeType) => void;
@@ -136,19 +179,62 @@ export const useNudgeQueueStore = create<NudgeState>()(
       // stacking on top. All 3 streak show-sites call this right after setVisible.
       markStreakShown: () => {
         set({ streakShownThisSession: true });
-        // The streak celebration IS this session's popup moment (Yoav 18.9) —
-        // it reserves the gap and spends the budget, so no promo follows it.
-        get().takePopupSlot('earned');
+        // The streak celebration IS this open's popup moment — it owns the stage, so nothing follows it.
+        get().takePopupSlot('launch', 'streak');
       },
       canTakePopupSlot: (kind: PopupKind = 'auto') => {
         const s = get();
         if (Date.now() < s.popupBusyUntil) return false;
         // Earned moments are never blocked — the user created them.
         if (kind === 'earned') return true;
+        // One interrupt per open: someone already greeted the user, or the settle window is still
+        // collecting requests (timer-based hosts retry and get their turn on a later open).
+        if (s.openOwner) return false;
+        if (Date.now() - s.openStartedAt < OPEN_SETTLE_MS) return false;
+        if (Object.keys(openRequests).length > 0) return false;
+        if (kind === 'launch') return true;
         if ((s.autoPopupsThisSession ?? 0) >= MAX_AUTO_POPUPS_PER_SESSION) return false;
         const today = getIsraelDateISO();
         const usedToday = s.lastAutoPopupDateKey === today ? (s.autoPopupsToday ?? 0) : 0;
         return usedToday < MAX_AUTO_POPUPS_PER_DAY;
+      },
+
+      openOwner: null,
+      openStartedAt: Date.now(),
+      startOpen: () => {
+        openRequests = {};
+        if (settleTimer) { clearTimeout(settleTimer); settleTimer = null; }
+        set({
+          openOwner: null,
+          openStartedAt: Date.now(),
+          popupBusyUntil: 0,
+          autoPopupsThisSession: 0,
+          streakShownThisSession: false,
+        });
+      },
+      requestOpenSlot: (id, priority) => {
+        const s = get();
+        if (s.openOwner) return s.openOwner === id;
+        const sinceOpen = Date.now() - s.openStartedAt;
+        if (sinceOpen < OPEN_SETTLE_MS) {
+          openRequests[id] = priority;
+          if (!settleTimer) {
+            settleTimer = setTimeout(() => {
+              settleTimer = null;
+              const entries = Object.entries(openRequests);
+              openRequests = {};
+              if (entries.length === 0 || get().openOwner) return;
+              entries.sort((a, b) => b[1] - a[1]);
+              set({ openOwner: entries[0][0], popupBusyUntil: Date.now() + POPUP_GAP_MS });
+            }, OPEN_SETTLE_MS - sinceOpen + 20);
+          }
+          return false;
+        }
+        set({ openOwner: id, popupBusyUntil: Date.now() + POPUP_GAP_MS });
+        return true;
+      },
+      releaseOpenRequest: (id) => {
+        delete openRequests[id];
       },
 
       // Every interrupt reserves the GAP, but only an UNINVITED ('auto') popup
@@ -163,13 +249,17 @@ export const useNudgeQueueStore = create<NudgeState>()(
       // out the uninvited popups, not to let the reward loop silence the
       // product. So: ceremonies hold the stage for POPUP_GAP_MS (nothing lands
       // ON them), and the budget applies to what the user never asked for.
-      takePopupSlot: (kind: PopupKind = 'auto') => {
+      takePopupSlot: (kind: PopupKind = 'auto', id?: string) => {
         set((s) => {
           if (kind === 'earned') return { popupBusyUntil: Date.now() + POPUP_GAP_MS };
+          // Launch and auto popups own this open's single interrupt.
+          const owner = s.openOwner ?? id ?? kind;
+          if (kind === 'launch') return { popupBusyUntil: Date.now() + POPUP_GAP_MS, openOwner: owner };
           const today = getIsraelDateISO();
           const usedToday = s.lastAutoPopupDateKey === today ? (s.autoPopupsToday ?? 0) : 0;
           return {
             popupBusyUntil: Date.now() + POPUP_GAP_MS,
+            openOwner: owner,
             autoPopupsThisSession: (s.autoPopupsThisSession ?? 0) + 1,
             lastAutoPopupDateKey: today,
             autoPopupsToday: usedToday + 1,
@@ -221,10 +311,9 @@ export const useNudgeQueueStore = create<NudgeState>()(
           sessionShown: emptyMap<boolean>(false),
           sessionStartedAt: Date.now(),
           inLesson: false,
-          streakShownThisSession: false,
-          popupBusyUntil: 0,
-          autoPopupsThisSession: 0,
         });
+        // The open itself starts when the popup hosts mount (OpenStarter in app/_layout.tsx), not
+        // here: this runs during boot, and a slow boot would eat the settle window.
       },
 
       lastBridgeNudgeDateISO: null,
@@ -273,3 +362,23 @@ export const useNudgeQueueStore = create<NudgeState>()(
 );
 
 registerLocalStore('nudge-queue-store', useNudgeQueueStore, 'nudge-queue-store');
+
+/**
+ * Gate a greeting popup/banner behind the one-interrupt-per-open rule.
+ * `wants` = the host's own "I'd like to show" condition. Returns true only while this host owns the
+ * open's single interrupt. A host that loses simply stays quiet; persisted pending states (comeback,
+ * repair offer…) come back on a later open. Once the owner closes, nobody else greets this open.
+ */
+export function useOpenSlot(id: string, wants: boolean, priority: number): boolean {
+  const owner = useNudgeQueueStore((s) => s.openOwner);
+  const openStartedAt = useNudgeQueueStore((s) => s.openStartedAt);
+  useEffect(() => {
+    const store = useNudgeQueueStore.getState();
+    if (!wants) {
+      store.releaseOpenRequest(id);
+      return;
+    }
+    store.requestOpenSlot(id, priority);
+  }, [id, wants, priority, openStartedAt]);
+  return wants && owner === id;
+}

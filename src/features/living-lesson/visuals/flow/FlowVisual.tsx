@@ -402,7 +402,8 @@ function Node({
         <Text
           style={[styles.label, { fontSize: layout.labelFont, lineHeight: layout.labelLH, textAlign: at.textAlign }]}
           numberOfLines={2}
-          ellipsizeMode="tail"
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
           allowFontScaling={false}
         >
           {at.label}
@@ -496,7 +497,7 @@ function FlowAmountText({
   }
 
   return (
-    <Text style={[styles.amount, { color, fontSize, lineHeight, height: lineHeight, textAlign }]} numberOfLines={1} allowFontScaling={false}>
+    <Text style={[styles.amount, { color, fontSize, lineHeight, height: lineHeight, textAlign }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} allowFontScaling={false}>
       {text}
     </Text>
   );

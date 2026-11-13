@@ -11,7 +11,7 @@ import { queryClient } from "../lib/queryClient";
 import { streakQueryKey } from "../features/economy/useStreak";
 import type { StreakState } from "../lib/api/streak";
 import { StreakCelebrationScreen } from "../features/streak/StreakCelebrationScreen";
-import { useNudgeQueueStore } from "../stores/useNudgeQueueStore";
+import { useNudgeQueueStore, useOpenSlot, OPEN_PRIORITY } from "../stores/useNudgeQueueStore";
 import { useTutorialStore } from "../stores/useTutorialStore";
 import { israelDayKey } from "../utils/dateUtils";
 import { reportPostLessonModal } from "../features/retention-loops/postLessonSequence";
@@ -37,7 +37,14 @@ export function StreakCelebrationProvider({
   children: React.ReactNode;
 }) {
   const [visible, setVisible] = useState(false);
+  // A streak popup that greets the user on app open (new-day login, the daily entry nudge) competes
+  // for the open's single interrupt; one that follows a lesson the user just finished does not (13.11).
+  const [launchPending, setLaunchPending] = useState(false);
+  const launchGranted = useOpenSlot('streak', launchPending, OPEN_PRIORITY.streak);
   const [celebrationStreak, setCelebrationStreak] = useState(0);
+  useEffect(() => {
+    if (launchGranted) useNudgeQueueStore.getState().markStreakShown();
+  }, [launchGranted]);
 
   const showStreakCelebration = useCallback(() => {
     const streakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
@@ -77,7 +84,12 @@ export function StreakCelebrationProvider({
         const cached =
           queryClient.getQueryData<StreakState | null>(streakQueryKey)?.currentStreak ?? 0;
         setCelebrationStreak(Math.max(current, cached));
+        const q = useNudgeQueueStore.getState();
+        // Earned = the user is in / just left a lesson, or the open is well under way. Otherwise this
+        // is the new-day login credit landing on app open → it is a greeting.
+        const earned = q.inLesson || Date.now() - q.openStartedAt > 20_000;
         setTimeout(() => {
+          if (!earned) { setLaunchPending(true); return; }
           setVisible(true);
           useNudgeQueueStore.getState().markStreakShown();
           // Counted only when it lands right after a lesson chest (no-op otherwise).
@@ -91,6 +103,7 @@ export function StreakCelebrationProvider({
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
+    setLaunchPending(false);
   }, []);
 
   // Daily entry nudge — pops the streak popup ~5s after the app launches IF:
@@ -133,8 +146,8 @@ export function StreakCelebrationProvider({
           const freshStreakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
           const freshStreak = freshStreakState?.currentStreak ?? 0;
           setCelebrationStreak(freshStreak);
-          setVisible(true);
-          useNudgeQueueStore.getState().markStreakShown();
+          // A greeting: it shows only if nothing else already greeted this open.
+          setLaunchPending(true);
         })();
       }, DAILY_STREAK_NUDGE_DELAY_MS);
     })();
@@ -148,7 +161,7 @@ export function StreakCelebrationProvider({
   return (
     <StreakCelebrationContext.Provider value={{ showStreakCelebration }}>
       {children}
-      {visible && (
+      {(visible || launchGranted) && (
         <StreakCelebrationScreen
           streak={celebrationStreak}
           onDismiss={handleDismiss}

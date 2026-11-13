@@ -712,7 +712,7 @@ function ModuleNode({
   // Positioned BELOW the module-title pill (same mirror side) — logos only.
   // Physical order inside the row: [🛋️ טרקלין][📅 יומן] — the lounge sits
   // LEFT of the journal (Yoav's explicit placement).
-  const chipCount = 1 + (onLoungePress ? 1 : 0) + (onProPress ? 1 : 0);
+  const chipCount = (onJournalPress ? 1 : 0) + (onLoungePress ? 1 : 0) + (onProPress ? 1 : 0);
   const CHIP_ROW_W = chipCount > 1 ? 42 * chipCount + 8 * (chipCount - 1) : 44;
   const journalLeft = finnGoesRight
     ? Math.max(nodeCenter - NODE_SIZE / 2 - CHIP_ROW_W - 10, 0)
@@ -753,7 +753,7 @@ function ModuleNode({
           </Animated.View>
           {/* Journal + Lounge — logo-only chips, mirror side of the shark,
               BELOW the module-title pill so they never cover text */}
-          {onJournalPress && (
+          {chipCount > 0 && (
             <Animated.View
               entering={FadeInDown.delay(160).duration(400)}
               style={{ position: 'absolute', top: 70, zIndex: 20, left: journalLeft, width: CHIP_ROW_W, flexDirection: 'row', gap: 8 }}
@@ -826,6 +826,7 @@ function ModuleNode({
                   )}
                 </Pressable>
               )}
+              {onJournalPress && (
               <Pressable
                 onPress={onJournalPress}
                 accessibilityRole="button"
@@ -873,6 +874,7 @@ function ModuleNode({
                   />
                 )}
               </Pressable>
+              )}
             </Animated.View>
           )}
           {/* Speech bubble above + offset to the right of Finn so it doesn't
@@ -2088,6 +2090,9 @@ export function DuoLearnScreen() {
   const [roadmapVisible, setRoadmapVisible] = useState(false);
 
   // ── Investors Journal (יומן משקיעים) — entry chip beside the active node ──
+  // Off the learning map (Yoav 13.11: "תוריד את היומן משקיעים מהמסך למידה הראשי"). The sheet and store stay,
+  // so turning this back on is one flag.
+  const SHOW_JOURNAL_ON_MAP = false;
   const [journalVisible, setJournalVisible] = useState(false);
   const journalMonth = currentJournalMonth();
   const journalEventsByMonth = useInvestorsJournalStore((s) => s.eventsByMonth);
@@ -3429,8 +3434,8 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
-                onJournalPress={hasActiveModule ? handleJournalPress : undefined}
-                journalBadge={hasActiveModule ? journalBadge : undefined}
+                onJournalPress={SHOW_JOURNAL_ON_MAP && hasActiveModule ? handleJournalPress : undefined}
+                journalBadge={SHOW_JOURNAL_ON_MAP && hasActiveModule ? journalBadge : undefined}
                 onLoungePress={hasActiveModule ? handleStreakClubPress : undefined}
                 onProPress={hasActiveModule && !isPro ? handleProChipPress : undefined}
                 loungeBadge={hasActiveModule ? clubHasUnseen : undefined}

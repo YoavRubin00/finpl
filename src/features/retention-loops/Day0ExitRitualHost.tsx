@@ -20,7 +20,7 @@ import { useBanditStore } from '../bandit/useBanditStore';
 import { getVariantPayload } from '../bandit/banditConfig';
 import { setPersonProperties } from '../../lib/posthog';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
-import { useNudgeQueueStore as useNudgeQueue } from '../../stores/useNudgeQueueStore';
+import { useNudgeQueueStore as useNudgeQueue, useOpenSlot, OPEN_PRIORITY } from '../../stores/useNudgeQueueStore';
 import { reportPostLessonModal } from './postLessonSequence';
 
 /** Amount + the app's gold-coin glyph (the one in the top wallet) inline. */
@@ -73,6 +73,7 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
   // screen - and the chest's primary button now starts lesson 2 directly, so
   // without this the wager would open on top of the next lesson's intro.
   const inLesson = useNudgeQueue((s) => s.inLesson);
+  const resolutionGranted = useOpenSlot('wagerResult', !!lastResolution && !inLesson, OPEN_PRIORITY.wagerResult);
 
   const permissionGranted = useNotificationStore((s) => s.permissionGranted);
   const preferredReminderHour = useNotificationStore((s) => s.preferredReminderHour);
@@ -123,15 +124,19 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
       // then the ritual closes the session. Never two modals stacked.
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { useNudgeQueueStore } = require('../../stores/useNudgeQueueStore') as typeof import('../../stores/useNudgeQueueStore');
-      if (!useNudgeQueueStore.getState().canTakePopupSlot('earned')) {
+      // מוני: balance < stake → the offer is never shown (and never
+      // discounted). Checked at fire time, against the server-truth cache —
+      // and BEFORE taking the stage, so a user who can't afford it doesn't
+      // burn the open's single popup on nothing.
+      const coins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
+      if (coins < WAGER_STAKE) return;
+      // One interrupt per open (13.11): if something already greeted the user,
+      // wait (≤18s), and otherwise try again on the next open.
+      if (!useNudgeQueueStore.getState().canTakePopupSlot('launch')) {
         if (waited < 18000) retry = setTimeout(() => attempt(waited + 3000), 3000);
         return;
       }
-      useNudgeQueueStore.getState().takePopupSlot('earned');
-      // מוני: balance < stake → the offer is never shown (and never
-      // discounted). Checked at fire time, against the server-truth cache.
-      const coins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
-      if (coins < WAGER_STAKE) return;
+      useNudgeQueueStore.getState().takePopupSlot('launch', 'day0Ritual');
       firedRef.current = true;
       // day0_wager A/B (Yoav 2026-07-03): among eligible mod-0-1-chest completers,
       // ~50% are SHOWN the wager (treatment) and ~50% held out (control), so its
@@ -188,7 +193,9 @@ export function Day0ExitRitualHost(): React.ReactElement | null {
   const overnightMatch = Math.min(200, Math.floor((coinsEarnedByDay[getIsraelDateISO()] ?? 0) * 0.5));
 
   // ── Resolution modal (won / lost) — shown once, then cleared. ──
-  if (lastResolution) {
+  // It greets the user on open, so it waits for the open's single slot (13.11); the
+  // result is persisted, so a lost slot just means it shows on the next open.
+  if (lastResolution && resolutionGranted) {
     const won = lastResolution.outcome === 'won';
     return (
       <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={dismissResolution}>

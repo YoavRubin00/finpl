@@ -34,6 +34,7 @@ import { useIsPro, useSyncFromRevenueCat } from "./useSubscription";
 import { useUsageStore } from "./useUsageStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { ParentalConsentGate } from "../legal/ParentalConsentGate";
+import { LIVE_VOICE_AVAILABLE } from "../shark-voice-chat/liveVoiceConfig";
 import { ParentalEmailModal } from "../legal/ParentalEmailModal";
 import { selectHasActiveParentalConsent, useParentalConsentStore } from "../legal/useParentalConsent";
 import { getOffering, getOfferingFailureReason, loginRevenueCat, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases, isPurchaseCancelledError, purchaseErrorCode } from "../../services/revenueCat";
@@ -141,7 +142,8 @@ const FEATURES: FeatureRow[] = [
   { label: "ללא פרסומות", free: false, pro: true },
   { label: "צ'אט AI עם שארק", free: "2 הודעות ביום", pro: "ללא הגבלה" },
   { label: "כלים פיננסיים מתקדמים", free: "גישה מוגבלת", pro: "גישה מלאה" },
-  { label: "סיכום שיעור לייב", free: "1 חינם", pro: "כל המודולות" },
+  // Never sell what isn't live: the row shows only while the live call is on.
+  ...(LIVE_VOICE_AVAILABLE ? [{ label: "סיכום שיעור לייב", free: "1 חינם", pro: "כל המודולות" }] : []),
   { label: "שיעורים בלעדיים", free: false, pro: true },
   { label: "בוסט XP", free: "x1", pro: "x1.5" },
 ];
@@ -150,20 +152,22 @@ const FEATURES: FeatureRow[] = [
  *  carries BOTH packages — today it has one ($rc_monthly), so the picker is
  *  dormant until an annual product is added in the stores + RevenueCat. */
 const planStyles = StyleSheet.create({
-  row: { flexDirection: "row-reverse", gap: 10, marginBottom: 12, marginTop: 8 },
-  pill: { flex: 1, minHeight: 92, borderRadius: 16, borderWidth: 2, borderColor: "#e2e8f0", paddingTop: 16, paddingBottom: 10, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
+  // Full width of the CTA section (the section centres its children, so the row must stretch itself),
+  // with room above for the "הכי משתלם" badge so it never rides over the feature table.
+  row: { alignSelf: "stretch", flexDirection: "row-reverse", gap: 12, marginHorizontal: 20, marginTop: 22, marginBottom: 16 },
+  pill: { flex: 1, minHeight: 112, borderRadius: 18, borderWidth: 2, borderColor: "#e2e8f0", paddingTop: 22, paddingBottom: 14, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
   pillActive: { borderColor: "#0ea5e9", backgroundColor: "#f0f9ff", shadowColor: "#0ea5e9", shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
-  radio: { position: "absolute", top: 8, right: 8, width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#cbd5e1", alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
+  radio: { position: "absolute", top: 10, right: 10, width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#cbd5e1", alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
   radioActive: { borderColor: "#0ea5e9", backgroundColor: "#0ea5e9" },
-  pillTitle: { fontSize: 15, fontWeight: "900", color: "#0f172a", writingDirection: "rtl" },
-  pillPrice: { fontSize: 13, fontWeight: "800", color: "#334155", marginTop: 2, writingDirection: "rtl" },
-  pillSub: { fontSize: 11.5, fontWeight: "700", color: "#0369a1", marginTop: 2, writingDirection: "rtl" },
+  pillTitle: { fontSize: 16, fontWeight: "900", color: "#0f172a", writingDirection: "rtl" },
+  // The billed amount is the most prominent price in the card (Apple 3.1.2(a)).
+  pillPrice: { fontSize: 17, fontWeight: "900", color: "#0f172a", marginTop: 8, writingDirection: "rtl" },
   // The discount, shown as a sign rather than words: the full price crossed out next to a red "-69%" tag.
-  dealRow: { flexDirection: "row-reverse", alignItems: "center", gap: 6, marginTop: 3 },
-  wasPrice: { fontSize: 11.5, fontWeight: "700", color: "#94a3b8", textDecorationLine: "line-through", writingDirection: "rtl" },
-  offTag: { backgroundColor: "#ef4444", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, transform: [{ rotate: "-4deg" }] },
+  dealRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8, marginTop: 8 },
+  wasPrice: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textDecorationLine: "line-through", writingDirection: "rtl" },
+  offTag: { backgroundColor: "#ef4444", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, transform: [{ rotate: "-4deg" }] },
   offTagText: { fontSize: 11, fontWeight: "900", color: "#ffffff" },
-  badge: { position: "absolute", top: -11, alignSelf: "center", backgroundColor: "#f59e0b", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  badge: { position: "absolute", top: -12, alignSelf: "center", backgroundColor: "#f59e0b", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 3 },
   badgeText: { fontSize: 11, fontWeight: "900", color: "#ffffff" },
 });
 
@@ -844,7 +848,6 @@ export function PricingScreen() {
                       const pct = best ? savingPct(monthlyPkg, planPackages.annual!) : 0;
                       // Twelve monthly payments, crossed out next to the annual price.
                       const wasPrice = pct > 0 ? formatStorePrice(monthlyPkg.product.price * 12, monthlyPkg.product.currencyCode) : '';
-                      const perMonth = best ? pkg.product.pricePerMonthString : null;
                       return (
                         <Pressable
                           key={pkg.identifier}
@@ -870,9 +873,6 @@ export function PricingScreen() {
                           <Text style={planStyles.pillPrice} allowFontScaling={false}>
                             {best ? `${pkg.product.priceString} לשנה` : `${pkg.product.priceString} לחודש`}
                           </Text>
-                          {perMonth ? (
-                            <Text style={planStyles.pillSub} allowFontScaling={false}>{`רק ${perMonth} לחודש`}</Text>
-                          ) : null}
                         </Pressable>
                       );
                     })}
@@ -968,7 +968,10 @@ export function PricingScreen() {
                 {/* Localized price + period (Apple 3.1.2(a)). Trial framing
                     pushes the "after the trial" disclosure into the same
                     line so the user sees the recurring charge clearly. */}
-                {priceString ? (
+                {/* With the plan picker on screen the selected card already shows the billed price and period,
+                    so the big repeat under the button only adds text (Yoav 13.11). The trial line stays: it
+                    carries the "after the trial" charge. */}
+                {priceString && (hasTrial || !(planPackages.monthly && planPackages.annual && !isGuest && offerState === 'ready')) ? (
                   <Text style={[styles.priceMain, { color: theme.text }]}>
                     {hasTrial
                       ? `חינם ${trialDays} ימים · אחר כך ${priceString} ${periodLabel}`
@@ -1334,6 +1337,9 @@ const styles = StyleSheet.create({
     marginTop: "auto",
     alignItems: "center",
     paddingBottom: 16,
+    // A clear edge between the scrolling feature table and the pinned plans + CTA.
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#e2e8f0",
   },
   ctaText: {
     fontSize: 18,

@@ -136,11 +136,13 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
       // 'earned' priority (Yoav 18.9 budget): the primer is the retention
       // keystone and a one-shot, so the budget never SKIPS it — it only waits
       // out the gap. It does spend the session's slot, so nothing follows it.
-      if (!useNudgeQueueStore.getState().canTakePopupSlot('earned') && waited < 12000) {
-        t = setTimeout(() => tryShow(waited + 2000), 2000);
+      // One interrupt per open (13.11): it no longer forces its way on top after 12s. If another
+      // popup greeted the user, it waits a little and otherwise asks on a later open.
+      if (!useNudgeQueueStore.getState().canTakePopupSlot('launch')) {
+        if (waited < 12000) t = setTimeout(() => tryShow(waited + 2000), 2000);
         return;
       }
-      useNudgeQueueStore.getState().takePopupSlot('earned');
+      useNudgeQueueStore.getState().takePopupSlot('launch', 'notifPrimer');
       // Burn the one-shot + suppress the thin banner ONLY now, at actual
       // display. Marking at effect-start was the self-cancel bug that kept the
       // permission ask 100% dark since 2.7 (0 primer views, 1 permission

@@ -1386,8 +1386,8 @@ function QuizCard({
           elevation: 5,
         }}>
             <View style={{ flexDirection: "row-reverse", alignItems: "flex-start", gap: 8 }}>
+              {/* Full question, never "…": the card scrolls (Yoav 13.11). */}
               <Text
-                numberOfLines={5}
                 style={[RTL_STYLE, { fontSize: 15, fontWeight: "700", color: "#1f2937", lineHeight: 22, marginBottom: 6, flex: 1 }]}
               >
                 {renderBoldText(quiz.question, onTermPress)}
@@ -1496,7 +1496,6 @@ function QuizCard({
                     accessibilityState={{ selected: isRevealed && idx === answerState?.selectedIndex, disabled: isRevealed || isWrong }}
                   >
                     <Text
-                      numberOfLines={4}
                       style={[RTL_STYLE, { fontSize: 13, lineHeight: 18, color: isWrong && !isRevealed ? "#64748b" : "#1f2937" }]}
                     >
                       {renderBoldText(option, onTermPress)}
@@ -1736,7 +1735,7 @@ function SummaryScreen({
                 <Text style={{ color: "#38bdf8", fontSize: 11, fontWeight: "800", letterSpacing: 0.8, marginBottom: 4 }}>
                   {wisdomItem.type === "quote" ? wisdomItem.authorRole : wisdomItem.type === "psych" ? wisdomItem.category.replace(/-/g, " ") : "טיפ"}
                 </Text>
-                <Text style={{ ...RTL_STYLE, color: "#e0f2fe", fontSize: 14, fontWeight: "500", lineHeight: 20 }} numberOfLines={3}>
+                <Text style={{ ...RTL_STYLE, color: "#e0f2fe", fontSize: 14, fontWeight: "500", lineHeight: 20 }}>
                   {wisdomItem.text}
                 </Text>
               </View>
@@ -1788,7 +1787,7 @@ function SummaryScreen({
                       <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 }} numberOfLines={1}>
                         השיעור הבא
                       </Text>
-                      <Text style={{ color: "#ffffff", fontSize: 17, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" }} numberOfLines={1}>
+                      <Text style={{ color: "#ffffff", fontSize: 17, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" }} numberOfLines={2}>
                         {nextModule.title}
                       </Text>
                     </>
@@ -5269,6 +5268,8 @@ export function LessonFlowScreen() {
             <Text
               style={{ fontSize: 14, fontWeight: "800", color: "#0f172a", writingDirection: "rtl", flexShrink: 1 }}
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
             >
               {mod.title}
             </Text>
@@ -5379,7 +5380,6 @@ export function LessonFlowScreen() {
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'flex-start' }}>
                   <Text
                     style={[RTL_STYLE, { color: '#1f2937', fontSize: 18, fontWeight: '900' }]}
-                    numberOfLines={2}
                     accessibilityRole="header"
                   >
                     {titleNodes ?? titleText}

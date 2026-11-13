@@ -73,7 +73,7 @@ function MilestoneNode({
   return (
     <View style={styles.node}>
       <Animated.View style={nodeStyle}>
-        <Text style={styles.label} numberOfLines={1}>
+        <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
           {label}
         </Text>
       </Animated.View>
@@ -82,7 +82,7 @@ function MilestoneNode({
       </View>
       {sublabel ? (
         <Animated.View style={nodeStyle}>
-          <Text style={styles.sublabel} numberOfLines={1}>
+          <Text style={styles.sublabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
             {sublabel}
           </Text>
         </Animated.View>

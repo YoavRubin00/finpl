@@ -646,35 +646,17 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     prevStepRef.current = diveStep;
   }, [diveStep, zoomRegions, zoomScale, zoomX, zoomY]);
 
+  // The infographic stays still (Yoav 13.11: "יש רעידה של רכיבים בפנים, זה מעצבן"). It used to "breathe"
+  // (scale 1.012 + a 2px drift, forever) and the hint shimmered every 0.9s; on a card full of text that
+  // reads as shaking. Motion now comes only from the dive zoom, which the learner triggers.
   useEffect(() => {
-    if (reducedMotion) {
-      breathScale.value = 1;
-      breathDriftY.value = 0;
-      return;
-    }
-    breathScale.value = withRepeat(
-      withTiming(1.012, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-    breathDriftY.value = withRepeat(
-      withTiming(2, { duration: 4800, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-  }, [breathScale, breathDriftY, reducedMotion]);
+    breathScale.value = 1;
+    breathDriftY.value = 0;
+  }, [breathScale, breathDriftY]);
 
   useEffect(() => {
-    if (reducedMotion) {
-      shimmer.value = 0.85;
-      return;
-    }
-    shimmer.value = withRepeat(
-      withTiming(0.85, { duration: 900, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-  }, [shimmer, reducedMotion]);
+    shimmer.value = 0.85;
+  }, [shimmer]);
 
   const shimmerStyle = useAnimatedStyle(() => ({ opacity: shimmer.value }));
 

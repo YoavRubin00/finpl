@@ -108,7 +108,7 @@ function LegendRow({
   return (
     <Animated.View style={[styles.legendRow, style]}>
       <View style={[styles.swatch, { backgroundColor: color }]} />
-      <Text style={styles.legendLabel} numberOfLines={1}>
+      <Text style={styles.legendLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
         {label}
       </Text>
       <Text style={styles.legendPct}>{pctDisplay}%</Text>

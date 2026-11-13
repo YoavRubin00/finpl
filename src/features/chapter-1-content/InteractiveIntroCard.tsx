@@ -11,6 +11,7 @@ import Animated, {
   withSequence,
   withTiming,
   cancelAnimation,
+  Easing,
 } from "react-native-reanimated";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useEntranceAnimation, fadeInScale, fadeInUp, SPRING_BOUNCY } from "../../utils/animations";
@@ -89,10 +90,11 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
   const floatY = useSharedValue(0);
 
   useEffect(() => {
+    // A gentle float (±3px, slow). The old ±8px swing every 1.5s read as shaking (Yoav 13.11).
     floatY.value = withRepeat(
       withSequence(
-        withTiming(-8, { duration: 1500 }),
-        withTiming(8, { duration: 1500 }),
+        withTiming(-3, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(3, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
       true,

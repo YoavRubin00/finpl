@@ -21,6 +21,7 @@ import {
   FINN_DANCING,
 } from './finnMascotConfig';
 import { getActiveSeasonalEvent } from '../seasonal-events/seasonalEvents';
+import { useOpenSlot, OPEN_PRIORITY } from '../../stores/useNudgeQueueStore';
 
 export function RetentionToasts() {
   // ── Source 1: Session-stacking bonus from useEconomyStore ──
@@ -62,6 +63,15 @@ export function RetentionToasts() {
     }
     prevHeartsFullRef.current = heartsFull;
   }, [heartsFull]);
+
+  // These toasts greet the user too, so they share the open's single interrupt (13.11): if a
+  // popup already greeted this open, the toast stays quiet.
+  const wantsToast =
+    !!pendingSessionBonus ||
+    !!(activeEvent && !activeEvent.silent && !seasonalDismissed) ||
+    (heartsFull && !heartsDismissedThisFill);
+  const toastGranted = useOpenSlot('toast', wantsToast, OPEN_PRIORITY.toast);
+  if (!toastGranted) return null;
 
   // ── Decide which toast to show — priority: session-bonus > seasonal > hearts-full ──
   if (pendingSessionBonus) {

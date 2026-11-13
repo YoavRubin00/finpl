@@ -101,13 +101,16 @@ export function FreezeRefundModalGate() {
     }
     let timer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
+    // 'launch' = it shares the open's single greeting (13.11). Gives up after ~20s instead of
+    // polling forever; the pending refund stays and is acknowledged on a later launch.
+    let tries = 0;
     const tryShow = () => {
       if (cancelled) return;
       const queue = useNudgeQueueStore.getState();
-      if (queue.canTakePopupSlot('earned')) {
-        queue.takePopupSlot('earned');
+      if (queue.canTakePopupSlot('launch')) {
+        queue.takePopupSlot('launch', 'freezeRefund');
         setVisible(true);
-      } else {
+      } else if (++tries < 8) {
         timer = setTimeout(tryShow, 2500);
       }
     };

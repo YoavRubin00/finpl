@@ -97,7 +97,7 @@ function BarRow({
   return (
     <View style={styles.row}>
       <View style={styles.labelChip}>
-        <Text style={styles.labelText} numberOfLines={1}>
+        <Text style={styles.labelText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
           {label}
         </Text>
       </View>
@@ -111,7 +111,7 @@ function BarRow({
             onLayout={(e: LayoutChangeEvent) => setLabelWidth(e.nativeEvent.layout.width)}
             style={[styles.tipLabelWrap, tipLabelStyle]}
           >
-            <Text style={styles.tipLabelText} numberOfLines={1}>
+            <Text style={styles.tipLabelText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
               {valueLabel}
             </Text>
           </Animated.View>

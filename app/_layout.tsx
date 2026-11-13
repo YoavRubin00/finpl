@@ -146,6 +146,7 @@ import {
   COMEBACK_COINS,
 } from "../src/features/retention-loops/ComebackRewardModal";
 import { useComebackRewardStore } from "../src/features/retention-loops/useComebackRewardStore";
+import { useNudgeQueueStore, useOpenSlot, OPEN_PRIORITY } from "../src/stores/useNudgeQueueStore";
 import { SharkSkinsGate } from "../src/features/retention-loops/SharkSkinsGate";
 import { useStreakSkinWatcher } from "../src/features/retention-loops/useStreakSkinWatcher";
 import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
@@ -205,16 +206,27 @@ const origInputRender = (TextInput as unknown as { render: Function }).render;
   }
 };
 
+/** Starts the app-open's one-interrupt budget the moment the popup hosts mount (after boot), so the
+ *  priority settle window runs alongside the intro splash. Must be the first host in the tree. */
+function OpenStarter() {
+  useEffect(() => {
+    try { useNudgeQueueStore.getState().startOpen(); } catch { /* non-fatal */ }
+  }, []);
+  return null;
+}
+
 function FreezeSaveModalGate() {
   const pending = useEconomyUIStore((s) => s.pendingFreezeSaveAck);
   const dismiss = useEconomyUIStore((s) => s.dismissFreezeSaveAck);
-  return <StreakFreezeSaveModal visible={pending} onDismiss={dismiss} />;
+  const granted = useOpenSlot('freezeSave', pending, OPEN_PRIORITY.freezeSave);
+  return <StreakFreezeSaveModal visible={granted} onDismiss={dismiss} />;
 }
 
 function StreakRepairModalGate() {
   const pending = useEconomyUIStore((s) => s.pendingRepairOffer);
   const dismiss = useEconomyUIStore((s) => s.dismissRepairOffer);
-  return <StreakRepairModal visible={pending} onDismiss={dismiss} />;
+  const granted = useOpenSlot('streakRepair', pending, OPEN_PRIORITY.streakRepair);
+  return <StreakRepairModal visible={granted} onDismiss={dismiss} />;
 }
 
 /** R8 T3.2 — Comeback Reward gate. Reads `pendingClaim` from the
@@ -227,9 +239,10 @@ function ComebackRewardGate() {
   const claimAndStamp = useComebackRewardStore((s) => s.claimAndStamp);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
+  const granted = useOpenSlot('comeback', pendingClaim, OPEN_PRIORITY.comeback);
   return (
     <ComebackRewardModal
-      visible={pendingClaim}
+      visible={granted}
       lapsedDays={lapsedDays}
       onClaim={() => {
         // Credit FIRST, then settle. If the app dies between these calls
@@ -261,6 +274,10 @@ function RootLayoutInner() {
   useNotificationSetup();
   const { visible: aiVisible, dismiss: aiDismiss, navigate: aiNavigate, message: aiMessage } = useAIInsightBanner();
   const upgradeNudge = useUpgradeNudgeBanner();
+  // Both top banners count as the open's single greeting (13.11): they no longer stack on a modal or
+  // on each other.
+  const aiGranted = useOpenSlot('aiInsight', aiVisible, OPEN_PRIORITY.aiInsight);
+  const upgradeGranted = useOpenSlot('upgradeNudge', upgradeNudge.visible, OPEN_PRIORITY.upgradeNudge);
 
   // R8 T3.2 — Comeback Reward boot hook. Stamps `lastSeenAt` on every
   // foreground; if the gap crosses 7 days, queues a pending claim that
@@ -281,10 +298,17 @@ function RootLayoutInner() {
 
   // ── Session time tracking: foreground/background events ──
   const foregroundEnteredAt = useRef<number | null>(Date.now());
+  const backgroundedAt = useRef<number | null>(null);
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         foregroundEnteredAt.current = Date.now();
+        // Coming back after 15+ minutes is a new "open": it gets its own single greeting (13.11).
+        // A quick switch to another app and back is the same open — no new popup.
+        if (backgroundedAt.current !== null && Date.now() - backgroundedAt.current >= 15 * 60 * 1000) {
+          try { useNudgeQueueStore.getState().startOpen(); } catch { /* non-fatal */ }
+        }
+        backgroundedAt.current = null;
         // Mark the open-day in the local streak calendar on EVERY foreground,
         // not only on cold start (false freeze-burn fix, Aug 2026): a day the
         // user only foregrounded the app never reached lastLoginBonusDate /
@@ -303,6 +327,7 @@ function RootLayoutInner() {
         // still in memory but the lapse window has elapsed).
         try { useComebackRewardStore.getState().registerAppOpen(Date.now()); } catch { /* non-fatal */ }
       } else if (state === "background" || state === "inactive") {
+        if (state === "background" && backgroundedAt.current === null) backgroundedAt.current = Date.now();
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
           foregroundEnteredAt.current = null;
@@ -841,6 +866,7 @@ function RootLayoutInner() {
         <RewardAnimationProvider>
           <EnergyAnimationProvider>
             <StreakCelebrationProvider>
+              <OpenStarter />
               {/* Root navigator. Was <Slot/> — which has NO stack, so pushing
                   /lesson/[id] swapped the whole (tabs) tree with no animation
                   and REMOUNTED it on return (the "learn map flashes briefly"
@@ -950,7 +976,7 @@ function RootLayoutInner() {
                   <NetworkStatusBanner />
                   <LevelUpBanner />
                   <NotificationBanner
-                    visible={aiVisible}
+                    visible={aiGranted}
                     message={aiMessage}
                     actionLabel="לראות"
                     onAction={aiNavigate}
@@ -959,7 +985,7 @@ function RootLayoutInner() {
                     duration={6000}
                   />
                   <NotificationBanner
-                    visible={upgradeNudge.visible}
+                    visible={upgradeGranted}
                     message={upgradeNudge.copy?.body ?? ''}
                     actionLabel="שדרג"
                     onAction={upgradeNudge.navigate}

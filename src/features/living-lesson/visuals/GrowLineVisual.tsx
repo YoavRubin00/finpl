@@ -95,12 +95,13 @@ export function GrowLineVisual({ visual, animate, startDelayMs }: Props) {
     if (highlightLastPoint) {
       pulse.value = withDelay(
         startDelayMs + 500,
+        // Three pulses on the last point, then still (no endless motion inside a lesson, Yoav 13.11).
         withRepeat(
           withSequence(
             withTiming(1, { duration: 700, easing: Easing.inOut(Easing.quad) }),
             withTiming(0, { duration: 700, easing: Easing.inOut(Easing.quad) }),
           ),
-          -1,
+          3,
           false,
         ),
       );

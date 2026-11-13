@@ -265,12 +265,13 @@ function MoreIndicator({ animate }: { animate: boolean }) {
     if (!animate) return;
     bounce.value = withDelay(
       500,
+      // Two nudges, then still: a forever-bouncing pill read as shaking (Yoav 13.11).
       withRepeat(
         withSequence(
           withTiming(1, { duration: 560, easing: Easing.inOut(Easing.quad) }),
           withTiming(0, { duration: 560, easing: Easing.inOut(Easing.quad) }),
         ),
-        -1,
+        2,
         false,
       ),
     );

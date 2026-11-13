@@ -101,7 +101,7 @@ export function ErosionVisual({ visual, animate, startDelayMs }: Props) {
         <>
           <View style={[styles.note, { left: layout.note.x, top: layout.note.y, width: layout.note.w, height: layout.note.h }]}>
             <View style={styles.noteInner}>
-              <Text style={[styles.noteText, { fontSize: layout.noteFont }]} numberOfLines={1} allowFontScaling={false}>
+              <Text style={[styles.noteText, { fontSize: layout.noteFont }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} allowFontScaling={false}>
                 {visual.noteLabel}
               </Text>
             </View>
@@ -149,6 +149,8 @@ export function ErosionVisual({ visual, animate, startDelayMs }: Props) {
           <Text
             style={[styles.colLabel, labelStyle, { left: layout.labels.note.x, top: layout.labels.note.y, width: layout.labels.note.w }]}
             numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
             allowFontScaling={false}
           >
             {NOTE_CAPTION}
@@ -156,6 +158,8 @@ export function ErosionVisual({ visual, animate, startDelayMs }: Props) {
           <Text
             style={[styles.colLabel, labelStyle, { left: layout.labels.price.x, top: layout.labels.price.y, width: layout.labels.price.w }]}
             numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
             allowFontScaling={false}
           >
             {visual.priceLabel}
@@ -163,6 +167,8 @@ export function ErosionVisual({ visual, animate, startDelayMs }: Props) {
           <Text
             style={[styles.colLabel, labelStyle, { left: layout.labels.basket.x, top: layout.labels.basket.y, width: layout.labels.basket.w }]}
             numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
             allowFontScaling={false}
           >
             {visual.basketLabel}

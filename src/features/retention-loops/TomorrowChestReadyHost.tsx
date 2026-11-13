@@ -16,7 +16,7 @@ import { useSharkWagerStore } from './useSharkWagerStore';
 import { getNextLessonTarget } from './nextLessonTarget';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
-import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
+import { useNudgeQueueStore, useOpenSlot, OPEN_PRIORITY } from '../../stores/useNudgeQueueStore';
 import { getIsraelDateISO, msUntilNextIsraelMidnight } from '../../utils/israelTime';
 import { DAILY_STREAK_NUDGE_KEY } from '../../hooks/useStreakCelebration';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
@@ -109,6 +109,9 @@ export function TomorrowChestReadyHost(): React.ReactElement | null {
     return Math.max(0, Math.round((to - from) / 86_400_000));
   })();
 
+  const [autoWants, setAutoWants] = useState(false);
+  const autoGranted = useOpenSlot('tomorrowChest', autoWants && !inLesson, OPEN_PRIORITY.tomorrowChest);
+
   const fireCeremony = useCallback((trigger: 'auto' | 'card_tap') => {
     if (!mountedRef.current) return;
     setOpened(false);
@@ -133,10 +136,14 @@ export function TomorrowChestReadyHost(): React.ReactElement | null {
     if (wagerResolution !== null) return; // wager win/loss modal first
     if (inLesson || !onTabs) return;
     autoFiredRef.current = true;
-    const t = setTimeout(() => fireCeremony('auto'), 1400);
-    timersRef.current.push(t);
-    return () => clearTimeout(t);
+    // Ask for the open's single greeting instead of firing on a timer (13.11).
+    setAutoWants(true);
   }, [status, hasCompletedOnboarding, hasSeenWalkthrough, pendingFirstChest, pendingProTeaser, pendingRegisterCTA, wagerResolution, inLesson, onTabs, visible, fireCeremony]);
+  useEffect(() => {
+    if (!autoGranted || visible) return;
+    setAutoWants(false);
+    fireCeremony('auto');
+  }, [autoGranted, visible, fireCeremony]);
 
   // Manual fire from the map card.
   const lastNonceRef = useRef(openRequestNonce);
