@@ -15,18 +15,22 @@ import { linkProvider } from "../../lib/api/auth";
 export function useAppleAuth() {
   const isAvailable = Platform.OS === "ios";
 
+  // The server verifies `identityToken` (Apple's signed JWT: signature, issuer,
+  // audience = our bundle id, expiry) and requires its `sub` to equal
+  // appleUserId. The email is read from the token there, so it isn't sent.
   const verifyWithServer = async (
+    identityToken: string,
     appleUserId: string,
-    email: string | null,
     displayName: string,
   ): Promise<{ token: string; profile: { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean } } | null> => {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      // 12s like Google: a cold function + a first fetch of Apple's keys.
+      const timeout = setTimeout(() => controller.abort(), 12000);
       const res = await fetch(`${getApiBase()}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'apple', appleUserId, email, displayName }),
+        body: JSON.stringify({ provider: 'apple', identityToken, appleUserId, displayName }),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -112,28 +116,30 @@ export function useAppleAuth() {
       const displayName =
         [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ").trim() ||
         "משתמש Apple";
-      // ALWAYS use credential.user as the authId — it is the stable identifier
-      // Apple returns on every sign-in. The previous code fell back to email
-      // which is only returned on FIRST sign-in, so subsequent sign-ins
-      // produced a different authId and created an orphan row server-side.
-      // credential.email is sent separately so the server can persist it
-      // (and migrate any legacy row keyed on it).
+      // credential.user is the stable Apple id. The server only trusts it when
+      // it equals the `sub` of Apple's signed identity token, so the token is
+      // required; without it there is nothing to prove the sign-in.
       const appleUserId = credential.user;
+      const identityToken = credential.identityToken;
+      if (!identityToken) {
+        captureEvent('auth_failed', { method: 'apple', error_code: 'no_identity_token' });
+        useAuthStore.getState().setAuthError("הכניסה עם Apple נכשלה. נסה שוב או בחר שיטה אחרת.");
+        return;
+      }
       // If already signed in, this is a "connect account" action, not a login:
       // attach the Apple subject to the current uuid and stop (do NOT re-run the
       // sign-in path, which would mint a new session / re-prefetch).
       const alreadySignedIn = !!(await tokenStore.get());
       if (alreadySignedIn) {
         try {
-          await linkProvider({ provider: 'apple', appleUserId });
+          await linkProvider({ provider: 'apple', identityToken, appleUserId });
           useAuthStore.getState().setAuthError(null);
         } catch {
           useAuthStore.getState().setAuthError('קישור החשבון נכשל. נסו שוב.');
         }
         return;
       }
-      const emailFromApple = credential.email ?? null;
-      const result = await verifyWithServer(appleUserId, emailFromApple, displayName);
+      const result = await verifyWithServer(identityToken, appleUserId, displayName);
       if (!result) {
         captureEvent('auth_failed', { method: 'apple', error_code: 'verify_failed' });
         useAuthStore.getState().setAuthError("הכניסה עם Apple נכשלה. נסה שוב או בחר שיטה אחרת.");

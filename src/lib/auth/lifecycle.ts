@@ -24,7 +24,6 @@ import { getStreak } from '../api/streak';
 import { getSubscription, syncSubscription } from '../api/subscription';
 import { getProgress } from '../api/progress';
 import { getUserStats } from '../api/userStats';
-import { verifyEmail } from '../api/auth';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { captureEvent, identifyUser, resetUser } from '../posthog';
 
@@ -37,9 +36,9 @@ export type SignInMethod = 'email' | 'google' | 'apple' | 'legacy';
 /**
  * Reads the pre-JWT auth session left behind by an older build.
  * Existing users authenticated with a `syncToken` stored under `auth-store-v2`;
- * the new build uses a JWT in secure-store. On first launch they have no JWT,
- * so we recover their email from the old store and re-mint a JWT seamlessly.
- * Returns null if there is no recoverable authenticated session.
+ * the new build uses a JWT in secure-store. Since 2026-11-13 the stored email
+ * alone can't mint a JWT (email sign-in needs a mailed code), so this is only
+ * used to count those users. Returns null if there is no such session.
  */
 async function readLegacyAuthSession(): Promise<{ email: string; displayName: string | null } | null> {
   try {
@@ -258,57 +257,24 @@ export async function signOut(): Promise<void> {
 export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
   const token = await tokenStore.get();
 
-  // No JWT yet. Before sending the user to the login screen, check for a
-  // pre-JWT session from an older build and migrate it seamlessly. Email login
-  // is passwordless, so re-minting a JWT from the stored email is transparent.
-  // signInWithProfile runs the one-time backfill, so local-only data is pushed
-  // to the server during this migration — no data loss, no forced re-login.
+  // No JWT yet. Two kinds of stored sessions used to be re-minted here from
+  // the email alone (POST /api/auth/verify {provider:'email', email}):
+  //   - a pre-JWT session from an older build (`auth-store-v2`), and
+  //   - an email "ghost": local isAuthenticated with no JWT, left by the old
+  //     register flow that signed in locally before the server call.
+  // That request is exactly what let anyone take over any email account, and
+  // since 2026-11-13 the server refuses it without a mailed code. There is no
+  // silent path left: these users sign in again with a code. Ghosts keep their
+  // local state (as when the heal used to fail); the events count them.
   if (!token) {
-    const legacy = await readLegacyAuthSession();
-    if (legacy) {
-      try {
-        captureEvent('legacy_session_migration_started');
-        const res = await verifyEmail(legacy.email, legacy.displayName);
-        if (res?.ok && res.profile && res.token) {
-          await signInWithProfile(res.profile, res.token, 'legacy');
-          captureEvent('legacy_session_migration_succeeded');
-          return { isAuthenticated: true };
-        }
-      } catch (e) {
-        captureEvent('legacy_session_migration_failed', {
-          reason: e instanceof Error ? e.message : String(e),
-        });
-        if (__DEV__) console.warn('[boot] legacy session migration failed:', e);
+    if (await readLegacyAuthSession()) {
+      captureEvent('legacy_session_needs_code');
+    } else {
+      const auth = useAuthStore.getState();
+      if (auth.isAuthenticated && !auth.isGuest && auth.email) {
+        captureEvent('ghost_session_needs_code');
       }
     }
-
-    // Ghost-session heal. The email-registration path (convertGuestToUser)
-    // marks the auth store `isAuthenticated` WITHOUT minting a JWT or creating
-    // a server profile row. Such a user is a "ghost": every /api/sync/economy
-    // call 401s (no JWT) so nothing persists, and the balance resets to 0 on
-    // every cold start. 28% of email signups were stranded this way (incident
-    // 2026-06-16). If the persisted store still claims a signed-in email user
-    // but we have no JWT (and it wasn't an old `auth-store-v2` legacy session
-    // handled above), re-mint here: verifyEmail creates/finds the row by email
-    // and returns a JWT, after which the economy endpoints work normally.
-    const auth = useAuthStore.getState();
-    if (auth.isAuthenticated && !auth.isGuest && auth.email) {
-      try {
-        captureEvent('ghost_session_heal_started');
-        const res = await verifyEmail(auth.email, auth.displayName ?? null);
-        if (res?.ok && res.profile && res.token) {
-          await signInWithProfile(res.profile, res.token, 'email');
-          captureEvent('ghost_session_heal_succeeded');
-          return { isAuthenticated: true };
-        }
-      } catch (e) {
-        captureEvent('ghost_session_heal_failed', {
-          reason: e instanceof Error ? e.message : String(e),
-        });
-        if (__DEV__) console.warn('[boot] ghost session heal failed:', e);
-      }
-    }
-
     return { isAuthenticated: false };
   }
 

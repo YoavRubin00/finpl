@@ -583,6 +583,33 @@ export const tradeRoomMessages = pgTable("trade_room_messages", {
   check("trade_room_messages_sentiment_chk", sql`sentiment IS NULL OR sentiment IN ('bull','bear')`),
 ]);
 
+// One-time sign-in codes for email accounts (0016, 2026-11-13). One row per
+// address (normalized: trimmed + lowercased). Only an HMAC of the code is
+// stored. A new request replaces the row; a successful sign-in deletes it.
+// Written by POST /api/auth/email-code, read by POST /api/auth/verify.
+export const emailLoginCodes = pgTable("email_login_codes", {
+  email: text().primaryKey().notNull(),
+  codeHash: text("code_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: 'date' }).notNull(),
+  attempts: integer().notNull().default(0),
+  lastSentAt: timestamp("last_sent_at", { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_email_login_codes_expires").using("btree", table.expiresAt.asc()),
+]);
+
+// Fixed-window counters shared by every serverless instance (0016). The
+// in-memory limiter in app/api/_shared/rateLimit.ts is per instance only;
+// this one is what actually bounds code sends and code guesses. Keys hash the
+// IP / email (see api/_shared/authStores.ts).
+export const authRateLimits = pgTable("auth_rate_limits", {
+  key: text().primaryKey().notNull(),
+  windowStart: timestamp("window_start", { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  count: integer().notNull().default(0),
+}, (table) => [
+  index("idx_auth_rate_limits_window").using("btree", table.windowStart.asc()),
+]);
+
 // A blocker never sees the blocked user's shares or comments again.
 export const userBlocks = pgTable("user_blocks", {
   blockerUserId: uuid("blocker_user_id").notNull(),

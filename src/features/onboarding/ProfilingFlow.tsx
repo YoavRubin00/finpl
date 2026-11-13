@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, AppState, useWindowDimensions } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, AppState, useWindowDimensions, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -42,8 +42,9 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { SignupGateStep, reportSignupGateCompleted, getSignupGateLastMethod } from "./SignupGateStep";
 import { isModuleFirstArm } from "./firstRunExperiment";
-import { getApiBase } from "../../db/apiBase";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
+import { EmailCodeStep, sendEmailCode } from "../auth/EmailCodeStep";
+import type { VerifiedSession } from "../../lib/api/auth";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { useBandit } from "../bandit/useBandit";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
@@ -2027,11 +2028,41 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
     return () => clearInterval(id);
   }, [subStep, termsAccepted]);
 
-  // Login form state
+  // Login form state. Email sign-in is email → mailed 6-digit code (2026-11-13).
+  // The password field that used to sit here was never sent anywhere, and the
+  // email alone signed in to any account.
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const isLoginValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && password.length > 0;
+  const [loginPhase, setLoginPhase] = useState<"email" | "code">("email");
+  const [loginCodeEmail, setLoginCodeEmail] = useState("");
+  const [loginSending, setLoginSending] = useState(false);
+  const isLoginValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && !loginSending;
+
+  async function handleLoginSendCode() {
+    if (!isLoginValid) return;
+    const normalized = email.trim().toLowerCase();
+    useAuthStore.getState().clearAuthError();
+    setLoginSending(true);
+    const failure = await sendEmailCode(normalized, "onboarding_login");
+    setLoginSending(false);
+    if (failure) {
+      useAuthStore.getState().setAuthError(failure);
+      return;
+    }
+    setLoginCodeEmail(normalized);
+    setLoginPhase("code");
+  }
+
+  async function handleLoginVerified(session: VerifiedSession) {
+    await signInWithProfile(session.profile, session.token, "email");
+    // Yoav 2026-06-11: this branch IS the "כבר יש לי חשבון" login, by
+    // definition the user already onboarded on a prior install.
+    // hasCompletedOnboarding is local-only state and is `false` on a fresh
+    // install — without flipping it here, root layout's redirect guard bounces
+    // the user straight back into onboarding after sign-in. (Same fix that
+    // LoginScreen.tsx already does.)
+    useAuthStore.getState().setOnboardingCompleted(true);
+    onLoginSuccess();
+  }
 
   // Entrance animations
   const finnScale = useSharedValue(0.8);
@@ -2367,7 +2398,8 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
         onPress={() => {
           try { captureEvent('login_back_chevron_clicked'); } catch { /* non-fatal */ }
           useAuthStore.getState().clearAuthError();
-          setSubStep("welcome");
+          if (loginPhase === "code") setLoginPhase("email");
+          else setSubStep("welcome");
         }}
         style={{ position: "absolute", top: 16, right: 16, zIndex: 10, padding: 8 }}
         accessibilityRole="button"
@@ -2377,15 +2409,21 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
         <ChevronRight size={28} color="#64748b" />
       </Pressable>
       <KeyboardAvoidingView style={{ flex: 1, width: "100%", alignItems: "center", justifyContent: "center" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Animated.View style={[introStyles.finnWrap, finnStyle]}>
-          <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 120, height: 120 }} contentFit="contain" />
-          </LinearGradient>
-        </Animated.View>
+        {/* The code step brings its own header and the keyboard; the mascot
+            and title would push it off small screens. */}
+        {loginPhase === "email" ? (
+          <>
+            <Animated.View style={[introStyles.finnWrap, finnStyle]}>
+              <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <ExpoImage source={FINN_STANDARD} style={{ width: 120, height: 120 }} contentFit="contain" />
+              </LinearGradient>
+            </Animated.View>
 
-        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 24 }]}>
-          <Text style={introStyles.title}>{"התחברות או הרשמה"}</Text>
-        </Animated.View>
+            <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 24 }]}>
+              <Text style={introStyles.title}>{"התחברות או הרשמה"}</Text>
+            </Animated.View>
+          </>
+        ) : null}
 
         {authError ? (
           <View style={{ width: "100%", backgroundColor: "#fef2f2", borderColor: "#fecaca", borderWidth: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14 }}>
@@ -2394,6 +2432,21 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
         ) : null}
 
         <Animated.View style={[ctaAnimStyle, { width: "100%", gap: 10 }]}>
+          {loginPhase === "code" ? (
+            <EmailCodeStep
+              email={loginCodeEmail}
+              displayName={null}
+              source="onboarding_login"
+              onVerified={handleLoginVerified}
+              onChangeEmail={() => {
+                useAuthStore.getState().clearAuthError();
+                setLoginPhase("email");
+              }}
+              buttonStyle={[introStyles.cta, { paddingHorizontal: 0 }]}
+              buttonTextStyle={introStyles.ctaText}
+            />
+          ) : (
+          <>
           {/* Apple Sign-In, required by App Store Guideline 4.8 (iOS only) */}
           {appleAvailable && (
             <Pressable
@@ -2458,7 +2511,10 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
             <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
           </View>
 
-          {/* Email */}
+          {/* Email — "המשך" mails a 6-digit code; the code step signs in (or
+              creates the account). Failures stay on this form with the banner
+              above and never navigate: onLoginSuccess does router.replace("/"),
+              which for a still-unauthenticated user is an invisible bounce. */}
           <TextInput
             style={inputStyle}
             placeholder="אימייל"
@@ -2468,81 +2524,24 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
+            returnKeyType="go"
+            onSubmitEditing={() => void handleLoginSendCode()}
             accessibilityLabel="אימייל" />
 
-          {/* Password */}
-          <View>
-            <TextInput
-              style={{ ...inputStyle, paddingLeft: 48 }}
-              placeholder="סיסמה"
-              placeholderTextColor="#64748b"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="סיסמה" />
-            <Pressable
-              onPress={() => setShowPassword((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ position: "absolute", left: 14, top: 0, bottom: 0, justifyContent: "center" }}
-            >
-              <Text style={{ fontSize: 13, color: "#0891b2", fontWeight: "600" }}>
-                {showPassword ? "הסתר" : "הצג"}
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Login button */}
           <Pressable
             disabled={!isLoginValid}
-            onPress={async () => {
-              if (!isLoginValid) return;
-              useAuthStore.getState().clearAuthError();
-              try {
-                const res = await fetch(`${getApiBase()}/api/auth/verify`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ provider: 'email', email: email.trim().toLowerCase() }),
-                });
-                const data = await res.json() as {
-                  ok: boolean;
-                  token?: string;
-                  syncToken?: string;
-                  profile: { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean } | null;
-                };
-                const resolvedToken = data.token ?? data.syncToken ?? null;
-                if (res.ok && data?.ok && data.profile && resolvedToken) {
-                  await signInWithProfile(data.profile, resolvedToken, 'email');
-                  // Yoav 2026-06-11: this branch IS the "כבר יש לי חשבון" login,
-                  // by definition the user already onboarded on a prior install.
-                  // hasCompletedOnboarding is local-only state and is `false` on a
-                  // fresh install — without flipping it here, root layout's
-                  // redirect guard bounces the user straight back into onboarding
-                  // after sign-in. (Same fix that LoginScreen.tsx already does.)
-                  useAuthStore.getState().setOnboardingCompleted(true);
-                  onLoginSuccess();
-                  return;
-                }
-                // Login failed (bad response / no profile / no token). DON'T call
-                // onLoginSuccess — it does router.replace("/"), which for a still-
-                // unauthenticated user just bounces back to welcome: an invisible
-                // loop with no feedback. Surface the error and stay on the form.
-                useAuthStore.getState().setAuthError('לא הצלחנו להתחבר. בדקו את כתובת המייל ונסו שוב.');
-              } catch {
-                // Network / server error — same rule: report, don't navigate.
-                useAuthStore.getState().setAuthError('אין חיבור לרשת כרגע. נסו שוב בעוד רגע.');
-              }
-            }}
+            onPress={() => void handleLoginSendCode()}
             accessibilityRole="button"
             accessibilityLabel="המשך"
-            accessibilityState={{ disabled: !isLoginValid }}
-            style={[introStyles.cta, { paddingHorizontal: 0, width: "100%", alignItems: "center", opacity: isLoginValid ? 1 : 0.5 }]}
+            accessibilityState={{ disabled: !isLoginValid, busy: loginSending }}
+            style={[introStyles.cta, { paddingHorizontal: 0, width: "100%", alignItems: "center", opacity: isLoginValid || loginSending ? 1 : 0.5 }]}
           >
-            <Text style={introStyles.ctaText}>המשך</Text>
+            {loginSending ? <ActivityIndicator color="#ffffff" /> : <Text style={introStyles.ctaText}>המשך</Text>}
           </Pressable>
+          </>
+          )}
 
           {/* Legal disclaimer, implicit consent on any tap above (Duolingo pattern) */}
           <Text

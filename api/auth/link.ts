@@ -1,14 +1,28 @@
 // api/auth/link.ts
+// Attach a second sign-in provider to the signed-in account. The provider must
+// prove the identity the same way as /api/auth/verify (2026-11-13): Apple needs
+// a verified identity token, Google a token issued to one of our own clients.
+// Before, a bare appleUserId was trusted, so a signed-in user could claim any
+// Apple subject and capture that person's future Apple sign-ins.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { eq } from 'drizzle-orm';
 import { userProfiles } from '../../src/db/schema';
 import { getDb } from '../_shared/db';
 import { withAuth } from '../_shared/withAuth';
+import {
+  appleTokenKid,
+  getAppleAudiences,
+  getGoogleClientIds,
+  resolveGoogleToken,
+  verifyAppleIdentityToken,
+} from '../_shared/authProof';
+import { getAppleKeys } from '../_shared/authDeps';
 
 interface LinkBody {
-  provider: 'google' | 'apple';
-  token?: string;        // google token
-  appleUserId?: string;  // apple subject
+  provider?: unknown;
+  token?: unknown;          // google id_token / access_token
+  identityToken?: unknown;  // apple identity token (JWT)
+  appleUserId?: unknown;    // apple credential.user, must equal the token's sub
 }
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => {
@@ -18,24 +32,36 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
 
   let subject: string | null = null;
   if (body.provider === 'google') {
-    if (!body.token) return res.status(400).json({ error: 'Missing Google token' });
-    const isJwt = (body.token.match(/\./g) ?? []).length === 2;
-    if (isJwt) {
-      const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(body.token)}`);
-      if (!r.ok) return res.status(401).json({ error: 'Invalid Google token' });
-      subject = ((await r.json()) as { sub?: string }).sub ?? null;
-    } else {
-      const r = await fetch('https://www.googleapis.com/userinfo/v2/me', { headers: { Authorization: `Bearer ${body.token}` } });
-      if (!r.ok) return res.status(401).json({ error: 'Invalid Google token' });
-      subject = ((await r.json()) as { id?: string }).id ?? null;
+    const token = typeof body.token === 'string' ? body.token.trim() : '';
+    if (!token) return res.status(400).json({ ok: false, code: 'GOOGLE_TOKEN_REQUIRED', error: 'Missing Google token' });
+    const result = await resolveGoogleToken(token, { clientIds: getGoogleClientIds(), fetchImpl: fetch });
+    if (!result.ok) {
+      console.warn(`[auth/link] google token rejected: reason=${result.reason}`);
+      return res.status(401).json({ ok: false, code: 'GOOGLE_TOKEN_INVALID', error: 'Invalid Google token' });
     }
+    subject = result.sub;
   } else if (body.provider === 'apple') {
-    if (!body.appleUserId) return res.status(400).json({ error: 'Missing Apple identifier' });
-    subject = body.appleUserId;
+    const identityToken = typeof body.identityToken === 'string' ? body.identityToken.trim() : '';
+    if (!identityToken) {
+      return res.status(401).json({ ok: false, code: 'APPLE_TOKEN_REQUIRED', error: 'Apple identity token is required' });
+    }
+    let keys = await getAppleKeys({ forceRefresh: false });
+    const kid = appleTokenKid(identityToken);
+    if (kid && !keys.some((k) => k.kid === kid)) keys = await getAppleKeys({ forceRefresh: true });
+    const result = verifyAppleIdentityToken(identityToken, {
+      keys,
+      audiences: getAppleAudiences(),
+      expectedSub: typeof body.appleUserId === 'string' ? body.appleUserId : null,
+      nowSec: Math.floor(Date.now() / 1000),
+    });
+    if (!result.ok) {
+      console.warn(`[auth/link] apple token rejected: reason=${result.reason}`);
+      return res.status(401).json({ ok: false, code: 'APPLE_TOKEN_INVALID', error: 'Invalid Apple identity token' });
+    }
+    subject = result.sub;
   } else {
-    return res.status(400).json({ error: 'Unsupported provider' });
+    return res.status(400).json({ ok: false, code: 'UNSUPPORTED_PROVIDER', error: 'Unsupported provider' });
   }
-  if (!subject) return res.status(401).json({ error: 'Could not resolve provider subject' });
 
   // Reject if this subject already belongs to a DIFFERENT user.
   const col = body.provider === 'google' ? userProfiles.googleSub : userProfiles.appleSub;
@@ -44,7 +70,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     return res.status(409).json({ error: 'This account is already linked to another user' });
   }
 
-  const setFields: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+  const setFields: Partial<typeof userProfiles.$inferInsert> = { updatedAt: new Date().toISOString() };
   if (body.provider === 'google') setFields.googleSub = subject;
   if (body.provider === 'apple') setFields.appleSub = subject;
   await db.update(userProfiles).set(setFields).where(eq(userProfiles.id, ctx.userId));

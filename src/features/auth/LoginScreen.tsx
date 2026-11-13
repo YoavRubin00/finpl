@@ -19,8 +19,8 @@ import { useAppleAuth } from "./useAppleAuth";
 import { AppleLogo } from "../../components/ui/AppleLogo";
 import { captureEvent } from "../../lib/posthog";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
-import { getApiBase } from "../../db/apiBase";
-import { ProfileBootScreen } from "./ProfileBootScreen";
+import type { VerifiedSession } from "../../lib/api/auth";
+import { EmailCodeStep, sendEmailCode } from "./EmailCodeStep";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -55,58 +55,69 @@ export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [signingIn, setSigningIn] = useState(false);
+  // "email" → address form; "code" → the mailed 6-digit code (EmailCodeStep).
+  const [phase, setPhase] = useState<"email" | "code">("email");
+  const [codeEmail, setCodeEmail] = useState("");
 
   useEffect(() => {
     captureEvent('login_form_viewed');
   }, []);
 
-  const canSubmit = isValidEmail(email) && !loading;
+  const canSubmit = isValidEmail(email.trim()) && !loading;
 
+  // Email sign-in needs a code mailed to the address (2026-11-13). The address
+  // alone used to be enough, which let anyone sign in as anyone.
   async function handleLogin() {
     if (!canSubmit) return;
     captureEvent('login_method_clicked', { method: 'email' });
+    const normalized = email.trim().toLowerCase();
     setLoading(true);
     setError(null);
-    setSigningIn(true);
-    try {
-      const response = await fetch(`${getApiBase()}/api/auth/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'email', email: email.trim().toLowerCase() }),
-      });
-      const data = await response.json() as {
-        ok: boolean;
-        token?: string;
-        syncToken?: string;
-        profile: { id: string; authId: string; displayName: string | null; email: string | null } | null;
-      };
-      const resolvedToken = data.token ?? data.syncToken ?? null;
-      if (!response.ok || !data?.ok || !data.profile || !resolvedToken) {
-        captureEvent('login_failed', { method: 'email', reason: 'not_found' });
-        setError("לא נמצא חשבון עם כתובת אימייל זו");
-        setSigningIn(false);
-        return;
-      }
-      await signInWithProfile(data.profile, resolvedToken, 'email');
-      // This screen is "sign in to an existing account" — by definition the
-      // user already onboarded. Mark it locally so the _layout nav guard routes
-      // them into the app instead of bouncing back to /(auth)/onboarding.
-      // (hasCompletedOnboarding is local-only state and was reset by the
-      // auth-store-v3 key bump, so returning users would otherwise be stuck.)
-      useAuthStore.getState().setOnboardingCompleted(true);
-      router.replace("/(tabs)/" as never);
-    } catch {
-      captureEvent('login_failed', { method: 'email', reason: 'network' });
-      setError("שגיאה בחיבור לשרת, נסה שוב");
-      setSigningIn(false);
-    } finally {
-      setLoading(false);
+    clearAuthError();
+    const failure = await sendEmailCode(normalized, 'login');
+    setLoading(false);
+    if (failure) {
+      captureEvent('login_failed', { method: 'email', reason: 'code_request_failed' });
+      setError(failure);
+      return;
     }
+    setCodeEmail(normalized);
+    setPhase("code");
   }
 
-  if (signingIn) {
-    return <ProfileBootScreen loading onRetry={() => setSigningIn(false)} />;
+  async function handleVerified(session: VerifiedSession) {
+    await signInWithProfile(session.profile, session.token, 'email');
+    // This screen is "sign in to an existing account" — by definition the
+    // user already onboarded. Mark it locally so the _layout nav guard routes
+    // them into the app instead of bouncing back to /(auth)/onboarding.
+    // (hasCompletedOnboarding is local-only state and was reset by the
+    // auth-store-v3 key bump, so returning users would otherwise be stuck.)
+    useAuthStore.getState().setOnboardingCompleted(true);
+    router.replace("/(tabs)/" as never);
+  }
+
+  if (phase === "code") {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingBottom: 8, backgroundColor: "#ffffff" }}>
+            <ExpoImage source={FINN_HELLO} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
+            <Text style={{ textAlign: "center", fontSize: 28, fontWeight: "900", color: "#0891b2", marginTop: 2, writingDirection: "rtl" }}>
+              FinPlay
+            </Text>
+          </SafeAreaView>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+            <EmailCodeStep
+              email={codeEmail}
+              displayName={null}
+              source="login"
+              onVerified={handleVerified}
+              onChangeEmail={() => setPhase("email")}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    );
   }
 
   return (
@@ -154,6 +165,8 @@ export function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
               accessibilityLabel="אימייל"
               accessibilityHint="הזן את כתובת האימייל שרשמת איתה"
               returnKeyType="go"
