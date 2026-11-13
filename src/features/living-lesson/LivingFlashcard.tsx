@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import Animated, {
   FadeIn,
@@ -20,6 +20,8 @@ import { tapHaptic, selectionHaptic } from "../../utils/haptics";
 import { RichText } from "./RichText";
 import { VisualHost } from "./visuals/VisualHost";
 import { LL_COLORS, RTL_STYLE, SEGMENT_SPRING } from "./tokens";
+import { withLivingVisuals } from "./lessonVisuals";
+import type { LivingSegment } from "./livingTypes";
 
 interface LivingFlashcardProps {
   segments: FlashcardSegment[];
@@ -48,9 +50,12 @@ interface LivingFlashcardProps {
  * rest of the app already uses, and each segment may carry one motion
  * visual instead of a static image.
  */
-export function LivingFlashcard({ segments, onAllRevealed, cardId, revealTrigger, revealAllTrigger }: LivingFlashcardProps) {
+export function LivingFlashcard({ segments: cardSegments, onAllRevealed, cardId, revealTrigger, revealAllTrigger }: LivingFlashcardProps) {
   const reducedMotion = useReducedMotion();
   const animate = !reducedMotion;
+  // Living diagrams attach here, by card id, from the registry (lessonVisuals.ts).
+  // The number of segments never changes, so reveal state and progress stay as they were.
+  const segments = useMemo(() => withLivingVisuals(cardId, cardSegments), [cardId, cardSegments]);
 
   const [revealedCount, setRevealedCount] = useState(() => (segments.length > 0 ? 1 : 0));
   const [activeTerm, setActiveTerm] = useState<string | null>(null);
@@ -185,7 +190,7 @@ function SegmentBlock({
   animate,
   onTermPress,
 }: {
-  segment: FlashcardSegment;
+  segment: LivingSegment;
   animate: boolean;
   onTermPress: (term: string) => void;
 }) {

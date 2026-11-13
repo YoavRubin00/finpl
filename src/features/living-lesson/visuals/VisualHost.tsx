@@ -1,7 +1,9 @@
 import React, { useEffect } from "react";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } from "react-native-reanimated";
-import type { FlashcardVisual } from "../../chapter-1-content/types";
+import type { LivingVisual } from "../livingTypes";
 import { VISUAL_DELAY_MS, VISUAL_SPRING } from "../tokens";
+import { FlowVisual } from "./flow/FlowVisual";
+import { ErosionVisual } from "./ErosionVisual";
 import { CounterVisual } from "./CounterVisual";
 import { CompareBarsVisual } from "./CompareBarsVisual";
 import { GrowLineVisual } from "./GrowLineVisual";
@@ -12,7 +14,7 @@ import { LottieVisual } from "./LottieVisual";
 import { ImageVisual } from "./ImageVisual";
 
 interface VisualHostProps {
-  visual: FlashcardVisual;
+  visual: LivingVisual;
   /** false under reduced-motion — everything renders settled, no entrance or internal animation. */
   animate?: boolean;
   /** ms after mount before this visual's own entrance starts (lets the segment's text land first). */
@@ -48,8 +50,12 @@ export function VisualHost({ visual, animate = true, delayMs = VISUAL_DELAY_MS }
   );
 }
 
-function renderPrimitive(visual: FlashcardVisual, animate: boolean, startDelayMs: number): React.ReactElement {
+function renderPrimitive(visual: LivingVisual, animate: boolean, startDelayMs: number): React.ReactElement {
   switch (visual.kind) {
+    case "flow":
+      return <FlowVisual visual={visual} animate={animate} startDelayMs={startDelayMs} />;
+    case "erosion":
+      return <ErosionVisual visual={visual} animate={animate} startDelayMs={startDelayMs} />;
     case "lottie":
       return <LottieVisual visual={visual} animate={animate} />;
     case "counter":
