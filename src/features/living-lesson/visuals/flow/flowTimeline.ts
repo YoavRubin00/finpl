@@ -191,14 +191,16 @@ export function legCurve(from: Pt, to: Pt, r: number, route: "h" | "v", arced: b
     const dist = Math.hypot(dx, dy) || 1;
     const nx = -dy / dist;
     const ny = dx / dist;
-    const bow = Math.min(32, dist * 0.3);
+    // The bow is sized from the node, so each leg stays within the nodes' own height
+    // (0.35r + 0.75 * bow < r) and never runs through the labels under or above them.
+    const bow = Math.max(6, Math.min(r * 0.75 - 4, dist * 0.3));
     const ux = dx / dist;
     const uy = dy / dist;
-    // Leave and arrive a little off the centre line, on the bowed side.
-    const sx = from.x + ux * r * 0.72 + nx * r * 0.7;
-    const sy = from.y + uy * r * 0.72 + ny * r * 0.7;
-    const ex = to.x - ux * r * 0.72 + nx * r * 0.7;
-    const ey = to.y - uy * r * 0.72 + ny * r * 0.7;
+    // Leave and arrive a little off the centre line, on the bowed side (still on the rim).
+    const sx = from.x + ux * r * 0.937 + nx * r * 0.35;
+    const sy = from.y + uy * r * 0.937 + ny * r * 0.35;
+    const ex = to.x - ux * r * 0.937 + nx * r * 0.35;
+    const ey = to.y - uy * r * 0.937 + ny * r * 0.35;
     return finish({
       x0: sx,
       y0: sy,

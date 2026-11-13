@@ -1,5 +1,5 @@
 import React, { useCallback, useId, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { LayoutChangeEvent } from "react-native";
 import Svg, { Circle, Defs, Path, Pattern, Rect } from "react-native-svg";
 import Animated, { runOnJS, useAnimatedProps, useAnimatedReaction, useAnimatedStyle } from "react-native-reanimated";
@@ -9,6 +9,8 @@ import { Check, TriangleAlert } from "lucide-react-native";
 import { LL_COLORS } from "../../tokens";
 import { FLOW_ICONS, FLOW_TONES } from "./flowIcons";
 import type { ToneColors } from "./flowIcons";
+import { BUMP_SCALE, FRAME_INSET_X, HALO_SCALE, SPARK_SCALE, SWING_PX, chooseFlow, stageBudget } from "./flowLayout";
+import type { ChosenFlow, FlowLayout, NodeLayout } from "./flowLayout";
 import {
   BADGE_MS,
   COUNT_MS,
@@ -19,12 +21,9 @@ import {
   easeInOut,
   easeOut,
   fadeAt,
-  legCurve,
-  planFlow,
 } from "./flowTimeline";
 import type { Curve, PlannedLeg, PlannedNode } from "./flowTimeline";
 import type { FlowNodeSpec, FlowVisualSpec } from "./flowTypes";
-import { FLOW_MAX_NODES } from "./flowTypes";
 import { StageFrame } from "./StageFrame";
 import { useRoundClock } from "./useRoundClock";
 
@@ -37,101 +36,72 @@ const SHARK = {
   empathic: require("../../../../../assets/webp/fin-empathic.webp") as number,
 };
 
-/** Ring radius, and the box a node's ring lives in. */
-const RING_R = 26;
-const RING_BOX = 60;
-const RING_STROKE = 4;
-const RING_LEN = 2 * Math.PI * RING_R;
-const CHIP = 42;
-const NODE_W = 96;
-const LABEL_H = 16;
-const AMOUNT_H = 17;
-const TEXT_GAP = 2;
-const ROW_GAP = RING_BOX + TEXT_GAP + LABEL_H + AMOUNT_H + 6;
-const PAD_X = NODE_W / 2;
-const PAD_Y = 10;
-const COIN = 18;
 /** Above this many paths the soft glow under each one is dropped (low-end Android). */
 const GLOW_MAX_LEGS = 5;
+/** Stage height before the first measurement, so the card does not jump much. */
+const PLACEHOLDER_H = 150;
 
 interface Props {
   visual: FlowVisualSpec;
   animate: boolean;
   startDelayMs: number;
-}
-
-interface Placed {
-  spec: FlowNodeSpec;
-  plan: PlannedNode;
-  x: number;
-  y: number;
-  tone: ToneColors;
+  /** Most height the whole visual (frame, caption row included) may take. */
+  maxHeight?: number;
 }
 
 /**
- * The living diagram. One shared clock (ms) runs on the UI thread; every
+ * The living diagram. Geometry comes from flowLayout.ts, sized from the
+ * measured stage width, the height budget and the font scale, with a safe
+ * margin on every side. One shared clock (ms) runs on the UI thread; every
  * path, coin, ring and badge reads it in a worklet, so a running diagram
  * never re-renders React (numbers step at most 14 times per landing).
  * Plays a round, holds, fades, plays once more and settles on the finished
  * frame. Reduced motion: the finished frame, nothing moves.
  */
-export function FlowVisual({ visual, animate, startDelayMs }: Props) {
-  const { nodes, stages, caption, a11y, example, shark, direction } = visual;
+export function FlowVisual({ visual, animate, startDelayMs, maxHeight }: Props) {
+  const { caption, example, shark, direction } = visual;
   const rtl = direction !== "ltr";
-  const patternId = `ll-dots-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  const { fontScale } = useWindowDimensions();
 
-  const plan = useMemo(() => planFlow(nodes, stages), [nodes, stages]);
-  const shown = useMemo(() => nodes.slice(0, FLOW_MAX_NODES), [nodes]);
-
-  const [width, setWidth] = useState(0);
+  // The visual's own measured width; the stage inside StageFrame is FRAME_INSET_X narrower.
+  const [outerW, setOuterW] = useState(0);
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     const w = Math.round(e.nativeEvent.layout.width);
-    setWidth((prev) => (Math.abs(prev - w) > 1 ? w : prev));
+    setOuterW((prev) => (Math.abs(prev - w) > 1 ? w : prev));
   }, []);
 
-  const maxCol = Math.max(0, ...shown.map((n) => n.col));
-  const maxRow = Math.max(0, ...shown.map((n) => n.row));
-  const hasAbove = shown.some((n) => n.labelAbove);
-  // The upper leg of a loop bows above its nodes: give it room.
-  const hasArc = plan.legs.some((leg) => leg.arced);
-  const topPad = PAD_Y + (hasAbove ? LABEL_H + AMOUNT_H + TEXT_GAP : 0) + (hasArc ? 18 : 0);
-  const height = topPad + maxRow * ROW_GAP + RING_BOX + TEXT_GAP + LABEL_H + AMOUNT_H + PAD_Y;
+  const chosen = useMemo<ChosenFlow | null>(() => {
+    if (outerW <= 0) return null;
+    const width = outerW - FRAME_INSET_X;
+    const budget = stageBudget(maxHeight, { stageWidth: width, caption, example, shark: !!shark, fontScale });
+    return chooseFlow(visual, { width, maxHeight: budget, fontScale, rtl });
+  }, [outerW, maxHeight, caption, example, shark, fontScale, visual, rtl]);
 
-  const placed = useMemo<Placed[]>(() => {
-    if (width <= 0) return [];
-    const step = maxCol > 0 ? (width - PAD_X * 2) / maxCol : 0;
-    return shown.map((spec) => {
-      const logical = maxCol > 0 ? PAD_X + spec.col * step : width / 2;
-      return {
-        spec,
-        plan: plan.nodes[spec.id],
-        x: rtl ? width - logical : logical,
-        y: topPad + RING_BOX / 2 + spec.row * ROW_GAP,
-        tone: FLOW_TONES[spec.tone ?? "cyan"],
-      };
-    });
-  }, [width, shown, plan, maxCol, rtl, topPad]);
+  return (
+    <View style={styles.measure} onLayout={onLayout}>
+      {chosen ? (
+        // Keyed by the variant: if a resize flips full <-> fewer rows, the diagram (and its clock) starts over.
+        <FlowStage key={chosen.variant} visual={visual} chosen={chosen} animate={animate} startDelayMs={startDelayMs} />
+      ) : (
+        <View style={{ height: PLACEHOLDER_H }} />
+      )}
+    </View>
+  );
+}
 
-  const curves = useMemo(() => {
-    const at: Record<string, Placed> = {};
-    for (const p of placed) at[p.spec.id] = p;
-    const out: Array<{ leg: PlannedLeg; curve: Curve }> = [];
-    for (const leg of plan.legs) {
-      const from = at[leg.from];
-      const to = at[leg.to];
-      if (!from || !to) continue;
-      out.push({ leg, curve: legCurve(from, to, RING_BOX / 2, leg.route, leg.arced) });
-    }
-    return out;
-  }, [placed, plan]);
+function FlowStage({ visual, chosen, animate, startDelayMs }: { visual: FlowVisualSpec; chosen: ChosenFlow; animate: boolean; startDelayMs: number }) {
+  const { caption, a11y, example, shark } = visual;
+  const { nodes, plan, layout } = chosen;
+  const patternId = `ll-dots-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
 
   const endMs = plan.endMs;
-  const payoff = shown.find((n) => n.id === plan.payoffId);
+  const payoff = nodes.find((n) => n.id === plan.payoffId);
   const payoffIsGood = payoff?.badge !== "alert";
   const { clock, replay } = useRoundClock({ animate, endMs, startDelayMs, payoffAt: plan.payoffAt, payoffIsGood });
 
-  const payoffPlaced = placed.find((p) => p.spec.id === plan.payoffId);
-  const glow = curves.length <= GLOW_MAX_LEGS;
+  const height = layout.height;
+  const payoffNode = layout.nodes[plan.payoffId];
+  const glow = layout.curves.length <= GLOW_MAX_LEGS;
 
   return (
     <StageFrame
@@ -139,34 +109,46 @@ export function FlowVisual({ visual, animate, startDelayMs }: Props) {
       a11y={a11y}
       caption={caption}
       example={example}
-      onStageLayout={onLayout}
       onReplay={animate ? replay : undefined}
       aside={shark ? <SharkReaction mood={shark} at={plan.payoffAt} clock={clock} endMs={endMs} /> : null}
     >
-      {width > 0 ? (
+      {layout ? (
         <>
-          <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+          <Svg width={layout.width} height={height} style={StyleSheet.absoluteFill}>
             <Defs>
               <Pattern id={patternId} patternUnits="userSpaceOnUse" width={18} height={18}>
                 <Circle cx={3} cy={3} r={1.1} fill="rgba(2,132,199,0.16)" />
               </Pattern>
             </Defs>
-            <Rect x={0} y={0} width={width} height={height} fill={`url(#${patternId})`} />
-            {curves.map(({ leg, curve }) => (
+            <Rect x={0} y={0} width={layout.width} height={height} fill={`url(#${patternId})`} />
+            {layout.curves.map(({ leg, curve }) => (
               <Edge key={leg.key} leg={leg} curve={curve} clock={clock} endMs={endMs} glow={glow} />
             ))}
           </Svg>
 
-          {curves.map(({ leg, curve }) => (
-            <Token key={leg.key} leg={leg} curve={curve} clock={clock} endMs={endMs} />
+          {layout.curves.map(({ leg, curve }) => (
+            <Token key={leg.key} leg={leg} curve={curve} layout={layout} clock={clock} endMs={endMs} />
           ))}
 
-          {placed.map((p) => (
-            <Node key={p.spec.id} placed={p} clock={clock} endMs={endMs} />
-          ))}
+          {nodes.map((spec) => {
+            const at = layout.nodes[spec.id];
+            const planned = plan.nodes[spec.id];
+            if (!at || !planned) return null;
+            return (
+              <Node key={spec.id} spec={spec} at={at} plan={planned} layout={layout} tone={FLOW_TONES[spec.tone ?? "cyan"]} clock={clock} endMs={endMs} />
+            );
+          })}
 
-          {payoffPlaced && payoffIsGood ? (
-            <Sparkle x={payoffPlaced.x} y={payoffPlaced.y} at={plan.payoffAt} clock={clock} endMs={endMs} color={payoffPlaced.tone.main} />
+          {payoffNode && payoffIsGood && layout.sparkR >= 12 ? (
+            <Sparkle
+              x={payoffNode.cx}
+              y={payoffNode.cy}
+              r={layout.sparkR}
+              at={plan.payoffAt}
+              clock={clock}
+              endMs={endMs}
+              color={FLOW_TONES[payoff?.tone ?? "cyan"].main}
+            />
           ) : null}
         </>
       ) : null}
@@ -237,10 +219,24 @@ function Edge({
 // What rides the path: a gold coin with a rim and a highlight, or a neon dot.
 // ---------------------------------------------------------------------------
 
-function Token({ leg, curve, clock, endMs }: { leg: PlannedLeg; curve: Curve; clock: SharedValue<number>; endMs: number }) {
+function Token({
+  leg,
+  curve,
+  layout,
+  clock,
+  endMs,
+}: {
+  leg: PlannedLeg;
+  curve: Curve;
+  layout: FlowLayout;
+  clock: SharedValue<number>;
+  endMs: number;
+}) {
   const tone = FLOW_TONES[leg.tone];
   const { startMs, hopMs } = leg;
   const { x0, y0, x1, y1, x2, y2, x3, y3 } = curve;
+  const coin = layout.coin;
+  const halo = layout.coinHalo * 2;
 
   const style = useAnimatedStyle(() => {
     const c = clock.value;
@@ -252,23 +248,26 @@ function Token({ leg, curve, clock, endMs }: { leg: PlannedLeg; curve: Curve; cl
     const riding = k > 0 && k < 1 ? Math.min(1, k * 9, (1 - k) * 9) : 0;
     return {
       opacity: riding * (1 - fadeAt(c, endMs)),
-      transform: [{ translateX: x - COIN / 2 }, { translateY: y - COIN / 2 }, { scale: 0.6 + 0.4 * riding }],
+      // Never above 1: the coin's halo is already counted in the path's bounds.
+      transform: [{ translateX: x - coin / 2 }, { translateY: y - coin / 2 }, { scale: 0.6 + 0.4 * riding }],
     };
   });
 
+  const haloStyle = { width: halo, height: halo, borderRadius: halo / 2 };
+
   return (
-    <Animated.View style={[styles.token, style]} pointerEvents="none">
+    <Animated.View style={[styles.token, { width: coin, height: coin }, style]} pointerEvents="none">
       {leg.token === "coin" ? (
         <>
-          <View style={styles.coinHalo} />
-          <View style={styles.coin}>
-            <View style={styles.coinFace} />
+          <View style={[styles.coinHalo, haloStyle]} />
+          <View style={[styles.coin, { width: coin, height: coin, borderRadius: coin / 2 }]}>
+            <View style={[styles.coinFace, { width: coin - 7, height: coin - 7, borderRadius: (coin - 7) / 2 }]} />
             <View style={styles.coinShine} />
           </View>
         </>
       ) : (
         <>
-          <View style={[styles.coinHalo, { backgroundColor: tone.main }]} />
+          <View style={[styles.coinHalo, haloStyle, { backgroundColor: tone.main }]} />
           <View style={[styles.dot, { backgroundColor: tone.main }]} />
         </>
       )}
@@ -279,14 +278,35 @@ function Token({ leg, curve, clock, endMs }: { leg: PlannedLeg; curve: Curve; cl
 // ---------------------------------------------------------------------------
 // A node: a pressed-3D chip with an icon, a ring that fills around it, a
 // halo that breathes when a coin lands, a badge, a label and a number.
+// The ring box and the text block are placed separately, straight from the
+// layout's rectangles, so what is drawn is what the geometry check measured.
 // ---------------------------------------------------------------------------
 
-function Node({ placed, clock, endMs }: { placed: Placed; clock: SharedValue<number>; endMs: number }) {
-  const { spec, plan, x, y, tone } = placed;
+function Node({
+  spec,
+  at,
+  plan,
+  layout,
+  tone,
+  clock,
+  endMs,
+}: {
+  spec: FlowNodeSpec;
+  at: NodeLayout;
+  plan: PlannedNode;
+  layout: FlowLayout;
+  tone: ToneColors;
+  clock: SharedValue<number>;
+  endMs: number;
+}) {
   const Icon = FLOW_ICONS[spec.icon];
   const { arrivals, litAt, doneAt, isSource } = plan;
   const ringTarget = Math.max(0, Math.min(1, spec.ring ?? 1));
-  const above = spec.labelAbove === true;
+  const { ring, ringR, ringStroke, chip, badge } = layout;
+  const ringLen = 2 * Math.PI * ringR;
+  const swing = spec.swing === true;
+  const bumpBy = BUMP_SCALE - 1;
+  const haloBy = HALO_SCALE - 1;
 
   const bodyStyle = useAnimatedStyle(() => {
     const c = clock.value;
@@ -297,8 +317,9 @@ function Node({ placed, clock, endMs }: { placed: Placed; clock: SharedValue<num
       if (c >= arrivals[i]) recent = arrivals[i];
     }
     const q = recent >= 0 ? (c - recent) / PULSE_MS : 2;
-    const bump = q >= 0 && q < 1 ? Math.sin(q * Math.PI) * 0.09 : 0;
-    return { opacity: 0.36 + 0.64 * lit, transform: [{ scale: 1 + bump }] };
+    const bump = q >= 0 && q < 1 ? Math.sin(q * Math.PI) * bumpBy : 0;
+    const sway = swing ? Math.sin(c / 240) * SWING_PX * lit : 0;
+    return { opacity: 0.36 + 0.64 * lit, transform: [{ translateY: sway }, { scale: 1 + bump }] };
   });
 
   const haloStyle = useAnimatedStyle(() => {
@@ -310,14 +331,14 @@ function Node({ placed, clock, endMs }: { placed: Placed; clock: SharedValue<num
     const span = isSource && recent === 0 ? LEAD_MS : PULSE_MS;
     const q = recent >= 0 ? (c - recent) / span : 2;
     const on = q >= 0 && q < 1;
-    return { opacity: on ? (1 - q) * 0.5 : 0, transform: [{ scale: on ? 1 + q * 0.5 : 1 }] };
+    return { opacity: on ? (1 - q) * 0.5 : 0, transform: [{ scale: on ? 1 + q * haloBy : 1 }] };
   });
 
   const ringProps = useAnimatedProps(() => {
     const c = clock.value;
     const span = Math.max(1, doneAt - litAt);
     const p = easeOut(clamp01((c - litAt) / span)) * (1 - fadeAt(c, endMs));
-    return { strokeDashoffset: RING_LEN * (1 - ringTarget * p) };
+    return { strokeDashoffset: ringLen * (1 - ringTarget * p) };
   });
 
   const badgeStyle = useAnimatedStyle(() => {
@@ -327,56 +348,78 @@ function Node({ placed, clock, endMs }: { placed: Placed; clock: SharedValue<num
     return { opacity: tk > 0 ? live : 0, transform: [{ scale: tk > 0 ? Math.max(0, backOut(tk)) * live : 0 }] };
   });
 
-  const texts = (
-    <>
-      <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-        {spec.label}
-      </Text>
-      {spec.amount ? (
-        <FlowAmountText amount={spec.amount} plan={plan} clock={clock} color={tone.deep} />
-      ) : (
-        <View style={styles.amountSpacer} />
-      )}
-    </>
-  );
+  // In the regular layouts a label above its node sits at the bottom of its block.
+  const justify = layout.mode === "side" ? "center" : spec.labelAbove ? "flex-end" : "flex-start";
 
   return (
-    <View
-      style={[styles.node, { left: x - NODE_W / 2, top: y - RING_BOX / 2 - (above ? LABEL_H + AMOUNT_H + TEXT_GAP : 0) }]}
-      pointerEvents="none"
-    >
-      {above ? <View style={styles.textsAbove}>{texts}</View> : null}
-
-      <Animated.View style={[styles.ringBox, bodyStyle]}>
-        <Animated.View style={[styles.halo, { backgroundColor: tone.main }, haloStyle]} />
-        <Svg width={RING_BOX} height={RING_BOX} style={StyleSheet.absoluteFill}>
-          <Circle cx={RING_BOX / 2} cy={RING_BOX / 2} r={RING_R} stroke={tone.main} strokeOpacity={0.16} strokeWidth={RING_STROKE} fill="none" />
+    <>
+      <Animated.View
+        style={[styles.ringBox, { left: at.ringRect.x, top: at.ringRect.y, width: ring, height: ring }, bodyStyle]}
+        pointerEvents="none"
+      >
+        <Animated.View style={[styles.halo, { width: ring, height: ring, borderRadius: ring / 2, backgroundColor: tone.main }, haloStyle]} />
+        <Svg width={ring} height={ring} style={StyleSheet.absoluteFill}>
+          <Circle cx={ring / 2} cy={ring / 2} r={ringR} stroke={tone.main} strokeOpacity={0.16} strokeWidth={ringStroke} fill="none" />
           <AnimatedCircle
-            cx={RING_BOX / 2}
-            cy={RING_BOX / 2}
-            r={RING_R}
+            cx={ring / 2}
+            cy={ring / 2}
+            r={ringR}
             stroke={tone.main}
-            strokeWidth={RING_STROKE}
+            strokeWidth={ringStroke}
             strokeLinecap="round"
             fill="none"
-            strokeDasharray={`${RING_LEN} ${RING_LEN}`}
-            transform={`rotate(-90 ${RING_BOX / 2} ${RING_BOX / 2})`}
+            strokeDasharray={`${ringLen} ${ringLen}`}
+            transform={`rotate(-90 ${ring / 2} ${ring / 2})`}
             animatedProps={ringProps}
           />
         </Svg>
-        <View style={[styles.chip, { backgroundColor: tone.tint, borderColor: tone.lip }]}>
-          <View style={styles.chipShine} />
-          <Icon size={21} color={tone.deep} strokeWidth={2.2} />
+        <View style={[styles.chip, { width: chip, height: chip, borderRadius: chip / 2, backgroundColor: tone.tint, borderColor: tone.lip }]}>
+          <View style={[styles.chipShine, { left: chip * 0.17, right: chip * 0.17, height: chip * 0.28 }]} />
+          <Icon size={layout.icon} color={tone.deep} strokeWidth={2.2} />
         </View>
         {spec.badge ? (
-          <Animated.View style={[styles.badge, spec.badge === "check" ? styles.badgeCheck : styles.badgeAlert, badgeStyle]}>
-            {spec.badge === "check" ? <Check size={11} color="#ffffff" strokeWidth={3.6} /> : <TriangleAlert size={10} color="#ffffff" strokeWidth={3} />}
+          <Animated.View
+            style={[
+              styles.badge,
+              { width: badge, height: badge, borderRadius: badge / 2 },
+              spec.badge === "check" ? styles.badgeCheck : styles.badgeAlert,
+              badgeStyle,
+            ]}
+          >
+            {spec.badge === "check" ? (
+              <Check size={badge * 0.55} color="#ffffff" strokeWidth={3.6} />
+            ) : (
+              <TriangleAlert size={badge * 0.5} color="#ffffff" strokeWidth={3} />
+            )}
           </Animated.View>
         ) : null}
       </Animated.View>
 
-      {above ? null : <View style={styles.textsBelow}>{texts}</View>}
-    </View>
+      <View
+        style={[styles.texts, { left: at.textRect.x, top: at.textRect.y, width: at.textRect.w, height: at.textRect.h, justifyContent: justify }]}
+        pointerEvents="none"
+      >
+        <Text
+          style={[styles.label, { fontSize: layout.labelFont, lineHeight: layout.labelLH, textAlign: at.textAlign }]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+          allowFontScaling={false}
+        >
+          {at.label}
+        </Text>
+        {spec.amount ? (
+          <FlowAmountText
+            amount={spec.amount}
+            plan={plan}
+            clock={clock}
+            color={tone.deep}
+            fontSize={layout.amountFont}
+            lineHeight={layout.amountLH}
+            textAlign={at.textAlign}
+          />
+        ) : null}
+      </View>
+    </>
   );
 }
 
@@ -396,11 +439,17 @@ function FlowAmountText({
   plan,
   clock,
   color,
+  fontSize,
+  lineHeight,
+  textAlign,
 }: {
   amount: NonNullable<FlowNodeSpec["amount"]>;
   plan: PlannedNode;
   clock: SharedValue<number>;
   color: string;
+  fontSize: number;
+  lineHeight: number;
+  textAlign: "center" | "left" | "right";
 }) {
   const { values, prefix = "", suffix = "" } = amount;
   const { arrivals, isSource } = plan;
@@ -447,7 +496,7 @@ function FlowAmountText({
   }
 
   return (
-    <Text style={[styles.amount, { color }]} numberOfLines={1}>
+    <Text style={[styles.amount, { color, fontSize, lineHeight, height: lineHeight, textAlign }]} numberOfLines={1} allowFontScaling={false}>
       {text}
     </Text>
   );
@@ -455,28 +504,47 @@ function FlowAmountText({
 
 // ---------------------------------------------------------------------------
 // The payoff: one burst of sparks around the node the story ends on.
-// One animated view; the eight sparks inside it are static.
+// One animated view; the eight sparks inside it are static. Its radius comes
+// from the layout, which sized it to end inside the safe box.
 // ---------------------------------------------------------------------------
 
 const SPARKS = [0, 45, 90, 135, 180, 225, 270, 315];
-const SPARK_R = 40;
 
-function Sparkle({ x, y, at, clock, endMs, color }: { x: number; y: number; at: number; clock: SharedValue<number>; endMs: number; color: string }) {
+function Sparkle({
+  x,
+  y,
+  r,
+  at,
+  clock,
+  endMs,
+  color,
+}: {
+  x: number;
+  y: number;
+  r: number;
+  at: number;
+  clock: SharedValue<number>;
+  endMs: number;
+  color: string;
+}) {
+  const grow = SPARK_SCALE - 0.45;
   const style = useAnimatedStyle(() => {
     const c = clock.value;
     const k = clamp01((c - at) / 760);
     const on = k > 0 && k < 1;
     return {
       opacity: on ? (1 - k) * (1 - fadeAt(c, endMs)) : 0,
-      transform: [{ scale: 0.45 + 0.75 * easeOut(k) }, { rotate: `${k * 24}deg` }],
+      transform: [{ scale: 0.45 + grow * easeOut(k) }, { rotate: `${k * 24}deg` }],
     };
   });
 
   return (
-    <Animated.View style={[styles.sparkle, { left: x - SPARK_R, top: y - SPARK_R }, style]} pointerEvents="none">
+    <Animated.View style={[styles.sparkle, { left: x - r, top: y - r, width: r * 2, height: r * 2 }, style]} pointerEvents="none">
       {SPARKS.map((deg, i) => {
         const rad = (deg * Math.PI) / 180;
         const size = i % 2 === 0 ? 6 : 4;
+        // Sparks sit just inside the radius, so the burst's edge is the radius itself.
+        const d = r - size;
         return (
           <View
             key={deg}
@@ -486,8 +554,8 @@ function Sparkle({ x, y, at, clock, endMs, color }: { x: number; y: number; at: 
               height: size,
               borderRadius: i % 2 === 0 ? 1.5 : size / 2,
               backgroundColor: i % 2 === 0 ? "#facc15" : color,
-              left: SPARK_R + Math.cos(rad) * SPARK_R - size / 2,
-              top: SPARK_R + Math.sin(rad) * SPARK_R - size / 2,
+              left: r + Math.cos(rad) * d - size / 2,
+              top: r + Math.sin(rad) * d - size / 2,
               transform: [{ rotate: "45deg" }],
             }}
           />
@@ -504,35 +572,29 @@ function SharkReaction({ mood, at, clock, endMs }: { mood: "happy" | "empathic";
     const live = 1 - fadeAt(c, endMs);
     return { opacity: k > 0 ? live : 0, transform: [{ scale: k > 0 ? Math.max(0, backOut(k)) : 0 }] };
   });
+  // A 44 px box around a 36 px image: the pop's overshoot stays inside the box.
   return (
-    <Animated.View style={[styles.shark, style]} pointerEvents="none">
-      <ExpoImage source={SHARK[mood]} style={styles.sharkImage} contentFit="contain" accessible={false} />
-    </Animated.View>
+    <View style={styles.sharkBox} pointerEvents="none">
+      <Animated.View style={style}>
+        <ExpoImage source={SHARK[mood]} style={styles.sharkImage} contentFit="contain" accessible={false} />
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  node: {
-    position: "absolute",
-    width: NODE_W,
-    alignItems: "center",
+  measure: {
+    width: "100%",
   },
   ringBox: {
-    width: RING_BOX,
-    height: RING_BOX,
+    position: "absolute",
     alignItems: "center",
     justifyContent: "center",
   },
   halo: {
     position: "absolute",
-    width: RING_BOX,
-    height: RING_BOX,
-    borderRadius: RING_BOX / 2,
   },
   chip: {
-    width: CHIP,
-    height: CHIP,
-    borderRadius: CHIP / 2,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
@@ -542,19 +604,13 @@ const styles = StyleSheet.create({
   chipShine: {
     position: "absolute",
     top: 3,
-    left: 7,
-    right: 7,
-    height: 12,
     borderRadius: 8,
     backgroundColor: "rgba(255,255,255,0.75)",
   },
   badge: {
     position: "absolute",
-    top: 1,
-    right: 1,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 0,
+    right: 0,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -566,58 +622,33 @@ const styles = StyleSheet.create({
   badgeAlert: {
     backgroundColor: "#dc2626",
   },
-  textsBelow: {
-    marginTop: TEXT_GAP,
-    alignItems: "center",
-    width: NODE_W,
-  },
-  textsAbove: {
-    marginBottom: TEXT_GAP,
-    alignItems: "center",
-    width: NODE_W,
+  texts: {
+    position: "absolute",
+    overflow: "hidden",
   },
   label: {
-    height: LABEL_H,
-    lineHeight: LABEL_H,
     color: LL_COLORS.textPrimary,
-    fontSize: 12,
     fontWeight: "800",
-    textAlign: "center",
     writingDirection: "rtl",
   },
   amount: {
-    height: AMOUNT_H,
-    lineHeight: AMOUNT_H,
-    fontSize: 13,
     fontWeight: "900",
-    textAlign: "center",
     writingDirection: "ltr",
     fontVariant: ["tabular-nums"],
-  },
-  amountSpacer: {
-    height: AMOUNT_H,
   },
   token: {
     position: "absolute",
     left: 0,
     top: 0,
-    width: COIN,
-    height: COIN,
     alignItems: "center",
     justifyContent: "center",
   },
   coinHalo: {
     position: "absolute",
-    width: COIN + 12,
-    height: COIN + 12,
-    borderRadius: (COIN + 12) / 2,
     backgroundColor: "#facc15",
     opacity: 0.28,
   },
   coin: {
-    width: COIN,
-    height: COIN,
-    borderRadius: COIN / 2,
     backgroundColor: "#f59e0b",
     borderWidth: 1.5,
     borderColor: "#b45309",
@@ -626,17 +657,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   coinFace: {
-    width: COIN - 7,
-    height: COIN - 7,
-    borderRadius: (COIN - 7) / 2,
     backgroundColor: "#fde047",
   },
   coinShine: {
     position: "absolute",
     top: 2,
     left: 3,
-    width: 6,
-    height: 4,
+    width: 5,
+    height: 3.5,
     borderRadius: 3,
     backgroundColor: "rgba(255,255,255,0.85)",
     transform: [{ rotate: "-30deg" }],
@@ -650,15 +678,15 @@ const styles = StyleSheet.create({
   },
   sparkle: {
     position: "absolute",
-    width: SPARK_R * 2,
-    height: SPARK_R * 2,
   },
-  shark: {
-    width: 40,
-    height: 40,
+  sharkBox: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   sharkImage: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
   },
 });
