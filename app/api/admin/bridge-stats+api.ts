@@ -38,7 +38,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const sql = neon(process.env.DATABASE_URL ?? '');
 
-    const [perBenefitRaw, dailyRaw, overallRaw] = await Promise.all([
+    const [perBenefitRows, dailyRows, overallRows] = await Promise.all([
       sql`
         SELECT
           benefit_id,
@@ -49,7 +49,7 @@ export async function GET(request: Request): Promise<Response> {
         FROM bridge_clicks
         GROUP BY benefit_id
         ORDER BY redeems DESC
-      ` as Array<Omit<BenefitTotals, 'conversion_pct'>>,
+      `,
       sql`
         SELECT
           to_char(DATE(created_at), 'YYYY-MM-DD') AS day,
@@ -60,7 +60,7 @@ export async function GET(request: Request): Promise<Response> {
           AND created_at >= NOW() - INTERVAL '30 days'
         GROUP BY day, platform
         ORDER BY day DESC, redeems DESC
-      ` as DailyRow[],
+      `,
       sql`
         SELECT
           COUNT(*) FILTER (WHERE action = 'redeem')::int    AS total_redeems,
@@ -70,8 +70,12 @@ export async function GET(request: Request): Promise<Response> {
           MIN(created_at)::text AS first_click,
           MAX(created_at)::text AS last_click
         FROM bridge_clicks
-      ` as OverallRow[],
+      `,
     ]);
+    // neon() resolves to untyped rows; narrow them to the shapes selected above.
+    const perBenefitRaw = perBenefitRows as Array<Omit<BenefitTotals, 'conversion_pct'>>;
+    const dailyRaw = dailyRows as DailyRow[];
+    const overallRaw = overallRows as OverallRow[];
 
     const perBenefit: BenefitTotals[] = perBenefitRaw.map((row) => ({
       ...row,
