@@ -1,0 +1,120 @@
+import {
+  Anchor,
+  Banknote,
+  Briefcase,
+  Building2,
+  Calendar,
+  ChartNoAxesColumn,
+  Clock,
+  Coffee,
+  Coins,
+  CreditCard,
+  Footprints,
+  Gift,
+  Globe,
+  GraduationCap,
+  HandCoins,
+  Handshake,
+  HeartPulse,
+  Hourglass,
+  House,
+  Landmark,
+  Laptop,
+  Package,
+  Percent,
+  PiggyBank,
+  Pizza,
+  Plane,
+  Receipt,
+  Repeat,
+  Scissors,
+  ShieldCheck,
+  Shirt,
+  ShoppingBag,
+  ShoppingCart,
+  Snowflake,
+  Sprout,
+  Store,
+  Tag,
+  TrendingDown,
+  TrendingUp,
+  Umbrella,
+  User,
+  Users,
+  Wallet,
+  Wheat,
+  Wrench,
+  Zap,
+} from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
+import type { FlowIconName, FlowTone } from "./flowTypes";
+
+/** The app's own icon set (lucide), so a diagram reads like the rest of FinPlay. No emoji. */
+export const FLOW_ICONS: Record<FlowIconName, LucideIcon> = {
+  wallet: Wallet,
+  bank: Landmark,
+  banknote: Banknote,
+  coins: Coins,
+  piggy: PiggyBank,
+  receipt: Receipt,
+  shield: ShieldCheck,
+  briefcase: Briefcase,
+  house: House,
+  bag: ShoppingBag,
+  cart: ShoppingCart,
+  zap: Zap,
+  pizza: Pizza,
+  trendUp: TrendingUp,
+  trendDown: TrendingDown,
+  percent: Percent,
+  card: CreditCard,
+  store: Store,
+  user: User,
+  building: Building2,
+  health: HeartPulse,
+  gift: Gift,
+  wrench: Wrench,
+  scissors: Scissors,
+  tag: Tag,
+  sprout: Sprout,
+  coffee: Coffee,
+  shirt: Shirt,
+  laptop: Laptop,
+  shoe: Footprints,
+  umbrella: Umbrella,
+  chart: ChartNoAxesColumn,
+  users: Users,
+  clock: Clock,
+  calendar: Calendar,
+  handCoins: HandCoins,
+  plane: Plane,
+  wheat: Wheat,
+  package: Package,
+  hourglass: Hourglass,
+  anchor: Anchor,
+  handshake: Handshake,
+  graduation: GraduationCap,
+  repeat: Repeat,
+  globe: Globe,
+  snowflake: Snowflake,
+};
+
+export interface ToneColors {
+  /** The neon line and the ring. */
+  main: string;
+  /** Icons and numbers: readable on a light surface. */
+  deep: string;
+  /** The node's face. */
+  tint: string;
+  /** The node's bottom lip (the pressed-3D edge used across the app). */
+  lip: string;
+}
+
+/** FinPlay's palette: brand cyan, coin gold, success green, warning red, neon violet. */
+export const FLOW_TONES: Record<FlowTone, ToneColors> = {
+  cyan: { main: "#0ea5e9", deep: "#0369a1", tint: "#e0f2fe", lip: "#7dd3fc" },
+  gold: { main: "#f59e0b", deep: "#b45309", tint: "#fef3c7", lip: "#fcd34d" },
+  green: { main: "#22c55e", deep: "#15803d", tint: "#dcfce7", lip: "#86efac" },
+  red: { main: "#ef4444", deep: "#b91c1c", tint: "#fee2e2", lip: "#fca5a5" },
+  violet: { main: "#7c3aed", deep: "#6d28d9", tint: "#ede9fe", lip: "#c4b5fd" },
+};
