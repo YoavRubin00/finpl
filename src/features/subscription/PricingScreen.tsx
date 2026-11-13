@@ -154,16 +154,20 @@ const FEATURES: FeatureRow[] = [
 const planStyles = StyleSheet.create({
   // Full width of the CTA section (the section centres its children, so the row must stretch itself),
   // with room above for the "הכי משתלם" badge so it never rides over the feature table.
-  row: { alignSelf: "stretch", flexDirection: "row-reverse", gap: 12, marginHorizontal: 20, marginTop: 22, marginBottom: 16 },
-  pill: { flex: 1, minHeight: 112, borderRadius: 18, borderWidth: 2, borderColor: "#e2e8f0", paddingTop: 22, paddingBottom: 14, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
+  row: { alignSelf: "stretch", flexDirection: "row-reverse", alignItems: "stretch", gap: 12, marginHorizontal: 20, marginTop: 22, marginBottom: 16 },
+  pillPress: { flex: 1 },
+  // Card: everything centred in one column — badge on the top edge, radio in the corner, then
+  // title / discount row / price, each on its own line with clear spacing.
+  pill: { flex: 1, minHeight: 124, borderRadius: 18, borderWidth: 2, borderColor: "#e2e8f0", paddingTop: 24, paddingBottom: 16, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
   pillActive: { borderColor: "#0ea5e9", backgroundColor: "#f0f9ff", shadowColor: "#0ea5e9", shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
   radio: { position: "absolute", top: 10, right: 10, width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#cbd5e1", alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff" },
   radioActive: { borderColor: "#0ea5e9", backgroundColor: "#0ea5e9" },
-  pillTitle: { fontSize: 16, fontWeight: "900", color: "#0f172a", writingDirection: "rtl" },
+  pillTitle: { fontSize: 17, fontWeight: "900", color: "#0f172a", textAlign: "center", alignSelf: "stretch" },
   // The billed amount is the most prominent price in the card (Apple 3.1.2(a)).
-  pillPrice: { fontSize: 17, fontWeight: "900", color: "#0f172a", marginTop: 8, writingDirection: "rtl" },
+  pillPrice: { fontSize: 18, fontWeight: "900", color: "#0f172a", marginTop: 6, textAlign: "center", alignSelf: "stretch" },
   // The discount, shown as a sign rather than words: the full price crossed out next to a red "-69%" tag.
-  dealRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8, marginTop: 8 },
+  // Fixed height on both cards (empty on monthly) so the two prices sit on the same line.
+  dealRow: { height: 26, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 6 },
   wasPrice: { fontSize: 12, fontWeight: "700", color: "#94a3b8", textDecorationLine: "line-through", writingDirection: "rtl" },
   offTag: { backgroundColor: "#ef4444", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, transform: [{ rotate: "-4deg" }] },
   offTagText: { fontSize: 11, fontWeight: "900", color: "#ffffff" },
@@ -855,24 +859,32 @@ export function PricingScreen() {
                           accessibilityRole="radio"
                           accessibilityState={{ selected: active }}
                           accessibilityLabel={`${title}, ${pkg.product.priceString}${pct > 0 ? `, במקום ${wasPrice}, הנחה של ${pct}%` : ''}`}
-                          style={({ pressed }) => [planStyles.pill, active && planStyles.pillActive, pressed && { transform: [{ scale: 0.98 }] }]}
+                          // Plain style object: a style FUNCTION on Pressable was dropped on Android
+                          // (13.11 screenshot: no card frame, text floating). The card visuals live
+                          // on the inner View instead.
+                          style={planStyles.pillPress}
                         >
-                          <View style={[planStyles.radio, active && planStyles.radioActive]} pointerEvents="none">
-                            {active ? <Check size={12} color="#ffffff" strokeWidth={4} /> : null}
-                          </View>
-                          {pct > 0 ? (
-                            <View style={planStyles.badge}><Text style={planStyles.badgeText} allowFontScaling={false}>הכי משתלם</Text></View>
-                          ) : null}
-                          <Text style={planStyles.pillTitle} allowFontScaling={false}>{title}</Text>
-                          {pct > 0 ? (
-                            <View style={planStyles.dealRow}>
-                              <Text style={planStyles.wasPrice} allowFontScaling={false}>{wasPrice}</Text>
-                              <View style={planStyles.offTag}><Text style={planStyles.offTagText} allowFontScaling={false}>{`-${pct}%`}</Text></View>
+                          <View style={[planStyles.pill, active && planStyles.pillActive]}>
+                            {pct > 0 ? (
+                              <View style={planStyles.badge} pointerEvents="none"><Text style={planStyles.badgeText} allowFontScaling={false}>הכי משתלם</Text></View>
+                            ) : null}
+                            <View style={[planStyles.radio, active && planStyles.radioActive]} pointerEvents="none">
+                              {active ? <Check size={12} color="#ffffff" strokeWidth={4} /> : null}
                             </View>
-                          ) : null}
-                          <Text style={planStyles.pillPrice} allowFontScaling={false}>
-                            {best ? `${pkg.product.priceString} לשנה` : `${pkg.product.priceString} לחודש`}
-                          </Text>
+                            <Text style={planStyles.pillTitle} allowFontScaling={false}>{title}</Text>
+                            {/* Same-height row on both cards so the prices line up. */}
+                            <View style={planStyles.dealRow}>
+                              {pct > 0 ? (
+                                <>
+                                  <Text style={planStyles.wasPrice} allowFontScaling={false}>{wasPrice}</Text>
+                                  <View style={planStyles.offTag}><Text style={planStyles.offTagText} allowFontScaling={false}>{`-${pct}%`}</Text></View>
+                                </>
+                              ) : null}
+                            </View>
+                            <Text style={planStyles.pillPrice} allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                              {best ? `${pkg.product.priceString} לשנה` : `${pkg.product.priceString} לחודש`}
+                            </Text>
+                          </View>
                         </Pressable>
                       );
                     })}
