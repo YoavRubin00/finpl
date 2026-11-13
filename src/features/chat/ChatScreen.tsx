@@ -541,10 +541,10 @@ const MessageBubble = React.memo(function MessageBubble({
           <Pressable
             onPress={onUpgradePress}
             accessibilityRole="button"
-            accessibilityLabel="שדרג לפרו"
+            accessibilityLabel="שדרגו ל-PRO"
             style={msgStyles.upgradeCta}
           >
-            <Text style={msgStyles.upgradeCtaText}>שדרג לפרו 💎</Text>
+            <Text style={msgStyles.upgradeCtaText}>שדרגו ל-PRO 💎</Text>
           </Pressable>
         )}
         {/* Timestamp + Read Receipt row */}
@@ -1213,9 +1213,9 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
               value={input}
               onChangeText={handleChangeText}
               editable={canSendChat}
-              placeholder={canSendChat ? companion.placeholder : "הגעת למגבלה היומית. חזור מחר או שדרג לפרו 💙"}
+              placeholder={canSendChat ? companion.placeholder : "הגעתם למגבלה היומית. נתראה מחר, או שדרגו ל-PRO 💙"}
               placeholderTextColor="#64748b"
-              accessibilityLabel={canSendChat ? "כתבו הודעה" : "הגעת למגבלה היומית, שדרוג לפרו יאפשר שיחה ללא הגבלה"}
+              accessibilityLabel={canSendChat ? "כתבו הודעה" : "הגעתם למגבלה היומית, שדרוג ל-PRO מאפשר שיחה ללא הגבלה"}
               multiline
               maxLength={500}
               style={[inputStyles.textInput, WEB_INPUT_RESET, { height: inputHeight }]}

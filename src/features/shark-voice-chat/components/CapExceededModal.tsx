@@ -29,8 +29,8 @@ const COPY: Record<CapExceededReason, CopyVariant> = {
   },
   'free-trial-over': {
     title: 'רוצה להמשיך לדבר עם השארק?',
-    body: 'דקת ההתנסות שלך הסתיימה. שדרג לפרו לעוד עשר דקות שיחה ביום + פיצ׳רים מתקדמים.',
-    primaryLabel: 'שדרג לפרו',
+    body: 'דקת ההתנסות שלך הסתיימה. עם PRO יש עוד עשר דקות שיחה ביום + פיצ׳רים מתקדמים.',
+    primaryLabel: 'שדרגו ל-PRO',
     secondaryLabel: 'אולי אחר כך',
   },
 };

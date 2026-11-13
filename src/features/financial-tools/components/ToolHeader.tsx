@@ -90,11 +90,21 @@ export function ToolHeader({ title, subtitle, accentColor = STITCH.primary, Icon
         ) : null}
 
         <View style={styles.titleWrap}>
-          <Text style={styles.title} numberOfLines={1} allowFontScaling={false}>
+          {/* Capped scaling instead of none (UX-23): the bar is one line with
+              shrink-to-fit, so larger system text stays readable without
+              breaking the layout. */}
+          <Text
+            style={styles.title}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            maxFontSizeMultiplier={1.3}
+            accessibilityRole="header"
+          >
             {title}
           </Text>
           {subtitle ? (
-            <Text style={styles.subtitle} numberOfLines={1} allowFontScaling={false}>
+            <Text style={styles.subtitle} numberOfLines={1} maxFontSizeMultiplier={1.3}>
               {subtitle}
             </Text>
           ) : null}
@@ -127,8 +137,8 @@ const styles = StyleSheet.create({
     borderBottomColor: STITCH.surfaceHighest,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     borderWidth: 1.5,
     alignItems: 'center',

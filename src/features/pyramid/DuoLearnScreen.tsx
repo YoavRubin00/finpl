@@ -1063,7 +1063,7 @@ function LockedModuleModal({ visible, onClose }: { visible: boolean; onClose: ()
           }}
           style={styles.modalCTA}
           accessibilityRole="button"
-          accessibilityLabel="שדרג ל-PRO"
+          accessibilityLabel="שדרגו ל-PRO"
         >
           <LinearGradient
             colors={["#0a2540", "#164e63", "#0a2540"]}
@@ -1079,11 +1079,13 @@ function LockedModuleModal({ visible, onClose }: { visible: boolean; onClose: ()
                 loop
               />
             </View>
-            <Text style={styles.modalCTAText}>שדרג ל-PRO</Text>
+            <Text style={styles.modalCTAText}>שדרגו ל-PRO</Text>
           </LinearGradient>
         </AnimatedPressable>
-        <Pressable onPress={onClose} style={{ paddingVertical: 10 }} accessibilityRole="button" accessibilityLabel="חזרה">
-          <Text style={{ color: "#71717a", fontSize: 14 }}>החליקו מטה או הקישו כאן</Text>
+        {/* A dismiss control that says what it does. It read "החליקו מטה או
+            הקישו כאן" (instructions as a button label) and announced "חזרה". */}
+        <Pressable onPress={onClose} style={{ minHeight: 44, paddingHorizontal: 24, justifyContent: "center" }} accessibilityRole="button" accessibilityLabel="לא עכשיו">
+          <Text style={{ color: "#64748b", fontSize: 14, fontWeight: "700" }}>לא עכשיו</Text>
         </Pressable>
       </Pressable>
     </SwipeableModal>

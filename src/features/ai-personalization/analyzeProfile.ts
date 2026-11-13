@@ -113,7 +113,7 @@ function deriveMonetizationContext(
       offers.push({
         trigger: 'after_win',
         bundleKey: 'gem_pack',
-        headline: 'חבילת ג׳מס',
+        headline: 'חבילת יהלומים',
         subtext: 'אם תרצה להאיץ את ההתקדמות — זמין בחנות',
         urgency: 'low',
       });

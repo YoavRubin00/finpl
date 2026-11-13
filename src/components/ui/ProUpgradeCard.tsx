@@ -29,10 +29,10 @@ export function ProUpgradeCard({
   headline,
   tagline = "✦ ללא הגבלות ✦ בלעדי לחברים ✦",
   active = true,
-  accessibilityLabel = "שדרג ל-PRO",
+  accessibilityLabel = "שדרגו ל-PRO",
 }: {
   onPress: () => void;
-  /** The white middle line — surface-specific (e.g. "לבבות אינסופיים + בוסט XP"). */
+  /** The white middle line — surface-specific (e.g. "אנרגיה אינסופית + בוסט XP"). */
   headline: string;
   tagline?: string;
   /** Drive the Lottie autoplay (pass screen focus to pause off-screen). */
