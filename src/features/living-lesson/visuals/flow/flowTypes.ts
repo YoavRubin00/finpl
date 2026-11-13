@@ -75,6 +75,10 @@ export interface FlowNodeSpec {
   id: string;
   /** One or two words. */
   label: string;
+  /** A shorter label for narrow or short stages (the compact layouts use it when it saves a line). */
+  short?: string;
+  /** The node bobs gently while the diagram plays: "this part moves", with no good/bad verdict. */
+  swing?: boolean;
   icon: FlowIconName;
   tone?: FlowTone;
   /** Logical grid position. Column 0 is where reading starts (the right, in Hebrew). Fractions are allowed. */
@@ -118,6 +122,13 @@ export interface FlowVisualSpec {
   shark?: "happy" | "empathic";
   /** Reading direction of the columns (default "rtl": money flows right to left). */
   direction?: "rtl" | "ltr";
+  /**
+   * The same idea in fewer rows, for a stage too short for the full diagram
+   * (a small phone, a long text above it, a large system font). Used only
+   * when the full diagram does not fit the height budget. It may re-arrange
+   * the nodes or leave some out; it must not add a figure the full one lacks.
+   */
+  compact?: { nodes: FlowNodeSpec[]; stages: FlowStageSpec[] };
 }
 
 /** Purchasing power: the same banknote, a price tag that grows, a basket that empties. */

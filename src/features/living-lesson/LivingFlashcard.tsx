@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import type { LayoutChangeEvent } from "react-native";
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -21,6 +22,7 @@ import { RichText } from "./RichText";
 import { VisualHost } from "./visuals/VisualHost";
 import { LL_COLORS, RTL_STYLE, SEGMENT_SPRING } from "./tokens";
 import { withLivingVisuals } from "./lessonVisuals";
+import { frameBudget } from "./visuals/flow/flowLayout";
 import type { LivingSegment } from "./livingTypes";
 
 interface LivingFlashcardProps {
@@ -143,6 +145,14 @@ export function LivingFlashcard({ segments: cardSegments, onAllRevealed, cardId,
     setTimeout(() => { pendingScrollRef.current = false; }, 600);
   }, [animate]);
 
+  // The card's real viewport height: a living diagram sizes itself so that its
+  // segment's text and the diagram both fit in it (flowLayout.frameBudget).
+  const [viewportH, setViewportH] = useState(0);
+  const handleViewportLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = Math.round(e.nativeEvent.layout.height);
+    setViewportH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+  }, []);
+
   return (
     <View style={styles.root}>
       {/* Segment progress dots — where am I inside this card (RTL: first dot
@@ -163,6 +173,7 @@ export function LivingFlashcard({ segments: cardSegments, onAllRevealed, cardId,
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        onLayout={handleViewportLayout}
         onContentSizeChange={handleContentSizeChange}
       >
         <Pressable
@@ -173,7 +184,7 @@ export function LivingFlashcard({ segments: cardSegments, onAllRevealed, cardId,
           style={styles.tapArea}
         >
           {segments.slice(0, revealedCount).map((segment, i) => (
-            <SegmentBlock key={i} segment={segment} animate={animate} onTermPress={handleTermPress} />
+            <SegmentBlock key={i} segment={segment} animate={animate} onTermPress={handleTermPress} viewportH={viewportH} />
           ))}
         </Pressable>
       </ScrollView>
@@ -189,11 +200,24 @@ function SegmentBlock({
   segment,
   animate,
   onTermPress,
+  viewportH,
 }: {
   segment: LivingSegment;
   animate: boolean;
   onTermPress: (term: string) => void;
+  viewportH: number;
 }) {
+  // A living diagram waits one layout pass for its text's height, so it is
+  // sized once, to the room that is really left in the card.
+  const sized = segment.visual?.kind === "flow";
+  const [textH, setTextH] = useState(0);
+  const handleTextLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = Math.round(e.nativeEvent.layout.height);
+    setTextH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+  }, []);
+  const visualReady = !sized || (textH > 0 && viewportH > 0);
+  const maxVisualH = sized && visualReady ? frameBudget(viewportH, textH) : undefined;
+
   // Mounts exactly once per reveal (parent keeps earlier segments mounted
   // via stable array-index keys), so this entrance plays exactly once —
   // combined scale + fade + translate, "עומק" per Yoav 1.8, not a flat fade.
@@ -215,9 +239,11 @@ function SegmentBlock({
 
   return (
     <Animated.View style={[styles.segment, style]}>
-      <RichText text={segment.text} onTermPress={onTermPress} animate={animate} baseDelayMs={110} />
+      <View onLayout={sized ? handleTextLayout : undefined}>
+        <RichText text={segment.text} onTermPress={onTermPress} animate={animate} baseDelayMs={110} />
+      </View>
 
-      {segment.visual ? <VisualHost visual={segment.visual} animate={animate} /> : null}
+      {segment.visual && visualReady ? <VisualHost visual={segment.visual} animate={animate} maxHeight={maxVisualH} /> : null}
 
       {segment.finnLine ? (
         <Animated.View

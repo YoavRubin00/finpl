@@ -1,5 +1,6 @@
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import type { LayoutChangeEvent } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
 import { Package, Tag, TrendingUp } from "lucide-react-native";
@@ -7,6 +8,7 @@ import { LL_COLORS } from "../tokens";
 import { StageFrame } from "./flow/StageFrame";
 import { useRoundClock } from "./flow/useRoundClock";
 import { backOut, clamp01, easeOut, fadeAt } from "./flow/flowTimeline";
+import { DROP_PX, EROSION_PER_ROW, TAG_GROW, layoutErosion } from "./flow/erosionLayout";
 import type { ErosionVisualSpec } from "./flow/flowTypes";
 
 interface Props {
@@ -23,12 +25,14 @@ const DROP_AFTER_MS = 220;
 const DROP_MS = 420;
 const TAIL_MS = 700;
 const MAX_ITEMS = 10;
-const PER_ROW = 5;
-const STAGE_H = 150;
+const PLACEHOLDER_H = 130;
+/** The fixed word under the banknote. */
+const NOTE_CAPTION = "אותו שטר";
 
 /**
  * Purchasing power in one glance: the banknote never changes, the price tag
  * grows a step at a time, and with every step one item leaves the basket.
+ * Sizes come from erosionLayout.ts (measured width, font scale, safe margin).
  * Same clock, same round and same reduced-motion behaviour as the diagrams.
  */
 export function ErosionVisual({ visual, animate, startDelayMs }: Props) {
@@ -36,9 +40,34 @@ export function ErosionVisual({ visual, animate, startDelayMs }: Props) {
   const lost = Math.max(0, Math.min(items, Math.round(visual.lost)));
   const lastDrop = LEAD_MS + Math.max(0, lost - 1) * STEP_MS + DROP_AFTER_MS + DROP_MS;
   const endMs = lastDrop + TAIL_MS;
+  const { fontScale } = useWindowDimensions();
+
+  const [width, setWidth] = useState(0);
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    // The stage's own 1 px border on each side is not drawable area.
+    const w = Math.round(e.nativeEvent.layout.width) - 2;
+    setWidth((prev) => (Math.abs(prev - w) > 1 ? w : prev));
+  }, []);
+
+  const layout = useMemo(
+    () =>
+      width > 0
+        ? layoutErosion({
+            width,
+            fontScale,
+            items,
+            noteLabel: visual.noteLabel,
+            priceLabel: visual.priceLabel,
+            basketLabel: visual.basketLabel,
+            noteCaption: NOTE_CAPTION,
+          })
+        : null,
+    [width, fontScale, items, visual.noteLabel, visual.priceLabel, visual.basketLabel],
+  );
 
   const { clock, replay } = useRoundClock({ animate, endMs, startDelayMs, payoffAt: lastDrop, payoffIsGood: false });
 
+  const growBy = TAG_GROW - 1;
   const tagStyle = useAnimatedStyle(() => {
     const c = clock.value;
     const live = 1 - fadeAt(c, endMs);
@@ -47,132 +76,173 @@ export function ErosionVisual({ visual, animate, startDelayMs }: Props) {
       grown += easeOut(clamp01((c - (LEAD_MS + i * STEP_MS)) / 360));
     }
     const share = lost > 0 ? (grown / lost) * live : 0;
-    return { transform: [{ scale: 1 + 0.42 * share }] };
+    return { transform: [{ scale: 1 + growBy * share }] };
   });
 
   const arrowStyle = useAnimatedStyle(() => {
     const c = clock.value;
     const k = clamp01((c - LEAD_MS) / 320) * (1 - fadeAt(c, endMs));
-    return { opacity: k, transform: [{ translateY: (1 - k) * 6 }, { scale: 0.6 + 0.4 * Math.max(0, backOut(k)) }] };
+    // Capped at 1: the badge never grows past the box the layout gave it.
+    return { opacity: k, transform: [{ scale: Math.min(1, 0.6 + 0.4 * Math.max(0, backOut(k))) }] };
   });
+
+  const labelStyle = layout ? { fontSize: layout.labelFont, lineHeight: layout.labelLH } : null;
 
   return (
     <StageFrame
-      height={STAGE_H}
+      height={layout?.height ?? PLACEHOLDER_H}
       a11y={visual.a11y}
       caption={visual.caption}
       example={visual.example}
+      onStageLayout={onLayout}
       onReplay={animate ? replay : undefined}
     >
-      <View style={styles.row}>
-        {/* Reading order, right to left: the note, the price, what it buys. */}
-        <View style={styles.col}>
-          <View style={styles.note}>
+      {layout && labelStyle ? (
+        <>
+          <View style={[styles.note, { left: layout.note.x, top: layout.note.y, width: layout.note.w, height: layout.note.h }]}>
             <View style={styles.noteInner}>
-              <Text style={styles.noteText}>{visual.noteLabel}</Text>
+              <Text style={[styles.noteText, { fontSize: layout.noteFont }]} numberOfLines={1} allowFontScaling={false}>
+                {visual.noteLabel}
+              </Text>
             </View>
           </View>
-          <Text style={styles.colLabel} numberOfLines={1}>
-            אותו שטר
-          </Text>
-        </View>
 
-        <View style={styles.col}>
-          <View style={styles.tagBox}>
-            <Animated.View style={[styles.priceTag, tagStyle]}>
-              <Tag size={24} color="#b91c1c" strokeWidth={2.2} />
-            </Animated.View>
-            <Animated.View style={[styles.arrow, arrowStyle]}>
-              <TrendingUp size={13} color="#ffffff" strokeWidth={3} />
-            </Animated.View>
-          </View>
-          <Text style={styles.colLabel} numberOfLines={1}>
+          <Animated.View
+            style={[
+              styles.priceTag,
+              { left: layout.tag.x, top: layout.tag.y, width: layout.tag.w, height: layout.tag.h, borderRadius: layout.tag.w / 2 },
+              tagStyle,
+            ]}
+          >
+            <Tag size={layout.tag.w * 0.52} color="#b91c1c" strokeWidth={2.2} />
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.arrow,
+              { left: layout.arrow.x, top: layout.arrow.y, width: layout.arrow.w, height: layout.arrow.h, borderRadius: layout.arrow.w / 2 },
+              arrowStyle,
+            ]}
+          >
+            <TrendingUp size={layout.arrow.w * 0.58} color="#ffffff" strokeWidth={3} />
+          </Animated.View>
+
+          {Array.from({ length: items }, (_, i) => {
+            // Reading order starts at the right; the last items are the ones that drop out.
+            const col = i % EROSION_PER_ROW;
+            const row = Math.floor(i / EROSION_PER_ROW);
+            const x = layout.basket.x + layout.basket.w - layout.item - col * (layout.item + layout.itemGap);
+            const y = layout.basket.y + row * (layout.item + layout.itemGap);
+            const lostIndex = i - (items - lost);
+            return (
+              <BasketItem
+                key={i}
+                x={x}
+                y={y}
+                size={layout.item}
+                dropAt={lostIndex >= 0 ? LEAD_MS + lostIndex * STEP_MS + DROP_AFTER_MS : null}
+                clock={clock}
+                endMs={endMs}
+              />
+            );
+          })}
+
+          <Text
+            style={[styles.colLabel, labelStyle, { left: layout.labels.note.x, top: layout.labels.note.y, width: layout.labels.note.w }]}
+            numberOfLines={2}
+            allowFontScaling={false}
+          >
+            {NOTE_CAPTION}
+          </Text>
+          <Text
+            style={[styles.colLabel, labelStyle, { left: layout.labels.price.x, top: layout.labels.price.y, width: layout.labels.price.w }]}
+            numberOfLines={2}
+            allowFontScaling={false}
+          >
             {visual.priceLabel}
           </Text>
-        </View>
-
-        <View style={styles.col}>
-          <View style={styles.basket}>
-            {Array.from({ length: items }, (_, i) => {
-              // The last items in reading order are the ones that drop out.
-              const lostIndex = i - (items - lost);
-              return (
-                <BasketItem
-                  key={i}
-                  dropAt={lostIndex >= 0 ? LEAD_MS + lostIndex * STEP_MS + DROP_AFTER_MS : null}
-                  clock={clock}
-                  endMs={endMs}
-                />
-              );
-            })}
-          </View>
-          <Text style={styles.colLabel} numberOfLines={1}>
+          <Text
+            style={[styles.colLabel, labelStyle, { left: layout.labels.basket.x, top: layout.labels.basket.y, width: layout.labels.basket.w }]}
+            numberOfLines={2}
+            allowFontScaling={false}
+          >
             {visual.basketLabel}
           </Text>
-        </View>
-      </View>
+        </>
+      ) : null}
     </StageFrame>
   );
 }
 
-function BasketItem({ dropAt, clock, endMs }: { dropAt: number | null; clock: SharedValue<number>; endMs: number }) {
+function BasketItem({
+  x,
+  y,
+  size,
+  dropAt,
+  clock,
+  endMs,
+}: {
+  x: number;
+  y: number;
+  size: number;
+  dropAt: number | null;
+  clock: SharedValue<number>;
+  endMs: number;
+}) {
+  const box = { left: x, top: y, width: size, height: size, borderRadius: size * 0.34 };
   if (dropAt === null) {
     return (
-      <View style={styles.item}>
-        <Package size={11} color="#b45309" strokeWidth={2.2} />
+      <View style={[styles.item, box]}>
+        <Package size={size * 0.55} color="#b45309" strokeWidth={2.2} />
       </View>
     );
   }
-  return <DroppingItem dropAt={dropAt} clock={clock} endMs={endMs} />;
+  return <DroppingItem box={box} iconSize={size * 0.55} dropAt={dropAt} clock={clock} endMs={endMs} />;
 }
 
-function DroppingItem({ dropAt, clock, endMs }: { dropAt: number; clock: SharedValue<number>; endMs: number }) {
+function DroppingItem({
+  box,
+  iconSize,
+  dropAt,
+  clock,
+  endMs,
+}: {
+  box: { left: number; top: number; width: number; height: number; borderRadius: number };
+  iconSize: number;
+  dropAt: number;
+  clock: SharedValue<number>;
+  endMs: number;
+}) {
   const style = useAnimatedStyle(() => {
     const c = clock.value;
     const k = easeOut(clamp01((c - dropAt) / DROP_MS)) * (1 - fadeAt(c, endMs));
     return {
       opacity: 1 - 0.84 * k,
-      transform: [{ translateY: k * 7 }, { rotate: `${k * 14}deg` }, { scale: 1 - 0.14 * k }],
+      transform: [{ translateY: k * DROP_PX }, { rotate: `${k * 12}deg` }, { scale: 1 - 0.14 * k }],
     };
   });
   return (
-    <Animated.View style={[styles.item, style]}>
-      <Package size={11} color="#b45309" strokeWidth={2.2} />
+    <Animated.View style={[styles.item, box, style]}>
+      <Package size={iconSize} color="#b45309" strokeWidth={2.2} />
     </Animated.View>
   );
 }
 
-const ITEM = 20;
-const ITEM_GAP = 3;
-
 const styles = StyleSheet.create({
-  row: {
-    flex: 1,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-  },
-  col: {
-    alignItems: "center",
-    gap: 10,
-  },
   colLabel: {
+    position: "absolute",
     color: LL_COLORS.textPrimary,
-    fontSize: 12,
     fontWeight: "800",
     textAlign: "center",
     writingDirection: "rtl",
   },
   note: {
-    width: 76,
-    height: 44,
+    position: "absolute",
     borderRadius: 9,
     backgroundColor: "#dcfce7",
     borderWidth: 1.5,
     borderColor: "#86efac",
     borderBottomWidth: 4,
-    padding: 4,
+    padding: 3,
   },
   noteInner: {
     flex: 1,
@@ -185,21 +255,12 @@ const styles = StyleSheet.create({
   },
   noteText: {
     color: "#15803d",
-    fontSize: 16,
     fontWeight: "900",
     writingDirection: "ltr",
     fontVariant: ["tabular-nums"],
   },
-  tagBox: {
-    width: 60,
-    height: 62,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   priceTag: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    position: "absolute",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fee2e2",
@@ -209,29 +270,14 @@ const styles = StyleSheet.create({
   },
   arrow: {
     position: "absolute",
-    top: 0,
-    right: 2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#dc2626",
     borderWidth: 2,
     borderColor: "#ffffff",
   },
-  basket: {
-    width: PER_ROW * ITEM + (PER_ROW - 1) * ITEM_GAP,
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: ITEM_GAP,
-    justifyContent: "flex-start",
-    minHeight: ITEM * 2 + ITEM_GAP,
-  },
   item: {
-    width: ITEM,
-    height: ITEM,
-    borderRadius: 7,
+    position: "absolute",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fef3c7",

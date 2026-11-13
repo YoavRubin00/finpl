@@ -94,10 +94,10 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
         a11y: "שישה אחוזים מהמשכורת שלכם, שישה וחצי אחוזים תגמולים מהמעסיק ושישה אחוזים פיצויים מהמעסיק נכנסים יחד לקרן הפנסיה: שמונה עשר וחצי אחוזים מהשכר.",
         caption: "פנסיית חובה בישראל: ‏18.5% מהשכר נכנסים לקרן מדי חודש",
         nodes: [
-          { id: "you", label: "מהמשכורת שלכם", icon: "user", tone: "cyan", col: 0, row: 0, amount: { values: [6], suffix: "%" } },
-          { id: "emp", label: "תגמולי מעסיק", icon: "building", tone: "violet", col: 0, row: 1, amount: { values: [6.5], suffix: "%" } },
+          { id: "you", label: "מהמשכורת שלכם", short: "אתם", icon: "user", tone: "cyan", col: 0, row: 0, amount: { values: [6], suffix: "%" } },
+          { id: "emp", label: "תגמולי מעסיק", short: "מעסיק", icon: "building", tone: "violet", col: 0, row: 1, amount: { values: [6.5], suffix: "%" } },
           { id: "sev", label: "פיצויים", icon: "shield", tone: "gold", col: 0, row: 2, amount: { values: [6], suffix: "%" } },
-          { id: "fund", label: "קרן הפנסיה", icon: "piggy", tone: "green", col: 1, row: 1, amount: { values: [6, 12.5, 18.5], suffix: "%" }, badge: "check" },
+          { id: "fund", label: "קרן הפנסיה", short: "הקרן", icon: "piggy", tone: "green", col: 1, row: 1, amount: { values: [6, 12.5, 18.5], suffix: "%" }, badge: "check" },
         ],
         stages: [{ legs: [["you", "fund"], ["emp", "fund"], ["sev", "fund"]], staggerMs: 520, tone: "green" }],
       },
@@ -125,6 +125,16 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
           { legs: [["goods", "money"]], tone: "gold" },
           { legs: [["money", "shoes"], ["money", "coffee"], ["money", "shirt"]] },
         ],
+        // Short stage: two of the three goods, in two rows.
+        compact: {
+          nodes: [
+            { id: "goods", label: "תפוחי אדמה", icon: "wheat", tone: "green", col: 0, row: 0.5 },
+            { id: "money", label: "כסף", icon: "coins", tone: "gold", col: 1, row: 0.5 },
+            { id: "shoes", label: "נעליים", icon: "shoe", tone: "cyan", col: 2, row: 0, badge: "check" },
+            { id: "coffee", label: "קפה", icon: "coffee", tone: "cyan", col: 2, row: 1, badge: "check" },
+          ],
+          stages: [{ legs: [["goods", "money"]], tone: "gold" }, { legs: [["money", "shoes"], ["money", "coffee"]] }],
+        },
       },
     },
   ],
@@ -206,6 +216,19 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
           { legs: [["money", "stocks"], ["money", "bank"], ["money", "estate"]] },
           { legs: [["stocks", "yield"], ["bank", "yield"], ["estate", "yield"]], tone: "green", staggerMs: 200 },
         ],
+        // Short stage: two of the three places to invest, in two rows.
+        compact: {
+          nodes: [
+            { id: "money", label: "הכסף שלכם", icon: "coins", tone: "gold", col: 0, row: 0.5 },
+            { id: "stocks", label: "מניות", icon: "chart", tone: "cyan", col: 1, row: 0 },
+            { id: "estate", label: "נדל\"ן", icon: "house", tone: "cyan", col: 1, row: 1 },
+            { id: "yield", label: "תשואה", icon: "trendUp", tone: "green", col: 2, row: 0.5, badge: "check" },
+          ],
+          stages: [
+            { legs: [["money", "stocks"], ["money", "estate"]] },
+            { legs: [["stocks", "yield"], ["estate", "yield"]], tone: "green", staggerMs: 200 },
+          ],
+        },
       },
     },
   ],
@@ -278,9 +301,9 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
         a11y: "מהחיוב החודשי חלק משולם, והחלק שנדחה עובר לחודש הבא עם ריבית.",
         caption: "מה שלא שולם החודש עובר הלאה, עם ריבית",
         nodes: [
-          { id: "bill", label: "החיוב החודשי", icon: "receipt", tone: "cyan", col: 0, row: 0.5 },
-          { id: "paid", label: "שולם החודש", icon: "wallet", tone: "green", col: 1, row: 0, badge: "check" },
-          { id: "rolled", label: "נדחה, עם ריבית", icon: "repeat", tone: "red", col: 1, row: 1, badge: "alert" },
+          { id: "bill", label: "החיוב החודשי", short: "החיוב", icon: "receipt", tone: "cyan", col: 0, row: 0.5 },
+          { id: "paid", label: "שולם החודש", short: "שולם", icon: "wallet", tone: "green", col: 1, row: 0, badge: "check" },
+          { id: "rolled", label: "נדחה, עם ריבית", short: "נדחה", icon: "repeat", tone: "red", col: 1, row: 1, badge: "alert" },
         ],
         stages: [{ legs: [["bill", "paid"]], tone: "green" }, { legs: [["bill", "rolled"]], tone: "red" }],
       },
@@ -298,7 +321,7 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
         a11y: "כשהמשכורת נכנסת, עשרים אחוזים יוצאים קודם לחיסכון, ורק אחר כך חמישים אחוזים לצרכים ושלושים אחוזים לרצונות.",
         caption: "קודם החיסכון יוצא, ורק אחר כך כל השאר",
         nodes: [
-          { id: "salary", label: "המשכורת", icon: "briefcase", tone: "cyan", col: 0, row: 1 },
+          { id: "salary", label: "המשכורת", short: "משכורת", icon: "briefcase", tone: "cyan", col: 0, row: 1 },
           { id: "save", label: "חיסכון", icon: "piggy", tone: "green", col: 1, row: 0, amount: { values: [20], suffix: "%" }, ring: 0.2, badge: "check" },
           { id: "needs", label: "צרכים", icon: "house", tone: "violet", col: 1, row: 1, amount: { values: [50], suffix: "%" }, ring: 0.5 },
           { id: "wants", label: "רצונות", icon: "bag", tone: "gold", col: 1, row: 2, amount: { values: [30], suffix: "%" }, ring: 0.3 },
@@ -333,6 +356,20 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
           { legs: [["gross", "tax"], ["gross", "ni"], ["gross", "pension"]], route: "v", tone: "red", staggerMs: 260 },
           { legs: [["gross", "net"]], tone: "green" },
         ],
+        // Short stage: the same five nodes and figures in two columns (labels beside the nodes).
+        compact: {
+          nodes: [
+            { id: "gross", label: "ברוטו", icon: "briefcase", tone: "cyan", col: 0, row: 0, amount: { values: [10000], prefix: "₪" } },
+            { id: "net", label: "נטו", icon: "wallet", tone: "green", col: 0, row: 2, amount: { values: [8200], prefix: "~₪" }, ring: 0.82, badge: "check" },
+            { id: "tax", label: "מס הכנסה", short: "מס", icon: "receipt", tone: "red", col: 1, row: 0, amount: { values: [600], prefix: "~₪" }, ring: 0.06 },
+            { id: "ni", label: "לאומי ובריאות", short: "לאומי", icon: "health", tone: "gold", col: 1, row: 1, amount: { values: [600], prefix: "~₪" }, ring: 0.06 },
+            { id: "pension", label: "פנסיה", icon: "piggy", tone: "violet", col: 1, row: 2, amount: { values: [600], prefix: "~₪" }, ring: 0.06 },
+          ],
+          stages: [
+            { legs: [["gross", "tax"], ["gross", "ni"], ["gross", "pension"]], tone: "red", staggerMs: 260 },
+            { legs: [["gross", "net"]], route: "v", tone: "green" },
+          ],
+        },
       },
     },
   ],
@@ -348,7 +385,7 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
         caption: "אותה הלוואה, שתי תוצאות. השאלה היא מה קונים איתה",
         nodes: [
           { id: "loan", label: "הלוואה", icon: "handCoins", tone: "cyan", col: 0, row: 0.5 },
-          { id: "asset", label: "נכס שמייצר כסף", icon: "sprout", tone: "green", col: 1, row: 0, badge: "check" },
+          { id: "asset", label: "נכס שמייצר כסף", short: "מייצר כסף", icon: "sprout", tone: "green", col: 1, row: 0, badge: "check" },
           { id: "stuff", label: "מוצר מתכלה", icon: "bag", tone: "red", col: 1, row: 1, badge: "alert" },
         ],
         stages: [{ legs: [["loan", "stuff"]], tone: "red" }, { legs: [["loan", "asset"]], tone: "green" }],
@@ -451,6 +488,20 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
           { legs: [["gross", "cost"]] },
           { legs: [["sev", "cost"], ["pension", "cost"], ["ni", "cost"]], route: "v", tone: "violet", staggerMs: 300 },
         ],
+        // Short stage: the same five nodes and figures in two columns (labels beside the nodes).
+        compact: {
+          nodes: [
+            { id: "gross", label: "הברוטו שלכם", short: "ברוטו", icon: "briefcase", tone: "cyan", col: 0, row: 0 },
+            { id: "cost", label: "עלות מעסיק", icon: "building", tone: "violet", col: 0, row: 2, badge: "check" },
+            { id: "ni", label: "ביטוח לאומי", short: "לאומי", icon: "health", tone: "gold", col: 1, row: 0, amount: { values: [7.6], suffix: "%" } },
+            { id: "pension", label: "פנסיה", icon: "piggy", tone: "violet", col: 1, row: 1, amount: { values: [6.5], suffix: "%" } },
+            { id: "sev", label: "פיצויים", icon: "shield", tone: "green", col: 1, row: 2, amount: { values: [6], suffix: "%" } },
+          ],
+          stages: [
+            { legs: [["gross", "cost"]], route: "v" },
+            { legs: [["ni", "cost"], ["pension", "cost"], ["sev", "cost"]], tone: "violet", staggerMs: 300 },
+          ],
+        },
       },
     },
   ],
@@ -464,18 +515,16 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
       anchor: "מתפצלות לשניים",
       visual: {
         kind: "flow",
-        a11y: "הפרשות המעסיק מתפצלות לתגמולים ולפיצויים, ושניהם נצברים בקרן שעל השם שלכם.",
-        caption: "שני זרמים מהמעסיק, קרן אחת על השם שלכם",
+        // Only what this card says: the employer's contributions split in two,
+        // תגמולים (for your pension allowance) and פיצויים. Where they are kept is not shown.
+        a11y: "הפרשות המעסיק מתפצלות לשניים: תגמולים, לקצבה שלכם, ופיצויים.",
+        caption: "הפרשות המעסיק מתפצלות לשניים: תגמולים לקצבה, ופיצויים",
         nodes: [
-          { id: "emp", label: "המעסיק", icon: "building", tone: "cyan", col: 0, row: 0.5 },
+          { id: "emp", label: "הפרשות המעסיק", short: "המעסיק", icon: "building", tone: "cyan", col: 0, row: 0.5 },
           { id: "tag", label: "תגמולים", icon: "piggy", tone: "violet", col: 1, row: 0 },
           { id: "sev", label: "פיצויים", icon: "shield", tone: "gold", col: 1, row: 1 },
-          { id: "fund", label: "הקרן שלכם", icon: "wallet", tone: "green", col: 2, row: 0.5, badge: "check" },
         ],
-        stages: [
-          { legs: [["emp", "tag"], ["emp", "sev"]] },
-          { legs: [["tag", "fund"], ["sev", "fund"]], tone: "green", staggerMs: 240 },
-        ],
+        stages: [{ legs: [["emp", "tag"]], tone: "violet" }, { legs: [["emp", "sev"]], tone: "gold" }],
       },
     },
   ],
@@ -519,6 +568,16 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
           { legs: [["you", "etf"]], tone: "violet" },
           { legs: [["etf", "c1"], ["etf", "c2"], ["etf", "c3"]], tone: "green" },
         ],
+        // Short stage: two rows.
+        compact: {
+          nodes: [
+            { id: "you", label: "קנייה אחת", icon: "wallet", tone: "cyan", col: 0, row: 0.5 },
+            { id: "etf", label: "ETF", icon: "package", tone: "violet", col: 1, row: 0.5 },
+            { id: "c1", label: "חברה", icon: "building", tone: "green", col: 2, row: 0, badge: "check" },
+            { id: "c3", label: "ועוד אלפים", icon: "globe", tone: "green", col: 2, row: 1, badge: "check" },
+          ],
+          stages: [{ legs: [["you", "etf"]], tone: "violet" }, { legs: [["etf", "c1"], ["etf", "c3"]], tone: "green" }],
+        },
       },
     },
   ],
@@ -555,14 +614,16 @@ export const LESSON_VISUALS: Record<string, LivingAttachment[]> = {
       anchor: "ארוחת החינם",
       visual: {
         kind: "flow",
-        a11y: "הכסף מתחלק בין מניות עולמיות, אגרות חוב ומזומן. גם אם חלק אחד יורד, השאר מחזיקים את התיק.",
-        caption: "גם אם חלק אחד נופל, השאר מחזיקים את התיק",
+        // No verdict on any part: no check and no alert. The stocks node only bobs
+        // (it is the part that moves most), in the same neutral colour family as the rest.
+        a11y: "הכסף מתחלק בין מניות עולמיות, אגרות חוב ומזומן. חלק אחד זז יותר מהאחרים, והתמהיל כולו נשאר יציב יותר.",
+        caption: "חלק אחד זז יותר, התמהיל יציב",
         example: true,
         nodes: [
           { id: "money", label: "הכסף שלכם", icon: "coins", tone: "gold", col: 0, row: 1 },
-          { id: "stocks", label: "מניות עולמיות", icon: "chart", tone: "red", col: 1, row: 0, amount: { values: [60], suffix: "%" }, ring: 0.6, badge: "alert" },
-          { id: "bonds", label: "אג\"ח", icon: "shield", tone: "cyan", col: 1, row: 1, amount: { values: [30], suffix: "%" }, ring: 0.3, badge: "check" },
-          { id: "cash", label: "מזומן", icon: "banknote", tone: "green", col: 1, row: 2, amount: { values: [10], suffix: "%" }, ring: 0.1, badge: "check" },
+          { id: "stocks", label: "מניות עולמיות", short: "מניות", icon: "chart", tone: "violet", col: 1, row: 0, amount: { values: [60], suffix: "%" }, ring: 0.6, swing: true },
+          { id: "bonds", label: "אג\"ח", icon: "shield", tone: "cyan", col: 1, row: 1, amount: { values: [30], suffix: "%" }, ring: 0.3 },
+          { id: "cash", label: "מזומן", icon: "banknote", tone: "green", col: 1, row: 2, amount: { values: [10], suffix: "%" }, ring: 0.1 },
         ],
         stages: [{ legs: [["money", "stocks"], ["money", "bonds"], ["money", "cash"]], staggerMs: 260 }],
       },

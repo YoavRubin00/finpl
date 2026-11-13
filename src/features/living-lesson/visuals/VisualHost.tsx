@@ -19,10 +19,16 @@ interface VisualHostProps {
   animate?: boolean;
   /** ms after mount before this visual's own entrance starts (lets the segment's text land first). */
   delayMs?: number;
+  /**
+   * Most height the visual may take (px), from the card's measured viewport
+   * minus the segment's text. The living diagrams pick a tighter layout to
+   * stay under it; the older primitives have a fixed small height and ignore it.
+   */
+  maxHeight?: number;
 }
 
 /** Maps a FlashcardVisual's `kind` to its rendering primitive, and wraps it in one shared entrance beat. */
-export function VisualHost({ visual, animate = true, delayMs = VISUAL_DELAY_MS }: VisualHostProps) {
+export function VisualHost({ visual, animate = true, delayMs = VISUAL_DELAY_MS, maxHeight }: VisualHostProps) {
   const progress = useSharedValue(animate ? 0 : 1);
 
   useEffect(() => {
@@ -45,15 +51,15 @@ export function VisualHost({ visual, animate = true, delayMs = VISUAL_DELAY_MS }
 
   return (
     <Animated.View style={[{ width: "100%" }, entranceStyle]}>
-      {renderPrimitive(visual, animate, innerStartDelay)}
+      {renderPrimitive(visual, animate, innerStartDelay, maxHeight)}
     </Animated.View>
   );
 }
 
-function renderPrimitive(visual: LivingVisual, animate: boolean, startDelayMs: number): React.ReactElement {
+function renderPrimitive(visual: LivingVisual, animate: boolean, startDelayMs: number, maxHeight: number | undefined): React.ReactElement {
   switch (visual.kind) {
     case "flow":
-      return <FlowVisual visual={visual} animate={animate} startDelayMs={startDelayMs} />;
+      return <FlowVisual visual={visual} animate={animate} startDelayMs={startDelayMs} maxHeight={maxHeight} />;
     case "erosion":
       return <ErosionVisual visual={visual} animate={animate} startDelayMs={startDelayMs} />;
     case "lottie":
