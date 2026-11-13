@@ -233,7 +233,7 @@ async function fetchInterestRate(): Promise<RateItem> {
       }
     }
   } catch { /* fall through */ }
-  return { value: '4.50%', numericValue: 4.5, changePct: 0, direction: 'stable', label: 'ריבית בנק ישראל', symbol: '🏦' };
+  return { value: '3.25%', numericValue: 3.25, changePct: 0, direction: 'stable', label: 'ריבית בנק ישראל', symbol: '🏦' };
 }
 
 // ── Handler ────────────────────────────────────────────────────────────────

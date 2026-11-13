@@ -256,7 +256,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   {
     id: "concept-31",
     titleHe: "נקודות זיכוי במס",
-    descriptionHe: "כל ישראלי מקבל 2.25 נקודות זיכוי בסיסיות. בשנת 2025 — כ-242 ש\"ח/חודש, פחות מס. תוספות לתואר, ילדים, חיילים משוחררים.",
+    descriptionHe: "כל ישראלי מקבל 2.25 נקודות זיכוי בסיסיות. בשנת 2026 — כ-242 ש\"ח/חודש לכל נקודה, פחות מס. תוספות לתואר, ילדים, חיילים משוחררים.",
     lottieSource: LOTTIE.gift,
     chapterId: 2,
   },
@@ -368,7 +368,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   {
     id: "concept-47",
     titleHe: "פטור מס לקופת גמל להשקעה",
-    descriptionHe: "ניתן להפקיד עד ~80K ש\"ח לשנה. אחרי גיל 60 — הכל פטור ממס רווחי הון. כלי חיסכון חזק וגמיש.",
+    descriptionHe: "ניתן להפקיד עד ~83.6K ש\"ח לשנה (2026). מגיל 60, משיכה כקצבה פטורה ממס רווחי הון. כלי חיסכון חזק וגמיש.",
     lottieSource: LOTTIE.gift,
     chapterId: 2,
   },

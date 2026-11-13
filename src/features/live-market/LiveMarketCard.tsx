@@ -44,7 +44,7 @@ const FALLBACK_RATES: RateItem[] = [
   { value: '₪3.65', numericValue: 3.65, changePct: 0, direction: 'stable', label: 'דולר / שקל', symbol: '$' },
   { value: '$65,000', numericValue: 65000, changePct: 0, direction: 'stable', label: 'ביטקוין', symbol: '₿' },
   { value: '2,100', numericValue: 2100, changePct: 0, direction: 'stable', label: 'ת"א 125', symbol: '📈' },
-  { value: '4.50%', numericValue: 4.5, changePct: 0, direction: 'stable', label: 'ריבית בנק ישראל', symbol: '🏦' },
+  { value: '3.25%', numericValue: 3.25, changePct: 0, direction: 'stable', label: 'ריבית בנק ישראל', symbol: '🏦' },
   { value: '₪4.00', numericValue: 4.0, changePct: 0, direction: 'stable', label: 'יורו / שקל', symbol: '€' },
 ];
 
