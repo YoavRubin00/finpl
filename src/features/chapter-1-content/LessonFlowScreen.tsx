@@ -18,7 +18,7 @@ import { ahaLineFor } from "../topic-learning/moduleAhaLines";
 import { SharkChipCallout } from "../topic-learning/components/SharkChipCallout";
 import { pickContinueCompliment } from "../topic-learning/moduleCompliments";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -33,6 +33,7 @@ import Animated, {
   runOnJS,
   withRepeat,
   cancelAnimation,
+  useReducedMotion,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { ChevronRight, ChevronLeft, Bookmark } from "lucide-react-native";
@@ -68,6 +69,7 @@ import { RewardPopup } from "../../components/ui/RewardPopup";
 import { successHaptic, errorHaptic, heavyHaptic, tapHaptic, mediumHaptic, doubleHeavyHaptic } from "../../utils/haptics";
 import { InteractiveIntroCard } from "./InteractiveIntroCard";
 import { LessonExitConfirmSheet } from "./LessonExitConfirmSheet";
+import { estimateRemaining, formatRemainingHe } from "./lessonRemaining";
 import { IntroStepStrip } from "./IntroStepStrip";
 import { QuizStartPopup } from "./QuizStartPopup";
 import { SimulatorLoader } from "./SimulatorLoader";
@@ -148,7 +150,7 @@ import { useSavedItemsStore } from "../saved-items/useSavedItemsStore";
 import { LifelineModal } from "../social/LifelineModal";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { captureEvent } from "../../lib/posthog";
-import { track } from "../../lib/analytics/events";
+import { track, type AppEvent } from "../../lib/analytics/events";
 import { PizzaIndexScreen } from "../fun/PizzaIndexScreen";
 import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
@@ -306,6 +308,43 @@ const JUSTIFY_RTL = {
 
 /** Phases where progress is worth saving so the user can resume mid-module */
 const RESTORABLE_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes", "game", "sim-intro", "sim", "podcast", "couple-dilemma"]);
+
+type EarlyExitProps = Extract<AppEvent, { name: 'lesson_exited_early' }>['props'];
+
+/** Phases whose forward exit counts as "the user finished this step"
+ *  (lesson_phase_completed). Interstitials (hero, mid-quiz video, sim-intro,
+ *  infographic tail) are left out on purpose. */
+const PHASE_COMPLETION_TRACKED: ReadonlySet<FlowPhase> = new Set<FlowPhase>([
+  "video", "intro", "flashcards", "interactive-recall", "quizzes", "sim", "game",
+  "podcast", "couple-dilemma", "shark-dilemma",
+]);
+
+/** A wrong answer is revealed (with its explanation) after this many misses.
+ *  Was 3: with four options the third guess taught nothing and each miss cost
+ *  energy. Now two tries, and energy is charged once per question at most. */
+const QUIZ_MAX_WRONG_TRIES = 2;
+
+/** Saved card / question index to resume at, or 0. A checkpoint is only a
+ *  resume point for a chip the user has NOT finished: the checkpoint is never
+ *  cleared in the chip flow, so without the completed-check a finished chip
+ *  re-opened on its LAST item. */
+function resumableIndex(moduleId: string | undefined, kind: TopicKind, saved: number | undefined, total: number): number {
+  if (!moduleId || saved === undefined || saved <= 0 || saved >= total) return 0;
+  if (useTopicProgressStore.getState().isTopicCompleted(`${moduleId}:${kind}`)) return 0;
+  return saved;
+}
+
+/** Progress-bar fill that glides to its new width instead of jumping, so every
+ *  tap visibly moves the bar. Reduced motion → instant. */
+function ProgressFill({ pct, children }: { pct: number; children: React.ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  const width = useSharedValue(pct);
+  useEffect(() => {
+    width.value = reduceMotion ? pct : withTiming(pct, { duration: 320 });
+  }, [pct, reduceMotion, width]);
+  const style = useAnimatedStyle(() => ({ width: `${width.value}%` }));
+  return <Animated.View style={[{ height: '100%' }, style]}>{children}</Animated.View>;
+}
 
 /** Summary infographic map, maps summary card IDs to portrait PNGs */
 const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
@@ -1264,18 +1303,20 @@ function QuizCard({
         safeTimeout(() => { playSound('modal_open_2'); }, 100);
         autoTimerRef.current = setTimeout(() => onCorrectAnswer(), 3400);
       } else {
-        // Wrong answer, give up to 3 chances
+        // Wrong answer: one more try, then the answer + explanation.
         shakeX.value = 0;
         errorHaptic();
-        onWrongImmediate(); // Heart drops immediately
+        // Energy drops on the FIRST miss of a question only (was: every miss,
+        // so one hard question could cost three).
+        if (wrongAttempts.size === 0) onWrongImmediate();
         setFinnState("empathy");
         safeTimeout(() => { playSound('modal_open_3'); }, 100);
         const newWrong = new Set(wrongAttempts);
         newWrong.add(idx);
         setWrongAttempts(newWrong);
 
-        if (newWrong.size >= 3) {
-          // 3rd wrong, auto-select correct answer, show feedback
+        if (newWrong.size >= QUIZ_MAX_WRONG_TRIES) {
+          // Last miss, auto-select correct answer, show feedback
           setAnswerState({ selectedIndex: quiz.correctAnswer, isCorrect: false, revealed: true });
           autoTimerRef.current = setTimeout(() => onWrongRevealed(), 3600);
         }
@@ -1468,7 +1509,7 @@ function QuizCard({
             {wrongAttempts.size > 0 && !isRevealed && (
               <Animated.View entering={FadeIn.duration(200)} style={{ marginTop: 12 }}>
                 <Text style={[RTL_STYLE, { fontSize: 12, color: "#f59e0b" }]}>
-                  לא נכון, ננסה שוב! 💪 ({wrongAttempts.size}/3)
+                  לא בדיוק. יש עוד ניסיון אחד 💪
                 </Text>
               </Animated.View>
             )}
@@ -2220,6 +2261,27 @@ export function LessonFlowScreen() {
   // lives friction); ON from mod-0-1b onward. Gates every in-lesson spend below.
   const energyOn = isEnergyEnabledForModule(id);
   const router = useRouter();
+  // iOS interactive pop OFF for the lesson (13.11.26). The root <Stack> turns
+  // the back-swipe on for every screen, and a horizontal swipe is exactly how
+  // the cards advance (FlashcardCard's Fling), so a card swipe that starts at
+  // the screen edge pops the whole lesson: no confirm, no exit sheet, no
+  // 'back_button' event. It was also the one way out that skipped the exit
+  // confirm entirely. The header chevron and Android hardware back stay, both
+  // behind the confirm.
+  const navigation = useNavigation();
+  useEffect(() => {
+    try {
+      (navigation as unknown as { setOptions: (o: { gestureEnabled: boolean }) => void })
+        .setOptions({ gestureEnabled: false });
+    } catch { /* non-fatal */ }
+  }, [navigation]);
+  /** True once this screen's departure is accounted for: an exit that was
+   *  already reported, or a successful return (chip done / chest / handoff).
+   *  The focus-loss tracker below stays quiet while it is set, so one exit is
+   *  one event and a completion is never an "early exit". */
+  const exitHandledRef = useRef(false);
+  const lessonEnterMsRef = useRef(Date.now());
+  const phaseEnterMsRef = useRef(Date.now());
   /** Return to the learn map. Under the root <Stack> the map is still mounted
    *  beneath this lesson, so dismissTo POPS back to it — no remount / "flash",
    *  and it carries any ?openPearl= param through (Yoav 2026-06-11: fast,
@@ -2308,10 +2370,15 @@ export function LessonFlowScreen() {
     const resumeFrom = postChestResumeRef.current;
     if (resumeFrom) {
       postChestResumeRef.current = null;
+      exitHandledRef.current = false; // the lesson goes on: a later exit is a real one
       setHandoffChest(null);
       advanceFromChip(resumeFrom);
       return;
     }
+    // Leaving with the chest earned is a completion. The chest sits over the
+    // quiz phase, so this return used to be logged as an early exit
+    // (reason:'navigation', phase:'quizzes').
+    exitHandledRef.current = true;
     setHandoffChest(null);
     if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'profiling') {
       router.replace('/(auth)/onboarding' as never);
@@ -2344,6 +2411,7 @@ export function LessonFlowScreen() {
     // Flip the stage BEFORE any UI: from here on, a kill resumes into
     // profiling (the chest rewards, once granted, are not re-earnable).
     tut.setFirstRunStage('profiling');
+    exitHandledRef.current = true; // a designed handoff, not an unexplained navigation
     try { captureEvent('onboarding_module_first_handoff', { trigger }); } catch { /* non-fatal */ }
     // Natural threshold completion → open the earned chest HERE (Yoav 5.7.26:
     // the reward lands at the win moment, not after profiling). The modal's
@@ -2366,6 +2434,8 @@ export function LessonFlowScreen() {
       setShowExitConfirm(true);
       return;
     }
+    // Unguarded phases leave immediately — still a deliberate back press.
+    if (phase !== "summary") reportEarlyExit('back_button');
     if (maybeHandoffToProfiling('back')) return;
     if (router.canGoBack()) {
       router.back();
@@ -2374,8 +2444,43 @@ export function LessonFlowScreen() {
     }
   }
 
+  /** Where inside the current phase the user is (card / question / prompt). */
+  function lessonPosition(): { index: number; total: number } {
+    if (phase === "flashcards") return { index: flashcardIndex, total: mod?.flashcards.length ?? 0 };
+    if (phase === "quizzes") return { index: quizIndex, total: phaseQuizzes.length };
+    if (phase === "interactive-recall") return { index: recallProgress.current, total: recallProgress.total };
+    return { index: 0, total: 0 };
+  }
+
+  /** THE emitter for lesson_exited_early. Once per departure: marks the exit
+   *  as handled so the focus-loss tracker does not report it a second time
+   *  as 'navigation'. Reads live state at call time (hoisted declaration). */
+  function reportEarlyExit(reason: EarlyExitProps['reason']) {
+    if (exitHandledRef.current) return;
+    exitHandledRef.current = true;
+    try {
+      const now = Date.now();
+      const pos = lessonPosition();
+      const props: EarlyExitProps = {
+        lesson_id: id ?? null,
+        chapter_id: chapterId ?? null,
+        reason,
+        phase,
+        phase_index: pos.index,
+        phase_total: pos.total,
+        cards_left: lessonRemaining.cardsLeft,
+        questions_left: lessonRemaining.questionsLeft,
+        seconds_in_lesson: Math.round((now - lessonEnterMsRef.current) / 1000),
+        seconds_in_phase: Math.round((now - phaseEnterMsRef.current) / 1000),
+        entry_phase: startPhase ?? 'default',
+        is_replay: isReplay,
+      };
+      captureEvent('lesson_exited_early', props);
+    } catch { /* non-fatal */ }
+  }
+
   function forceExit() {
-    try { captureEvent('lesson_exited_early', { lesson_id: id ?? null, chapter_id: chapterId ?? null, reason: 'back_button', phase }); } catch { /* non-fatal */ }
+    reportEarlyExit('back_button');
     // Mark mod-0-1 complete on any exit so the user never gets stuck on it
     if (id === 'mod-0-1') completeModule('mod-0-1');
     setShowExitConfirm(false);
@@ -2392,7 +2497,7 @@ export function LessonFlowScreen() {
    *  to fix. Progress is safe anyway: chip completions live in the topic store
    *  and the resume checkpoint restores the phase ("ההתקדמות נשמרת"). */
   function leaveLessonFromSheet() {
-    try { captureEvent('lesson_exited_early', { lesson_id: id ?? null, chapter_id: chapterId ?? null, reason: 'back_button', phase }); } catch { /* non-fatal */ }
+    reportEarlyExit('back_button');
     setShowExitConfirm(false);
     if (maybeHandoffToProfiling('force_exit')) return;
     if (router.canGoBack()) router.back();
@@ -2413,6 +2518,28 @@ export function LessonFlowScreen() {
     }
     return undefined;
   }, [id, chapterId]);
+
+  // Quick checks (13.11.26): a card may name ONE of the module's quiz questions
+  // (Flashcard.quickCheckQuizId). That question is asked right after the card,
+  // inside the cards phase, and is left out of the quiz phase — so a long deck
+  // gets its first interaction after 2-3 cards instead of after all of them.
+  // `phaseQuizzes` is what the quiz phase asks; with no annotations it is
+  // exactly mod.quizzes. Never empties the quiz phase.
+  const quickCheckIds = useMemo<ReadonlySet<string>>(() => {
+    if (!mod) return new Set<string>();
+    const ids = new Set<string>();
+    for (const fc of mod.flashcards) {
+      if (fc.quickCheckQuizId && mod.quizzes.some((q) => q.id === fc.quickCheckQuizId)) ids.add(fc.quickCheckQuizId);
+    }
+    return mod.quizzes.length - ids.size >= 1 ? ids : new Set<string>();
+  }, [mod]);
+  const phaseQuizzes = useMemo<QuizQuestion[]>(
+    () => (mod ? mod.quizzes.filter((q) => !quickCheckIds.has(q.id)) : []),
+    [mod, quickCheckIds],
+  );
+  /** The quick-check question on screen (still phase 'flashcards'), or null. */
+  const [quickCheck, setQuickCheck] = useState<QuizQuestion | null>(null);
+  const quickCheckDoneRef = useRef<Set<string>>(new Set<string>());
 
   useEffect(() => {
     if (mod) {
@@ -2560,6 +2687,7 @@ export function LessonFlowScreen() {
     // flows straight into the cards / sentence-completion IN-LESSON, like every
     // other module, so the first lesson is continuous ("מקושר וברצף, לא בנפרד").
     if (mod.id === 'mod-0-1' && returnTo !== 'topic-tree') {
+      exitHandledRef.current = true;
       router.replace(
         `/(tabs)/learn?completedPhase=intro&completedModuleId=${encodeURIComponent(mod.id)}&expandedModule=${encodeURIComponent(mod.id)}&onboardingPhase=welcome` as never,
       );
@@ -3097,6 +3225,7 @@ export function LessonFlowScreen() {
 
     // Return to the map: chip-mode after every chip, or auto-flow at the chest.
     tt_exitFiredRef.current = true;
+    exitHandledRef.current = true;
     // Module-first v1: the chest-threshold exit is the natural end of the
     // pre-onboarding module — hand off to profiling. The earned chest fires
     // from the accordion when the user reaches the map AFTER profiling+tour
@@ -3417,14 +3546,61 @@ export function LessonFlowScreen() {
   // new-user drop is DURING the intro (Android 65% intro completion vs iOS 90%),
   // and this tracker was blind to it — 0 lesson_exited_early for 15 intro
   // droppers. Now every pre-content exit is measurable too.
-  const ACTIVE_LESSON_PHASES = new Set<FlowPhase>(["hero", "intro", "video", "flashcards", "interactive-recall", "quizzes", "sim", "summary"]);
+  // 13.11.26: this tracker also fired on SUCCESSFUL returns — a finished chip
+  // in chip/replay mode pops the screen one phase later, and the mod-0-1 chest
+  // closes over the quiz phase (PostHog: every 'navigation' exit from
+  // mod-0-1 'quizzes' was followed by the map) — and could fire again after
+  // an already-reported exit. It now reports only departures nothing else
+  // accounted for (exitHandledRef / tt_exitFiredRef), through the same
+  // emitter, with position props. The secondary phases joined the set so an
+  // exit there is no longer invisible.
+  const ACTIVE_LESSON_PHASES = new Set<FlowPhase>(["hero", "intro", "video", "flashcards", "interactive-recall", "quizzes", "sim-intro", "sim", "game", "podcast", "couple-dilemma", "shark-dilemma", "module-infographic", "summary"]);
   const wasFocusedRef = useRef(true);
   useEffect(() => {
-    if (wasFocusedRef.current && !isFocused && mod && ACTIVE_LESSON_PHASES.has(phase) && phase !== "summary") {
-      try { captureEvent('lesson_exited_early', { lesson_id: mod.id, chapter_id: chapterId ?? null, reason: 'navigation', phase }); } catch { /* non-fatal */ }
+    if (wasFocusedRef.current && !isFocused && mod && ACTIVE_LESSON_PHASES.has(phase) && phase !== "summary" && !tt_exitFiredRef.current) {
+      reportEarlyExit('navigation');
     }
+    // Back on the lesson (e.g. returned from the paywall) → a later exit is a new exit.
+    if (isFocused && !wasFocusedRef.current) exitHandledRef.current = false;
     wasFocusedRef.current = isFocused;
+    // reportEarlyExit is a hoisted function declaration reading live state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFocused, mod, chapterId, phase]);
+
+  // lesson_phase_completed — one event per phase the user finished, with the
+  // time it took. Together with lesson_exited_early{phase, phase_index} this
+  // gives a per-phase pass-through rate without stitching topic_* events.
+  const phaseTrackRef = useRef<{ phase: FlowPhase; modId: string | undefined }>({ phase, modId: mod?.id });
+  useEffect(() => {
+    const prev = phaseTrackRef.current;
+    phaseTrackRef.current = { phase, modId: mod?.id };
+    const now = Date.now();
+    const enteredAt = phaseEnterMsRef.current;
+    phaseEnterMsRef.current = now;
+    if (!mod || prev.modId !== mod.id) { lessonEnterMsRef.current = now; return; }
+    if (prev.phase === phase || !PHASE_COMPLETION_TRACKED.has(prev.phase)) return;
+    // Not completions: the quiz pausing for its mid-quiz video, and the legacy
+    // linear flow parking the cards for a podcast / couple-dilemma break.
+    if (phase === "mid-quiz-video") return;
+    if (prev.phase === "flashcards" && (phase === "podcast" || phase === "couple-dilemma") && returnTo !== 'topic-tree') return;
+    try {
+      track({
+        name: 'lesson_phase_completed',
+        props: {
+          lesson_id: mod.id,
+          chapter_id: chapterId ?? null,
+          phase: prev.phase,
+          next_phase: phase,
+          phase_total: prev.phase === "flashcards" ? mod.flashcards.length : prev.phase === "quizzes" ? phaseQuizzes.length : undefined,
+          seconds_in_phase: Math.round((now - enteredAt) / 1000),
+          seconds_in_lesson: Math.round((now - lessonEnterMsRef.current) / 1000),
+          is_replay: isReplay,
+        },
+      });
+    } catch { /* non-fatal */ }
+    // Only a real phase change (or module swap) should re-fire.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, mod]);
 
   // Show Pro gate for locked modules, but only after video finishes
   useEffect(() => {
@@ -3440,9 +3616,15 @@ export function LessonFlowScreen() {
     // effect below never finds it and bumps to the end — the video silently
     // never plays ("הסרטון לא נפתח" in mod-1-1). Start at 0 for filtered chips
     // so the forward search reliably lands on the first matching card.
-    if (cardFilter === 'video' || cardFilter === 'non-video') return 0;
+    // 13.11.26: the 'non-video' cards chip (mod-1-1) used to share that reset,
+    // so leaving its cards and coming back always restarted at card 1. It now
+    // resumes like every other cards chip, as long as the saved card is one
+    // the filter shows.
+    if (cardFilter === 'video') return 0;
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
-    return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
+    if (!r || !mod || !RESTORABLE_PHASES.has(r.phase as FlowPhase)) return 0;
+    if (cardFilter === 'non-video' && mod.flashcards[r.flashcardIndex]?.videoUri) return 0;
+    return resumableIndex(mod.id, 'cards', r.flashcardIndex, mod.flashcards.length);
   });
 
   // R5.5 (2026-06-10) — topic-tree flashcards filter. Two modes:
@@ -3548,10 +3730,11 @@ export function LessonFlowScreen() {
   // Mid-lesson Finn checkpoint
   const [showMidCheckpoint, setShowMidCheckpoint] = useState(false);
   const [checkpointReturnIndex, setCheckpointReturnIndex] = useState<number | null>(null);
-  const checkpointIndex = useMemo(() =>
-    mod && mod.flashcards.length >= 5 ? (2 + Math.round(Math.random())) : -1,
-    [mod?.id],
-  );
+  // OFF (13.11.26): a blocking "איך הולך? רוצים לחזור למשהו?" sheet at a random
+  // card (3 or 4) of every 5+ card deck — an extra stop in the phase where
+  // people quit, offering only what the back arrow and the chat button already
+  // do. -1 never matches a card index; the sheet's code is left in place.
+  const checkpointIndex: number = -1;
   // Post-module celebration
   const [showPostCelebration, setShowPostCelebration] = useState(false);
   // Architect P2 (2026-06-11): pre-pick the playful "quit" label once when
@@ -3614,8 +3797,33 @@ export function LessonFlowScreen() {
   const markLifestyleSeen = useLifestyleBreakStore((s) => s.markSeen);
   const [quizIndex, setQuizIndex] = useState(() => {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
-    return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.quizIndex : 0;
+    if (!r || !RESTORABLE_PHASES.has(r.phase as FlowPhase)) return 0;
+    // Bounded by the quiz-phase list: a stale or oversized index used to index
+    // past the array on the quiz render.
+    return resumableIndex(mod?.id, 'quiz', r.quizIndex, phaseQuizzes.length);
   });
+  // Second-chance round: questions the user missed are asked once more at the
+  // end of the quiz. null = first pass; an array = the round is on and these
+  // question indices are still queued after the one on screen.
+  const missedQuizIdxRef = useRef<number[]>([]);
+  const [retryQueue, setRetryQueue] = useState<number[] | null>(null);
+  const inQuizRetry = retryQueue !== null;
+  useEffect(() => {
+    missedQuizIdxRef.current = [];
+    setRetryQueue(null);
+    setQuickCheck(null);
+    quickCheckDoneRef.current = new Set<string>();
+  }, [mod?.id]);
+  // A quick check belongs to the cards phase it was opened in; the
+  // second-chance round belongs to the quiz run it closed (the mid-quiz video
+  // is part of that run).
+  useEffect(() => {
+    if (phase !== "flashcards") setQuickCheck(null);
+    if (phase !== "quizzes" && phase !== "mid-quiz-video") {
+      missedQuizIdxRef.current = [];
+      setRetryQueue(null);
+    }
+  }, [phase]);
   // The module's "fun" Finn video (MODULE_POST_VIDEO_MAP) now plays INLINE
   // mid-quiz instead of as a standalone phase after the infographic (Yoav
   // 2026-06-10). This guards against showing it twice: once it's been played
@@ -3729,6 +3937,33 @@ export function LessonFlowScreen() {
     () => (mod ? resolveTopics(mod).map((t) => t.kind).filter((k) => k !== 'chat') : []),
     [mod],
   );
+  // What is still ahead — feeds the exit confirm ("נשארו 2 שאלות, בערך 40
+  // שניות") AND lesson_exited_early{cards_left, questions_left}.
+  const lessonRemaining = useMemo(() => {
+    if (!mod) return { cardsLeft: 0, questionsLeft: 0, seconds: 0 };
+    const currentKind: TopicKind | undefined =
+      phase === "sim-intro" ? 'sim' : phase === "mid-quiz-video" ? 'quiz' : TT_PHASE_TO_KIND[phase];
+    const quickChecksAhead = (quickCheck ? 1 : 0) + mod.flashcards.filter(
+      (fc, i) => i >= (phase === "flashcards" ? flashcardIndex : 0)
+        && !!fc.quickCheckQuizId && quickCheckIds.has(fc.quickCheckQuizId)
+        && !quickCheckDoneRef.current.has(fc.quickCheckQuizId),
+    ).length;
+    return estimateRemaining({
+      mod,
+      chipOrder: introStripKinds,
+      currentKind,
+      flashcardIndex,
+      // In the second-chance round only the queued questions are left.
+      quizIndex: retryQueue !== null ? phaseQuizzes.length - (retryQueue.length + 1) : quizIndex,
+      quizPhaseTotal: phaseQuizzes.length,
+      quickChecksAhead,
+    });
+  }, [mod, phase, flashcardIndex, quizIndex, retryQueue, phaseQuizzes, quickCheck, quickCheckIds, introStripKinds]);
+  const exitRemainingLine = formatRemainingHe(lessonRemaining);
+  // Honest about what is kept: the intro / hook are not a resume point.
+  const exitKeptLine = phase === "intro" || phase === "hero" || phase === "video"
+    ? "אפשר לחזור מתי שרוצים. ההקדמה קצרה."
+    : "מה שעברתם נשמר. חוזרים בדיוק לאותה נקודה.";
   // Auto-flow "עוד X לתיבה" chip-callout (pop+confetti, preserved). Driven by the
   // seam: bumped once per chip completion (NOT the chest-crossing one).
   const [calloutSeq, setCalloutSeq] = useState(0);
@@ -3776,6 +4011,27 @@ export function LessonFlowScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // "Continue where you stopped": the first time this visit lands on the cards
+  // or the quiz at a restored position, say so (the restore used to be silent,
+  // so it read as a glitch: "why am I on card 4?") and count it.
+  const resumeAnnouncedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!mod || isReplay) return;
+    if (phase !== "flashcards" && phase !== "quizzes") return;
+    const key = `${mod.id}:${phase}`;
+    if (resumeAnnouncedRef.current === key) return;
+    resumeAnnouncedRef.current = key;
+    const index = phase === "flashcards" ? flashcardIndex : quizIndex;
+    const total = phase === "flashcards" ? mod.flashcards.length : phaseQuizzes.length;
+    if (index <= 0 || index >= total) return;
+    try {
+      track({ name: 'lesson_resumed', props: { lesson_id: mod.id, chapter_id: chapterId ?? null, phase, phase_index: index, phase_total: total } });
+    } catch { /* non-fatal */ }
+    setComplimentMsg("ממשיכים מאיפה שעצרתם");
+    setComplimentSeq((s) => s + 1);
+    // Entry into the phase is the trigger; the indices are read as they are then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, mod]);
   // Progress-to-chest bar removed 2026-06-25 — the non-blocking "עוד X לתיבה"
   // callouts are enough; the segmented bar added clutter ("מספיק ההודעות שקופצות").
   const [showRegisterNudge, setShowRegisterNudge] = useState(false);
@@ -3842,10 +4098,13 @@ export function LessonFlowScreen() {
   useEffect(() => {
     if (!mod?.id || !RESTORABLE_PHASES.has(phase)) return;
     const timer = setTimeout(() => {
-      saveResume(mod.id, { phase, flashcardIndex, quizIndex, consecutiveCorrect, peakStreak });
+      // In the second-chance round quizIndex points BACK at a missed question;
+      // saving it would resume the quiz from there. Keep the last question.
+      const quizIndexToSave = inQuizRetry ? Math.max(0, phaseQuizzes.length - 1) : quizIndex;
+      saveResume(mod.id, { phase, flashcardIndex, quizIndex: quizIndexToSave, consecutiveCorrect, peakStreak });
     }, 500);
     return () => clearTimeout(timer);
-  }, [phase, flashcardIndex, quizIndex, consecutiveCorrect, peakStreak, mod?.id, saveResume]);
+  }, [phase, flashcardIndex, quizIndex, inQuizRetry, phaseQuizzes.length, consecutiveCorrect, peakStreak, mod?.id, saveResume]);
 
   // Reset all state when navigating to a different module (same route, different id)
   const prevIdRef = useRef(id);
@@ -4379,17 +4638,26 @@ export function LessonFlowScreen() {
 
   const advanceQuiz = useCallback(() => {
     if (!mod) return;
+    // Second-chance round in progress → next queued miss, or (queue drained)
+    // fall through to the end-of-quiz seam below.
+    if (retryQueue !== null && retryQueue.length > 0) {
+      setQuizIndex(retryQueue[0]);
+      setRetryQueue(retryQueue.slice(1));
+      tapHaptic();
+      return;
+    }
+    if (retryQueue === null) {
     // Mid-quiz fun video: play the module's Finn video INLINE between two quiz
     // questions (right after the middle question) instead of as a standalone
     // full-screen phase after the infographic (Yoav 2026-06-10: "embedded
     // mid-quiz, not a unit of its own"). Only when there's a real mid-point
     // (≥3 quizzes, and the mid index isn't the last) — otherwise it falls
     // through to the trailing post-infographic-video phase as a fallback.
-    const midIndex = Math.floor(mod.quizzes.length / 2);
+    const midIndex = Math.floor(phaseQuizzes.length / 2);
     if (
       !funVideoShownRef.current &&
       quizIndex === midIndex &&
-      midIndex < mod.quizzes.length - 1 &&
+      midIndex < phaseQuizzes.length - 1 &&
       mod.id && MODULE_POST_VIDEO_MAP[mod.id]
     ) {
       funVideoShownRef.current = true;
@@ -4397,10 +4665,25 @@ export function LessonFlowScreen() {
       setPhase("mid-quiz-video");
       return;
     }
-    if (quizIndex < mod.quizzes.length - 1) {
+    if (quizIndex < phaseQuizzes.length - 1) {
       setQuizIndex((prev) => prev + 1);
       tapHaptic();
       return;
+    }
+    // First pass done. Anything missed gets ONE more go before the lesson
+    // moves on, so the quiz ends on answers the user got right (wrong answers
+    // teach). No energy and no score change in this round. Skipped on replay
+    // and on single-question quizzes (an instant repeat of the same screen).
+    const missed = missedQuizIdxRef.current;
+    if (!isReplay && phaseQuizzes.length >= 2 && missed.length > 0) {
+      missedQuizIdxRef.current = [];
+      setQuizIndex(missed[0]);
+      setRetryQueue(missed.slice(1));
+      setComplimentMsg("סיבוב שני, רק על מה שהתפספס");
+      setComplimentSeq((s) => s + 1);
+      mediumHaptic();
+      return;
+    }
     }
     // Last quiz done. Resolve the next phase first, then decide whether to
     // inject an inline onboarding-style question before transitioning.
@@ -4421,12 +4704,14 @@ export function LessonFlowScreen() {
       return;
     }
     advanceToNextPhase();
-  }, [mod, quizIndex]);
+  }, [mod, quizIndex, phaseQuizzes, retryQueue, isReplay, advanceFromChip]);
 
   const handleCorrectAnswer = useCallback(() => {
     if (!mod) return;
-    const quiz = mod.quizzes[quizIndex];
-    recordQuizAnswer(mod.id, true);
+    const quiz = phaseQuizzes[quizIndex];
+    if (!quiz) { advanceQuiz(); return; }
+    // The second-chance round never rewrites the score (first answer counts).
+    if (!inQuizRetry) recordQuizAnswer(mod.id, true);
     // AI telemetry for quiz answers
     useAITelemetryStore.getState().addEvent('quiz_answer', mod.id, { correct: true, meta: { questionId: quiz.id } });
     const newStreak = consecutiveCorrect + 1;
@@ -4441,7 +4726,7 @@ export function LessonFlowScreen() {
     const grantedCombo = useHeartsStore.getState().registerComboCorrect(isReplay);
     const energyCharged = grantedCombo > 0;
     if (energyCharged) { try { captureEvent('combo_energy_earned', { granted: grantedCombo }); } catch { /* non-fatal */ } }
-    try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: true, combo_at_answer: newStreak }); } catch { /* non-fatal */ }
+    try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: true, combo_at_answer: newStreak, attempt: inQuizRetry ? 2 : 1 }); } catch { /* non-fatal */ }
     setComboEnergyGranted(energyCharged);
     if (newStreak === 3 || newStreak === 5 || newStreak === 7) {
       if (newStreak >= 7) { doubleHeavyHaptic(); playSound('btn_click_heavy'); }
@@ -4456,7 +4741,7 @@ export function LessonFlowScreen() {
       safeTimeout(() => setShowStreakPopup(false), 1600);
     }
     advanceQuiz();
-  }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, consecutiveCorrect, peakStreak, playSound, isReplay]);
+  }, [mod, quizIndex, phaseQuizzes, inQuizRetry, recordQuizAnswer, advanceQuiz, consecutiveCorrect, peakStreak, playSound, isReplay]);
 
   // Immediate heart drop, called right when wrong answer is selected.
   // Skipped entirely on replay so users can re-do completed modules without
@@ -4465,8 +4750,9 @@ export function LessonFlowScreen() {
     if (!mod) return;
     setConsecutiveCorrect(0); // Reset streak on ANY wrong answer
     useHeartsStore.getState().resetCombo();
-    const quiz = mod.quizzes[quizIndex];
-    if (isReplay) return;
+    const quiz = phaseQuizzes[quizIndex];
+    // Replay and the second-chance round are practice: a miss costs nothing.
+    if (isReplay || inQuizRetry || !quiz) return;
     const heartUsed = useHeartsStore.getState().useHeart(isPro || !energyOn);
     if (heartUsed) {
       // Loss animation fires globally via the useHeart() store signal.
@@ -4480,20 +4766,28 @@ export function LessonFlowScreen() {
     } else {
       setShowOutOfHearts(true);
     }
-  }, [mod, quizIndex, isReplay, isPro, energyOn]);
+  }, [mod, quizIndex, phaseQuizzes, inQuizRetry, isReplay, isPro, energyOn]);
 
   // Deferred, advances quiz after feedback shown (stops if no hearts left)
   const handleWrongRevealed = useCallback(() => {
     if (!mod) return;
-    const quiz = mod.quizzes[quizIndex];
-    recordQuizAnswer(mod.id, false);
+    const quiz = phaseQuizzes[quizIndex];
+    if (!quiz) { advanceQuiz(); return; }
     // AI telemetry + adaptive for wrong answers
     useAITelemetryStore.getState().addEvent('quiz_answer', mod.id, { correct: false, meta: { questionId: quiz.id } });
-    try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: false }); } catch { /* non-fatal */ }
+    try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: false, attempt: inQuizRetry ? 2 : 1 }); } catch { /* non-fatal */ }
+    setConsecutiveCorrect(0);
+    if (inQuizRetry) {
+      // Missed again in the second-chance round: the explanation was shown
+      // twice, move on. No score, no energy, no out-of-energy stop.
+      advanceQuiz();
+      return;
+    }
+    recordQuizAnswer(mod.id, false);
+    missedQuizIdxRef.current.push(quizIndex);
     if (quiz.conceptTag) {
       useAdaptiveStore.getState().logFailure(quiz.id, quiz.conceptTag, mod.id);
     }
-    setConsecutiveCorrect(0);
     // If hearts ran out, stop playing, show out-of-hearts
     const currentHearts = useHeartsStore.getState().getHearts();
     if (!isPro && currentHearts <= 0) {
@@ -4501,7 +4795,7 @@ export function LessonFlowScreen() {
       return;
     }
     advanceQuiz();
-  }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, isPro]);
+  }, [mod, quizIndex, phaseQuizzes, inQuizRetry, recordQuizAnswer, advanceQuiz, isPro]);
 
   const handleSimComplete = useCallback(() => {
     if (mod) {
@@ -4541,6 +4835,70 @@ export function LessonFlowScreen() {
   );
   const handlePodcastProgress = useCallback((current: number, total: number) => {
     setPodcastProgress({ current, total });
+  }, []);
+
+  /** Leave the current card: next card, or (last card) the next chip. */
+  const advancePastCard = useCallback(() => {
+    if (!mod) return;
+    if (flashcardIndex < mod.flashcards.length - 1) {
+      const nextCardId = mod.flashcards[flashcardIndex + 1]?.id;
+      const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
+      if (finnSource) {
+        setFinnTransitionSource(finnSource as { uri: string });
+        safeTimeout(() => {
+          setFinnTransitionSource(null);
+          setFlashcardIndex((prev) => prev + 1);
+        }, 1500);
+      } else {
+        setFlashcardIndex((prev) => prev + 1);
+      }
+    } else {
+      mediumHaptic();
+      // Unified driver: cards → next chip (recall/sim/game/quiz) in accordion
+      // order. (A hardcoded cards→recall jump here once leapfrogged the quiz.)
+      advanceFromChip('cards');
+    }
+  }, [mod, flashcardIndex, safeTimeout, advanceFromChip]);
+
+  /** Opens the card's quick-check question (once per visit). True = opened,
+   *  the caller must not advance; the check's own handlers do. */
+  const maybeStartQuickCheck = useCallback((): boolean => {
+    if (!mod) return false;
+    const quizId = mod.flashcards[flashcardIndex]?.quickCheckQuizId;
+    if (!quizId || !quickCheckIds.has(quizId) || quickCheckDoneRef.current.has(quizId)) return false;
+    const question = mod.quizzes.find((q) => q.id === quizId);
+    if (!question) return false;
+    quickCheckDoneRef.current.add(quizId);
+    mediumHaptic();
+    setQuickCheck(question);
+    return true;
+  }, [mod, flashcardIndex, quickCheckIds]);
+
+  /** Quick check answered (or revealed after the misses) → back to the cards.
+   *  Counts toward the lesson score and the in-lesson streak; a miss costs no
+   *  energy — it is a check on the way, not the test. */
+  const handleQuickCheckDone = useCallback((isCorrect: boolean) => {
+    if (!mod || !quickCheck) return;
+    recordQuizAnswer(mod.id, isCorrect);
+    useAITelemetryStore.getState().addEvent('quiz_answer', mod.id, { correct: isCorrect, meta: { questionId: quickCheck.id } });
+    try {
+      track({ name: 'lesson_quick_check_answered', props: { lesson_id: mod.id, question_id: quickCheck.id, after_card_index: flashcardIndex, is_correct: isCorrect } });
+    } catch { /* non-fatal */ }
+    if (isCorrect) {
+      const newStreak = consecutiveCorrect + 1;
+      setConsecutiveCorrect(newStreak);
+      if (newStreak > peakStreak) setPeakStreak(newStreak);
+      const grantedCombo = useHeartsStore.getState().registerComboCorrect(isReplay);
+      if (grantedCombo > 0) { try { captureEvent('combo_energy_earned', { granted: grantedCombo, source: 'quick-check' }); } catch { /* non-fatal */ } }
+    } else if (quickCheck.conceptTag) {
+      useAdaptiveStore.getState().logFailure(quickCheck.id, quickCheck.conceptTag, mod.id);
+    }
+    setQuickCheck(null);
+    advancePastCard();
+  }, [mod, quickCheck, flashcardIndex, consecutiveCorrect, peakStreak, isReplay, recordQuizAnswer, advancePastCard]);
+  const handleQuickCheckMiss = useCallback(() => {
+    setConsecutiveCorrect(0);
+    useHeartsStore.getState().resetCombo();
   }, []);
 
   const handleFlashcardNext = useCallback(() => {
@@ -4592,24 +4950,9 @@ export function LessonFlowScreen() {
       return;
     }
 
-    if (flashcardIndex < mod.flashcards.length - 1) {
-      const nextCardId = mod.flashcards[flashcardIndex + 1]?.id;
-      const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
-      if (finnSource) {
-        setFinnTransitionSource(finnSource as { uri: string });
-        safeTimeout(() => {
-          setFinnTransitionSource(null);
-          setFlashcardIndex((prev) => prev + 1);
-        }, 1500);
-      } else {
-        setFlashcardIndex((prev) => prev + 1);
-      }
-    } else {
-      mediumHaptic();
-      // Unified driver: cards → next chip (recall/sim/game/quiz) in accordion order.
-      advanceFromChip('cards');
-    }
-  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, returnTo, advanceFromChip]);
+    if (maybeStartQuickCheck()) return;
+    advancePastCard();
+  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, returnTo, maybeStartQuickCheck, advancePastCard]);
 
   const handleDismissFinnTip = useCallback(() => {
     setFinnTipText(null);
@@ -4634,29 +4977,10 @@ export function LessonFlowScreen() {
       return;
     }
 
-    if (flashcardIndex < mod.flashcards.length - 1) {
-      const nextCardId = mod.flashcards[flashcardIndex + 1]?.id;
-      const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
-      if (finnSource) {
-        setFinnTransitionSource(finnSource as { uri: string });
-        safeTimeout(() => {
-          setFinnTransitionSource(null);
-          setFlashcardIndex((prev) => prev + 1);
-        }, 1500);
-      } else {
-        setFlashcardIndex((prev) => prev + 1);
-      }
-    } else {
-      mediumHaptic();
-      // Unified driver — mirror handleFlashcardNext's last-card branch (advanceFromChip).
-      // The old hardcoded cards→interactive-recall jump was written when the order
-      // was cards→recall→quiz; after ים 2.7 pinned the quiz BETWEEN cards and recall
-      // (types.ts MODULE_CHIPS_TO_CHEST), that hardcode leapfrogged the quiz and
-      // orphaned it (advanceFromChip('recall') then resumed past it). Following the
-      // resolveTopics chip order fixes the skipped-quiz bug for finn-tip cards.
-      advanceFromChip('cards');
-    }
-  }, [mod, flashcardIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, advanceFromChip]);
+    // Same tail as handleFlashcardNext (one implementation: advancePastCard).
+    if (maybeStartQuickCheck()) return;
+    advancePastCard();
+  }, [mod, flashcardIndex, returnTo, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, maybeStartQuickCheck, advancePastCard]);
 
   const handleFlashcardPrev = useCallback(() => {
     if (flashcardIndex > 0) {
@@ -4678,7 +5002,7 @@ export function LessonFlowScreen() {
             שדרג לPRO כדי לגשת לכל המודולים, או המשך מהמקום שהפסקת ברצף הלמידה
           </Text>
           <Pressable
-            onPress={() => { setShowProGate(false); router.push("/pricing?source=lesson_pro_gate" as never); }}
+            onPress={() => { setShowProGate(false); reportEarlyExit('paywall'); router.push("/pricing?source=lesson_pro_gate" as never); }}
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#0a2540", paddingHorizontal: 28, paddingVertical: 16, borderRadius: 999, width: "100%", borderWidth: 2, borderColor: "rgba(22, 78, 99, 0.6)", shadowColor: "#0a2540", shadowOpacity: 0.5, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 8 }}
             accessibilityRole="button"
             accessibilityLabel="שדרג לPRO"
@@ -4758,6 +5082,8 @@ export function LessonFlowScreen() {
           accentColor={unitColors.bg}
           accentBottom={unitColors.bottom}
           bottomInset={safeInsets.bottom}
+          remainingLine={exitRemainingLine}
+          keptLine={exitKeptLine}
         />
       </>
     );
@@ -4863,7 +5189,10 @@ export function LessonFlowScreen() {
       
       <View style={{ backgroundColor: "#ffffff" }}>
         <View style={{ paddingTop: safeInsets.top }} />
-        <GlobalWealthHeader />
+        {/* Display-only while the lesson is running: the header's own links
+            (settings, shop, profile) were where most "navigation" exits went
+            (PostHog 45d). Unlocked again on the summary, after the lesson. */}
+        <GlobalWealthHeader lockNavigation={phase !== "summary"} />
       </View>
 
       <View style={{ flex: 1, paddingHorizontal: 16, paddingBottom: safeInsets.bottom }}>
@@ -5016,8 +5345,10 @@ export function LessonFlowScreen() {
                   ? "הדילמות של הזוג הצעיר"
                   : phase === "interactive-recall"
                     ? "השלמת משפטים"
-                    : mod.title;
-            if (phase === "flashcards") {
+                    : phase === "flashcards" && quickCheck
+                      ? "בדיקה קצרה"
+                      : mod.title;
+            if (phase === "flashcards" && !quickCheck) {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
               const colonIdx = cardText.indexOf(":");
               if (colonIdx > 0 && colonIdx < 80) {
@@ -5060,7 +5391,7 @@ export function LessonFlowScreen() {
             const podcastOffset = hasPodcastStep ? 1 : 0;
             const dilemmaOffset = hasCoupleDilemmaStep ? 1 : 0;
             const breakOffset = podcastOffset + dilemmaOffset;
-            const totalSteps = 1 + mod.flashcards.length + mod.quizzes.length + (hasSim ? 1 : 0) + 1 + breakOffset;
+            const totalSteps = 1 + mod.flashcards.length + phaseQuizzes.length + (hasSim ? 1 : 0) + 1 + breakOffset;
             // For a flashcard at `idx`, account for break steps that sit before this card
             const fcOffset = (idx: number) =>
               (hasPodcastStep && idx > podcastTriggerAfter ? 1 : 0) +
@@ -5085,7 +5416,7 @@ export function LessonFlowScreen() {
                 : phase === "couple-dilemma" ? dilemmaStep(1)
                 : phase === "interactive-recall" ? 1 + mod.flashcards.length + breakOffset
                 : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex + breakOffset
-                : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length + breakOffset
+                : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + phaseQuizzes.length + breakOffset
                 : totalSteps);
             // Topic-tree (R5): the user entered at a specific phase via a
             // chip, so the bar should reflect only that phase's progress
@@ -5094,9 +5425,11 @@ export function LessonFlowScreen() {
             const pctLessonWide = Math.min((currentStep / totalSteps) * 100, 100);
             const pct = returnTo === 'topic-tree'
               ? (phase === 'flashcards'
-                  ? (flashcardIndex / Math.max(1, mod.flashcards.length)) * 100
+                  // The card on screen counts as half done (the bar used to sit
+                  // at 0% for the whole first card), a quick check as most of it.
+                  ? ((flashcardIndex + (quickCheck ? 0.85 : 0.5)) / Math.max(1, mod.flashcards.length)) * 100
                   : phase === 'quizzes'
-                  ? (quizIndex / Math.max(1, mod.quizzes.length)) * 100
+                  ? (inQuizRetry ? 94 : Math.max(6, (quizIndex / Math.max(1, phaseQuizzes.length)) * 100))
                   : phase === 'interactive-recall' && recallProgress.total > 0
                   // Yoav 2026-06-11: השלמת משפטים — fill per prompt
                   // solved (3-ish prompts each). Previously flat 0 →
@@ -5125,25 +5458,51 @@ export function LessonFlowScreen() {
             const barShadow = isOnFire ? '#f97316' : unitColors.glow;
             const barBorder = isOnFire ? '#ef4444' : '#d1d5db';
             const barHeight = isOnFire ? 16 : 14;
+            // "2 מתוך 7" under the bar: the count of what is left, in words.
+            const immersiveCard = phase === "flashcards" && !quickCheck && Boolean(mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri);
+            const stepLabel =
+              phase === "flashcards" && quickCheck ? "בדיקה קצרה, ואז ממשיכים"
+              : phase === "flashcards" && !immersiveCard && mod.flashcards.length > 1 ? `כרטיסייה ${Math.min(flashcardIndex + 1, mod.flashcards.length)} מתוך ${mod.flashcards.length}`
+              : phase === "quizzes" && inQuizRetry ? "סיבוב שני"
+              : phase === "quizzes" && phaseQuizzes.length > 1 ? `שאלה ${Math.min(quizIndex + 1, phaseQuizzes.length)} מתוך ${phaseQuizzes.length}`
+              : null;
             return (
-              <View style={{ marginTop: 8, marginBottom: (phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri)) ? 2 : 6, transform: [{ scaleX: -1 }] }}>
+              <>
+              <View
+                accessible
+                accessibilityRole="progressbar"
+                accessibilityLabel={stepLabel ?? "התקדמות בשיעור"}
+                accessibilityValue={{ min: 0, max: 100, now: Math.round(pct) }}
+                style={{ marginTop: 8, marginBottom: stepLabel ? 2 : (phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri)) ? 2 : 6, transform: [{ scaleX: -1 }] }}
+              >
                 {/* Outer glow wrapper for fire effect */}
                 {isOnFire && (
                   <View style={{ position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 999, shadowColor: '#f97316', shadowOpacity: 0.9, shadowRadius: 20, shadowOffset: { width: 0, height: 0 }, elevation: 6 }} />
                 )}
                 <View style={{ height: barHeight, backgroundColor: '#e5e7eb', borderRadius: 999, overflow: 'hidden', borderWidth: isOnFire ? 2.5 : 1.5, borderColor: barBorder, shadowColor: barShadow, shadowOpacity: isOnFire ? 1 : 0.5, shadowRadius: isOnFire ? 28 : 8, shadowOffset: { width: 0, height: 0 }, elevation: isOnFire ? 12 : 4 }}>
+                  <ProgressFill pct={pct}>
                   <LinearGradient
                     colors={barColors}
                     locations={[0, 0.5, 1]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                    style={{ height: '100%', borderRadius: 999, width: `${pct}%` }}
+                    style={{ height: '100%', borderRadius: 999, width: '100%' }}
                   >
                     {/* Shine effect, brighter on fire */}
                     <View style={{ position: 'absolute', top: 2, left: 6, right: 6, height: isOnFire ? 4 : 3, backgroundColor: isOnFire ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.35)', borderRadius: 999 }} />
                   </LinearGradient>
+                  </ProgressFill>
                 </View>
               </View>
+              {stepLabel ? (
+                <Text
+                  accessible={false}
+                  style={[RTL_STYLE, { fontSize: 11, fontWeight: '700', color: '#64748b', marginBottom: 4, fontVariant: ['tabular-nums'] }]}
+                >
+                  {stepLabel}
+                </Text>
+              ) : null}
+              </>
             );
           })()}
         </Animated.View>
@@ -5279,7 +5638,22 @@ export function LessonFlowScreen() {
             with no video flashcards). Without this guard, `card[…].id` threw
             synchronously and crashed the screen. Self-heal: skip to quizzes
             so the user is never trapped on a blank phase (QA 2026-06-12). */}
-        {phase === "flashcards" && mod.flashcards[flashcardIndex] && (
+        {phase === "flashcards" && quickCheck && (
+          <Animated.View style={[contentStyle, { flex: 1 }]}>
+            <QuizCard
+              key={`quick-check-${quickCheck.id}`}
+              quiz={quickCheck}
+              quizIndex={0}
+              totalQuizzes={1}
+              onCorrectAnswer={() => handleQuickCheckDone(true)}
+              onWrongRevealed={() => handleQuickCheckDone(false)}
+              onWrongImmediate={handleQuickCheckMiss}
+              unitColors={unitColors}
+              onTermPress={setActiveGlossaryTerm}
+            />
+          </Animated.View>
+        )}
+        {phase === "flashcards" && !quickCheck && mod.flashcards[flashcardIndex] && (
           <Animated.View style={[contentStyle, { flex: 1 }]}>
             <FlashcardCard
               key={mod.flashcards[flashcardIndex].id}
@@ -5297,7 +5671,7 @@ export function LessonFlowScreen() {
             />
           </Animated.View>
         )}
-        {phase === "flashcards" && !mod.flashcards[flashcardIndex] && (
+        {phase === "flashcards" && !quickCheck && !mod.flashcards[flashcardIndex] && (
           <FallbackToPhaseEffect run={() => setPhase("quizzes")} />
         )}
 
@@ -5335,7 +5709,12 @@ export function LessonFlowScreen() {
         )}
 
         {/* ── Quizzes phase ── */}
-        {phase === "quizzes" && (
+        {phase === "quizzes" && !phaseQuizzes[quizIndex] && (
+          // No question at this index (empty quiz / stale position) → move on
+          // instead of crashing on the QuizCard props below.
+          <FallbackToPhaseEffect run={() => advanceFromChip('quiz')} />
+        )}
+        {phase === "quizzes" && phaseQuizzes[quizIndex] && (
           <Animated.View style={[contentStyle, { flex: 1 }]}>
             {/* Energy display — hidden for Pro (unlimited; no ∞ advertising).
                 Tappable: when empty → straight to the Pro paywall (Yoav 18/06);
@@ -5349,6 +5728,7 @@ export function LessonFlowScreen() {
                 tapHaptic();
                 if (heartsCount <= 0) {
                   try { captureEvent('energy_indicator_tapped', { state: 'empty' }); } catch { /* non-fatal */ }
+                  reportEarlyExit('paywall');
                   router.push('/pricing?source=energy_indicator_empty' as never);
                 } else {
                   setShowOutOfHearts(true);
@@ -5366,10 +5746,10 @@ export function LessonFlowScreen() {
             </Pressable>
             )}
             <QuizCard
-              key={mod.quizzes[quizIndex].id}
-              quiz={mod.quizzes[quizIndex]}
+              key={`${phaseQuizzes[quizIndex].id}${inQuizRetry ? '-retry' : ''}`}
+              quiz={phaseQuizzes[quizIndex]}
               quizIndex={quizIndex}
-              totalQuizzes={mod.quizzes.length}
+              totalQuizzes={phaseQuizzes.length}
               onCorrectAnswer={handleCorrectAnswer}
               onWrongRevealed={handleWrongRevealed}
               onWrongImmediate={handleWrongImmediate}
@@ -5383,7 +5763,7 @@ export function LessonFlowScreen() {
         {/* ── Quiz Start Popup ── */}
         <QuizStartPopup
           visible={showQuizIntro}
-          quizCount={mod.quizzes.length}
+          quizCount={phaseQuizzes.length}
           onStart={() => setShowQuizIntro(false)}
           unitColors={unitColors}
         />
@@ -5944,6 +6324,7 @@ export function LessonFlowScreen() {
         visible={showOutOfHearts}
         onDismiss={() => {
           setShowOutOfHearts(false);
+          if (phase !== "summary") reportEarlyExit('out_of_energy');
           returnToMap("/(tabs)/index");
         }}
         onHeartsRefilled={() => {
@@ -5955,6 +6336,7 @@ export function LessonFlowScreen() {
         }}
         onUpgrade={() => {
           setShowOutOfHearts(false);
+          if (phase !== "summary") reportEarlyExit('paywall');
           router.push('/pricing?source=out_of_hearts_quiz' as never);
         }}
       />
@@ -6145,7 +6527,7 @@ export function LessonFlowScreen() {
       {showExitConfirm && (() => {
         // Minutes remaining = 3 (first third) / 2 (middle) / 1 (last third) of module progress.
         const flashcardsTotal = mod?.flashcards.length ?? 1;
-        const quizzesTotal = mod?.quizzes.length ?? 1;
+        const quizzesTotal = Math.max(1, phaseQuizzes.length);
         let fractionDone = 0;
         if (phase === "flashcards") {
           fractionDone = (flashcardIndex / flashcardsTotal) * 0.5;
@@ -6163,10 +6545,10 @@ export function LessonFlowScreen() {
             <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(56,189,248,0.15)" }}>
               <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 90, height: 90, marginBottom: 16 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>
-                חכו, יש רק {minutesWord}{"\n"}לסיום השיעור!
+                {exitRemainingLine ?? `חכו, יש רק ${minutesWord}\nלסיום השיעור!`}
               </Text>
               <Text style={{ ...RTL_STYLE, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 24 }}>
-                כמעט סיימתם, אל תצאו עכשיו
+                {exitRemainingLine ? exitKeptLine : "כמעט סיימתם, אל תצאו עכשיו"}
               </Text>
               <Pressable
                 onPress={() => { tapHaptic(); setShowExitConfirm(false); }}
@@ -6919,6 +7301,8 @@ export function LessonFlowScreen() {
         accentColor={unitColors.bg}
         accentBottom={unitColors.bottom}
         bottomInset={safeInsets.bottom}
+        remainingLine={exitRemainingLine}
+        keptLine={exitKeptLine}
       />
 
       {/* Glossary tooltip */}

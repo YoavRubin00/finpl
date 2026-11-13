@@ -29,6 +29,12 @@ interface LessonExitConfirmSheetProps {
   accentBottom: string;
   /** Safe-area bottom inset so the buttons clear the home indicator / nav bar. */
   bottomInset: number;
+  /** Concrete "what is left" line, e.g. "נשארו 2 שאלות, בערך 40 שניות."
+   *  (see lessonRemaining.ts). Omitted when nothing countable is ahead. */
+  remainingLine?: string | null;
+  /** What happens to the progress if the user leaves now. Defaults to the
+   *  generic "progress is saved" line. */
+  keptLine?: string;
 }
 
 export function LessonExitConfirmSheet({
@@ -38,6 +44,8 @@ export function LessonExitConfirmSheet({
   accentColor,
   accentBottom,
   bottomInset,
+  remainingLine,
+  keptLine,
 }: LessonExitConfirmSheetProps) {
   const reduceMotion = useReducedMotion();
   if (!visible) return null;
@@ -85,8 +93,11 @@ export function LessonExitConfirmSheet({
               <Text style={styles.title} accessibilityRole="header">
                 לצאת עכשיו?
               </Text>
+              {remainingLine ? (
+                <Text style={styles.remaining}>{remainingLine}</Text>
+              ) : null}
               <Text style={styles.body}>
-                ההתקדמות נשמרת — אפשר לחזור מאותה נקודה.
+                {keptLine ?? "ההתקדמות נשמרת — אפשר לחזור מאותה נקודה."}
               </Text>
             </View>
           </View>
@@ -160,6 +171,15 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#ffffff",
     marginBottom: 6,
+  },
+  remaining: {
+    writingDirection: "rtl",
+    textAlign: "right",
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: 4,
   },
   body: {
     writingDirection: "rtl",

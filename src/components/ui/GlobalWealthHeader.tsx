@@ -193,9 +193,23 @@ function ResourcePill({ icon, children, glowColor, showPlus, onPress, trackedVal
 interface GlobalWealthHeaderProps {
   /** When true, hides profile row + settings, shows only resources + progress bar */
   compact?: boolean;
+  /**
+   * Display-only mode for screens the user should not be pulled out of (the
+   * lesson). The header keeps showing coins / streak / level and still catches
+   * the flying rewards, but nothing in it NAVIGATES: no settings gear, the
+   * coin + gem pills do not open the shop, the profile banner is not a link
+   * and loses its "tap me" confetti. The streak calendar and the level popup
+   * (in-place modals) keep working.
+   *
+   * Why (PostHog, 45d to 13.11.26): the event right after a
+   * lesson_exited_early{reason:'navigation'} was a screen view of /more,
+   * /profile or the shop in ~3 of 4 cases — all three are this header's own
+   * links, tapped mid-intro / mid-cards, leaving the lesson with no confirm.
+   */
+  lockNavigation?: boolean;
 }
 
-export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps) {
+export function GlobalWealthHeader({ compact = false, lockNavigation = false }: GlobalWealthHeaderProps) {
   const router = useRouter();
   const { data: economyData } = useEconomy();
   const xp = economyData?.xp ?? 0;
@@ -441,7 +455,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
       {/* Token row, Single compact header */}
       <View style={[s.tokenRow, { gap: d.rowGap }, compact && { justifyContent: "center" }]}>
 
-        {!compact && (
+        {!compact && !lockNavigation && (
           <View style={[s.shortcutIcons, walkthroughActive && { opacity: 0.3 }]}>
             <Pressable
               onPress={walkthroughActive ? undefined : () => { tapHaptic(); router.push("/(tabs)/more" as never); }}
@@ -461,7 +475,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         <ResourcePill
           icon={<GoldCoinIcon size={d.coinIconSize} />}
           glowColor={CLASH.goldLight}
-          onPress={walkthroughActive ? undefined : navigateToShop}
+          onPress={walkthroughActive || lockNavigation ? undefined : navigateToShop}
           trackedValue={coins}
           accessibilityLabel={`${coins} מטבעות`}
           pillStyle={pillStyle}
@@ -479,7 +493,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         <ResourcePill
           icon={<LottieIcon source={require("../../../assets/lottie/Diamond.json") as number} size={d.lottieSize} autoPlay loop={false} active={appActive} />}
           glowColor="#67e8f9"
-          onPress={walkthroughActive ? undefined : navigateToShop}
+          onPress={walkthroughActive || lockNavigation ? undefined : navigateToShop}
           trackedValue={gems}
           accessibilityLabel={`${gems} יהלומים`}
           pillStyle={pillStyle}
@@ -560,9 +574,10 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
               captureEvent("wealth_banner_tapped");
               router.push("/(tabs)/profile" as never);
             }}
-            accessibilityRole="button"
+            disabled={lockNavigation}
+            accessibilityRole={lockNavigation ? "text" : "button"}
             accessibilityLabel="פרופיל"
-            accessibilityHint="עבור לעמוד הפרופיל"
+            accessibilityHint={lockNavigation ? undefined : "עבור לעמוד הפרופיל"}
             style={{ flexShrink: 1, minWidth: 0 }}
           >
             <Animated.View style={[
@@ -590,6 +605,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                   cycle on mount + one every 30s (Yoav's cadence) keeps the
                   recurring eye-draw — motion onset beats a loop the eye has
                   habituated to — at a fraction of the duty cycle. */}
+              {!lockNavigation && (
               <View style={{ position: "absolute", top: -18, left: -18, right: -18, bottom: -18, pointerEvents: "none" }}>
                 <LottieIcon
                   source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json") as number}
@@ -601,6 +617,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                   active={appActive}
                 />
               </View>
+              )}
 
               <Text
                 style={[s.profileNameCompact, { fontSize: d.nameFont, maxWidth: d.nameMaxW }, isPro && { color: "#d97706" }]}

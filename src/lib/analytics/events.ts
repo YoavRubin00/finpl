@@ -78,7 +78,18 @@ export type AppEvent =
   | { name: 'lesson_started'; props: { lesson_id?: string; module_id?: string; chapter_id?: string | null; is_replay?: boolean; entry_source?: 'map_tap' | 'auto_advance' | 'deeplink'; module_variant?: string } }
   | { name: 'lesson_quiz_question_answered'; props: { lesson_id: string; question_index: number; is_correct: boolean; attempt?: number; combo_at_answer?: number } }
   | { name: 'lesson_completed'; props: { lesson_id?: string; module_id?: string; chapter_id?: string | null; duration_ms?: number; completed_at_phase?: string; correct_count?: number; total_questions?: number; is_first_lesson?: boolean; max_combo?: number; lesson_xp_multiplier?: number; learning_mode?: string; module_variant?: string } }
-  | { name: 'lesson_exited_early'; props: { lesson_id: string; chapter_id?: string; reason: 'back_button' | 'navigation' | 'app_background'; phase?: string } }
+  // Exit diagnostics (13.11.26): where inside the phase the user was and what
+  // was still ahead. `navigation` now means ONLY an unintended screen change
+  // (the deliberate exits and the successful chip/chest returns used to leak
+  // into it and double-count). `out_of_energy` / `paywall` split the exits the
+  // lesson itself causes.
+  | { name: 'lesson_exited_early'; props: { lesson_id: string | null; chapter_id?: string | null; reason: 'back_button' | 'navigation' | 'app_background' | 'out_of_energy' | 'paywall'; phase?: string; phase_index?: number; phase_total?: number; cards_left?: number; questions_left?: number; seconds_in_lesson?: number; seconds_in_phase?: number; entry_phase?: string; is_replay?: boolean } }
+  // Fired when the user LEAVES a lesson phase forwards (finished it).
+  | { name: 'lesson_phase_completed'; props: { lesson_id: string; chapter_id?: string | null; phase: string; next_phase: string; phase_total?: number; seconds_in_phase: number; seconds_in_lesson: number; is_replay?: boolean } }
+  // Fired once per lesson mount when a saved mid-phase position was restored.
+  | { name: 'lesson_resumed'; props: { lesson_id: string; chapter_id?: string | null; phase: string; phase_index: number; phase_total: number } }
+  // Quick check: a quiz question pulled forward between two flashcards.
+  | { name: 'lesson_quick_check_answered'; props: { lesson_id: string; question_id: string; after_card_index: number; is_correct: boolean } }
   | { name: 'module_unlocked'; props: { module_id: string; chapter_id?: string; trigger?: 'completion' | 'pro_subscribe' | 'manual' } }
   | { name: 'chapter_completed'; props: { chapter_id: string; total_modules?: number } }
   // ── Topic-tree (R6-R8 architecture) ───────────────────────────────────

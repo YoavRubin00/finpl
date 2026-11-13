@@ -81,6 +81,16 @@ export interface Flashcard {
   hideTextOnDive?: boolean; // If true, the main text disappears when diveMode advances to step > 0
   zoomRegions?: [number, number, number][]; // [translateX, translateY, scale] for each step
   finnExplanations?: string[]; // Explanation text for each step in diveMode
+  /**
+   * Quick check (13.11.26): id of ONE of this module's `quizzes` that tests
+   * exactly what this card (and the ones before it) taught. When set, that
+   * question is asked right after this card, inside the cards phase, and is
+   * left out of the quiz phase, so a long deck is never more than 2-3 cards of
+   * reading before the first interaction. Presentation only: the question
+   * itself is unchanged. Set it only where the question is answerable from the
+   * cards shown so far.
+   */
+  quickCheckQuizId?: string;
   isInteractiveChart?: boolean; // If true, renders a full-screen interactive chart component
   chartId?: 'ta125_war_recovery'; // Identifier for which chart to render
 }

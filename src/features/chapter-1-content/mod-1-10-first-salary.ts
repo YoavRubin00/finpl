@@ -73,6 +73,9 @@ export const MOD_1_10_FIRST_SALARY: Module = {
     },
     {
       id: 'fc-1-10-3',
+      // Quick check (presentation only, 13.11.26): the employer-cost question is
+      // asked right after this card instead of after all seven.
+      quickCheckQuizId: 'q-1-10-1',
       text: 'כמה אתם עולים למעסיק? הרבה יותר מהברוטו. על השכר שלכם המעסיק מוסיף ביטוח לאומי (7.6% מעל 7,703 שקל), הפרשה לפנסיה (6.5%) ולפיצויים (לפחות 6% לפי צו ההרחבה). כלומר על כל 10,000 שקל ברוטו, המעסיק משלם עוד כ-2,000. זה חשוב כי זה הגודל האמיתי של העסקה, וכי כל אחוז הפרשה הוא כסף שלכם.',
       segments: [
         {
@@ -116,6 +119,8 @@ export const MOD_1_10_FIRST_SALARY: Module = {
     },
     {
       id: 'fc-1-10-5',
+      // Quick check: the employee-vs-freelancer question follows this card.
+      quickCheckQuizId: 'q-1-10-4',
       text: 'שכיר או פרילנסר? על הנייר הפרילנסר מקבל יותר לשעה. בפועל: עצמאי משלם בעצמו ביטוח לאומי ובריאות (7.7% עד 7,703 שקל, ו-18% מעל), אין מעסיק שמפריש לו פנסיה ופיצויים, ומעל מחזור של 122,833 שקל בשנה הוא גם גובה ומעביר מע"מ של 18%. אז לפני שמתלהבים מהמחיר לשעה, מחשבים מה נשאר.',
       segments: [
         {
