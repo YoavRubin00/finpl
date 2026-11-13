@@ -91,6 +91,8 @@ let graceTimer: ReturnType<typeof setTimeout> | null = null;
 // between loads (e.g. profile completes after onboarding) and TFUA must
 // follow it for compliance. Kept in sync by useRewardedAd's effect + each load.
 let latestIsMinor = false;
+/** Consecutive load errors, for the retry backoff (reset on a successful load). */
+let adErrorStreak = 0;
 
 // ───────────────────────────── AdMob init gate
 // play-services-ads 25+ THROWS IllegalStateException from setAppMuted /
@@ -212,6 +214,7 @@ function loadAdSingleton(isMinor: boolean): void {
       ad.addAdEventListener(mod.RewardedAdEventType.LOADED, () => {
         console.log("[AdMob] Ad loaded");
         isLoading = false;
+        adErrorStreak = 0;
         setLoaded(true);
       }),
     );
@@ -268,7 +271,11 @@ function loadAdSingleton(isMinor: boolean): void {
         currentAd = null;
         isLoading = false;
         setLoaded(false);
-        setTimeout(() => loadAdSingleton(latestIsMinor), 30000);
+        // Heat (13.11): was a flat 30s retry forever (also with no fill / no network). Back off
+        // 30s → 60s → 2m → … capped at 10 min, and reset after a successful load.
+        adErrorStreak += 1;
+        const delay = Math.min(10 * 60_000, 30_000 * 2 ** Math.min(adErrorStreak - 1, 5));
+        setTimeout(() => loadAdSingleton(latestIsMinor), delay);
       }),
     );
 

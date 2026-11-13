@@ -12,7 +12,9 @@ import Animated, {
   cancelAnimation,
   useReducedMotion,
 } from "react-native-reanimated";
+import { useIsFocused } from "@react-navigation/native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
+import { useAppActive } from "../../hooks/useAppActive";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
@@ -54,8 +56,12 @@ function QuestPathNodeInner({
   // Pulse glow, stronger when ready-to-claim (golden), softer when pending (blue).
   // Skipped entirely when reduced motion is on.
   const pulse = useSharedValue(reducedMotion ? 0.9 : 0);
+  // Heat (13.11): pulse + trophy Lottie only while the map is on screen and the app is active.
+  const isFocused = useIsFocused();
+  const appActive = useAppActive();
+  const live = isFocused && appActive;
   useEffect(() => {
-    if (state === "claimed" || reducedMotion) {
+    if (state === "claimed" || reducedMotion || !live) {
       cancelAnimation(pulse);
       pulse.value = state === "claimed" ? 0 : 0.9;
       return;
@@ -69,7 +75,7 @@ function QuestPathNodeInner({
       true,
     );
     return () => cancelAnimation(pulse);
-  }, [state, pulse, reducedMotion]);
+  }, [state, pulse, reducedMotion, live]);
 
   const glowStyle = useAnimatedStyle(() => {
     const rgb = state === "ready" ? "250,204,21" : "37,99,235";
@@ -130,6 +136,7 @@ function QuestPathNodeInner({
               size={state === "ready" ? 52 : 40}
               autoPlay
               loop={state !== "claimed"}
+              active={live}
             />
             <View style={styles.dotsRow}>
               {Array.from({ length: totalQuests }).map((_, i) => (

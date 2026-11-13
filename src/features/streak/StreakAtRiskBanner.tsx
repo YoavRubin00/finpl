@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
   FadeInDown,
   FadeOut,
+  cancelAnimation,
 } from "react-native-reanimated";
 import { X } from "lucide-react-native";
 import { useRouter } from "expo-router";
@@ -58,8 +59,21 @@ export function StreakAtRiskBanner() {
   // Subtle pulse animation
   const glowOpacity = useSharedValue(0.15);
 
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowOpacity: glowOpacity.value,
+  }));
+
+  // UX-14: one banner above the golden node — streak-at-risk outranks the rest.
+  const canShow = useBannerSlot('streak_at_risk', isAtRisk && !dismissed, BANNER_PRIORITY.streakAtRisk);
+
+  // Heat (13.11): the glow used to start at 18:00 and never stop — even after the banner was
+  // dismissed or hidden. Now it runs only while the banner is actually on screen.
   useEffect(() => {
-    if (!isAtRisk) return;
+    if (!canShow) {
+      cancelAnimation(glowOpacity);
+      glowOpacity.value = 0.15;
+      return;
+    }
     glowOpacity.value = withRepeat(
       withSequence(
         withTiming(0.3, { duration: 1200 }),
@@ -68,14 +82,8 @@ export function StreakAtRiskBanner() {
       -1,
       true
     );
-  }, [isAtRisk]);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    shadowOpacity: glowOpacity.value,
-  }));
-
-  // UX-14: one banner above the golden node — streak-at-risk outranks the rest.
-  const canShow = useBannerSlot('streak_at_risk', isAtRisk && !dismissed, BANNER_PRIORITY.streakAtRisk);
+    return () => cancelAnimation(glowOpacity);
+  }, [canShow, glowOpacity]);
   if (!canShow) return null;
 
   return (

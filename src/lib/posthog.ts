@@ -38,13 +38,18 @@ export function initPostHog(): void {
       // we collect email + password fields, and PII in PostHog would breach
       // the privacy policy we ship to the store.
       enableSessionReplay: true,
+      // Heat (13.11): replay grabbed a full-screen screenshot about once a second for the whole
+      // session (the screen never stops changing), on every device. Now: 1 in 10 sessions, one
+      // frame per 3s at most, no console/network capture.
       sessionReplayConfig: {
         maskAllTextInputs: true,
         maskAllImages: false,
-        captureLog: true,
-        captureNetworkTelemetry: true,
-        androidDebouncerDelayMs: 1000,
-        iOSdebouncerDelayMs: 1000,
+        captureLog: false,
+        captureNetworkTelemetry: false,
+        throttleDelayMs: 3000,
+        androidDebouncerDelayMs: 3000,
+        iOSdebouncerDelayMs: 3000,
+        sampleRate: 0.1,
       },
     });
 

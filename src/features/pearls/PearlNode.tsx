@@ -12,6 +12,9 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 
+import { useIsFocused } from '@react-navigation/native';
+import { useAppActive } from '../../hooks/useAppActive';
+
 const PEARL_COLORED = require('../../../assets/webp/pearl-colored.webp');
 // PEARL_LOCKED used to be a separate gray-sphere webp. Per user request
 // (2026-05-31) locked pearls now render the SAME colored image as unlocked,
@@ -58,9 +61,14 @@ export function PearlNode({
   glow = false,
 }: PearlNodeProps): React.ReactElement {
   const reducedMotion = useReducedMotion();
+  // Heat (13.11): up to ~40 pearls each ran up to 3 endless loops, on the map and while the map sat
+  // behind another tab or the app was in the background. Animate only while the map is on screen.
+  const isFocused = useIsFocused();
+  const appActive = useAppActive();
+  const live = isFocused && appActive;
   const isUnlocked = state === 'unlocked';
-  const shouldAnimate = isUnlocked && !reducedMotion;
-  const shouldGlow = isUnlocked && glow && !reducedMotion;
+  const shouldAnimate = isUnlocked && !reducedMotion && live;
+  const shouldGlow = isUnlocked && glow && !reducedMotion && live;
 
   const scale = useSharedValue(1);
   const haloOpacity = useSharedValue(0);

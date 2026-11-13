@@ -393,27 +393,8 @@ export function GlobalWealthHeader({ compact = false, lockNavigation = false }: 
     elevation: walkthroughProfilePulse.value > 0.05 ? 10 : 2,
   }));
 
-  // ---- Mail icon pulse animation ----
-  const mailPulse = useSharedValue(1);
-  useEffect(() => {
-    if (hasUnreadMail && appActive) {
-      mailPulse.value = withRepeat(
-        withSequence(
-          withTiming(1.25, { duration: 800 }),
-          withTiming(1, { duration: 800 }),
-        ),
-        -1,
-        true,
-      );
-    } else {
-      cancelAnimation(mailPulse);
-      mailPulse.value = 1;
-    }
-  }, [hasUnreadMail, appActive, mailPulse]);
-
-  const mailPulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: mailPulse.value }],
-  }));
+  // (13.11) The mail-icon pulse loop that lived here was attached to no view, yet ran all day on
+  // every screen (hasUnreadMail is set daily). Removed for heat.
 
   const pillStyle = useMemo(() => ({
     paddingHorizontal: d.pillPadH,

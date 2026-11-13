@@ -24,6 +24,8 @@ import {
   ENERGY_REGEN_MS,
 } from "../subscription/useHeartsStore";
 import { useIsPro } from "../subscription/useSubscription";
+import { useIsFocused } from "@react-navigation/native";
+import { useAppActive } from "../../hooks/useAppActive";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 
 /**
@@ -49,11 +51,17 @@ export function EnergyStationCard({
   const rawUnits = useHeartsStore((s) => s.hearts);
   const lastLost = useHeartsStore((s) => s.lastHeartLostAt);
   const [, forceTick] = useReducer((c: number) => c + 1, 0);
+  // Heat (13.11): the 1 Hz tick and the animated shark ran even with a full battery, behind another
+  // tab and under a lesson. Now only while the map is on screen and energy is actually refilling.
+  const isFocused = useIsFocused();
+  const appActive = useAppActive();
+  const live = isFocused && appActive;
+  const rawFull = rawUnits >= MAX_ENERGY;
 
   // Live tick: settle passive regen + recompute the countdown every second,
   // paused when the app is backgrounded (battery-safe). Pro never regenerates.
   useEffect(() => {
-    if (isPro) return;
+    if (isPro || !isFocused || rawFull) return;
     let id: ReturnType<typeof setInterval> | null = null;
     const start = () => {
       if (id) return;
@@ -71,7 +79,7 @@ export function EnergyStationCard({
       else stop();
     });
     return () => { stop(); sub.remove(); };
-  }, [isPro]);
+  }, [isPro, isFocused, rawFull]);
 
   // Settled energy (raw + any pending passive refills). rawUnits/lastLost in the
   // dep-less render keep this fresh on store changes; forceTick covers the clock.
@@ -163,6 +171,7 @@ export function EnergyStationCard({
             source={sharkSrc}
             style={styles.shark}
             contentFit="contain"
+            autoplay={live}
             accessible={false}
             pointerEvents="none"
           />

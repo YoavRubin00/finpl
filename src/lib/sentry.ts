@@ -18,6 +18,10 @@ export function initSentry(): void {
     dsn: DSN,
     debug: __DEV__,
     tracesSampleRate: __DEV__ ? 1.0 : 0.2,
+    // Heat (13.11): a traces rate silently turns on per-frame native frames tracking and stall
+    // tracking, a continuous display-link observer. Errors and traces still report.
+    enableNativeFramesTracking: false,
+    enableStallTracking: false,
     enableAutoSessionTracking: true,
     environment: __DEV__ ? "development" : "production",
   });
