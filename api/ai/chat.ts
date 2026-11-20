@@ -1,11 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { HEBREW_STYLE_RULES } from '../_shared/hebrewStyle';
 import { TIMEOUTS } from '../_shared/timeout';
+import { FOLLOWUPS_INSTRUCTION, FollowupStreamSplitter } from '../../src/features/chat/chatFollowups';
 
 interface ChatRequestBody {
   systemPrompt: string;
   messages: Array<{ role: 'user' | 'model'; content: string }>;
   maxOutputTokens?: number;
+  /** Opt-in (OTA 20.11): also write two follow-up chips after the answer, in
+   *  this same call. Older clients don't send it and get exactly the old
+   *  response. Wire format: src/features/chat/chatFollowups.ts. */
+  followups?: boolean;
 }
 
 interface GeminiStreamChunk {
@@ -56,6 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }));
 
     const maxTokens = Math.min(body.maxOutputTokens ?? 2048, 4096);
+    const wantsFollowups = body.followups === true;
 
     // SSE streaming endpoint — Gemini emits `data: {...}\n\n` events with
     // partial candidates. Parsing these into raw text and writing them to
@@ -76,7 +82,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         body: JSON.stringify({
           // The client owns the persona prompt; the server appends the shared
           // Hebrew-style guard so every chat reply obeys it without an OTA.
-          system_instruction: { parts: [{ text: systemPrompt + HEBREW_STYLE_RULES }] },
+          // The follow-up format goes last, only when the client asked for it.
+          system_instruction: {
+            parts: [{ text: systemPrompt + HEBREW_STYLE_RULES + (wantsFollowups ? FOLLOWUPS_INSTRUCTION : '') }],
+          },
           contents: messages,
           generationConfig: { maxOutputTokens: maxTokens },
         }),
@@ -95,6 +104,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    // With follow-ups the answer still streams as it arrives; only the tail
+    // after the marker is held back and sent as the trailer at the end.
+    const splitter = wantsFollowups ? new FollowupStreamSplitter() : null;
+    const writeText = (text: string) => {
+      const out = splitter ? splitter.push(text) : text;
+      if (out) res.write(out);
+    };
 
     const flushEvent = (eventBlock: string) => {
       for (const rawLine of eventBlock.split('\n')) {
@@ -106,7 +122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const parts = parsed.candidates?.[0]?.content?.parts;
           if (!parts) continue;
           for (const p of parts) {
-            if (p.text) res.write(p.text);
+            if (p.text) writeText(p.text);
           }
         } catch {
           // Ignore malformed events — stream continues.
@@ -131,6 +147,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Final decode flush + drain any trailing event that didn't end with \n\n.
     buffer = (buffer + decoder.decode()).replace(/\r\n/g, '\n').trim();
     if (buffer) flushEvent(buffer);
+
+    if (splitter) {
+      const { text, trailer } = splitter.finish();
+      if (text) res.write(text);
+      if (trailer) res.write(trailer);
+    }
 
     res.end();
   } catch (err: unknown) {

@@ -13,6 +13,9 @@ export interface StreamChatBody {
   systemPrompt: string;
   messages: Array<{ role: 'user' | 'model'; content: string }>;
   maxOutputTokens?: number;
+  /** Ask for two follow-up chips after the answer in the same response
+   *  (see src/features/chat/chatFollowups.ts). Split with splitChatResponse. */
+  followups?: boolean;
 }
 
 /**
