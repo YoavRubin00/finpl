@@ -18,8 +18,9 @@
 // A real server streak answer is noted only where one is accepted (useStreak.ts:
 // the guarded GET's kept answer, the daily tick's and an activity's POST
 // answer). The economy store's local seed never notes one, so it cannot end
-// the wait. (Not serverAnswerSince(['streak'], ...): that seed is stored with a
-// fresh updatedAt and not as a snapshot seed, so it would count at once.)
+// the wait. (Not serverAnswerSince(['streak'], ...): since boot fix B8 the local
+// seed is stored as a seed (updatedAt 0) and no longer counts there, but any
+// local write does, e.g. completeDailyTask's mirror of the local calendar.)
 
 /** Longest the launch's login bonus waits for the server's streak. */
 export const LAUNCH_STREAK_WAIT_MS = 3000;

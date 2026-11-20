@@ -15,6 +15,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import * as Notifications from "expo-notifications";
 import { applyEconomyDelta } from "../../lib/api/economy";
 import { queryClient } from "../../lib/queryClient";
+import { seedQueryData } from "../../lib/queryGuard";
 import {
   economyQueryKey,
   economyPlaceholder,
@@ -1045,13 +1046,20 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         // Without this, guests (whose useStreak() server query is disabled)
         // would see "0" in the header on every cold start until the next
         // daily activity fires completeDailyTask.
+        // As a seed (boot fix B8, 20.11: updatedAt 0, see queryGuardCore
+        // seed): it used to be a normal write, fresh for a minute, so the
+        // boot's streak read and the useStreak hooks took it for the server's
+        // streak and did not ask, and a GET in flight when it landed was
+        // dropped in its favour. Now the server is still asked at launch and
+        // its answer replaces this. It never counts as a server streak for the
+        // launch's login bonus (launchStreakWait.ts notes only server answers).
         try {
           const derived = deriveStreakFromDates(state.activeDates, state.frozenDates);
           // Only seed if the cache is empty — don't clobber a freshly-fetched
           // server value that may have arrived first.
           const existing = queryClient.getQueryData<StreakState | null>(STREAK_QUERY_KEY);
           if (!existing) {
-            queryClient.setQueryData<StreakState | null>(STREAK_QUERY_KEY, {
+            seedQueryData<StreakState>(STREAK_QUERY_KEY, {
               currentStreak: derived,
               longestStreak: derived,
               lastActiveDate: state.activeDates[state.activeDates.length - 1] ?? null,

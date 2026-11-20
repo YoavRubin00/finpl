@@ -46,8 +46,9 @@ export function primeStreakSnapshot(): Promise<void> {
  *  A kept answer is also a real server streak for the launch's login bonus
  *  (launchStreakWait.ts), noted on the next tick: this callback runs before
  *  react-query stores the answer, and the bonus must read the answer, not the
- *  seed it replaces. A dropped answer (the guard kept a newer write, such as
- *  the economy store's local seed) notes nothing. */
+ *  seed it replaces. A dropped answer (the guard kept a newer local write, such
+ *  as completeDailyTask's mirror) notes nothing. The economy store's local
+ *  seed is a seed (B8): an answer in flight when it lands is kept. */
 export const streakQueryFn = guardedQueryFn(
   streakQueryKey,
   async () => (await getStreak()).streak,

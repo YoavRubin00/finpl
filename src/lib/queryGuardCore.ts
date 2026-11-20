@@ -27,6 +27,17 @@ export interface QueryGuard {
   markSeeded(value: object): void;
   isSeeded(value: unknown): boolean;
   /**
+   * Puts a value in the cache as a seed: a saved snapshot, RevenueCat's cached
+   * Pro, the economy store's local streak (boot fix B8, 20.11). Stored with
+   * updatedAt 0, so it is stale (the next read and every mounting screen ask
+   * the server), a read in flight is never dropped in its favour, and
+   * serverAnswerSince never takes it for a server answer. The value the cache
+   * now holds is marked seeded (structural sharing may store a copy of
+   * `value` when it replaces an earlier seed) and returned. Callers decide
+   * whether a seed may go in (it overwrites whatever the cache holds).
+   */
+  seed<T>(key: QueryKey, value: T): T | undefined;
+  /**
    * Wraps a query function. If the query got a newer write while the request
    * was in flight (anything but a seeded snapshot, i.e. stored with a real
    * updatedAt), that write is kept, this answer is dropped and the query is
@@ -65,6 +76,12 @@ export function createQueryGuard(client: QueryClient, getAuthId: () => string | 
       seededValues.add(value);
     },
     isSeeded,
+    seed<T>(key: QueryKey, value: T): T | undefined {
+      client.setQueryData<T>(key, value, { updatedAt: 0 });
+      const stored = client.getQueryData<T>(key);
+      if (typeof stored === 'object' && stored !== null) seededValues.add(stored);
+      return stored;
+    },
     guardedQueryFn(key, fetcher, onAccepted) {
       return async () => {
         const cache = client.getQueryCache();

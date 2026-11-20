@@ -48,7 +48,7 @@ import { userStatsQueryKey, userStatsQueryFn } from '../../features/user-stats/u
 import { getProfile, type ProfileRow } from '../api/profile';
 import { syncSubscription, type SubscriptionState } from '../api/subscription';
 import { ApiError } from '../api/client';
-import { markSeeded, serverAnswerSince } from '../queryGuard';
+import { seedQueryData, serverAnswerSince } from '../queryGuard';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { captureEvent, forgetPersonDetails, identifyUser, resetUser } from '../posthog';
 import { track } from '../analytics/events';
@@ -205,16 +205,15 @@ function isTokenExpiredLocally(token: string): boolean {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Puts a saved last-known value in the cache for the first frame. Marked stale
- * (updatedAt 0) so the boot read and any mounting screen still ask the server,
- * and marked seeded so the server answer always replaces it (queryGuard).
+ * Puts a saved last-known value in the cache for the first frame, as a seed
+ * (queryGuard seedQueryData: updatedAt 0, so the boot read and any mounting
+ * screen still ask the server and the server answer always replaces it).
  * Skipped when the cache already holds something (newer, or the dev override).
  */
 function seedFromSnapshot<T extends object>(key: QueryKey, value: T | null | undefined): boolean {
   if (!value) return false;
   if (queryClient.getQueryData(key) !== undefined) return false;
-  queryClient.setQueryData<T>(key, value, { updatedAt: 0 });
-  markSeeded(value);
+  seedQueryData<T>(key, value);
   return true;
 }
 

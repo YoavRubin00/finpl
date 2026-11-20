@@ -10,7 +10,10 @@
 //    the next account;
 //  - B1 (boot fix round, 20.11): a server answer equal to the seed (the usual
 //    launch, nothing changed) is still the server's answer, although
-//    react-query keeps the seeded object in the cache.
+//    react-query keeps the seeded object in the cache;
+//  - B8: guard.seed() stores a value stale (updatedAt 0) and marked, also when
+//    it replaces an earlier seed; a read in flight is never dropped for a
+//    seed, and a seed never stops the boot's read from asking the server.
 import { QueryClient, QueryObserver } from '@tanstack/query-core';
 import { createQueryGuard } from '../src/lib/queryGuardCore';
 
@@ -177,6 +180,85 @@ async function writeEqualToTheSeedIsKept(): Promise<void> {
   unsub();
 }
 
+async function seedPutsAStaleMarkedValue(): Promise<void> {
+  // B8 (20.11): one way to put a seed in the cache (a saved snapshot,
+  // RevenueCat's cached Pro, the economy store's local streak).
+  const client = makeClient();
+  const guard = createQueryGuard(client, () => 'A');
+  const key = ['streak'];
+  const local = { currentStreak: 1, lastActiveDate: '2026-11-18' };
+  const stored = guard.seed(key, local);
+  const state = client.getQueryState(key);
+  check(state?.dataUpdatedAt === 0 && stored === client.getQueryData(key), 'seed: stored with updatedAt 0 and returned as the cache holds it');
+  check(guard.isSeeded(client.getQueryData(key)), 'seed: the cached value is marked seeded');
+  check(guard.serverAnswerSince(key, 0) === undefined, 'seed: never a server answer for serverAnswerSince, even since 0');
+
+  // Replacing an earlier seed: structural sharing stores a copy, which must be the marked one.
+  const subKey = ['subscription'];
+  const savedNotPro: Sub = { isPro: false, proExpiresAt: null, proSource: null };
+  guard.seed(subKey, savedNotPro);
+  const storePro: Sub = { isPro: true, proExpiresAt: '2026-12-20T10:00:00Z', proSource: null };
+  const replaced = guard.seed(subKey, storePro);
+  check(replaced !== undefined && replaced !== storePro && replaced.isPro === true,
+    'seed over a seed: react-query stores a copy of the new value (structural sharing)');
+  check(guard.isSeeded(client.getQueryData(subKey)) && client.getQueryState(subKey)?.dataUpdatedAt === 0,
+    'seed over a seed: the copy in the cache is the one marked, still updatedAt 0');
+}
+
+async function aSeedIsNeverANewerWrite(): Promise<void> {
+  // B8: the economy store's local streak lands while the boot's GET is in
+  // flight. Written as a normal write it was a "newer local write" and the
+  // server's answer was dropped in its favour; as a seed the answer is kept.
+  const client = makeClient();
+  const guard = createQueryGuard(client, () => 'A');
+  const key = ['streak'];
+  const snapshots: unknown[] = [];
+  const streakQueryFn = guard.guardedQueryFn(
+    key,
+    async () => { await sleep(30); return { currentStreak: 5, lastActiveDate: '2026-11-20' }; },
+    (v) => snapshots.push(v),
+  );
+  const observer = new QueryObserver(client, { queryKey: key, queryFn: streakQueryFn });
+  const unsub = observer.subscribe(() => {});
+  await sleep(5);
+  guard.seed(key, { currentStreak: 1, lastActiveDate: '2026-11-18' }); // the economy store loads mid-request
+  await sleep(40);
+  const cached = client.getQueryData(key) as { currentStreak: number };
+  check(cached.currentStreak === 5 && snapshots.length === 1, 'B8: a GET in flight when a seed lands is kept (and snapshotted), not dropped for the seed', cached);
+  check(client.getQueryState(key)?.isInvalidated === false, 'B8: and the query is not marked stale for a reconcile');
+  unsub();
+}
+
+async function aSeedStillAsksTheServer(): Promise<void> {
+  // B8: with the local streak in the cache, the boot's read (fetchQuery, the
+  // client's default staleTime of 30 s) and a screen mounting useStreak (60 s)
+  // still ask the server. As a normal write they returned the local value.
+  for (const how of ['normal write (before B8)', 'seed'] as const) {
+    for (const reader of ['boot read', 'mounting screen'] as const) {
+      const client = makeClient();
+      const guard = createQueryGuard(client, () => 'A');
+      const key = ['streak'];
+      let reads = 0;
+      const streakQueryFn = guard.guardedQueryFn(key, async () => { reads++; await sleep(5); return { currentStreak: 5 }; });
+      const local = { currentStreak: 1 };
+      if (how === 'seed') guard.seed(key, local); else client.setQueryData(key, local);
+      if (reader === 'boot read') {
+        await client.fetchQuery({ queryKey: key, queryFn: streakQueryFn });
+      } else {
+        const observer = new QueryObserver(client, { queryKey: key, queryFn: streakQueryFn, staleTime: 60_000 });
+        const unsub = observer.subscribe(() => {});
+        await sleep(20);
+        unsub();
+      }
+      const shown = (client.getQueryData(key) as { currentStreak: number }).currentStreak;
+      const ok = how === 'seed' ? reads === 1 && shown === 5 : reads === 0 && shown === 1;
+      check(ok, `B8 (${how}, ${reader}): ${how === 'seed'
+        ? 'asks the server and shows its streak'
+        : "took the local streak for the server's and never asked"} (reads=${reads}, shown=${shown})`);
+    }
+  }
+}
+
 async function accountSwitchDuringRead(): Promise<void> {
   // F3: a slow read for A; A signs out (cache cleared) and B signs in.
   const client = makeClient();
@@ -220,6 +302,9 @@ async function main(): Promise<void> {
   await seededThenAnswered();
   await seedEqualToTheAnswer();
   await writeEqualToTheSeedIsKept();
+  await seedPutsAStaleMarkedValue();
+  await aSeedIsNeverANewerWrite();
+  await aSeedStillAsksTheServer();
   await accountSwitchDuringRead();
   console.log(`\n${passed} passed, ${failed} failed`);
   // The clients' gc timers would keep Node alive for gcTime.

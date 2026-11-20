@@ -11,6 +11,10 @@
 //    GET answer and a POST answer do (real @tanstack/query-core and the query
 //    guard, wired as useStreak.ts wires them), and the bonus then reads the
 //    server's answer from the cache, not the seed it replaced;
+//  - B8: the local seed is written as a seed (guard.seed, updatedAt 0), as
+//    useEconomyUIStore now writes it: a GET in flight when it lands is kept
+//    and ends the wait; only a real local write (completeDailyTask's mirror)
+//    drops an answer in flight, and that notes nothing;
 //  - a foreground run during the launch's wait is left to it, and a second
 //    mount of the root layout joins it.
 import { QueryClient, QueryObserver } from '@tanstack/query-core';
@@ -151,9 +155,11 @@ function streakWiring(client: QueryClient, arrivals: StreakArrivals, serverAnswe
 }
 
 // The economy store's seed, as useEconomyUIStore's onRehydrateStorage writes
-// it: the LOCAL calendar's streak, a normal write (not a snapshot seed).
+// it: the LOCAL calendar's streak, put in as a seed (guard.seed, B8).
 const LOCAL_SEED = { currentStreak: 1, lastActiveDate: '2026-11-18' };
 const SERVER_STREAK = { currentStreak: 3, lastActiveDate: '2026-11-20' };
+// completeDailyTask's mirror of the local calendar: a normal (newer) local write.
+const LOCAL_MIRROR = { currentStreak: 2, lastActiveDate: '2026-11-20' };
 
 async function theLocalSeedNeverEndsTheWait(): Promise<void> {
   const client = makeClient();
@@ -162,12 +168,18 @@ async function theLocalSeedNeverEndsTheWait(): Promise<void> {
   const launchStartedAt = Date.now();
   const mark = arrivals.count();
 
-  const local = { ...LOCAL_SEED };
-  client.setQueryData(key, local); // the economy store loads
-  check(guard.serverAnswerSince(key, launchStartedAt) === local,
-    'why B5 has its own signal: serverAnswerSince takes the local seed for a server answer');
+  guard.seed(key, { ...LOCAL_SEED }); // the economy store loads
+  check(guard.serverAnswerSince(key, launchStartedAt) === undefined,
+    'B8: the local seed is a seed, so serverAnswerSince does not take it for a server answer either');
   const w = startWait(arrivals, mark);
   check(!(await settledWithin(w.p, 80)), 'the local seed does not end the wait');
+
+  // Why B5 keeps its own signal: a local write does count for serverAnswerSince.
+  client.setQueryData(key, { ...LOCAL_MIRROR });
+  // (By value: replacing the seed, structural sharing stores a copy.)
+  check(JSON.stringify(guard.serverAnswerSince(key, launchStartedAt)) === JSON.stringify(LOCAL_MIRROR),
+    "why B5 keeps its own signal: serverAnswerSince takes a local write (completeDailyTask's mirror) for a server answer");
+  check(!(await settledWithin(w.p, 30)), 'that local write does not end the wait either');
 
   // The daily tick's POST answer: stored, then noted. The wait ends and the
   // cache holds the server's streak.
@@ -179,9 +191,37 @@ async function theLocalSeedNeverEndsTheWait(): Promise<void> {
   check(JSON.stringify(client.getQueryData(key)) === JSON.stringify(post), "the cache holds the server's streak when the bonus runs");
 }
 
-async function anAnswerDroppedForTheSeedNotesNothing(): Promise<void> {
-  // A GET in flight when the local seed lands: the guard keeps the newer local
-  // write and drops the server answer, so nothing is noted and the wait goes on.
+async function aGetInFlightWhenTheSeedLandsEndsTheWait(): Promise<void> {
+  // B8: a GET in flight when the local seed lands. The seed is not a newer
+  // write, so the guard keeps the server's answer: snapshotted, noted, and the
+  // wait ends with the server's streak in the cache. (Before B8 the seed was a
+  // normal write, the answer was dropped and the wait ran to its limit.)
+  const client = makeClient();
+  const arrivals = createStreakArrivals();
+  const { guard, key, streakQueryFn, snapshots } = streakWiring(client, arrivals, async () => { await sleep(30); return { ...SERVER_STREAK }; });
+  const mark = arrivals.count();
+  const observer = new QueryObserver(client, { queryKey: key, queryFn: streakQueryFn });
+  const unsub = observer.subscribe(() => {});
+  await sleep(5);
+  guard.seed(key, { ...LOCAL_SEED }); // the store loads mid-request
+  let seen: unknown = 'not run';
+  const bonus = createLaunchLoginBonus({
+    wait: (m) => waitForLaunchStreak({ mark: m, capMs: CAP, isGuest: () => false, hasToken: async () => true, arrivals }),
+    award: () => { seen = client.getQueryData(key); },
+  });
+  const startedAt = Date.now();
+  await bonus.launch(mark);
+  const ms = Date.now() - startedAt;
+  check(snapshots.length === 1 && arrivals.count() === mark + 1, 'B8: the answer in flight when the local seed lands is kept, snapshotted and noted');
+  check(ms < CAP - 100, `B8: so the wait ends with it, not at the limit (${ms}ms)`);
+  check((seen as { currentStreak?: number })?.currentStreak === 3, 'B8: the bonus reads the server streak, not the local seed', seen);
+  unsub();
+}
+
+async function anAnswerDroppedForALocalWriteNotesNothing(): Promise<void> {
+  // A GET in flight when a real local write lands (completeDailyTask's
+  // mirror): the guard keeps the newer local write and drops the server
+  // answer, so nothing is noted and the wait goes on.
   const client = makeClient();
   const arrivals = createStreakArrivals();
   const { key, streakQueryFn, snapshots } = streakWiring(client, arrivals, async () => { await sleep(30); return { ...SERVER_STREAK }; });
@@ -189,10 +229,10 @@ async function anAnswerDroppedForTheSeedNotesNothing(): Promise<void> {
   const observer = new QueryObserver(client, { queryKey: key, queryFn: streakQueryFn });
   const unsub = observer.subscribe(() => {});
   await sleep(5);
-  client.setQueryData(key, { ...LOCAL_SEED }); // the store loads mid-request
+  client.setQueryData(key, { ...LOCAL_MIRROR }); // a local write mid-request
   const w = startWait(arrivals, mark);
   await sleep(50);
-  check(snapshots.length === 0 && arrivals.count() === mark, 'a server answer dropped for the local seed notes nothing');
+  check(snapshots.length === 0 && arrivals.count() === mark, 'a server answer dropped for a local write notes nothing');
   check(!(await settledWithin(w.p, 30)), 'so the wait goes on');
   unsub();
   const capped = await w.p;
@@ -205,18 +245,20 @@ async function aKeptGetAnswerEndsTheWait(): Promise<void> {
   // has stored it.
   const client = makeClient();
   const arrivals = createStreakArrivals();
-  const { key, streakQueryFn, snapshots } = streakWiring(client, arrivals, async () => { await sleep(20); return { ...SERVER_STREAK }; });
-  client.setQueryData(key, { ...LOCAL_SEED });
+  const { guard, key, streakQueryFn, snapshots } = streakWiring(client, arrivals, async () => { await sleep(20); return { ...SERVER_STREAK }; });
+  guard.seed(key, { ...LOCAL_SEED });
   let seen: unknown = 'not run';
   const bonus = createLaunchLoginBonus({
     wait: (mark) => waitForLaunchStreak({ mark, capMs: CAP, isGuest: () => false, hasToken: async () => true, arrivals }),
     award: () => { seen = client.getQueryData(key); },
   });
   const run = bonus.launch(arrivals.count());
-  // A read made after the seed (e.g. once it is stale): nothing writes meanwhile, so it is kept.
-  await client.fetchQuery({ queryKey: key, queryFn: streakQueryFn, staleTime: 0 });
+  // The boot's read after the seed, with the client's default staleTime: the
+  // seed is stale (B8), so it asks the server; nothing writes meanwhile, so
+  // the answer is kept.
+  await client.fetchQuery({ queryKey: key, queryFn: streakQueryFn });
   await run;
-  check(snapshots.length === 1, 'the kept GET answer is snapshotted');
+  check(snapshots.length === 1, "the boot's read asks the server despite the local seed (B8), and its kept answer is snapshotted");
   check((seen as { currentStreak?: number })?.currentStreak === 3, 'the bonus reads the server answer, not the seed it replaced', seen);
 }
 
@@ -271,7 +313,8 @@ async function main(): Promise<void> {
   await earlierLaunchAnswerDoesNotCount();
   await theLimitCoversEverything();
   await theLocalSeedNeverEndsTheWait();
-  await anAnswerDroppedForTheSeedNotesNothing();
+  await aGetInFlightWhenTheSeedLandsEndsTheWait();
+  await anAnswerDroppedForALocalWriteNotesNothing();
   await aKeptGetAnswerEndsTheWait();
   await foregroundAndSecondMountJoinTheLaunch();
   console.log(`\n${passed} passed, ${failed} failed`);

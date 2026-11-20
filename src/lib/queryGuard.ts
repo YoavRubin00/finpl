@@ -9,5 +9,6 @@ const guard = createQueryGuard(queryClient, () => useAuthStore.getState().authId
 
 export const markSeeded = guard.markSeeded;
 export const isSeeded = guard.isSeeded;
+export const seedQueryData = guard.seed;
 export const guardedQueryFn = guard.guardedQueryFn;
 export const serverAnswerSince = guard.serverAnswerSince;
