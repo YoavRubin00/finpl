@@ -64,10 +64,17 @@ export async function capturePostHog(
     // BEFORE redirecting, so a PostHog outage must not stall the redirect up to
     // the function's maxDuration. Bound the wait to 2.5s (the fetch itself may
     // finish in the background); a capture is fire-and-forget, never blocking.
-    await Promise.race([
-      post,
-      new Promise((resolve) => setTimeout(resolve, 2500)),
-    ]);
+    let releaseCap: () => void = () => {};
+    const cap = new Promise<void>((resolve) => {
+      const capTimer = setTimeout(resolve, 2500);
+      releaseCap = () => clearTimeout(capTimer);
+    });
+    try {
+      await Promise.race([post, cap]);
+    } finally {
+      // Don't leave a 2.5s timer pending after a fast capture.
+      releaseCap();
+    }
   } catch (err) {
     console.warn('[posthogCapture]', eventName, err);
   }

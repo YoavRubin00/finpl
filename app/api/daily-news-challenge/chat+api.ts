@@ -20,6 +20,7 @@ import { sanitizeString, validateSyncAuth } from '../_shared/validate';
 import { eq } from 'drizzle-orm';
 import { userProfiles } from '../../../src/db/schema';
 import { getDb } from './_lib';
+import { TIMEOUTS, timeoutSignal } from '../../../api/_shared/timeout';
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
@@ -101,6 +102,7 @@ export async function POST(request: Request): Promise<Response> {
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
+        signal: timeoutSignal(TIMEOUTS.aiShort),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(geminiBody),
       },

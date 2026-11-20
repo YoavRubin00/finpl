@@ -19,6 +19,7 @@ import { fetchTickerNews } from '../_shared/perplexityNews';
 import { tavilyNewsSearch, type TavilyBundle } from '../_shared/tavily';
 import { fetchMarketData } from './fetchMarketData';
 import { withRetry, isTransientAiError } from '../_shared/retry';
+import { TIMEOUTS, timeoutSignal } from '../../../api/_shared/timeout';
 import { formatFailuresForRetryHint, type SimplicityFailure } from '../_shared/simplicityCheck';
 import {
   BREAKING_NEWS_SYSTEM_PROMPT,
@@ -182,6 +183,10 @@ export async function generateForTicker(
         `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
+          // Per attempt: a hung call becomes a retry instead of eating the
+          // whole function budget (isTransientAiError treats the abort as
+          // transient).
+          signal: timeoutSignal(TIMEOUTS.aiRetried),
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(buildGeminiBody()),
         },

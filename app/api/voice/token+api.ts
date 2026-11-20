@@ -12,6 +12,7 @@
 
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
+import { TIMEOUTS, timeoutSignal } from '../../../api/_shared/timeout';
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY ?? '';
 const ELEVENLABS_AGENT_ID = process.env.ELEVENLABS_AGENT_ID ?? '';
@@ -36,6 +37,7 @@ export async function POST(request: Request): Promise<Response> {
 
     const upstream = await fetch(url, {
       method: 'GET',
+      signal: timeoutSignal(TIMEOUTS.quick),
       headers: { 'xi-api-key': ELEVENLABS_API_KEY },
     });
 

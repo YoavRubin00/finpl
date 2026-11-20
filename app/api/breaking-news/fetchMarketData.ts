@@ -11,6 +11,8 @@
  * failure so summary generation is never blocked by a market-data hiccup.
  */
 
+import { TIMEOUTS, timeoutSignal } from '../../../api/_shared/timeout';
+
 export interface MarketSnapshot {
   /** Today's % change vs the previous close. */
   changePct: number;
@@ -35,11 +37,15 @@ async function getYahooCrumb(): Promise<{ crumb: string; cookie: string } | null
     return { crumb: authCrumb.crumb, cookie: authCrumb.cookie };
   }
   try {
-    const consentRes = await fetch('https://fc.yahoo.com', { redirect: 'manual' });
+    const consentRes = await fetch('https://fc.yahoo.com', {
+      redirect: 'manual',
+      signal: timeoutSignal(TIMEOUTS.quick),
+    });
     const cookie = (consentRes.headers.get('set-cookie') ?? '').split(';')[0];
     if (!cookie) return null;
     const crumbRes = await fetch('https://query2.finance.yahoo.com/v1/test/getcrumb', {
       headers: { Cookie: cookie, 'User-Agent': 'Mozilla/5.0' },
+      signal: timeoutSignal(TIMEOUTS.quick),
     });
     if (!crumbRes.ok) return null;
     const crumb = await crumbRes.text();
@@ -66,6 +72,7 @@ export async function fetchMarketData(ticker: string): Promise<MarketSnapshot | 
       (auth ? `&crumb=${encodeURIComponent(auth.crumb)}` : '');
     try {
       const res = await fetch(url, {
+        signal: timeoutSignal(TIMEOUTS.quick),
         headers: {
           'User-Agent': 'Mozilla/5.0',
           ...(auth ? { Cookie: auth.cookie } : {}),

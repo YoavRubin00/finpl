@@ -12,6 +12,8 @@
  * day rather than crashing the whole cron run.
  */
 
+import { TIMEOUTS, timeoutSignal } from '../../../api/_shared/timeout';
+
 export interface TavilyResult {
   /** Headline / page title. */
   title: string;
@@ -96,6 +98,7 @@ export async function tavilyNewsSearch(
 
   const res = await fetch('https://api.tavily.com/search', {
     method: 'POST',
+    signal: timeoutSignal(TIMEOUTS.search),
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
