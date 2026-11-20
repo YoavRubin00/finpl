@@ -81,9 +81,7 @@ import { useReferralStore } from "../social/useReferralStore";
 // DailyIncomeCard removed from learn screen per user request
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
-import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
 import { ToolsDiscoveryBanner } from "../../components/ui/ToolsDiscoveryBanner";
-import { BridgeCTABanner } from "../../components/ui/BridgeCTABanner";
 import { ProPromoGrantedModal } from "../subscription/ProPromoGrantedModal";
 import { ProPromoExpiringBanner } from "../subscription/ProPromoExpiringBanner";
 import { MarketUnlockGate } from "../market-unlock";
@@ -145,7 +143,6 @@ import { InvestorQuizNode } from "../graham-personality/InvestorQuizNode";
 import { pearlConfigFor, pearlIdFor, type PearlContent } from "../pearls/pearlConfig";
 import { usePearlsStore } from "../pearls/usePearlsStore";
 import { MondialMailBadge } from "../mondial/MondialMailBadge";
-import { MondialCarouselSheet } from "../mondial/MondialCarouselSheet";
 import { useMondialStore } from "../mondial/useMondialStore";
 import { StreakClubEntryCard } from "../streak-club/StreakClubEntryCard";
 import { StreakLoungeSheet } from "../streak-club/StreakLoungeSheet";
@@ -513,54 +510,6 @@ function ArenaHeaderBanner({
       </Pressable>
       {/* Removed: "מפת הלמידה" button (Yoav approved removal 2026-05-27) */}
     </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Pulsing glow behind active node
-// ---------------------------------------------------------------------------
-
-function PulsingGlow({ color }: { color: string }) {
-  const opacity = useSharedValue(0.35);
-  const scale = useSharedValue(1);
-  const reducedMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (reducedMotion) {
-      opacity.value = 0.5;
-      scale.value = 1;
-      return;
-    }
-    opacity.value = withRepeat(
-      withSequence(withTiming(0.6, { duration: 1200 }), withTiming(0.3, { duration: 1200 })),
-      -1,
-      true,
-    );
-    scale.value = withRepeat(
-      withSequence(withTiming(1.12, { duration: 1200 }), withTiming(1.0, { duration: 1200 })),
-      -1,
-      true,
-    );
-    return () => {
-      cancelAnimation(opacity);
-      cancelAnimation(scale);
-    };
-  }, [opacity, scale, reducedMotion]);
-
-  const style = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
-        { borderRadius: NODE_SIZE / 2, backgroundColor: color },
-        style,
-      ]}
-    />
   );
 }
 
@@ -3081,17 +3030,10 @@ export function DuoLearnScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Unified notification-permission banner — the SINGLE thin top ask
-          (the prominent centered modal was retired, Yoav 2026-06-22: "באנר
-          עליון דק"). Held back until the guest register CTA is handled
-          (pendingPostWalkthroughCTA clears) so it lands after the register
-          prompt; fires once after the mod-0-1 chest, on the map between 0-1
-          and 0-1b, then recurs on the 14-day cooldown. */}
       {/* FRONT-DECLUTTER (Yoav 11.7, data 14d): the thin permission banner is
           KILLED — 2,900 dismissals vs 3 actions in 14 days taught users to
           swat banners; the appointment primer (post-activation) + day-2
           ritual own the ask now. */}
-      {false && !isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionBanner />}
       {/* Tools discovery — only on this main learning screen (NOT in the
           lesson flow). Self-gated to 5s presence + cooldown + 1/day per
           calendar day. */}
@@ -3099,7 +3041,6 @@ export function DuoLearnScreen() {
       {/* FRONT-DECLUTTER (Yoav 11.7): Bridge banner KILLED from the global
           learn surface — 465 dismissers × 1,371 dismissals vs 3 taps (0.2%).
           The bridge remains reachable from its own tab. */}
-      {false && !isWalkthroughActive && !pendingPostWalkthroughCTA && <BridgeCTABanner />}
       {/* Explicit first-lesson invitation (Yoav 18.8) — replaces the
           walkthrough's auto-launch of mod-0-1. Self-gates on
           pendingFirstLessonCTA; sits above the streak banners so it's the
@@ -3221,7 +3162,6 @@ export function DuoLearnScreen() {
       </Modal>
       <PearlSheet visible={!!activePearl} pearl={activePearl} onClose={() => setActivePearl(null)} />
       {/* FRONT-DECLUTTER (Yoav 11.7): mondial sheet retired with its badge. */}
-      <MondialCarouselSheet visible={false && mondialVisible} onClose={() => setMondialVisible(false)} />
 
       {/* Profile-question backstop before gated chapter-0/1 modules.
           Mapping lives in PROFILE_QUESTION_BACKSTOPS (top of file). */}

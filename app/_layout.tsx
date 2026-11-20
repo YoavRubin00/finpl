@@ -121,9 +121,7 @@ import { NotificationBanner } from "../src/components/ui/NotificationBanner";
 import { useAIInsightBanner } from "../src/features/ai-insights/useAIInsightBanner";
 import { useUpgradeNudgeBanner } from "../src/features/monetization/useUpgradeNudgeBanner";
 import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQuestCompletionModal";
-import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
-import { GlobalCrowdQuestionGate } from "../src/components/ui/GlobalCrowdQuestionGate";
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
 import { PostWalkthroughProTeaserGate } from "../src/features/subscription/PostWalkthroughProTeaser";
 import { PostWalkthroughFirstChestGate } from "../src/features/onboarding/PostWalkthroughFirstChest";
@@ -884,11 +882,9 @@ function RootLayoutInner() {
                   dismissers vs 3 taps on the banner sibling; RETENTION-PLAN
                   already ruled bridge is an activated-user move, not a day-0
                   push). The bridge lives in its own tab. */}
-              {false && <DailyBridgeNudgeModal />}
               <InviteFriendsNudgeModal />
               {/* FRONT-DECLUTTER (Yoav 11.7): crowd-question popup KILLED —
                   6 voters in 14 days for a global interrupt. */}
-              {false && allowAutoPopups && <GlobalCrowdQuestionGate />}
               {/* First-chest onboarding moment — shown to every new user before
                   the walkthrough. Tap to open → coins+XP → shark bubble →
                   continue starts the tour, which hands directly into mod-0-1. */}

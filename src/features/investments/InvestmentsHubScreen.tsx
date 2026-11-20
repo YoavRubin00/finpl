@@ -34,7 +34,6 @@ import { formatNumber, formatSigned } from "../../utils/format";
 import { tapHaptic } from "../../utils/haptics";
 import { Lock } from "lucide-react-native";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
-import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
 import { SupercellButton } from "../../components/ui/SupercellButton";
 import { useHoldingsStore } from "../net-worth-dashboard/holdings/useHoldingsStore";
 
@@ -190,7 +189,6 @@ export function InvestmentsHubScreen() {
       {/* FRONT-DECLUTTER (Yoav 11.7): thin permission banner KILLED app-wide —
           2,900 dismissals vs 3 actions in 14d. The appointment primer +
           day-2 ritual own the permission ask now. */}
-      {false && <NotificationPermissionBanner />}
       {/* UX-02 (Yoav 18.9.26): the hub is ~574px of content on ~500px of
           SE-height — a ScrollView instead of a flex:1 View so the last card
           never hides under the tab bar (or any Dynamic-Type size). */}
