@@ -41,13 +41,17 @@ function isChestReminder(n: ScheduledRequest): boolean {
   return dataOf(n).type === TOMORROW_CHEST_NOTIF_TYPE;
 }
 
-/** Local `hour`:00 on the IL calendar day `opensOnDate`; never earlier than that IL day. */
+/** Two hours BEFORE the user's reminder hour on the IL calendar day `opensOnDate` (never earlier
+ *  than that IL day). The daily streak reminder fires AT the reminder hour, so the same slot would
+ *  land two pushes in one minute; the chest goes first, the streak reminder stays the evening backup. */
 export function resolveChestFireDate(opensOnDate: string, hour: number): Date {
   const [y, m, d] = opensOnDate.split('-').map(Number);
-  const h = Math.max(8, Math.min(22, Math.round(hour)));
-  let at = new Date(y, m - 1, d, h, 0, 0, 0);
+  const reminderHour = Math.max(8, Math.min(22, Math.round(hour)));
+  const h = Math.max(8, reminderHour - 2);
+  const min = h === reminderHour ? 30 : 0; // reminder already at 08:00 → 08:30, still apart
+  let at = new Date(y, m - 1, d, h, min, 0, 0);
   // Device clock far ahead of Israel: make sure the chest is really ready by then.
-  if (getIsraelDateISO(at) < opensOnDate) at = new Date(y, m - 1, d + 1, h, 0, 0, 0);
+  if (getIsraelDateISO(at) < opensOnDate) at = new Date(y, m - 1, d + 1, h, min, 0, 0);
   return at;
 }
 

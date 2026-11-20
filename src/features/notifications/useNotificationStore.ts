@@ -369,7 +369,9 @@ export const useNotificationStore = create<NotificationState & NotificationExtra
             await get().scheduleStreakReminderWithCopy(
               {
                 title: 'יומיים ברצף במרחק 2 דקות',
-                body: 'התיבה של יום 2 מחכה. קבענו, לא?',
+                // Repeats daily, so it must not name "the day-2 chest" (the chest has its own
+                // one-shot push now, useTomorrowChestReminder).
+                body: 'שיעור קצר אחד והרצף ממשיך. קבענו, לא?',
                 data: { screen: "/(tabs)/learn" },
               },
               appointmentHour ?? 20,
