@@ -34,7 +34,7 @@ import { getIsraelDateISO } from '../../utils/israelTime';
  *  habit anchor available (RETENTION-PLAN 2026-07-02 §2.2). The old flat-20
  *  fallback sent every new user a generic evening push regardless of when
  *  they actually use the app. No samples at all → 20. */
-function computePersonalizedHour(recentHours: number[]): number {
+export function computePersonalizedHour(recentHours: number[]): number {
     if (recentHours.length === 0) return 20;
     if (recentHours.length < 7) {
         const mostRecent = recentHours[recentHours.length - 1];

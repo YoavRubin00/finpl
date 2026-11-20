@@ -29,10 +29,11 @@ export function useNotificationSetup() {
     const data = request.content.data;
     const screen = data?.screen as string | undefined;
     const channel = data?.channel as string | undefined;
+    const type = data?.type as string | undefined;
 
     // Attribute both in-memory and cold-start notification opens. The latter
     // was previously invisible and could strand a returning user on the map.
-    try { track({ name: 'push_opened', props: { channel, screen, entrypoint } }); } catch { /* non-fatal */ }
+    try { track({ name: 'push_opened', props: { channel, screen, entrypoint, ...(type ? { type } : {}) } }); } catch { /* non-fatal */ }
 
     // Legacy feedScrollIndex payloads have no screen and are intentionally ignored.
     if (screen) {

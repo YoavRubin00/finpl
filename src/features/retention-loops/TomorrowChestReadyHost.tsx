@@ -11,6 +11,7 @@ import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { EnergyBatteryIcon } from '../../components/ui/EnergyBatteryIcon';
 import { useTomorrowChestStore, tomorrowChestStatus, TOMORROW_CHEST_ENABLED } from './useTomorrowChestStore';
+import { useTomorrowChestReminderSync } from '../notifications/useTomorrowChestReminder';
 import type { TomorrowChestRewards } from './useTomorrowChestStore';
 import { useSharkWagerStore } from './useSharkWagerStore';
 import { getNextLessonTarget } from './nextLessonTarget';
@@ -46,6 +47,7 @@ const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as co
  *    lesson still fires normally.
  */
 export function TomorrowChestReadyHost(): React.ReactElement | null {
+  useTomorrowChestReminderSync();
   const router = useRouter();
   const segments = useSegments();
 
