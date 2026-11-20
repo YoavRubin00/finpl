@@ -3,9 +3,15 @@
 // What a RevenueCat consumable purchase (NON_RENEWING_PURCHASE) is worth, by
 // store product id. The RevenueCat webhook is the ONLY path that credits
 // purchased gems (since 2026-11-20 /api/sync/economy drops purchase-sized gem
-// deltas). Product ids: src/services/revenueCat.ts GEM_PRODUCT_IDS.
+// deltas). An explicit table, not a pattern: only the products the app sells
+// credit anything. Any other id credits nothing and is recorded for a manual
+// check (api/_shared/revenueCatWebhook.ts).
 //
-//   finplay_gems_<N>            → N gems (80 / 500 / 1,200 / 2,500 / 6,500 / 14,000)
+//   finplay_gems_80 … finplay_gems_14000
+//                               → the six gem bundles (src/services/revenueCat.ts
+//                                 GEM_PRODUCT_IDS; amounts from
+//                                 src/features/shop/gemBundles.ts, checked by
+//                                 scripts/test-economy-sync.ts)
 //   finplay_starter_pack_19_90  → that Israel day's pack (src/features/shop/
 //                                 starterPack.ts): its gems are credited here;
 //                                 its coins go into the user's returns pool,
@@ -13,12 +19,21 @@
 //                                 (the app adds the pack's coins itself and
 //                                 always has; crediting them here too would
 //                                 pay them twice).
-// Before this file the webhook read the trailing digits of ANY product id, so
-// the starter pack ("…_19_90") credited 90 gems on top of the app's own grant.
+// Before 2026-11-20 the webhook read the trailing digits of ANY product id, so
+// the starter pack ("…_19_90") credited 90 gems on top of the app's own grant,
+// and "finplay_gems_<any number>" credited that number.
 
 import { getTodaysStarterPack, STARTER_PACK_PRODUCT_ID } from '../../src/features/shop/starterPack';
 
-export const MAX_GEMS_PER_PURCHASE = 20_000;
+/** Store product id → gems. */
+export const GEM_PRODUCTS: Readonly<Record<string, number>> = Object.freeze({
+  finplay_gems_80: 80,
+  finplay_gems_500: 500,
+  finplay_gems_1200: 1200,
+  finplay_gems_2500: 2500,
+  finplay_gems_6500: 6500,
+  finplay_gems_14000: 14000,
+});
 
 export interface PurchaseCredit {
   kind: 'gem_bundle' | 'starter_pack';
@@ -27,17 +42,23 @@ export interface PurchaseCredit {
   poolCoins: number;
 }
 
+/** Google Play may report a one-time product as "<product>:<purchase option>";
+ *  the product is the part before the colon. */
+function baseProductId(productId: string): string {
+  const i = productId.indexOf(':');
+  return i > 0 ? productId.slice(0, i) : productId;
+}
+
 export function creditForProduct(productId: unknown, purchasedAtMs: unknown, nowMs: number): PurchaseCredit | null {
   if (typeof productId !== 'string') return null;
-  if (productId === STARTER_PACK_PRODUCT_ID) {
+  const id = baseProductId(productId);
+  if (id === STARTER_PACK_PRODUCT_ID) {
     const at = typeof purchasedAtMs === 'number' && Number.isFinite(purchasedAtMs) ? purchasedAtMs : nowMs;
     const pack = getTodaysStarterPack(new Date(at));
     return { kind: 'starter_pack', gems: pack.gems, poolCoins: pack.coins };
   }
-  const m = /^finplay_gems_(\d{1,6})$/.exec(productId);
-  if (m) {
-    const gems = parseInt(m[1], 10);
-    if (gems > 0 && gems <= MAX_GEMS_PER_PURCHASE) return { kind: 'gem_bundle', gems, poolCoins: 0 };
+  if (Object.prototype.hasOwnProperty.call(GEM_PRODUCTS, id)) {
+    return { kind: 'gem_bundle', gems: GEM_PRODUCTS[id], poolCoins: 0 };
   }
   return null;
 }

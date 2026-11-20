@@ -28,10 +28,18 @@
 --                      this row in the same statement. The primary key makes a
 --                      replay or a double tap a no-op.
 --
--- revenuecat_events    one row per RevenueCat webhook purchase event that
---                      credited gems/coins. The primary key (RevenueCat's event
---                      id) makes a redelivered webhook a no-op instead of a
---                      second credit.
+-- revenuecat_events    one row per RevenueCat webhook purchase event. A credited
+--                      event carries the user id. An event the webhook could
+--                      NOT credit (no matching account, an anonymous RevenueCat
+--                      id, an unknown product) is kept too: user_id NULL, the
+--                      raw RevenueCat id in app_user_id and the gems it is
+--                      worth, so it can be credited by hand (the owner gets an
+--                      email with the event id). The primary key (RevenueCat's
+--                      event id) makes a redelivered webhook a no-op instead of
+--                      a second credit. Account deletion sets user_id and
+--                      app_user_id to NULL on that user's rows and clears
+--                      app_user_id on unlinked rows holding their address or
+--                      their profile id.
 --
 -- Additive + idempotent: safe to run twice, no rewrite of user_profiles
 -- (ADD COLUMN with a constant default is metadata-only on Postgres 11+).
@@ -40,7 +48,8 @@
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f src/db/0018_economy_guard.sql
 -- Until it runs the new server still works: /api/sync/economy falls back to
 -- per-request limits only (no daily caps), /api/bridge/redeem answers 503, and
--- the webhook credits without the duplicate-event check.
+-- the webhook credits without the duplicate-event check (a purchase it cannot
+-- credit is only emailed to the owner, not recorded).
 
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "economy_guard" jsonb;
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "economy_guard_version" integer DEFAULT 0 NOT NULL;
@@ -59,6 +68,7 @@ CREATE TABLE IF NOT EXISTS "bridge_redemptions" (
 CREATE TABLE IF NOT EXISTS "revenuecat_events" (
   "event_id" text PRIMARY KEY NOT NULL,
   "user_id" uuid,
+  "app_user_id" text,
   "event_type" text NOT NULL,
   "product_id" text,
   "gems" integer DEFAULT 0 NOT NULL,
@@ -67,6 +77,10 @@ CREATE TABLE IF NOT EXISTS "revenuecat_events" (
   CONSTRAINT "revenuecat_events_user_fk" FOREIGN KEY ("user_id")
     REFERENCES "user_profiles" ("id") ON DELETE SET NULL
 );
+
+-- For a database where an earlier draft of this file created the table
+-- without the column (a no-op otherwise).
+ALTER TABLE "revenuecat_events" ADD COLUMN IF NOT EXISTS "app_user_id" text;
 
 CREATE INDEX IF NOT EXISTS "idx_revenuecat_events_user"
   ON "revenuecat_events" USING btree ("user_id");

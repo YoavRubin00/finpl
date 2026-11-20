@@ -2,21 +2,29 @@
 //
 // Production (Neon) wiring for the economy guard (economyGuard.ts), the
 // server-checked Bridge redeem (bridgeRedeem.ts), the subscription sync
-// (subscriptionSync.ts) and the webhook's purchase credit. Raw SQL on purpose:
-// the 0018 guard columns are not in src/db/schema.ts (see the migration).
-// scripts/test-economy-sync.ts runs the same handlers with in-memory stores.
+// (subscriptionSync.ts) and the RevenueCat webhook (revenueCatWebhook.ts).
+// Raw SQL on purpose: the 0018 guard columns are not in src/db/schema.ts (see
+// the migration). scripts/test-economy-sync.ts runs the same handlers with
+// in-memory stores; the local Postgres harness runs this SQL.
 
 import { eq, sql } from 'drizzle-orm';
 import { userProfiles } from '../../src/db/schema';
-import { sendBridgeAlert } from './bridgeAlert';
+import { sendBridgeAlert, sendUnmatchedPurchaseAlert } from './bridgeAlert';
 import type { BridgeRedeemDeps, BridgeRedeemStore, RedeemOutcome } from './bridgeRedeem';
 import type { CallerDeps } from './callerAuth';
 import { getDb, type Db } from './db';
 import {
+  applyGuard,
+  casBackoffMs,
+  ECONOMY_LIMITS,
   GuardUnavailableError,
+  MAX_CAS_ATTEMPTS,
+  runGuarded,
   type EconomyDeps,
+  type EconomyLimits,
   type EconomyRow,
   type EconomyStore,
+  type GuardedRead,
 } from './economyGuard';
 import {
   pgErrorCode,
@@ -24,7 +32,15 @@ import {
   PG_UNDEFINED_TABLE as UNDEFINED_TABLE,
   PG_UNIQUE_VIOLATION as UNIQUE_VIOLATION,
 } from './pgError';
+import { capturePostHog } from './posthogCapture';
 import { verifyProWithRevenueCat } from './revenueCatVerify';
+import type {
+  PurchaseCreditArgs,
+  PurchaseCreditOutcome,
+  RcWebhookDeps,
+  UnmatchedPurchaseArgs,
+  UnmatchedRecordOutcome,
+} from './revenueCatWebhook';
 import type { SubscriptionDeps, SubscriptionStore } from './subscriptionSync';
 
 // Kept here too: tests and callers import it from this module.
@@ -294,7 +310,7 @@ export function createSubscriptionDeps(): SubscriptionDeps {
   };
 }
 
-// ─── RevenueCat purchase credit (webhook) ────────────────────────────────────
+// ─── RevenueCat webhook ──────────────────────────────────────────────────────
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -311,27 +327,25 @@ export async function resolveProfileId(db: Db, keys: string[]): Promise<string |
   return null;
 }
 
-export type PurchaseCreditResult = 'credited' | 'duplicate' | 'credited_without_dedupe';
+/** Gems added with no ledger (no event key, or no revenuecat_events table yet). */
+async function creditGemsWithoutLedger(db: Db, args: PurchaseCreditArgs): Promise<PurchaseCreditOutcome> {
+  await db.execute(sql`
+    UPDATE user_profiles
+       SET gems = COALESCE(gems, 0) + ${args.gems}::integer, updated_at = now()
+     WHERE id = ${args.userId}::uuid
+  `);
+  return 'credited_without_dedupe';
+}
 
 /**
  * Credit purchased gems once per RevenueCat event: the ledger insert and the
  * gem update are one statement, and a redelivered event conflicts on the
- * primary key and credits nothing. Before migration 0018 (no ledger table) it
- * credits without the duplicate check, as the webhook always did.
+ * primary key and credits nothing (two concurrent deliveries: the second
+ * insert waits for the first and then does nothing). Before migration 0018 (no
+ * ledger table) it credits without the duplicate check, as the webhook always did.
  */
-export async function creditPurchaseGems(
-  db: Db,
-  args: { eventKey: string | null; userId: string; eventType: string; productId: string; gems: number; poolCoins: number },
-): Promise<PurchaseCreditResult> {
-  const plain = async (): Promise<PurchaseCreditResult> => {
-    await db.execute(sql`
-      UPDATE user_profiles
-         SET gems = COALESCE(gems, 0) + ${args.gems}::integer, updated_at = now()
-       WHERE id = ${args.userId}::uuid
-    `);
-    return 'credited_without_dedupe';
-  };
-  if (!args.eventKey) return plain();
+export async function creditPurchaseGems(db: Db, args: PurchaseCreditArgs): Promise<PurchaseCreditOutcome> {
+  if (!args.eventKey) return creditGemsWithoutLedger(db, args);
   try {
     const result = await db.execute(sql`
       WITH ev AS (
@@ -348,7 +362,169 @@ export async function creditPurchaseGems(
     `);
     return rowsOf<{ gems: number }>(result).length > 0 ? 'credited' : 'duplicate';
   } catch (err) {
-    if (pgErrorCode(err) === UNDEFINED_TABLE) return plain();
+    if (pgErrorCode(err) === UNDEFINED_TABLE) return creditGemsWithoutLedger(db, args);
     throw err;
   }
+}
+
+export interface PoolCreditDeps {
+  now(): number;
+  sleep?(ms: number): Promise<void>;
+  limits?: Readonly<EconomyLimits>;
+  /** Defaults to economyStore(db) (the harness injects a racing one). */
+  store?: EconomyStore;
+  log?(line: Record<string, unknown>): void;
+}
+
+/**
+ * A purchase that also funds the returns pool (the starter pack): the pool
+ * credit lives in the guard state, so the ledger insert, the gems and the new
+ * guard state are written by ONE compare-and-swap statement. Either all of it
+ * lands once, or none of it does: a retry after 'busy' (or after any failure)
+ * finds no ledger row and starts over; a redelivery after success finds the
+ * row and changes nothing.
+ *   'credited'  ledger row + gems + pool (+ any held coins it released)
+ *   'duplicate' the event was already recorded (credited or not)
+ *   'busy'      every compare-and-swap attempt missed: nothing written
+ *   'no_user'   the profile is gone
+ * Before 0018 (no guard columns) it falls back to creditPurchaseGems: gems
+ * only, there is no pool to fund.
+ */
+export async function creditPurchaseWithPool(db: Db, args: PurchaseCreditArgs, deps: PoolCreditDeps): Promise<PurchaseCreditOutcome> {
+  const store = deps.store ?? economyStore(db);
+  const limits = deps.limits ?? ECONOMY_LIMITS;
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  if (!args.eventKey) {
+    // No event id to deduplicate on (RevenueCat always sends one): gems as
+    // before, and the pool best-effort.
+    const outcome = await creditGemsWithoutLedger(db, args);
+    await runGuarded(args.userId, { xp: 0, coins: 0, gems: 0 }, { store, now: deps.now, sleep, limits }, 'webhook/revenuecat', { poolCredit: args.poolCoins });
+    return outcome;
+  }
+  for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt++) {
+    let read: GuardedRead | null;
+    try {
+      read = await store.read(args.userId);
+    } catch (err) {
+      if (err instanceof GuardUnavailableError) return creditPurchaseGems(db, args);
+      throw err;
+    }
+    if (!read) return 'no_user';
+    const outcome = applyGuard(read.state, read.economy, { xp: 0, coins: 0, gems: 0 }, deps.now(), { poolCredit: args.poolCoins }, limits);
+    let result: unknown;
+    try {
+      result = await db.execute(sql`
+        WITH dup AS (
+          SELECT 1 AS x FROM revenuecat_events WHERE event_id = ${args.eventKey}::text
+        ),
+        upd AS (
+          UPDATE user_profiles
+             SET gems = GREATEST(0, COALESCE(gems, 0) + ${args.gems + outcome.gemChange}::integer),
+                 coins = GREATEST(0, COALESCE(coins, 0) + ${outcome.coinChange}::integer),
+                 economy_guard = ${JSON.stringify(outcome.state)}::jsonb,
+                 economy_guard_version = economy_guard_version + 1,
+                 updated_at = now()
+           WHERE id = ${args.userId}::uuid
+             AND economy_guard_version = ${read.version}::integer
+             AND coins IS NOT DISTINCT FROM ${read.economy.coins}::integer
+             AND gems IS NOT DISTINCT FROM ${read.economy.gems}::integer
+             AND NOT EXISTS (SELECT 1 FROM dup)
+          RETURNING id
+        ),
+        ev AS (
+          INSERT INTO revenuecat_events (event_id, user_id, event_type, product_id, gems, coins)
+          SELECT ${args.eventKey}::text, id, ${args.eventType}::text, ${args.productId}::text,
+                 ${args.gems}::integer, ${args.poolCoins}::integer
+            FROM upd
+          RETURNING event_id
+        )
+        SELECT (SELECT count(*) FROM dup)::int AS duplicate,
+               (SELECT count(*) FROM upd)::int AS updated,
+               (SELECT count(*) FROM ev)::int  AS recorded
+      `);
+    } catch (err) {
+      const code = pgErrorCode(err);
+      if (code === UNDEFINED_TABLE) return creditPurchaseGems(db, args);
+      // A concurrent delivery of the same event inserted its row between this
+      // statement's snapshot and its insert: the whole statement rolled back.
+      if (code === UNIQUE_VIOLATION) return 'duplicate';
+      throw err;
+    }
+    const r = rowsOf<{ duplicate: number; updated: number }>(result)[0];
+    if (Number(r?.duplicate) > 0) return 'duplicate';
+    if (Number(r?.updated) > 0) {
+      if (outcome.reasons.length > 0) deps.log?.({ userId: args.userId, source: 'webhook/revenuecat', reasons: outcome.reasons, ...outcome.report });
+      return 'credited';
+    }
+    await sleep(casBackoffMs(attempt));
+  }
+  deps.log?.({ userId: args.userId, source: 'webhook/revenuecat', reasons: ['cas_exhausted'], eventId: args.eventKey });
+  return 'busy';
+}
+
+/**
+ * A purchase the webhook could not credit: kept with user_id NULL and the raw
+ * RevenueCat app_user_id, so it can be credited by hand. Once per event id.
+ */
+export async function recordUnmatchedPurchase(db: Db, args: UnmatchedPurchaseArgs): Promise<UnmatchedRecordOutcome> {
+  try {
+    const result = await db.execute(sql`
+      INSERT INTO revenuecat_events (event_id, user_id, app_user_id, event_type, product_id, gems, coins)
+      VALUES (${args.eventKey}::text, NULL, ${args.appUserId}::text, ${args.eventType}::text,
+              ${args.productId}::text, ${args.gems}::integer, ${args.poolCoins}::integer)
+      ON CONFLICT (event_id) DO NOTHING
+      RETURNING event_id
+    `);
+    return rowsOf(result).length > 0 ? 'recorded' : 'duplicate';
+  } catch (err) {
+    const code = pgErrorCode(err);
+    if (code === UNDEFINED_TABLE || code === UNDEFINED_COLUMN) return 'unavailable';
+    throw err;
+  }
+}
+
+export function createRevenueCatWebhookDeps(): RcWebhookDeps {
+  const db = getDb();
+  const now = () => Date.now();
+  return {
+    now,
+    resolveProfileId: (keys) => resolveProfileId(db, keys),
+    creditPurchase: (args) =>
+      args.poolCoins > 0
+        ? creditPurchaseWithPool(db, args, { now, log: (line) => console.warn(`[economy-guard] ${JSON.stringify(line)}`) })
+        : creditPurchaseGems(db, args),
+    recordUnmatchedPurchase: (args) => recordUnmatchedPurchase(db, args),
+    async grantPro(userId, { expiresAt, proSource }) {
+      await db
+        .update(userProfiles)
+        .set({ isPro: true, proExpiresAt: expiresAt, proSource, updatedAt: new Date().toISOString() })
+        .where(eq(userProfiles.id, userId));
+    },
+    async extendProForGrace(userId, graceExpiresAt) {
+      // Never shortens: a later stored expiry (a renewal already processed, a
+      // longer server grant) wins, and NULL (no expiry) stays NULL.
+      await db.execute(sql`
+        UPDATE user_profiles
+           SET pro_expires_at = GREATEST(pro_expires_at, ${graceExpiresAt}::timestamptz),
+               updated_at = now()
+         WHERE id = ${userId}::uuid AND pro_expires_at IS NOT NULL
+      `);
+    },
+    async expirePro(userId, eventExpiresAt) {
+      // A late redelivery of an older period's EXPIRATION (the subscription
+      // renewed since) must not take Pro away.
+      const result = await db.execute(sql`
+        UPDATE user_profiles
+           SET is_pro = false, updated_at = now()
+         WHERE id = ${userId}::uuid
+           AND NOT (pro_expires_at IS NOT NULL
+                    AND ${eventExpiresAt}::timestamptz IS NOT NULL
+                    AND pro_expires_at > ${eventExpiresAt}::timestamptz)
+        RETURNING id
+      `);
+      return rowsOf(result).length > 0 ? 'revoked' : 'skipped';
+    },
+    capture: capturePostHog,
+    alertUnmatchedPurchase: sendUnmatchedPurchaseAlert,
+  };
 }

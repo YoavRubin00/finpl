@@ -206,11 +206,15 @@ export const bridgeRedemptions = pgTable("bridge_redemptions", {
 	check("bridge_redemptions_cost_check", sql`cost_coins >= 0`),
 ]);
 
-// RevenueCat consumable purchases that credited gems (0018). event_id is
-// RevenueCat's event id: a redelivered webhook conflicts and credits nothing.
+// RevenueCat consumable purchase events (0018). event_id is RevenueCat's event
+// id: a redelivered webhook conflicts and credits nothing. A credited event has
+// user_id; one the webhook could not credit (no matching account, unknown
+// product) has user_id NULL and the raw RevenueCat id in app_user_id, for a
+// manual credit.
 export const revenuecatEvents = pgTable("revenuecat_events", {
 	eventId: text("event_id").primaryKey().notNull(),
 	userId: uuid("user_id"),
+	appUserId: text("app_user_id"),
 	eventType: text("event_type").notNull(),
 	productId: text("product_id"),
 	gems: integer().notNull().default(0),
