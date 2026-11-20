@@ -129,8 +129,12 @@ import { NotificationPermissionPrompt } from "../src/features/notifications/Noti
 import { Day0ExitRitualHost } from "../src/features/retention-loops/Day0ExitRitualHost";
 import { TomorrowChestReadyHost } from "../src/features/retention-loops/TomorrowChestReadyHost";
 import { StarterCapitalGrantHost } from "../src/features/retention-loops/StarterCapitalGrantHost";
-import { PredictionResultsHost } from "../src/features/crowd-wisdom/PredictionResultsHost";
 import { SOCIAL_FEATURES_ENABLED } from "../src/config/social";
+// Social is off (src/config/social.ts): do not load the crowd-wisdom host at boot.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const PredictionResultsHost: React.ComponentType | null = SOCIAL_FEATURES_ENABLED
+  ? (require("../src/features/crowd-wisdom/PredictionResultsHost") as typeof import("../src/features/crowd-wisdom/PredictionResultsHost")).PredictionResultsHost
+  : null;
 import { GuestValueGateHost } from "../src/features/auth/guestValueGate";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
@@ -927,7 +931,7 @@ function RootLayoutInner() {
               <StarterCapitalGrantHost />
               {/* Credits + announces predictions that settled while away
                   ("צדקתם בזמן שהייתם בחוץ"). Claims once on open; server dedupes. */}
-              {SOCIAL_FEATURES_ENABLED && <PredictionResultsHost />}
+              {PredictionResultsHost ? <PredictionResultsHost /> : null}
               {/* Guest value-action register gate (Yoav 2026-07-03 policy):
                   every completed value action → signup gate, 2-min cooldown.
                   Call sites fire requestGuestGate('<trigger>'). */}

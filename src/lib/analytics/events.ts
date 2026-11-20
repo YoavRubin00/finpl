@@ -140,8 +140,6 @@ export type AppEvent =
   | { name: 'lesson_resumed'; props: { lesson_id: string; chapter_id?: string | null; phase: string; phase_index: number; phase_total: number } }
   // Quick check: a quiz question pulled forward between two flashcards.
   | { name: 'lesson_quick_check_answered'; props: { lesson_id: string; question_id: string; after_card_index: number; is_correct: boolean } }
-  | { name: 'module_unlocked'; props: { module_id: string; chapter_id?: string; trigger?: 'completion' | 'pro_subscribe' | 'manual' } }
-  | { name: 'chapter_completed'; props: { chapter_id: string; total_modules?: number } }
   // ── Topic-tree (R6-R8 architecture) ───────────────────────────────────
   // The topic-tree learning method (learningMode: 'topic-tree') fires one
   // `topic_completed` per chip. Before this the new method emitted NO learning
@@ -197,17 +195,12 @@ export type AppEvent =
   | { name: 'portfolio_screenshot_import_started'; props: Record<string, never> }
   | { name: 'portfolio_screenshot_import_succeeded'; props: { positions_count: number; broker?: string } }
   | { name: 'portfolio_screenshot_import_failed'; props: Record<string, never> }
-  // mod-0-1 walkthrough prompt — fires once. Lets us tie subsequent
-  // retention to whether the user opted into the tour or skipped it.
-  | { name: 'walkthrough_prompt_shown'; props: { module_id: string } }
-  | { name: 'walkthrough_prompt_choice'; props: { module_id: string; choice: 'tour' | 'continue' } }
 
   // ── Pearl ──────────────────────────────────────────────────────────────
   | { name: 'pearl_opened'; props: { after_module_id: string; next_module_id?: string; chapter_id?: string; game_key?: string; stages_count: number; has_profile_question?: boolean; has_unique_bundle?: boolean } }
   | { name: 'pearl_stage_completed'; props: { after_module_id: string; stage_kind: string; stage_index: number; stages_count: number } }
   | { name: 'pearl_completed'; props: { after_module_id: string; next_module_id?: string; chapter_id?: string; stages_count: number; time_to_complete_ms?: number } }
   | { name: 'pearl_dismissed'; props: { after_module_id: string; chapter_id?: string; stage_kind?: string; stage_index?: number; stages_count?: number; time_open_ms?: number } }
-  | { name: 'pearl_skipped'; props: { after_module_id: string; chapter_id?: string } }
   | { name: 'pearl_skipped_to_next_module'; props: { module_id: string; current_chapter_id?: string } }
   | { name: 'pearl_cta_shown'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; effective_kind: 'referral' | 'trading' | 'whatsapp'; cta_variant?: string } }
   | { name: 'pearl_cta_tapped'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; destination_url?: string; cta_variant?: string } }
@@ -389,8 +382,6 @@ export type AppEvent =
   // arm the daily morning/streak reminders IMMEDIATELY (not on the next app open
   // a churning user never reaches). Plus a small next-day return reward on D1.
   | { name: 'next_day_reminder_scheduled'; props: { source?: string } }
-  | { name: 'day1_return_reward_shown'; props: { coins: number } }
-  | { name: 'day1_return_reward_claimed'; props: { coins: number; freezes?: number } }
 
   // ── Push attribution + appointment-setting (RETENTION-PLAN 2026-07-02) ──
   // `push_opened` fires when the user taps an OS notification. Until this
