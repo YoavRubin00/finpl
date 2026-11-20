@@ -725,7 +725,7 @@ for (const mode of ['shadow', 'enforced'] as const) {
 {
   reset(0, 0);
   const a = await runGuarded(ALICE, { xp: 0, coins: 0, gems: 300 }, deps(), 'migrate/backfill', { legacyDifference: true });
-  check(a.kind === 'ok' && bal().gems === 200 && a.outcome?.reasons.includes('gem_daily_cap') && !a.outcome?.reasons.includes('gem_purchase_size_dropped'),
+  check(a.kind === 'ok' && bal().gems === 200 && a.outcome?.reasons.includes('gem_daily_cap') === true && !a.outcome?.reasons.includes('gem_purchase_size_dropped'),
     'backfill: a legacy gem difference of 300 goes through the 24h earned-gem budget (200 credited), not dropped as purchase-shaped', a.kind === 'ok' ? a.outcome?.report : a);
   await runGuarded(ALICE, { xp: 0, coins: 0, gems: 100 }, deps(), 'migrate/backfill', { legacyDifference: true });
   check(bal().gems === 200, 'backfill: repeated uploads stay within the same 24h gem budget (never unbounded)', bal().gems);

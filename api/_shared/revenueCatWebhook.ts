@@ -127,8 +127,10 @@ export function webhookSecret(env: Record<string, string | undefined>): string |
 }
 
 function sameString(a: string, b: string): boolean {
-  const ab = Buffer.from(a, 'utf8');
-  const bb = Buffer.from(b, 'utf8');
+  // Plain Uint8Arrays: the installed @types/node types Buffer as
+  // Buffer<ArrayBufferLike>, which timingSafeEqual's ArrayBufferView rejects.
+  const ab = new Uint8Array(Buffer.from(a, 'utf8'));
+  const bb = new Uint8Array(Buffer.from(b, 'utf8'));
   return ab.length === bb.length && timingSafeEqual(ab, bb);
 }
 
