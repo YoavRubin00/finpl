@@ -13,6 +13,7 @@ import type { StreakState } from "../lib/api/streak";
 import { StreakCelebrationScreen } from "../features/streak/StreakCelebrationScreen";
 import { useNudgeQueueStore, useOpenSlot, OPEN_PRIORITY } from "../stores/useNudgeQueueStore";
 import { useTutorialStore } from "../stores/useTutorialStore";
+import { useAuthStore } from "../features/auth/useAuthStore";
 import { israelDayKey } from "../utils/dateUtils";
 import { reportPostLessonModal } from "../features/retention-loops/postLessonSequence";
 
@@ -79,6 +80,13 @@ export function StreakCelebrationProvider({
       const prev = deriveStreakFromDates(prevState.activeDates, prevState.frozenDates);
       // Streak increased — show celebration after a short delay.
       if (current > prev && current > 0) {
+        // Not during onboarding (activation pass 2026-11-20). Onboarding starts
+        // day 1 of the streak right before it hands over to the welcome chest
+        // and the first lesson; this full-screen popup would otherwise land
+        // under the chest modal and then cover the lesson for up to 8s. The
+        // old flow showed its own day-1 screen there instead, which is gone.
+        // Any later increase (day 2+) celebrates as before.
+        if (!useAuthStore.getState().hasCompletedOnboarding) return;
         // For DISPLAY, prefer the server/authoritative streak if it's at least
         // as high (cross-device), else the freshly-derived local value.
         const cached =

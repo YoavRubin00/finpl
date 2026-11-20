@@ -379,7 +379,9 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         payload: {
           eyebrow: 'היי, אני קפטן שארק',
           title: 'מה החלום הפיננסי שלך?',
-          benefit: 'נתחיל מהמטרה — הדרך תתגלה.',
+          // Copy touch only (2026-11-20): the em-dash became ", ו". Same
+          // pinned arm, same layout.
+          benefit: 'נתחיל מהמטרה, והדרך תתגלה.',
           cta: 'מתחילים',
           layout: 'active_question',
         },

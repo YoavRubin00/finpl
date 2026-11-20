@@ -1,14 +1,19 @@
 // One-shot "first chest" onboarding moment, shown to every new user immediately
-// after profiling and before the app walkthrough. The user taps the chest to
-// open it (credits a starter coins + XP reward via the same economy pipe the
-// real module chests use, so it persists identically), then Captain Shark
-// explains the reward loop. A clear "המשך" starts the tour, which then hands
-// directly into the first learning module.
+// after profiling. The user taps the chest to open it (credits a starter coins
+// + XP reward via the same economy pipe the real module chests use, so it
+// persists identically), then Captain Shark explains the reward loop.
 // Copy follows BRAND.md: Captain Shark speaking personally → singular,
 // gender-neutral. Yoav 2026-06-23.
+//
+// Shortening pass 2026-11-20: this is now the ONE screen between the signup
+// gate and the first lesson. "לשיעור הראשון" starts mod-0-1 directly; the app
+// tour that used to run in between is marked done exactly as if the user had
+// tapped its "skip" (PostHog 30d: 29 skipped vs 28 finished it, and skip
+// already went straight into mod-0-1). The invite-code entry that lived on the
+// removed "profile ready" screen moved here.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Modal, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { usePathname } from 'expo-router';
@@ -36,9 +41,19 @@ import { useRouter } from 'expo-router';
 import { FINN_HAPPY } from '../retention-loops/finnMascotConfig';
 import { useTomorrowChestStore } from '../retention-loops/useTomorrowChestStore';
 import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 import { isModuleFirstArm, FIRST_RUN_EXPERIMENT_ID, firstRunVariantId } from './firstRunExperiment';
 import { useTopicProgressStore } from '../topic-learning/useTopicProgressStore';
 import { useBanditStore } from '../bandit/useBanditStore';
+import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
+import { useNotificationStore } from '../notifications/useNotificationStore';
+import { useBannerCooldownStore } from '../notifications/useBannerCooldownStore';
+import { InviteCodeEntry } from './InviteCodeEntry';
+import { onboardingStepProps } from './onboardingSteps';
+
+/** Same destination the tour used to open at its end (topic-tree intro of
+ *  mod-0-1, returning to the accordion afterwards). */
+const FIRST_LESSON_ROUTE = '/lesson/mod-0-1?startPhase=intro&returnTo=topic-tree&chapterId=chapter-0';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -61,7 +76,18 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
   const clearFlag = useTutorialStore((s) => s.setPendingPostWalkthroughFirstChest);
   const triggerWalkthrough = useTutorialStore((s) => s.triggerWalkthrough);
   const firstChestOpened = useTutorialStore((s) => s.firstChestOpened);
+  const hasSeenAppWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  const mod01Done = useCompletedModulesStore((s) => s.completedIds.includes('mod-0-1'));
   const router = useRouter();
+  // The new first run (tour not seen yet) goes straight into the first lesson.
+  // Module-first v1 and the legacy "chest after the tour" order go to the map.
+  const goesToLesson = !isModuleFirstArm() && !hasSeenAppWalkthrough && !mod01Done;
+
+  // Funnel step 'first-chest' (onboarding_step_viewed / _completed), the last
+  // onboarding screen before mod-0-1.
+  useEffect(() => {
+    try { track({ name: 'onboarding_step_viewed', props: { ...onboardingStepProps('first-chest'), mode: 'new' } }); } catch { /* non-fatal */ }
+  }, []);
 
   // A process kill can happen after the reward is persisted but before the
   // learner taps continue. Resume in the claimed state so reopening the gate
@@ -141,28 +167,77 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
 
   const handleContinue = useCallback(() => {
     tapHaptic();
-    try { captureEvent('first_chest_continue', {}); } catch { /* non-fatal */ }
-    clearFlag(false);
-    // The reward is the first thing a new learner sees. Only after it is
-    // claimed do we introduce the wider app; completing or skipping that tour
-    // then enters mod-0-1 from AppWalkthroughOverlay.
-    try { triggerWalkthrough(); } catch { /* non-fatal */ }
-    // Module-first first-run (onboarding_module_first v1, Yoav 5.7.26): the v1
-    // user already played mod-0-1 BEFORE profiling — their earned threshold
-    // chest is waiting on the learn map (the accordion fires it on mount).
-    // Re-pushing the lesson would replay the half-done intro; land on the map.
-    if (isModuleFirstArm()) {
-      try { router.push('/(tabs)/index' as never); } catch { /* non-fatal */ }
+    const tut = useTutorialStore.getState();
+    const moduleFirst = isModuleFirstArm();
+    const lessonDone = useCompletedModulesStore.getState().completedIds.includes('mod-0-1');
+    const toLesson = !moduleFirst && !tut.hasSeenAppWalkthrough && !lessonDone;
+    try { captureEvent('first_chest_continue', { next: toLesson ? 'lesson' : 'map' }); } catch { /* non-fatal */ }
+    try {
+      track({
+        name: 'onboarding_step_completed',
+        props: { ...onboardingStepProps('first-chest'), step_name: 'first-chest', next_step: toLesson ? 'lesson' : 'map', mode: 'new', direction: 'forward' },
+      });
+    } catch { /* non-fatal */ }
+
+    if (moduleFirst || tut.hasSeenAppWalkthrough) {
+      // Unchanged paths:
+      // - Module-first first-run (onboarding_module_first v1, Yoav 5.7.26): the
+      //   v1 user already played mod-0-1 BEFORE profiling — their earned
+      //   threshold chest is waiting on the learn map (the accordion fires it
+      //   on mount). Re-pushing the lesson would replay the half-done intro.
+      // - Legacy order: this chest was armed at the END of a tour
+      //   (AppWalkthroughOverlay.routePostWalkthrough, users who saw the tour
+      //   before any chest). The tour is over; back to the map as before.
+      clearFlag(false);
+      try { triggerWalkthrough(); } catch { /* non-fatal */ }
+      if (moduleFirst) {
+        try { router.push('/(tabs)/index' as never); } catch { /* non-fatal */ }
+        return;
+      }
+      try { router.replace('/(tabs)' as never); } catch { /* non-fatal */ }
       return;
     }
-    // The walkthrough spans tabs, so remain on the map while its overlay starts.
+
+    // New first run: no tour before the first lesson. Leave every tutorial flag
+    // exactly where the old chest → tour → "skip" path left it, so the popups
+    // gated on them (notification prompt, Pro teaser, register CTA, day-0
+    // ritual, streak nudges) behave the same:
+    //   hasSeenAppWalkthrough=true, walkthroughTriggered=false, step=-1,
+    //   pendingPostWalkthroughFirstChest=false, pendingFirstLessonCTA=true
+    //   (until mod-0-1 is done), pendingPostWalkthroughProTeaser /
+    //   pendingPostWalkthroughCTA untouched (armed after the mod-0-1 chest).
+    // Order matters: complete the tour BEFORE clearing the chest flag, so the
+    // root layout's fallback re-arm never sees "no chest pending, tour neither
+    // seen nor triggered" in between and starts the tour.
+    try { tut.completeAppWalkthrough(); } catch { /* non-fatal */ }
+    // Same resets the tour's skip / finish ran: the post-tour notification
+    // prompt must not be suppressed by a stale dismissal or cooldown.
+    try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
+    try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
+    clearFlag(false);
+    if (toLesson) {
+      // Safety net, as after the tour: backing out of the intro lands on the
+      // map with the "מוכנים לשיעור הראשון?" card waiting.
+      try { tut.setPendingFirstLessonCTA(true); } catch { /* non-fatal */ }
+      try { router.replace(FIRST_LESSON_ROUTE as never); } catch { /* non-fatal */ }
+      return;
+    }
     try { router.replace('/(tabs)' as never); } catch { /* non-fatal */ }
   }, [clearFlag, router, triggerWalkthrough]);
 
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => { /* block back — must open + continue */ }}>
       <View style={styles.backdrop}>
-        <View style={[styles.safe, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
+        {/* Keyboard-aware + scrollable only for the optional invite-code field
+            under the button; without the keyboard it lays out as one screen. */}
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.safe, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Heading */}
           <Animated.View entering={FadeInUp.duration(360)} style={styles.headingWrap}>
             <Text style={[styles.heading, RTL_CENTER]} allowFontScaling={false}>
@@ -221,20 +296,30 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
               <View style={styles.sharkRow}>
                 <View style={styles.bubble}>
                   <Text style={[styles.bubbleText, RTL]} allowFontScaling={false}>
-                    זאת התיבה הראשונה שלך! עוד תיבות מחכות לך בסוף כל שיעור ובסיום אתגר יומי.
+                    עוד תיבות מחכות לך בסוף כל שיעור.
                   </Text>
                   <View style={styles.bubbleTail} pointerEvents="none" />
                 </View>
                 <ExpoImage source={FINN_HAPPY} accessible={false} style={styles.shark} contentFit="contain" />
               </View>
-              <Pressable onPress={handleContinue} accessibilityRole="button" accessibilityLabel="המשך" style={styles.continueBtn}>
-                <Text style={styles.continueText} allowFontScaling={false}>המשך</Text>
+              <Pressable
+                onPress={handleContinue}
+                accessibilityRole="button"
+                accessibilityLabel={goesToLesson ? 'לשיעור הראשון' : 'המשך'}
+                style={styles.continueBtn}
+              >
+                <Text style={styles.continueText} allowFontScaling={false}>{goesToLesson ? 'לשיעור הראשון' : 'המשך'}</Text>
               </Pressable>
+              {/* Optional, one quiet link. Moved here from the removed
+                  "profile ready" screen: on iOS the copied invite code is the
+                  only way an install carries a referral. */}
+              <InviteCodeEntry />
             </Animated.View>
           ) : (
             <View style={styles.bottomSpacer} />
           )}
-        </View>
+        </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -273,7 +358,8 @@ const styles = StyleSheet.create({
   // the half-mounted map shimmered through and read as "slow loading".
   backdrop: { flex: 1, backgroundColor: '#0f172a' },
   // Vertical padding applied inline (insets.top/bottom + 20) — see render.
-  safe: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24 },
+  // flexGrow (not flex): this is now a ScrollView content container.
+  safe: { flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24 },
   headingWrap: { alignItems: 'center', gap: 8, marginTop: 8 },
   heading: { fontSize: 30, fontWeight: '900', color: '#fcd34d' },
   subheading: { fontSize: 15, fontWeight: '600', color: '#e0f2fe', maxWidth: 320, lineHeight: 22 },

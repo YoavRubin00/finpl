@@ -124,7 +124,8 @@ export function RegisterScreen() {
     if (isGuest) {
       // ?onboarding=1 means we arrived from the signup-gate email button: keep
       // onboarding incomplete so returnTo bounces back to /(auth)/onboarding →
-      // celebration → streak → mod-0-1 (the flag is flipped by enterFirstModule).
+      // finish step → welcome chest → mod-0-1 (the flag is flipped by
+      // enterFirstModule).
       // Fires guest_converted_to_user / registration attribution as before.
       convertGuestToUser(name.trim(), session.profile.email ?? codeEmail, { completeOnboarding: onboarding !== "1" });
     }

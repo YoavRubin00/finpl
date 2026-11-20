@@ -45,18 +45,17 @@ interface WalkthroughStep {
 
 // 3 steps, not 8 (Yoav 11.10.26). PostHog 30d: 75 of 123 users skipped the
 // tour (34 of them on step 0) and only 30 reached step 6 — people want to
-// play, not to be shown around. Hello → the learning path → the tools, then
-// straight into the first lesson. The other tabs introduce themselves.
+// play, not to be shown around. The other tabs introduce themselves.
+//
+// 2 steps (activation pass 2026-11-20). New users no longer get this tour
+// before the first lesson at all: the welcome chest goes straight into mod-0-1
+// and marks the tour done (PostWalkthroughFirstChest). It still runs for the
+// few who reach it another way (a tour already in progress, the root layout's
+// fallback re-arm). The "hello" step that opened it said nothing about the app
+// (30d: 29 skipped vs 28 finished), so it is gone: the learning path → the
+// tools → the first lesson, with a real "skip" button from the first card.
+// A persisted step index past the end is healed below (counts as finished).
 const STEPS: WalkthroughStep[] = [
-  {
-    title: "היי! אני קפטן שארק",
-    emoji: "",
-    message: "אני אלווה אתכם לאורך כל הדרך.\nסיור של חצי דקה, ומתחילים!",
-    navigateTo: null,
-    ctaLabel: "יאללה, קדימה!",
-    screenSignal: null,
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-0-kOK18ZhYnb8UPxoe5Ebxp4rvNdNmqW.mp3",
-  },
   {
     title: "מסלול הלמידה",
     emoji: "📚",
@@ -125,9 +124,10 @@ export function AppWalkthroughOverlay() {
   // the new architecture — the pill rendered under the Dynamic Island (Yoav
   // 9.9: "חורג בחלק העליון"). The JS hook reads window insets reliably.
   const insets = useSafeAreaInsets();
-  // The walkthrough only starts once the user explicitly opts in by tapping
-  // continue on the welcome chest (which sets walkthroughTriggered=true).
-  // This keeps the reward and the tour as separate, non-competing moments.
+  // The walkthrough only starts once walkthroughTriggered=true (a tour already
+  // in progress, the legacy chest-after-tour order, or the root layout's
+  // fallback re-arm). Since 2026-11-20 the welcome chest no longer triggers it
+  // for new users: it marks the tour done and opens mod-0-1 instead.
   const walkthroughTriggered = useTutorialStore((s) => s.walkthroughTriggered);
   const [ready, setReady] = useState(step > 0);
   useEffect(() => {
@@ -210,6 +210,21 @@ export function AppWalkthroughOverlay() {
     const normalize = (p: string) => p.replace(/\/index$/, "").replace(/\/$/, "") || "/";
     return normalize(currentPath) === normalize(target);
   }, [segments]);
+
+  // The first card is now the learning path itself (the "hello" card before it
+  // had no screen of its own), so make sure the map is what sits under it when
+  // the tour opens. Later cards navigate on "next", as before.
+  useEffect(() => {
+    if (!ready || hasSeenWalkthrough || step !== 0) return;
+    const first = stepsWithLast[0];
+    if (!first) return;
+    try { setActiveScreen(first.screenSignal); } catch { /* non-fatal */ }
+    if (first.navigateTo && !isAlreadyOnRoute(first.navigateTo)) {
+      try { router.replace(first.navigateTo as never); } catch { /* non-fatal */ }
+    }
+    // Only when the tour becomes visible, not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
 
 
   // Outer try/catch on each gesture callback prevents Hermes from
@@ -369,22 +384,20 @@ export function AppWalkthroughOverlay() {
       onRequestClose={() => { if (step > 0) handleBack(); }}
     >
       <View style={s.overlay}>
-        {/* ── Top: Step title pill with counter (hidden on step 0 — welcome card has no pill) ── */}
-        {step > 0 && (
-          <View style={{ alignItems: "center", paddingTop: Math.max(insets.top + 16, 56) }}>
-            <Animated.View
-              key={`pill-${contentKey}`}
-              entering={reducedMotion ? undefined : FadeInDown.duration(350)}
-              style={s.titlePill}
-            >
-              {stepConfig.emoji ? <Text style={s.titleEmoji}>{stepConfig.emoji}</Text> : null}
-              <Text style={s.titleText} accessibilityRole="header">{stepConfig.title}</Text>
-              <View style={s.stepCounter}>
-                <Text style={s.stepCounterText}>{`${step + 1}/${stepsWithLast.length}`}</Text>
-              </View>
-            </Animated.View>
-          </View>
-        )}
+        {/* ── Top: Step title pill with counter (every card has a title now) ── */}
+        <View style={{ alignItems: "center", paddingTop: Math.max(insets.top + 16, 56) }}>
+          <Animated.View
+            key={`pill-${contentKey}`}
+            entering={reducedMotion ? undefined : FadeInDown.duration(350)}
+            style={s.titlePill}
+          >
+            {stepConfig.emoji ? <Text style={s.titleEmoji}>{stepConfig.emoji}</Text> : null}
+            <Text style={s.titleText} accessibilityRole="header">{stepConfig.title}</Text>
+            <View style={s.stepCounter}>
+              <Text style={s.stepCounterText}>{`${step + 1}/${stepsWithLast.length}`}</Text>
+            </View>
+          </Animated.View>
+        </View>
 
         {/* ── Middle: transparent, real screen shows through ── */}
         <View style={{ flex: 1 }} />
@@ -415,7 +428,7 @@ export function AppWalkthroughOverlay() {
               {stepConfig.message}
             </Animated.Text>
 
-            {/* Dots (3 steps) */}
+            {/* Dots (one per step) */}
             <View style={s.dotsRow} accessibilityLabel={`שלב ${step + 1} מתוך ${stepsWithLast.length}`} accessibilityRole="text">
               {stepsWithLast.map((_, i) => (
                 <View key={i} style={[s.dot, i === step && s.dotActive]} />
@@ -483,15 +496,16 @@ export function AppWalkthroughOverlay() {
               </Pressable>
             </View>
 
-            {/* Skip */}
+            {/* Skip: a real button from the first card (was a grey text link),
+                so leaving the tour is one visible tap. */}
             <Pressable
               onPress={handleSkip}
               style={s.skipBtn}
-              hitSlop={12}
+              hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="דלג על הסיור"
+              accessibilityLabel="דילוג על הסיור"
             >
-              <Text style={s.skipText}>דלג על הסיור</Text>
+              <Text style={s.skipText}>דילוג על הסיור</Text>
             </Pressable>
           </Animated.View>
         </View>
@@ -627,13 +641,20 @@ const s = StyleSheet.create({
 
   /* ── Skip ── */
   skipBtn: {
+    width: "100%",
+    minHeight: 46,
+    marginTop: 10,
     alignItems: "center",
-    paddingVertical: 6,
+    justifyContent: "center",
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#7dd3fc",
+    backgroundColor: "#ffffff",
   },
   skipText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0369a1",
     writingDirection: "rtl",
   },
 });

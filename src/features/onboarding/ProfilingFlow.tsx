@@ -4,11 +4,9 @@ import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleS
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
-import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { GoogleLogo } from "../../components/ui/GoogleLogo";
-import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import LottieView from "lottie-react-native";
-import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET, FINN_DANCING } from "../retention-loops/finnMascotConfig";
+import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
 import { useRouter, type Href } from "expo-router";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp, ChevronRight } from "lucide-react-native";
@@ -36,8 +34,7 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { ParticleBurst } from "../../components/ui/ParticleBurst";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
-import { useStreak, markDailyActivityCompleted } from "../economy/useStreak";
-import { StreakCelebrationScreen } from "../streak/StreakCelebrationScreen";
+import { markDailyActivityCompleted } from "../economy/useStreak";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { SignupGateStep, reportSignupGateCompleted, getSignupGateLastMethod } from "./SignupGateStep";
@@ -50,9 +47,8 @@ import { useBandit } from "../bandit/useBandit";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
 import { captureEvent } from "../../lib/posthog";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PENDING_REFERRAL_STORAGE_KEY, PENDING_REFERRAL_ATTEMPTS_STORAGE_KEY } from '../social/InviteRedemptionScreen';
-import * as Clipboard from 'expo-clipboard';
+import { track } from "../../lib/analytics/events";
+import { onboardingStepProps, isTrackedOnboardingStep } from "./onboardingSteps";
 import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
 import { FREE_AVATARS } from "../avatars/avatarData";
 import type { AvatarDefinition } from "../avatars/avatarData";
@@ -77,11 +73,6 @@ const SLIDE_MS = 300;
 const AUTO_ADVANCE_MS = 500;
 const TOTAL_STEPS = 3;
 
-const CONFETTI_COLORS = [
-  "#0891b2", "#4ade80", "#fbbf24", "#22d3ee",
-  "#f472b6", "#60a5fa", "#fb923c", "#22d3ee",
-];
-
 // Module-level callback ref, StepShell notifies ProfilingFlow when user taps
 // so the persistent Finn overlay can mirror the typing animation.
 const finnTriggerRef: { current: (() => void) | null } = { current: null };
@@ -89,19 +80,6 @@ const finnTriggerRef: { current: (() => void) | null } = { current: null };
 const STEPS_WITH_PERSISTENT_FINN = new Set([
   "dream", "goal", "age",
 ]);
-
-// Pre-computed so particles are deterministic (no Math.random in render)
-const PARTICLE_CONFIGS = Array.from({ length: 24 }, (_, i) => {
-  const angle = (i / 24) * Math.PI * 2;
-  const radius = 140 + (i % 4) * 50;
-  return {
-    tx: Math.cos(angle) * radius,
-    ty: Math.sin(angle) * radius - 50,
-    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-    size: 10 + (i % 3) * 5,
-    delay: (i % 6) * 30,
-  };
-});
 
 // ─── Instagram Stories progress bar ──────────────────────────────────────────
 
@@ -488,47 +466,6 @@ function StepShell({
   );
 }
 
-// ─── Confetti particle ────────────────────────────────────────────────────────
-
-function ConfettiParticle({ tx, ty: targetY, color, size, delay: d }: typeof PARTICLE_CONFIGS[0]) {
-  const x = useSharedValue(0);
-  const y = useSharedValue(0);
-  const opacity = useSharedValue(0);
-  const scale = useSharedValue(0);
-  const rotate = useSharedValue(0);
-
-  useEffect(() => {
-    scale.value = withDelay(d, withSpring(1, { damping: 6, stiffness: 200 }));
-    opacity.value = withDelay(d, withSequence(
-      withTiming(1, { duration: 100 }),
-      withDelay(500, withTiming(0, { duration: 400 }))
-    ));
-    x.value = withDelay(d, withTiming(tx, { duration: 900, easing: Easing.out(Easing.quad) }));
-    y.value = withDelay(d, withTiming(targetY, { duration: 900, easing: Easing.out(Easing.quad) }));
-    rotate.value = withDelay(d, withTiming(tx > 0 ? 360 : -360, { duration: 900 }));
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: x.value },
-      { translateY: y.value },
-      { scale: scale.value },
-      { rotate: `${rotate.value}deg` },
-    ],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        styles.confettiDot,
-        { backgroundColor: color, width: size, height: size, borderRadius: size / 2 },
-        style,
-      ]}
-    />
-  );
-}
-
 // ─── Profile summary screen ───────────────────────────────────────────────────
 
 type EditableStep = 'dream' | 'goal' | 'knowledge' | 'daily-goal';
@@ -561,7 +498,7 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
           הנה מה שאני אכין בשבילך
         </Text>
         <Text style={{ fontSize: 14, color: '#6b7280', writingDirection: 'rtl', textAlign: 'center' }}>
-          הקשה על שורה — עריכה
+          אפשר להקיש על שורה כדי לערוך
         </Text>
       </Animated.View>
       <Animated.View entering={FadeInUp.duration(350).delay(200)} style={{ width: '100%', gap: 10, marginBottom: 32 }}>
@@ -614,7 +551,7 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
   );
 }
 
-// ─── Celebration screen ───────────────────────────────────────────────────────
+// ─── Finish step (was the celebration + streak screens) ───────────────────────
 
 // Onboarding completion reward — flat +50 coins for everyone. Variable rewards
 // were tested but the "treasure popup" interrupted the flow into mod-0-1; user
@@ -622,228 +559,35 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
 // drops inside the learning modules.
 const ONBOARDING_COINS = 50;
 
-function CelebrationScreen({ onDone }: { onDone: () => void }) {
-  const rewardCoins = ONBOARDING_COINS;
-  const badgeScale = useSharedValue(0.2);
-  const badgeRotate = useSharedValue(-15);
-  const xpScale = useSharedValue(0);
-  // CTA fades in via opacity (not scale). When using scale 0 to 1, the
-  // Pressable's hit-rect stays collapsed and on some Reanimated/RN versions
-  // it never recovers, the button looks visible but doesn't respond to taps.
-  // Opacity doesn't affect hit-testing, so the button is tappable from mount.
-  const ctaOpacity = useSharedValue(0);
-  const [bursting, setBursting] = useState(false);
-  // Synchronous guard against double-tap in the same frame. useState's stale
-  // closure can let two taps both pass the `bursting` check before either
-  // setBursting commits.
-  const burstingRef = useRef(false);
-  const { playSound: playCelebSound } = useSoundEffect();
+// Background of the welcome chest (PostWalkthroughFirstChest backdrop), so the
+// chest's fade-in over this screen reads dark → dark instead of flashing.
+const FINISH_BG = "#0f172a";
 
+/**
+ * The "celebration" step, shortened away (activation pass 2026-11-20).
+ *
+ * Before: "profile ready" celebration (tap, CTA after 700ms) → day-1 streak
+ * screen (tap or 8s) → welcome chest → 3-step tour → first lesson. PostHog
+ * 30d: 58 of 121 who started onboarding completed it, and more people skipped
+ * the tour than finished it.
+ *
+ * Now this step has no UI of its own: on mount it runs the same completion
+ * logic the celebration's "start" tap ran (reward, streak day 1, freezes,
+ * onboarding_completed) and hands over to the welcome chest, which goes
+ * straight into mod-0-1. The step id stays "celebration" because every exit
+ * from the signup gate, and the re-mount after OAuth / email register / an app
+ * relaunch, already lands on it, and funnels read next_step: 'celebration'.
+ */
+function FinishOnboardingStep({ onFinish }: { onFinish: () => void }) {
+  const ranRef = useRef(false);
   useEffect(() => {
-    badgeScale.value = withSequence(
-      withSpring(1.05, { damping: 14, stiffness: 120 }),
-      withSpring(1, { damping: 14 })
-    );
-    badgeRotate.value = withSpring(0, { damping: 14, stiffness: 100 });
-    xpScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
-    ctaOpacity.value = withDelay(700, withTiming(1, { duration: 280 }));
+    if (ranRef.current) return;
+    ranRef.current = true;
+    onFinish();
+    // Mount-only: the finish must run exactly once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  function handleStart() {
-    if (burstingRef.current) return;
-    burstingRef.current = true;
-    setBursting(true);
-    try { tapHaptic(); } catch { /* non-fatal */ }
-    try { playCelebSound('modal_open_4'); } catch { /* non-fatal */ }
-    // Advance after a short burst window — long enough to see confetti, short
-    // enough that the user doesn't feel the button "stuck". Previously we
-    // waited for ConfettiExplosion's full 1200ms onComplete which felt slow.
-    setTimeout(() => onDone(), 400);
-  }
-
-  const [showCodeField, setShowCodeField] = useState(false);
-  const [inviteCode, setInviteCode] = useState('');
-  const [codeSaved, setCodeSaved] = useState(false);
-  // Clipboard bridge, app side (Yoav 14.10.26). finplay.me/invite/CODE already
-  // copies the code before handing off to the store — that is the ONLY way an
-  // iOS install can carry an invite (no install-referrer on iOS). The app never
-  // read it back: `expo-clipboard` was a dependency with zero call sites, so
-  // every iOS invite died on "the user must remember 8 characters and find a
-  // collapsed text link". PostHog: friends_count=0 for every user, 45 days.
-  //
-  // `hasStringAsync` needs no permission and shows no banner, so it is safe on
-  // mount; it only tells us a string EXISTS. The content is read in
-  // `showCode()` — in direct response to the user's tap — so any iOS paste
-  // prompt is something they just asked for.
-  const [clipboardMayHaveCode, setClipboardMayHaveCode] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        // Already have a pending code (Android install-referrer or a deep link
-        // on an installed app)? Then there is nothing to offer.
-        const pending = await AsyncStorage.getItem(PENDING_REFERRAL_STORAGE_KEY);
-        if (pending) return;
-        const has = await Clipboard.hasStringAsync();
-        if (!cancelled) setClipboardMayHaveCode(has);
-      } catch { /* non-fatal */ }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-  const codeAreaOpacity = useSharedValue(0);
-  const codeAreaHeight = useSharedValue(0);
-
-  const handleSaveCode = async () => {
-    const trimmed = inviteCode.trim().toUpperCase();
-    if (!/^[A-Z0-9-]{4,12}$/.test(trimmed)) return;
-    await AsyncStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, trimmed);
-    // Fresh code → fresh retry budget for the _layout pending-redemption hook.
-    try { await AsyncStorage.removeItem(PENDING_REFERRAL_ATTEMPTS_STORAGE_KEY); } catch { /* non-fatal */ }
-    // The actual redeem is deferred to the post-signup hook in _layout.tsx
-    // (it emits referral_redeem_succeeded/failed with source 'pending_hook');
-    // here we only record that a manual code entered the pipeline.
-    try { captureEvent('referral_redeem_attempted', { source: codePasted ? 'profiling_clipboard' : 'profiling_manual', invite_code: trimmed, deferred: true }); } catch { /* non-fatal */ }
-    setCodeSaved(true);
-  };
-
-  const [codePasted, setCodePasted] = useState(false);
-  const showCode = () => {
-    setShowCodeField(true);
-    codeAreaOpacity.value = withTiming(1, { duration: 220 });
-    codeAreaHeight.value = withSpring(72, { damping: 16, stiffness: 140 });
-    // Pre-fill from the clipboard when it holds something code-shaped. The user
-    // still taps "אישור", so nothing is attributed without their confirmation.
-    (async () => {
-      try {
-        const raw = (await Clipboard.getStringAsync())?.trim().toUpperCase() ?? '';
-        const candidate = raw.replace(/^.*\/INVITE\//, '');
-        if (/^[A-Z0-9-]{4,12}$/.test(candidate)) {
-          setInviteCode(candidate);
-          setCodePasted(true);
-          try { captureEvent('referral_code_autofilled', { source: 'clipboard', invite_code: candidate }); } catch { /* non-fatal */ }
-        }
-      } catch { /* clipboard denied — the user can still type the code */ }
-    })();
-  };
-
-  const codeAreaStyle = useAnimatedStyle(() => ({
-    opacity: codeAreaOpacity.value,
-    height: codeAreaHeight.value,
-    overflow: 'hidden',
-  }));
-
-  const badgeStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: badgeScale.value }, { rotate: `${badgeRotate.value}deg` }],
-  }));
-  const xpStyle = useAnimatedStyle(() => ({ transform: [{ scale: xpScale.value }] }));
-  const ctaStyle = useAnimatedStyle(() => ({ opacity: ctaOpacity.value }));
-
-  return (
-    <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
-      <BubbleOverlay />
-      <SafeAreaView style={styles.celebShell} edges={["top", "bottom"]}>
-        {/* Confetti burst */}
-        <View style={styles.confettiOrigin} pointerEvents="none">
-          {PARTICLE_CONFIGS.map((p, i) => (
-            <ConfettiParticle key={i} {...p} />
-          ))}
-        </View>
-
-        {/* Finn celebrating */}
-        <Animated.View style={[styles.celebBadge, badgeStyle]}>
-          <ExpoImage
-            source={FINN_DANCING}
-            style={{ width: 120, height: 120 }}
-            contentFit="contain"
-            accessible={false}
-          />
-        </Animated.View>
-
-        {/* Confetti */}
-        <View style={{ position: 'absolute', top: '30%', alignSelf: 'center' }} pointerEvents="none">
-          <LottieIcon
-            source={require("../../../assets/lottie/Confetti.json") as number}
-            size={200}
-            autoPlay
-            loop={false}
-          />
-        </View>
-
-        {/* XP + Coins */}
-        <Animated.View style={[styles.celebRewards, xpStyle]}>
-          <View style={styles.rewardPill}>
-            <Text style={styles.rewardXP}>+{ONBOARDING_XP} XP</Text>
-          </View>
-          <View style={[styles.rewardPill, styles.rewardPillGold, { flexDirection: "row-reverse", alignItems: "center", gap: 6 }]}>
-            <Text style={styles.rewardCoins}>+{rewardCoins}</Text>
-            <GoldCoinIcon size={20} />
-          </View>
-        </Animated.View>
-
-        <Text style={styles.celebTitle}>הפרופיל שלך מוכן!</Text>
-        <Text style={styles.celebSub}>
-          הכנו את הפיד שלך.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
-        </Text>
-
-        {/* CTA */}
-        <Animated.View style={ctaStyle}>
-          <Pressable onPress={handleStart} disabled={bursting} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="מתחילים">
-            <Text style={styles.celebCTAText}>מתחילים</Text>
-          </Pressable>
-        </Animated.View>
-
-        {/* Coin / confetti burst on CTA tap. onDone is scheduled from
-            handleStart with a short delay so navigation isn't blocked on the
-            full confetti animation. */}
-        {bursting && (
-          <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-            <ConfettiExplosion />
-          </View>
-        )}
-
-        {/* Optional invite code entry */}
-        {codeSaved ? (
-          <Text style={styles.codeSavedText}>✓ הקוד נשמר — יחובר לחשבון שלך</Text>
-        ) : showCodeField ? (
-          <Animated.View style={[styles.codeRow, codeAreaStyle]}>
-            <TextInput
-              style={styles.codeInput}
-              placeholder="קוד הזמנה"
-              placeholderTextColor="#64748b"
-              value={inviteCode}
-              onChangeText={(t) => setInviteCode(t.toUpperCase())}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={12}
-              returnKeyType="done"
-              onSubmitEditing={handleSaveCode}
-              accessibilityLabel="הזינו קוד הזמנה"
-            />
-            <Pressable onPress={handleSaveCode} style={styles.codeSubmitBtn} accessibilityRole="button" accessibilityLabel="אישור קוד">
-              <Text style={styles.codeSubmitText}>אישור</Text>
-            </Pressable>
-          </Animated.View>
-        ) : null}
-        {showCodeField && !codeSaved && codePasted ? (
-          <Text style={styles.codePastedText}>הדבקנו את הקוד שהעתקתם — רק לאשר</Text>
-        ) : null}
-        {!codeSaved && !showCodeField ? (
-          <Pressable
-            onPress={showCode}
-            style={[styles.codeToggle, clipboardMayHaveCode && styles.codeTogglePrimed]}
-            accessibilityRole="button"
-            accessibilityLabel={clipboardMayHaveCode ? 'הוזמנתם דרך חבר? לחצו והקוד יודבק מלוח ההעתקה' : 'הוזמנתם דרך חבר? לחצו להזנת קוד הזמנה'}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={[styles.codeToggleText, clipboardMayHaveCode && styles.codeToggleTextPrimed]}>
-              {clipboardMayHaveCode ? 'הוזמנתם דרך חבר? להדביק את הקוד' : 'הוזמנתם דרך חבר? הזינו קוד'}
-            </Text>
-          </Pressable>
-        ) : null}
-      </SafeAreaView>
-
-    </ImageBackground>
-  );
+  return <View style={{ flex: 1, backgroundColor: FINISH_BG }} accessible={false} />;
 }
 
 // ─── Step: Q0 Dream (Duolingo-style "pick your dream") ─────────────────────
@@ -1032,7 +776,7 @@ const GOAL_REACTIONS: Record<FinancialGoal, string> = {
   "investing": "השקעות דורשות ידע. כמה יש לך הבנה בזה היום?",
   "army-release": "שחרור מהצבא זה שלב גדול! כמה מוכר לך עולם הכסף?",
   "expand-horizons": "להרחיב אופקים זה תמיד רעיון טוב. מאיפה מתחילים?",
-  "unsure": "בכנות מוחלטת — נתחיל בדיוק מהמקום הנכון.",
+  "unsure": "בכנות מוחלטת, נתחיל בדיוק מהמקום הנכון.",
 };
 
 function KnowledgeStep({ goal, onNext, onBack, initialValue }: { goal: FinancialGoal | null; onNext: (v: KnowledgeLevel) => void; onBack?: () => void; initialValue?: KnowledgeLevel | null }) {
@@ -1053,7 +797,7 @@ function KnowledgeStep({ goal, onNext, onBack, initialValue }: { goal: Financial
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
 
-  const dynamicHint = goal ? GOAL_REACTIONS[goal] : "בכנות מוחלטת — נתחיל בדיוק מהמקום הנכון";
+  const dynamicHint = goal ? GOAL_REACTIONS[goal] : "בכנות מוחלטת, נתחיל בדיוק מהמקום הנכון";
 
   return (
     <StepShell stepIndex={3} question="כמה יש לך הבנה בכסף?" hint={dynamicHint} finnState={sel ? (sel === "none" ? "empathy" : "tablet") : "thinking"} compact onBack={onBack}>
@@ -2777,14 +2521,16 @@ function ModuleFirstHook({ onStart }: ModuleFirstHookProps) {
 type FlowStep =
   | "intro" | "dream" | "first-sim" | "goal" | "knowledge" | "age" | "signup-gate" | "learning-time"
   | "learning-style" | "deadline" | "daily-goal" | "companion" | "finance-experts"
-  | "avatar" | "building-profile" | "profile-summary" | "celebration" | "streak";
+  | "avatar" | "building-profile" | "profile-summary" | "celebration";
 
 // Position of each LIVE step, used only to label a slide() as forward or back
 // for analytics. Steps that are not rendered any more are left out (→ 0).
+// (The funnel position props, step_index / total_steps, come from
+// onboardingSteps.ts instead.)
 const FLOW_STEP_ORDER: Partial<Record<FlowStep, number>> = {
   intro: 0, dream: 1, goal: 2, age: 3, "signup-gate": 4,
   knowledge: 5, "daily-goal": 5, "profile-summary": 6, "building-profile": 7,
-  celebration: 8, streak: 9,
+  celebration: 8,
 };
 
 interface Collected {
@@ -2814,7 +2560,6 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const grantOnboardingFreezes = useEconomyUIStore((s) => s.grantOnboardingFreezes);
   // Streak bump uses markDailyActivityCompleted() helper, not the mutation hook —
   // see comment at the call site in handleDone for rationale.
-  const { data: streakData } = useStreak();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const seedProfile = useAuthStore((s) => s.seedProfile);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
@@ -2869,7 +2614,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       // signed-in user coming back mid-flow, 'celebration' is the re-mount after
       // OAuth / email register. Without it the started→completed rate counts
       // returning users and re-mounts in the denominator.
-      captureEvent('onboarding_started', { entry_step: step });
+      try { track({ name: 'onboarding_started', props: { entry_step: step } }); } catch { /* non-fatal */ }
       // Resuming at the celebration means the user got past the signup gate on
       // a path that left this component (Google, email register, or an app
       // relaunch after the gate). Those exits never ran slide(), so the gate's
@@ -2885,6 +2630,19 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // Mount-only by design: `step` and `isGuest` are read once, as the entry state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRedo]);
+  // Per-step "viewed" signal (onboarding_step_viewed), the denominator for each
+  // step's completion. Fires every time a real screen of the flow becomes the
+  // current step, Back included. Declared after the mount effect above so
+  // onboarding_started always lands first. 'celebration' is the transient
+  // finish step, not a screen, so it is not counted.
+  useEffect(() => {
+    const funnelMode = isRedo ? "redo" : "new";
+    if (!isTrackedOnboardingStep(step, funnelMode)) return;
+    if (!isRedo && step === "intro" && isModuleFirstArm()) return;
+    try {
+      track({ name: 'onboarding_step_viewed', props: { ...onboardingStepProps(step, funnelMode), mode: funnelMode } });
+    } catch { /* non-fatal */ }
+  }, [step, isRedo]);
   const [returnToSummary, setReturnToSummary] = useState(false);
   const [collected, setCollected] = useState<Collected>(() => {
     // Mirror the post-OAuth-mid-signup detection above: if the user came back
@@ -2957,14 +2715,21 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         // The gate → celebration exit is reported by reportSignupGateCompleted
         // (once per gate pass, shared with the re-mount exits) — not here.
         if (!(step === "signup-gate" && nextStep === "celebration")) {
-          captureEvent('onboarding_step_completed', {
-            step_name: step,
-            next_step: nextStep,
-            mode: isRedo ? 'redo' : 'new',
-            // Back taps and edit-from-summary hops run through slide() too.
-            // Funnels should count 'forward' only; before this prop a Back tap
-            // counted as completing the step.
-            direction: (FLOW_STEP_ORDER[nextStep] ?? 0) < (FLOW_STEP_ORDER[step] ?? 0) ? 'back' : 'forward',
+          const funnelMode = isRedo ? 'redo' : 'new';
+          track({
+            name: 'onboarding_step_completed',
+            props: {
+              // step / step_index / total_steps (2026-11-20): position props so
+              // PostHog can order the steps and show where people leave.
+              ...onboardingStepProps(step, funnelMode),
+              step_name: step,
+              next_step: nextStep,
+              mode: funnelMode,
+              // Back taps and edit-from-summary hops run through slide() too.
+              // Funnels should count 'forward' only; before this prop a Back tap
+              // counted as completing the step.
+              direction: (FLOW_STEP_ORDER[nextStep] ?? 0) < (FLOW_STEP_ORDER[step] ?? 0) ? 'back' : 'forward',
+            },
           });
         }
       } catch { /* non-fatal */ }
@@ -3011,11 +2776,16 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       onRedoComplete?.();
       return;
     }
-    // Once per install. This flow resumes at the celebration after a re-mount
-    // or an app relaunch, and this function runs on its "start" tap — so
-    // closing the app on the streak screen and reopening used to grant the XP
-    // and coins again and fire onboarding_completed a second time. The flag is
-    // persisted (tutorial store) and set BEFORE granting.
+    // Already finished (a second instance of this flow, or an existing account
+    // that signed in at the gate and whose server profile says onboarded): the
+    // root layout's redirect takes it from here. Running the finish again would
+    // re-arm the welcome chest and complete onboarding twice.
+    if (useAuthStore.getState().hasCompletedOnboarding) return;
+    // Once per install. This flow resumes at the finish step after a re-mount
+    // or an app relaunch — so a relaunch at the old celebration / streak
+    // screens used to grant the XP and coins again and fire
+    // onboarding_completed a second time. The flag is persisted (tutorial
+    // store) and set BEFORE granting.
     let firstCompletion = true;
     try {
       const tutorial = useTutorialStore.getState();
@@ -3046,25 +2816,24 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // new streak into the React Query cache — so the header reflects day-1
     // even before the user becomes a guest / signs in. The server call still
     // fires in the background and reconciles when auth is available.
+    // (The day-1 full-screen streak celebration that used to follow is gone:
+    // the streak still starts here, and the global streak popup stays quiet
+    // until onboarding is complete, see useStreakCelebration.)
     try { markDailyActivityCompleted(); } catch (e) { if (__DEV__) console.warn('[onboarding] streak start failed:', e); }
-    // Show the day-1 streak celebration as a dedicated step BEFORE finalizing
-    // onboarding. We intentionally defer enterGuestMode + completeOnboarding to
-    // enterFirstModule() (fired on streak dismiss): completeOnboarding flips
-    // hasCompletedOnboarding=true, which would trigger _layout's auth redirect
-    // to mod-0-1 and skip right past this celebration. Staying unauthenticated
-    // on (auth)/onboarding keeps the redirect dormant while the streak shows.
-    setStep("streak");
+    // Straight on to the welcome chest. The old "profile ready" celebration and
+    // the day-1 streak screen between here and the chest were removed in the
+    // 2026-11-20 shortening pass.
+    enterFirstModule();
   }
 
-  // Finalize onboarding and enter the first module. Called when the day-1 streak
-  // celebration is dismissed (tap or auto-dismiss), so the sequence is:
-  // profile-ready celebration → streak celebration → mod-0-1.
+  // Finalize onboarding and hand over to the welcome chest. Runs from the
+  // finish step (FinishOnboardingStep), so the sequence is:
+  // signup gate → welcome chest → mod-0-1.
   function enterFirstModule() {
-    // Put a tangible reward ahead of the app tour. The profile is still complete
-    // before this point (unlike the retired module-first experiment), but the
-    // first screen after onboarding is now the welcome chest rather than a
-    // seven-step product tour. The chest's continue action starts the tour and
-    // the tour then hands directly into mod-0-1.
+    // Put a tangible reward ahead of the first lesson. The welcome chest is the
+    // one screen between the questions and mod-0-1: its continue action marks
+    // the app tour as done (the same end state as tapping "skip" on it) and
+    // starts mod-0-1 directly.
     //
     // This must happen before completeOnboarding(): the root redirect guard
     // observes that flag synchronously and would otherwise route a fresh user
@@ -3097,9 +2866,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       avatarId: collected.avatarId ?? null,
       ownedAvatars: [],
     });
-    // The welcome-chest gate owns the next step. Its continue action starts
-    // the tab tour, and the tour then auto-starts mod-0-1. The tour therefore
-    // still needs a tab route rather than a lesson route here.
+    // The welcome-chest gate owns the next step, and its continue action starts
+    // mod-0-1. Land on the tab route here (where the root layout's redirect
+    // sends a pending-chest user anyway) so the learn map mounts behind the
+    // opaque chest; a relaunch with the chest still pending resumes there too.
     try { captureEvent('onboarding_enter_first_module', { target: 'mod-0-1', chapter_id: 'chapter-0' }); } catch { /* non-fatal */ }
     // First-run experiment bookkeeping (both arms): the reordered flow is over.
     // NOTE: v1's conversion does NOT fire here — the variant's journey END is
@@ -3124,8 +2894,8 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   // instead of asking the questions again.
   // Must not use completeOnboarding: that flips hasCompletedOnboarding before
   // the OAuth prompt, so useGoogleAuth / useAppleAuth route to /(tabs) and the
-  // celebration → streak → mod-0-1 sequence is skipped. The flag stays false
-  // until enterFirstModule.
+  // finish step (reward, streak day 1, welcome chest) is skipped. The flag
+  // stays false until enterFirstModule.
   // null for the deferred-question fields (knowledgeLevel / learningTime /
   // dailyGoalMinutes) so the mod-0-1 / 0-3 / 0-4 guards still fire — same
   // reason as enterFirstModule above.
@@ -3159,27 +2929,19 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     slide(target as FlowStep, {});
   }
 
-  if (step === "celebration") return <CelebrationScreen onDone={handleDone} />;
-  // Day-1 streak celebration, shown between the profile-ready celebration and
-  // the first module. Dismiss (tap or 5s auto) finalizes onboarding + navigates.
-  // The dark wrapper matches the celebration gradient's darkest stop so its
-  // overlay fade-in reads as dark→dark (seamless) instead of flashing white.
-  if (step === "streak") {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#072a42" }}>
-        <StreakCelebrationScreen
-          streak={Math.max(1, streakData?.currentStreak ?? 0)}
-          onDismiss={enterFirstModule}
-        />
-      </View>
-    );
-  }
+  // Finish step: no screen of its own. It completes onboarding on mount and the
+  // welcome chest (a root-level modal armed by enterFirstModule) paints over it.
+  if (step === "celebration") return <FinishOnboardingStep onFinish={handleDone} />;
   if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => {
     // Fire the funnel event manually since this transition does NOT use `slide()`.
     // Without this PostHog showed an 86% drop here — most of which was missing
     // telemetry, not real abandonment.
     try {
-      captureEvent('onboarding_step_completed', { step_name: 'profile-summary', next_step: 'building-profile', mode: isRedo ? 'redo' : 'new' });
+      const funnelMode = isRedo ? 'redo' : 'new';
+      track({
+        name: 'onboarding_step_completed',
+        props: { ...onboardingStepProps('profile-summary', funnelMode), step_name: 'profile-summary', next_step: 'building-profile', mode: funnelMode, direction: 'forward' },
+      });
     } catch { /* non-fatal */ }
     setStep("building-profile");
   }} onEditStep={editSummaryStep} />;

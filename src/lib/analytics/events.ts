@@ -53,8 +53,21 @@ export type ProGateFeature =
 
 export type AppEvent =
   // ── Onboarding ─────────────────────────────────────────────────────────
-  | { name: 'onboarding_started'; props?: Record<string, never> }
-  | { name: 'onboarding_step_completed'; props: { step_name: string; next_step?: string; mode?: 'new' | 'redo' } }
+  // `entry_step` tells the mounts apart: only 'intro' is a brand-new user.
+  | { name: 'onboarding_started'; props: { entry_step: string } }
+  // Per-step funnel (activation pass 2026-11-20). Both events carry the same
+  // position props, from src/features/onboarding/onboardingSteps.ts:
+  //   step        stable step id ('intro' | 'dream' | 'goal' | 'age' |
+  //               'signup-gate' | 'first-chest'; redo mode uses
+  //               'dream' | 'goal' | 'age' | 'profile-summary' | 'knowledge' |
+  //               'daily-goal')
+  //   step_index  position in the canonical order for the mode (a dream picked
+  //               on the welcome screen skips 'dream', so 0 then 2 is normal)
+  //   total_steps length of that canonical order
+  // `step_name` carries the same value as `step`, kept so insights already
+  // built on it keep working. Funnels should count `direction: 'forward'` only.
+  | { name: 'onboarding_step_viewed'; props: { step: string; step_index: number; total_steps: number; mode: 'new' | 'redo' } }
+  | { name: 'onboarding_step_completed'; props: { step: string; step_index: number; total_steps: number; step_name: string; next_step?: string; mode?: 'new' | 'redo'; direction?: 'forward' | 'back' } }
   | { name: 'onboarding_completed'; props: { duration_sec?: number; total_steps?: number } }
   // screen-1 dream-question easy-exit experiment (onboarding_dream_easy_exit).
   // `dream_step_shown` fires on every DreamStep mount so we can finally measure
@@ -74,11 +87,10 @@ export type AppEvent =
   // `signup_gate_completed` fires ONCE per gate pass on every exit, with the
   // exit that was actually taken; `via: 'resume'` marks exits detected on the
   // re-mount after OAuth / register / an app relaunch.
-  // Related untyped props added in the same pass (raw captureEvent call sites):
-  //   onboarding_started        + entry_step: 'intro' | 'dream' | 'celebration'
-  //                               (only 'intro' is a brand-new user)
-  //   onboarding_step_completed + direction: 'forward' | 'back'
+  // Related untyped prop added in the same pass (raw captureEvent call site):
   //   auth_cancelled            + result_type: 'cancel' | 'dismiss'
+  // (onboarding_started.entry_step and onboarding_step_completed.direction
+  // from the same pass are typed above since 2026-11-20.)
   | { name: 'signup_gate_completed'; props: { source: string; outcome: 'apple' | 'google' | 'email' | 'guest' | 'account'; via: 'in_place' | 'resume'; time_open_ms?: number } }
   // Fires on the real signed-out → guest transition (useAuthStore.enterGuestMode).
   // Every new user enters guest mode at the welcome CTA; an account is optional.

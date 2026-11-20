@@ -29,7 +29,9 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { captureEvent } from "../../lib/posthog";
+import { track } from "../../lib/analytics/events";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { onboardingStepProps } from "./onboardingSteps";
 
 const SOURCE = "post_onboarding_questions";
 
@@ -62,7 +64,10 @@ export function reportSignupGateCompleted(outcome: SignupGateOutcome, via: "in_p
   if (gateSession.completionReported) return;
   gateSession.completionReported = true;
   try {
-    captureEvent("onboarding_step_completed", { step_name: "signup-gate", next_step: "celebration", mode: "new", direction: "forward" });
+    track({
+      name: "onboarding_step_completed",
+      props: { ...onboardingStepProps("signup-gate"), step_name: "signup-gate", next_step: "celebration", mode: "new", direction: "forward" },
+    });
     captureEvent("signup_gate_completed", {
       source: SOURCE,
       outcome,
