@@ -35,6 +35,7 @@ import {
   STARTER_PACK_PRICE_LABEL,
 } from './starterPack';
 import { identifyForCheckout, CHECKOUT_COPY } from './checkoutIdentityCore';
+import { noteStoreCustomerInfo } from '../subscription/useSubscription';
 
 interface Props {
   visible: boolean;
@@ -130,8 +131,9 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
           return;
         }
         // Real money path. RC throws on user-cancel — we treat that as a no-op,
-        // not a failure, so the modal just closes silently.
-        await purchaseGemBundle('starter-pack');
+        // not a failure, so the modal just closes silently. Its answer is a
+        // fresh RevenueCat customer info: also what the store says about Pro.
+        noteStoreCustomerInfo(await purchaseGemBundle('starter-pack'));
         // Facebook attribution — only on real-money branch with RC key. The
         // dev grant path (no RC) shouldn't pollute Ads Manager ROAS data.
         logPurchase(19.90, 'ILS', {

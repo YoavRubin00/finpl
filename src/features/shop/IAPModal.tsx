@@ -17,6 +17,7 @@ import { captureEvent } from '../../lib/posthog';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useShopModalStore } from '../../stores/useShopModalStore';
 import { identifyForCheckout, CHECKOUT_COPY } from './checkoutIdentityCore';
+import { noteStoreCustomerInfo } from '../subscription/useSubscription';
 import type { GemBundle, CoinBundle } from './types';
 
 type AnyBundle = GemBundle | CoinBundle;
@@ -141,7 +142,8 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
             else Alert.alert(CHECKOUT_COPY.identityFailedTitle, CHECKOUT_COPY.identityFailedBody);
             return;
           }
-          await purchaseGemBundle(bundle.id);
+          // A fresh RevenueCat answer: also what the store says about Pro now.
+          noteStoreCustomerInfo(await purchaseGemBundle(bundle.id));
           // The server credits bought gems from the RevenueCat webhook (and,
           // since 2026-11-20, drops a purchase-sized gem delta from the app —
           // sending one here used to credit every purchase twice). Show them

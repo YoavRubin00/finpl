@@ -7,8 +7,42 @@ import type { CustomerInfo } from '../../services/revenueCat';
 import { useAuthStore } from '../auth/useAuthStore';
 import { primeSnapshot, readSnapshot, writeSnapshot } from '../economy/querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
+import { createStoreProOverride } from './proOverrideCore';
 
 export const subscriptionQueryKey = ['subscription'] as const;
+
+// ─── "The store says Pro" for this session (proOverrideCore.ts) ─────────────
+// Set from a FRESH RevenueCat answer that lists the Pro entitlement (a
+// purchase, a restore, the launch sync's fresh read), for the signed-in
+// account, until the entitlement expires (24 h when it has none). Applied only
+// to what the subscription query function returns (and the purchase
+// re-reads), so a refetch never locks a paying user out while the server
+// lags; the snapshot and the server keep the server's own answer. In memory
+// only; cleared on sign-out and on the account wipe (lifecycle.ts).
+const storePro = createStoreProOverride();
+
+/** A fresh RevenueCat customer info for the signed-in account: sets the
+ *  override when it lists Pro, ends it when it does not. */
+export function noteStoreCustomerInfo(info: CustomerInfo | null | undefined): void {
+  if (!info) return;
+  const entitlement = info.entitlements.active[RC_ENTITLEMENT_PRO];
+  storePro.noteStoreAnswer(
+    useAuthStore.getState().authId,
+    entitlement ? { expirationDate: entitlement.expirationDate ?? null } : null,
+    Date.now(),
+  );
+}
+
+/** Sign-out / account wipe. */
+export function clearStoreProOverride(): void {
+  storePro.clear();
+}
+
+/** The subscription to show for a server answer: Pro while the store said so
+ *  for this account (see above), the server's answer otherwise. */
+export function withStoreProOverride(sub: SubscriptionState | null): SubscriptionState | null {
+  return storePro.apply(sub, useAuthStore.getState().authId, Date.now());
+}
 
 /**
  * Last server-confirmed subscription for this account (keyed by authId inside),
@@ -36,9 +70,11 @@ export function readSubscriptionSnapshot(): SubscriptionState | null {
   return readSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, isSubscriptionState)?.value ?? null;
 }
 
-/** Call with a server answer only. */
+/** Call with a server answer only. A value the store's override produced is
+ *  saved as the server answer behind it, never as Pro. */
 export function writeSubscriptionSnapshot(sub: SubscriptionState | null | undefined, forAuthId?: string): void {
-  writeSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, normalizeSubscription(sub), forAuthId);
+  const serverAnswer = storePro.rawOf(sub) as SubscriptionState | null | undefined;
+  writeSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, normalizeSubscription(serverAnswer), forAuthId);
 }
 
 /** Load the saved Pro state from storage (AsyncStorage on devices). The cold
@@ -47,14 +83,19 @@ export function primeSubscriptionSnapshot(): Promise<void> {
   return primeSnapshot(SUBSCRIPTION_SNAPSHOT_KEY);
 }
 
-/** GET the subscription as a query function: a late answer never overwrites a
- *  newer write such as a purchase's answer (queryGuard), and only answers it
- *  keeps become the last known state. */
-export const subscriptionQueryFn = guardedQueryFn(
+/** GET the subscription, guarded: a late answer never overwrites a newer write
+ *  such as a purchase's answer (queryGuard), and only answers it keeps become
+ *  the last known state (as the server sent them). */
+const guardedSubscriptionRead = guardedQueryFn(
   subscriptionQueryKey,
   async () => (await getSubscription()).subscription,
   (sub, { authId }) => writeSubscriptionSnapshot(sub, authId),
 );
+
+/** The subscription query function (screens and the boot): the guarded read,
+ *  with the store's fresh "Pro" kept on screen while the server lags. */
+export const subscriptionQueryFn = async (): Promise<SubscriptionState | null> =>
+  withStoreProOverride(await guardedSubscriptionRead());
 
 export function useSubscription() {
   // Skip for guests — they have no RevenueCat entitlement yet; useIsPro()
@@ -90,6 +131,10 @@ export function useSyncFromRevenueCat() {
   return useMutation({
     retry: 2,
     mutationFn: async (customerInfo: CustomerInfo | null) => {
+      // The store's answer from a purchase, a restore or the paywall's login:
+      // shown for this session even when the server below cannot confirm it
+      // yet (noteStoreCustomerInfo). Without one there is nothing fresh.
+      noteStoreCustomerInfo(customerInfo);
       const isPro = customerInfo
         ? customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined
         : await checkProEntitlement();
@@ -102,9 +147,11 @@ export function useSyncFromRevenueCat() {
       if (rcIsPro && sub?.isPro !== true) {
         // Since 2026-11-20 the server makes an account Pro only once
         // RevenueCat confirms it (or its webhook lands), so right after a
-        // purchase it can still say "not Pro". Show the store's answer for now
-        // (not saved as the last known state) and re-read the server shortly.
-        qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, {
+        // purchase it can still say "not Pro". Show the store's answer (not
+        // saved as the last known state; the override keeps it through
+        // refetches) and re-read the server shortly.
+        const shown = withStoreProOverride(sub);
+        qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, shown?.isPro === true ? shown : {
           isPro: true,
           proExpiresAt: rcExpiresAt,
           proSource: sub?.proSource ?? null,
@@ -112,13 +159,14 @@ export function useSyncFromRevenueCat() {
         recheckAfterPurchase(qc, 0);
         return;
       }
-      qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, sub);
+      qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, withStoreProOverride(sub));
     },
   });
 }
 
-/** Keeps the store's "Pro" on screen until the server agrees; after the last
- *  re-read the server's answer stands, whatever it is. */
+/** Re-reads the server until it agrees with the store. The server's answer is
+ *  saved as it is; on screen the store's "Pro" stays while its override is
+ *  valid, so even the last re-read never locks a paying user out. */
 function recheckAfterPurchase(qc: ReturnType<typeof useQueryClient>, attempt: number): void {
   const last = attempt >= PURCHASE_RECHECK_MS.length - 1;
   setTimeout(() => {
@@ -126,7 +174,7 @@ function recheckAfterPurchase(qc: ReturnType<typeof useQueryClient>, attempt: nu
       try {
         const sub = (await getSubscription()).subscription;
         if (sub?.isPro === true || last) {
-          qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, sub);
+          qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, withStoreProOverride(sub));
           writeSubscriptionSnapshot(sub);
           return;
         }

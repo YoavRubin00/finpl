@@ -37,6 +37,8 @@ import {
   readSubscriptionSnapshot,
   writeSubscriptionSnapshot,
   primeSubscriptionSnapshot,
+  noteStoreCustomerInfo,
+  clearStoreProOverride,
 } from '../../features/subscription/useSubscription';
 import { resetSnapshotMemory } from '../../features/economy/querySnapshot';
 import { whenHydrated } from '../stores/whenHydrated';
@@ -343,6 +345,9 @@ async function syncRevenueCatToServer(serverSub: SubscriptionState | null, gen: 
 
   const freshInfo = await getFreshCustomerInfo();
   if (!freshInfo) return;
+  // The store's fresh answer stays on screen for this session, through
+  // refetches, while the server lags (or ends when the store says not Pro).
+  if (gen === bootGeneration) noteStoreCustomerInfo(freshInfo);
   const fresh = rcProState(freshInfo);
   if (matchesServer(fresh, serverSub)) return;
   if (gen !== bootGeneration) return;
@@ -530,7 +535,10 @@ export async function signOut(): Promise<void> {
       }
 
       queryClient.clear();
-      clearPendingGems(); // bought gems shown while the server confirms them (in memory)
+      // In-memory display state of this session: bought gems shown while the
+      // server confirms them, the store's "Pro" while the server lags.
+      clearPendingGems();
+      clearStoreProOverride();
       resetAllLocalStores();
       // Saved snapshots held in memory (keyed by authId, so never readable by
       // the next account, but nothing of this account should stay loaded).
@@ -605,6 +613,7 @@ export async function wipeDeviceForDeletedAccount(scope: 'account' | 'guest'): P
   //    describe the device rather than the account.
   queryClient.clear();
   clearPendingGems();
+  clearStoreProOverride();
   resetAllLocalStores();
   resetSnapshotMemory();
   await resetLocalOnlyStores();
