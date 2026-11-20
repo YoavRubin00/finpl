@@ -91,7 +91,7 @@ export function waitForLaunchStreak(opts: {
   const now = opts.now ?? Date.now;
   let guest = false;
   try { guest = opts.isGuest(); } catch { /* unknown: the token decides */ }
-  if (guest) return Promise.resolve({ waited: false, reason: 'guest' });
+  if (guest) return Promise.resolve<LaunchStreakWait>({ waited: false, reason: 'guest' });
 
   const startedAt = now();
   return new Promise<LaunchStreakWait>((resolve) => {
