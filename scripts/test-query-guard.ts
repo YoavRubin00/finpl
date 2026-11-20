@@ -19,9 +19,9 @@ import { createQueryGuard } from '../src/lib/queryGuardCore';
 
 let failed = 0;
 let passed = 0;
-function check(cond: boolean, label: string): void {
+function check(cond: boolean, label: string, detail?: unknown): void {
   if (cond) { passed++; console.log(`PASS: ${label}`); }
-  else { failed++; console.error(`FAIL: ${label}`); }
+  else { failed++; console.error(`FAIL: ${label}${detail !== undefined ? `  → ${JSON.stringify(detail)}` : ''}`); }
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

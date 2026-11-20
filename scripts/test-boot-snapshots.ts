@@ -46,9 +46,9 @@ import {
 
 let failed = 0;
 let passed = 0;
-function check(cond: boolean, label: string): void {
+function check(cond: boolean, label: string, detail?: unknown): void {
   if (cond) { passed++; console.log(`PASS: ${label}`); }
-  else { failed++; console.error(`FAIL: ${label}`); }
+  else { failed++; console.error(`FAIL: ${label}${detail !== undefined ? `  → ${JSON.stringify(detail)}` : ''}`); }
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -271,7 +271,7 @@ function snapshotKeysAreOneList(): void {
   const names = [...SNAPSHOT_STORAGE_KEYS].sort();
   check(names.join() === ['economy-snapshot:v1', 'streak-snapshot:v1', 'subscription-snapshot:v1'].join(),
     'B7: the sign-out list names the three snapshot keys', names);
-  check(ECONOMY_SNAPSHOT_KEY !== STREAK_SNAPSHOT_KEY && STREAK_SNAPSHOT_KEY !== SUBSCRIPTION_SNAPSHOT_KEY,
+  check(new Set<string>([ECONOMY_SNAPSHOT_KEY, STREAK_SNAPSHOT_KEY, SUBSCRIPTION_SNAPSHOT_KEY]).size === 3,
     'B7: three distinct keys');
   // Nothing in the app defines its own copy of a key name, so what sign-out
   // removes can never drift from what is written.
