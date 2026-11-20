@@ -44,8 +44,11 @@
 //                           from a pool without them.
 //   dividend_collections, coin_events, crowd_bets, crowd_question_votes,
 //   breaking_news_tracked, paper_trades, paper_portfolio, module_progress,
-//   ai_mentor_usage, user_stats, user_feedback, parental_consents, inventory
-//                           delete
+//   ai_mentor_usage, user_stats, user_feedback, parental_consents, inventory,
+//   bridge_redemptions      delete
+//   revenuecat_events       anonymise (user_id NULL): the purchase event ids
+//                           stay so a webhook redelivered later still credits
+//                           nothing; the row no longer points at anyone
 //   support_messages        delete (their messages; also rows sent with their
 //                           email and no user id)
 //   bridge_clicks           anonymise (user_id and user_email NULL; the
@@ -82,6 +85,7 @@ const USER_ID_TABLES = [
   'user_feedback',
   'parental_consents',
   'inventory',
+  'bridge_redemptions',
 ] as const;
 
 export const ACCOUNT_DELETE_TABLES = [
@@ -95,6 +99,7 @@ export const ACCOUNT_DELETE_TABLES = [
   'friendships',
   'referrals',
   ...USER_ID_TABLES,
+  'revenuecat_events',
   'support_messages',
   'bridge_clicks',
   'email_login_codes',
@@ -212,6 +217,12 @@ export function buildAccountDeletePlan(ctx: AccountDeleteContext, columns: Colum
 
   for (const table of USER_ID_TABLES) {
     if (has(table, 'user_id')) add(table, sql`DELETE FROM ${sql.identifier(table)} WHERE user_id = ${id}`);
+  }
+
+  // Purchase events the RevenueCat webhook already credited: keep the event id
+  // (it is what makes a redelivered webhook a no-op), drop the link to the user.
+  if (has('revenuecat_events', 'user_id')) {
+    add('revenuecat_events_anonymised', sql`UPDATE revenuecat_events SET user_id = NULL WHERE user_id = ${id}`);
   }
 
   // Rows carrying only an email: matched by address ONLY when they belong to

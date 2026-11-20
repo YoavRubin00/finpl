@@ -251,6 +251,12 @@ async function main(): Promise<void> {
     const referrer = rendered.find((q) => q.name.startsWith('referrals_as_referrer'));
     check(referrer?.name === 'referrals_as_referrer_anonymised' && /UPDATE referrals SET referrer_user_id = NULL, invite_code = 'DELETED' WHERE referrer_user_id = \$1::uuid/.test(referrer.sql),
       'plan (after 0019): invitees\' rows kept with the referrer anonymised (no second redemption)', referrer);
+    const redemptions = rendered.find((q) => q.name === 'bridge_redemptions');
+    const rcEvents = rendered.find((q) => q.name === 'revenuecat_events_anonymised');
+    check(!!redemptions && /DELETE FROM "?bridge_redemptions"? WHERE user_id = \$1::uuid/.test(redemptions.sql)
+      && !!rcEvents && /UPDATE revenuecat_events SET user_id = NULL WHERE user_id = \$1::uuid/.test(rcEvents.sql),
+      'plan (0018 tables): bridge redemptions deleted; RevenueCat purchase events kept without the user (a redelivered webhook stays a no-op)',
+      [redemptions?.sql, rcEvents?.sql]);
     const bridge = rendered.find((q) => q.name === 'bridge_clicks_anonymised');
     check(!!bridge && /UPDATE "?bridge_clicks"? SET user_id = NULL, user_email = NULL WHERE/.test(bridge.sql),
       'plan: bridge clicks anonymised (user id + email cleared)', bridge?.sql);
