@@ -41,15 +41,18 @@
 --                      app_user_id on unlinked rows holding their address or
 --                      their profile id.
 --
--- Additive + idempotent: safe to run twice, no rewrite of user_profiles
--- (ADD COLUMN with a constant default is metadata-only on Postgres 11+).
--- Run manually against prod DATABASE_URL BEFORE the server deploy (NOT
--- drizzle-kit push — known schema drift):
---   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f src/db/0018_economy_guard.sql
--- Until it runs the new server still works: /api/sync/economy falls back to
--- per-request limits only (no daily caps), /api/bridge/redeem answers 503, and
--- the webhook credits without the duplicate-event check (a purchase it cannot
--- credit is only emailed to the owner, not recorded).
+-- Additive + idempotent: safe to run twice, and every statement is safe on its
+-- own (scripts/apply-sql.mjs sends them one by one, each with a 5 s lock
+-- timeout). No rewrite of user_profiles (ADD COLUMN with a constant default is
+-- metadata-only on Postgres 11+); each ALTER holds its lock for a moment only.
+-- Run manually against the production database BEFORE the server deploy
+-- (NOT drizzle-kit push: known schema drift):
+--   node scripts/apply-sql.mjs src/db/0018_economy_guard.sql
+-- Until it runs the new server still works: /api/sync/economy uses its
+-- stateless fallback (the same rules without the 24 h counters),
+-- /api/bridge/redeem answers 503, and the webhook credits without the
+-- duplicate-event check (a purchase it cannot credit is only emailed to the
+-- owner, not recorded).
 
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "economy_guard" jsonb;
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "economy_guard_version" integer DEFAULT 0 NOT NULL;
