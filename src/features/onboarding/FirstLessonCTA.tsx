@@ -93,7 +93,7 @@ export function FirstLessonCTA() {
           <View style={styles.textWrap}>
             <Text style={styles.title} allowFontScaling={false}>מוכנים לשיעור הראשון?</Text>
             <Text style={styles.sub}>
-              3 דקות, ומתחילים לצבור מטבעות ו-XP.{"\n"}קפטן שארק כבר מחכה במפה.
+              3 דקות, ומתחילים לצבור מטבעות.
             </Text>
           </View>
           <View style={styles.mascotWrap}>
