@@ -14,10 +14,13 @@ import { handleAccountDelete, type AccountDeleteStore } from '../api/_shared/acc
 import {
   ACCOUNT_DELETE_TABLES,
   buildAccountDeletePlan,
+  createAccountDeleteStore,
   profileEmails,
   type ColumnMap,
 } from '../api/_shared/accountDeleteStore';
-import { authenticateBearer } from '../api/_shared/withAuth';
+import type { Db } from '../api/_shared/db';
+import type { SQL } from 'drizzle-orm';
+import { authenticateBearer, lookupFoundRow } from '../api/_shared/withAuth';
 import { handleReferralMe, handleReferralCollect, handleReferralRedeem, type ReferralStore } from '../api/_shared/referral';
 import { ACCOUNT_DELETE_CONFIRM } from '../src/lib/api/accountDeleteContract';
 import type { CallerInput } from '../api/_shared/callerAuth';
@@ -155,6 +158,21 @@ async function main(): Promise<void> {
     const after = await authenticateBearer(BOB, exists);
     check(!after.ok && after.status === 401 && after.body.error === 'Invalid or expired token',
       'withAuth: deleted account\'s token → 401 Invalid or expired token (sync, refresh, link all sit behind it)', after);
+    check(!after.ok && after.body.code === 'ACCOUNT_NOT_FOUND',
+      'withAuth: that 401 carries code ACCOUNT_NOT_FOUND (a rollout can tell it from a normal expiry)', after);
+    const expiredLike = await authenticateBearer('Bearer nope', exists);
+    check(!expiredLike.ok && expiredLike.body.code === undefined, 'withAuth: an invalid token carries no such code');
+
+    // What counts as "the lookup found a row": a shape we don't know is an
+    // error (500), never "account gone" (401 = sign-out + device wipe).
+    check(lookupFoundRow({ rows: [{ hit: 1 }] }) === true && lookupFoundRow({ rows: [] }) === false
+      && lookupFoundRow([{ hit: 1 }]) === true && lookupFoundRow([]) === false,
+      'withAuth: lookup result read from { rows } or a bare array');
+    let unknownShapes = 0;
+    for (const odd of [undefined, null, {}, { rows: null }, { rows: 'x' }, 'ok', 1]) {
+      try { lookupFoundRow(odd); } catch { unknownShapes++; }
+    }
+    check(unknownShapes === 7, 'withAuth: an unknown result shape throws (→ 500), it is never read as "no row"', unknownShapes);
     const alive = await authenticateBearer(ALICE, exists);
     check(alive.ok && alive.decoded.sub === ALICE_ID, 'withAuth: a live account\'s token still passes');
     const missing = await authenticateBearer('', exists);
@@ -251,6 +269,66 @@ async function main(): Promise<void> {
     const small = buildAccountDeletePlan({ userId: id, emails: [] }, sparse).map((s) => s.name);
     check(JSON.stringify(small) === JSON.stringify(['coin_events', 'support_messages', 'user_profiles']),
       'plan: tables / columns missing from the database are skipped (inventory, bridge_clicks, …)', small);
+  }
+
+  // ═══ The store around the plan (a fake database: the SQL is rendered, nothing runs) ═══
+  {
+    const dialect = new PgDialect();
+    type CatalogueRow = { table_name: string; column_name: string; is_nullable: string };
+    const fakeDb = (catalogue: CatalogueRow[], profile: { email: string | null; auth_id: string | null } | null) => {
+      const batches: string[][] = [];
+      const reads: string[] = [];
+      const db = {
+        execute(q: SQL) {
+          const text = dialect.sqlToQuery(q).sql.replace(/\s+/g, ' ').trim();
+          let rows: unknown[] = [{ n: 1 }];
+          if (/^SELECT email, auth_id FROM user_profiles WHERE id = \$1::uuid LIMIT 1$/.test(text)) {
+            reads.push('profile');
+            rows = profile ? [profile] : [];
+          } else if (/information_schema\.columns/.test(text)) {
+            reads.push('catalogue');
+            rows = catalogue;
+          }
+          return Object.assign(Promise.resolve({ rows }), { text });
+        },
+        async batch(queries: Array<Promise<unknown> & { text: string }>) {
+          batches.push(queries.map((q) => q.text));
+          return Promise.all(queries);
+        },
+      };
+      return { store: createAccountDeleteStore(db as unknown as Db), batches, reads };
+    };
+    const cat = (table: string, column: string, nullable = false): CatalogueRow =>
+      ({ table_name: table, column_name: column, is_nullable: nullable ? 'YES' : 'NO' });
+    const aliceRow = { email: 'alice@example.com', auth_id: 'alice@example.com' };
+
+    const ok = fakeDb([
+      cat('user_profiles', 'id'), cat('coin_events', 'user_id'),
+      cat('support_messages', 'user_id', true), cat('support_messages', 'user_email', true),
+    ], aliceRow);
+    const summary = await ok.store.deleteAccount(ALICE_ID);
+    check(ok.batches.length === 1 && ok.batches[0].length === 3
+      && /DELETE FROM user_profiles WHERE id = \$1::uuid/.test(ok.batches[0][2])
+      && JSON.stringify(summary?.rows) === JSON.stringify({ coin_events: 1, support_messages: 1, user_profiles: 1 }),
+      'store: reads the profile and the catalogue, then sends the whole plan as ONE batch (one transaction)', { batches: ok.batches, summary });
+
+    for (const [label, catalogue] of [
+      ['an empty catalogue answer', [] as CatalogueRow[]],
+      ['a catalogue answer without user_profiles', [cat('coin_events', 'user_id')]],
+    ] as const) {
+      const bad = fakeDb([...catalogue], aliceRow);
+      let message = '';
+      try { await bad.store.deleteAccount(ALICE_ID); } catch (err) { message = err instanceof Error ? err.message : String(err); }
+      check(/catalogue/.test(message) && bad.batches.length === 0,
+        `store: ${label} → error (500), nothing deleted (never a partial plan that leaves email rows behind)`, { message, batches: bad.batches.length });
+    }
+
+    const gone = fakeDb([cat('user_profiles', 'id')], null);
+    check((await gone.store.deleteAccount(ALICE_ID)) === null && gone.batches.length === 0 && gone.reads.join() === 'profile',
+      'store: no such account → null (already deleted), no catalogue read, no batch');
+    const notUuid = fakeDb([cat('user_profiles', 'id')], aliceRow);
+    check((await notUuid.store.deleteAccount("x' OR 1=1 --")) === null && notUuid.reads.length === 0 && notUuid.batches.length === 0,
+      'store: an id that is not a uuid never reaches the database');
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);

@@ -32,7 +32,7 @@ import { syncSubscription, type SubscriptionState } from '../api/subscription';
 import { ApiError } from '../api/client';
 import { markSeeded, serverAnswerSince } from '../queryGuard';
 import { useAuthStore } from '../../features/auth/useAuthStore';
-import { captureEvent, identifyUser, resetUser } from '../posthog';
+import { captureEvent, forgetPersonDetails, identifyUser, resetUser } from '../posthog';
 import { track } from '../analytics/events';
 
 type ProfileLike = { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean };
@@ -556,8 +556,10 @@ export async function wipeDeviceForDeletedAccount(scope: 'account' | 'guest'): P
   useAuthStore.getState().clear();
   await clearAllPersistedState().catch(() => { /* non-fatal */ });
 
-  // 5. Detach the device from the deleted person in PostHog, then count the
-  //    deletion on the new anonymous id (no person properties).
+  // 5. Blank the email and name on the deleted person in PostHog, detach the
+  //    device from that person, then count the deletion on the new anonymous
+  //    id (no person properties).
+  if (scope === 'account') forgetPersonDetails();
   resetUser();
   captureEvent('account_deleted', { scope });
 }

@@ -1,36 +1,36 @@
 -- 0019_referrals_keep_referee_row.sql — account deletion (2026-11-20). NOT YET APPLIED.
 --
 -- When a REFERRER deletes their account, the referral rows of the friends they
--- invited used to disappear with it (referrals_referrer_fk ON DELETE CASCADE).
--- That freed those friends' one-time redemption (the PK on referee_user_id),
--- so each of them could redeem a second invite and collect the 500-coin
--- signup bonus again. After this migration the row stays, anonymised:
--- referrer_user_id becomes NULL (POST /api/account/delete also sets
--- invite_code = 'DELETED'), nothing about the deleted user remains, and the
--- friend still counts as "already redeemed".
+-- invited used to disappear with it. That freed those friends' one-time
+-- redemption (the primary key on referee_user_id), so each of them could redeem
+-- a second invite and collect the 500-coin signup bonus again. With this column
+-- nullable, POST /api/account/delete keeps those rows, anonymised
+-- (referrer_user_id NULL, invite_code 'DELETED'): nothing about the deleted
+-- user remains, and the friend still counts as "already redeemed".
 --
 -- Readers are unaffected: /api/referral/me and /collect select
 -- `WHERE referrer_user_id = <caller>`, which never matches NULL. The CHECK
--- referrer_user_id <> referee_user_id passes for NULL.
+-- referrer_user_id <> referee_user_id passes for NULL. The server that runs
+-- before this release never writes NULL here, so the migration is safe to
+-- apply ahead of the deploy.
 --
--- The code is safe before and after: api/_shared/accountDeleteStore.ts reads
--- information_schema and, while the column is still NOT NULL, deletes those
--- rows (what the cascade did) instead of anonymising them.
+-- ONE statement, on purpose:
+--   * scripts/apply-sql.mjs sends each statement on its own, so a file cannot
+--     rely on BEGIN / COMMIT to make several statements atomic.
+--   * It locks only `referrals` (8 rows, read by the invite screen), for a
+--     moment. An earlier draft also changed referrals_referrer_fk from
+--     ON DELETE CASCADE to SET NULL. Dropping a foreign key takes an exclusive
+--     lock on the table it points at, user_profiles, which every signed-in
+--     request reads, and the app does not need it: /api/account/delete sets
+--     referrer_user_id to NULL itself before it deletes the profile row, so the
+--     CASCADE finds nothing to remove. (A profile row deleted BY HAND in the SQL
+--     editor still takes its invitees' referral rows with it, as it always did.)
 --
--- Additive, idempotent, one short transaction (ALTER takes a brief lock on
--- referrals, a small table). Run manually against the production
--- DATABASE_URL, any time (before or after the server deploy):
---   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f src/db/0019_referrals_keep_referee_row.sql
--- (NOT drizzle-kit push — known schema drift.) Or paste it into the Neon SQL
--- editor.
-
-BEGIN;
+-- WHEN: apply BEFORE deploying the server that has /api/account/delete. Until
+-- it is applied that endpoint deletes the invitees' rows (what the cascade
+-- did), which lets an invitee redeem one more invite.
+-- Idempotent: running it twice changes nothing.
+--   node scripts/apply-sql.mjs src/db/0019_referrals_keep_referee_row.sql
+-- (NOT drizzle-kit push: known schema drift.)
 
 ALTER TABLE "referrals" ALTER COLUMN "referrer_user_id" DROP NOT NULL;
-
-ALTER TABLE "referrals" DROP CONSTRAINT IF EXISTS "referrals_referrer_fk";
-ALTER TABLE "referrals"
-  ADD CONSTRAINT "referrals_referrer_fk"
-  FOREIGN KEY ("referrer_user_id") REFERENCES "user_profiles"("id") ON DELETE SET NULL;
-
-COMMIT;

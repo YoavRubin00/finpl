@@ -26,14 +26,22 @@
 //   trade_room_messages     delete (their messages + display name)
 //   user_blocks             delete (both directions)
 //   friendships             delete (both directions)
-//   referrals (as referee)  delete their "invited by X" row. The referrer keeps
-//                           what they earned: their own coin_events and
-//                           dividend_collections rows are untouched.
+//   referrals (as referee)  delete their "invited by X" row. The referrer's own
+//                           coin_events and dividend_collections rows are
+//                           untouched. Known limit: if the referrer's app had
+//                           not yet collected the 500-coin bonus for this
+//                           invite (referrer_local_credited = false; the app
+//                           credits it on its next /api/referral/me), that
+//                           pending bonus goes with the row.
 //   referrals (as referrer) the rows of the friends they invited: anonymised
 //                           (referrer_user_id NULL, invite_code 'DELETED') once
 //                           0019 makes the column nullable, so those friends
 //                           keep "already redeemed" and can't redeem a second
-//                           invite; deleted before 0019 (what the cascade did).
+//                           invite; deleted before 0019 (what the cascade did),
+//                           which is why 0019 is applied BEFORE the deploy.
+//   crowd_bets              includes PENDING stakes: they leave the pool, so
+//                           the evening settlement pays the remaining players
+//                           from a pool without them.
 //   dividend_collections, coin_events, crowd_bets, crowd_question_votes,
 //   breaking_news_tracked, paper_trades, paper_portfolio, module_progress,
 //   ai_mentor_usage, user_stats, user_feedback, parental_consents, inventory
@@ -277,7 +285,17 @@ export function createAccountDeleteStore(db: Db): AccountDeleteStore {
       if (!profile) return null;
 
       const emails = profileEmails({ email: profile.email, authId: profile.auth_id });
-      const plan = buildAccountDeletePlan({ userId, emails }, await loadColumns(db));
+      const columns = await loadColumns(db);
+      // The plan skips what the catalogue doesn't list. If the catalogue answer
+      // is empty or partial (a role that can't see it, an unexpected schema),
+      // the plan would shrink to "delete the profile row" and leave the email
+      // rows that only ON DELETE SET NULL touches. We just read the profile from
+      // user_profiles, so the catalogue must list it: otherwise stop (500,
+      // nothing deleted) rather than report a deletion that left data behind.
+      if (!columns.get('user_profiles')?.has('id')) {
+        throw new Error('account delete: the catalogue did not list user_profiles, refusing to run a partial plan');
+      }
+      const plan = buildAccountDeletePlan({ userId, emails }, columns);
       const queries = plan.map((step) => db.execute(step.query));
       const results = await db.batch(queries as [(typeof queries)[number], ...(typeof queries)[number][]]);
 

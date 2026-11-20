@@ -221,6 +221,22 @@ export function resetUser(): void {
 }
 
 /**
+ * Account deletion: blank the properties that identify the person (the email
+ * and name set by identifyUser) on the still-identified id, BEFORE resetUser()
+ * detaches this device. The server holds no PostHog admin key, so it cannot
+ * delete the person record itself; this at least removes the address and the
+ * name from it. The event stays in the queue with the old id and is sent on
+ * the next flush. Best-effort, never throws.
+ */
+export function forgetPersonDetails(): void {
+  try {
+    setPersonProperties({ email: null, displayName: null });
+  } catch {
+    /* analytics must never block a deletion */
+  }
+}
+
+/**
  * Capture install/launch attribution from the initial deep-link URL (utm_*).
  * Board 2026-06-18: 100% of installs were "Unknown". This catches users who
  * arrive via a TRACKED link (Instagram bio, WhatsApp CTA) once those links

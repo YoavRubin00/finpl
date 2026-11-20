@@ -78,7 +78,7 @@ export const DELETE_ACCOUNT_DIALOG = {
   finalConfirm: "כן, למחוק",
   deleting: "מוחקים את החשבון",
   doneTitle: "החשבון נמחק",
-  doneMessage: "החשבון וכל הנתונים שלו נמחקו.",
+  doneMessage: "החשבון וכל מה שנשמר בו נמחקו.",
   guestDoneTitle: "הנתונים נמחקו",
   guestDoneMessage: "כל מה שנשמר במכשיר נמחק.",
   failedTitle: "המחיקה לא הצליחה",

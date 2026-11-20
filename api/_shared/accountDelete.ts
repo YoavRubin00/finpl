@@ -22,10 +22,15 @@
 // token's user id and answers 401 when it is gone, and the id is never reused.
 // No refreshed token is ever handed out by this endpoint.
 //
-// Not done here (see the 2026-11-20 report): an active App Store / Google Play
-// subscription is NOT cancelled (only the user can, in the store; the app says
-// so before deleting), RevenueCat's customer record and PostHog's person
-// record are not deleted server-side (no admin keys on the server).
+// Not done here (see the 2026-11-20 report):
+//   * an active App Store / Google Play subscription is NOT cancelled (only the
+//     user can, in the store; the app says so before deleting);
+//   * RevenueCat's customer record and PostHog's person record are not deleted
+//     server-side (no admin keys on the server). The app clears the email and
+//     name on its PostHog person before it resets the device;
+//   * a Sign in with Apple authorization is not revoked with Apple (it needs
+//     the app's Apple private key on the server and a fresh authorization code
+//     from the device). The user can remove it under Apple ID settings.
 
 import { ACCOUNT_DELETE_CONFIRM } from '../../src/lib/api/accountDeleteContract';
 import {
