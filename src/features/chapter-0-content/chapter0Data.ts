@@ -66,16 +66,19 @@ export const chapter0Data: Chapter = {
       quizzes: [
         {
           id: 'q-0-2-1',
-          question: 'מה באמת קורה כשאתם בוחרים "לפרוס לתשלומים בקליק" בקנייה?',
+          // 2026-11-20: the old question asked about "תשלומים בקליק", which moved to mod-0-1b in
+          // the June split, so this lesson never taught it. This one checks exactly what the two
+          // cards teach (עו"ש: nothing on the plus, a lot on the minus).
+          question: 'יש לכם כסף בפלוס בעו"ש. מה הבנק משלם לכם עליו?',
           options: [
-            'הקנייה מתחלקת בחינם לכמה חודשים',
-            'לוקחים הלוואה קצרה מהבנק או מחברת האשראי, בדרך כלל בריבית',
-            'הסכום יורד מיידית מהחשבון בלי ריבית',
-            'החנות נותנת לכם הנחה על המחיר המקורי',
+            'ריבית גבוהה, כמו בתוכנית חיסכון',
+            'כלום. על פלוס בעו"ש לא מקבלים ריבית',
+            'אותה ריבית שמשלמים על מינוס',
+            'בונוס קבוע בכל חודש',
           ],
           correctAnswer: 1,
-          successFeedback: 'בדיוק! "פריסה לתשלומים בקליק" היא בעצם הלוואה, ולרוב עם ריבית שהבנק או חברת האשראי מרוויחים ממנה.',
-          failFeedback: 'לא נכון. פריסה לתשלומים היא הלוואה לכל דבר, ובדרך כלל נגבית עליה ריבית לא זניחה.',
+          successFeedback: 'בדיוק! על הפלוס בעו"ש לא מקבלים ריבית, אבל על המינוס משלמים המון.',
+          failFeedback: 'לא נכון. על פלוס בעו"ש לא מקבלים ריבית. דווקא על המינוס משלמים, והרבה.',
           type: 'multiple-choice',
           conceptTag: 'basic_concepts',
         },
