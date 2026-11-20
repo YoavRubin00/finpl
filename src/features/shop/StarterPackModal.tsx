@@ -28,11 +28,13 @@ import { successHaptic, tapHaptic } from '../../utils/haptics';
 import { formatNumber } from '../../utils/format';
 import { logPurchase } from '../../utils/fbEvents';
 import { track } from '../../lib/analytics/events';
-import { purchaseGemBundle } from '../../services/revenueCat';
+import { captureEvent } from '../../lib/posthog';
+import { loginRevenueCat, purchaseGemBundle } from '../../services/revenueCat';
 import {
   getTodaysStarterPack,
   STARTER_PACK_PRICE_LABEL,
 } from './starterPack';
+import { identifyForCheckout, CHECKOUT_COPY } from './checkoutIdentityCore';
 
 interface Props {
   visible: boolean;
@@ -85,6 +87,23 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
     setAvatar(pack.autoEquipAvatarId);
   }, [pack, addCoins, addGems, addOwnedAvatar, setAvatar]);
 
+  // A guest has no account the pack could be credited to: offer the sign-up
+  // first (nothing is charged), then back to the shop.
+  const promptAccount = useCallback(() => {
+    captureEvent('register_cta_shown', { source: 'starter_pack' });
+    Alert.alert(CHECKOUT_COPY.needsAccountTitle, CHECKOUT_COPY.needsAccountBody, [
+      { text: CHECKOUT_COPY.needsAccountLater, style: 'cancel' },
+      {
+        text: CHECKOUT_COPY.needsAccountSignUp,
+        onPress: () => {
+          captureEvent('register_cta_accepted', { source: 'starter_pack' });
+          onDismiss();
+          router.push(`/(auth)/register?returnTo=${encodeURIComponent('/shop')}` as never);
+        },
+      },
+    ]);
+  }, [onDismiss, router]);
+
   const handleConfirm = useCallback(async () => {
     if (purchasing) return;
     setPurchasing(true);
@@ -99,6 +118,17 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
     });
     try {
       if (HAS_RC_KEY) {
+        // The Pro checkout's identity step (PricingScreen): the webhook credits
+        // the pack's gems to the account RevenueCat knows the buyer as, so a
+        // guest, or a session whose RevenueCat login failed at launch, must not
+        // pay anonymously. Nothing is charged when this stops.
+        const identity = await identifyForCheckout(useAuthStore.getState(), loginRevenueCat);
+        if (identity.kind !== 'ready') {
+          track({ name: 'purchase_failed', props: { bundle_id: pack.id, bundle_type: 'starter_pack', reason: identity.kind } });
+          if (identity.kind === 'needs_account') promptAccount();
+          else Alert.alert(CHECKOUT_COPY.identityFailedTitle, CHECKOUT_COPY.identityFailedBody);
+          return;
+        }
         // Real money path. RC throws on user-cancel — we treat that as a no-op,
         // not a failure, so the modal just closes silently.
         await purchaseGemBundle('starter-pack');
@@ -145,7 +175,7 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
     } finally {
       setPurchasing(false);
     }
-  }, [purchasing, grantPack, pack, onDismiss, onPurchaseSuccess]);
+  }, [purchasing, grantPack, pack, onDismiss, onPurchaseSuccess, promptAccount]);
 
   const handleCancel = useCallback(() => {
     tapHaptic();

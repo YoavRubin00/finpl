@@ -5,7 +5,12 @@
 // no React Native and no network:
 //  - E4 (src/lib/api/economyCore.ts): a POST /api/sync/economy answered
 //    503 ECONOMY_BUSY (nothing written) is sent once more; nothing else is.
+//  - E2c (src/features/shop/checkoutIdentityCore.ts): the gem and starter-pack
+//    checkouts charge only a signed-in account whose RevenueCat login
+//    succeeded; a guest is sent to sign up, a failed login stops the purchase.
 import { ECONOMY_BUSY_CODE, isEconomyBusy, withEconomyBusyRetry } from '../src/lib/api/economyCore';
+import { CHECKOUT_COPY, identifyForCheckout, type CheckoutAccount } from '../src/features/shop/checkoutIdentityCore';
+import { PENDING_GEMS_COPY } from '../src/features/economy/pendingGemsCore';
 
 let failed = 0;
 let passed = 0;
@@ -97,8 +102,60 @@ async function economyBusyRetry(): Promise<void> {
   }
 }
 
+async function checkoutIdentity(): Promise<void> {
+  const signedIn: CheckoutAccount = { isAuthenticated: true, isGuest: false, userId: 'uuid-1' };
+  const loginSpy = (result: () => Promise<unknown>) => {
+    const calls: string[] = [];
+    return { login: (id: string) => { calls.push(id); return result(); }, calls };
+  };
+
+  // ═══ No account: sign up first, RevenueCat never asked, nothing charged ═══
+  for (const [label, account] of [
+    ['a guest', { isAuthenticated: true, isGuest: true, userId: null }],
+    ['a guest that kept an old user id', { isAuthenticated: true, isGuest: true, userId: 'uuid-old' }],
+    ['signed out', { isAuthenticated: false, isGuest: false, userId: null }],
+    ['signed out with a stale user id', { isAuthenticated: false, isGuest: false, userId: 'uuid-old' }],
+    ['signed in without a user id', { isAuthenticated: true, isGuest: false, userId: null }],
+  ] as const) {
+    const spy = loginSpy(async () => ({ entitlements: { active: {} } }));
+    const r = await identifyForCheckout(account, spy.login);
+    check(r.kind === 'needs_account' && spy.calls.length === 0, `E2c: ${label} → needs_account, no RevenueCat login`, { r, calls: spy.calls });
+  }
+
+  // ═══ Signed in: the RevenueCat login must succeed ═══
+  {
+    const spy = loginSpy(async () => ({ entitlements: { active: {} } }));
+    const r = await identifyForCheckout(signedIn, spy.login);
+    check(r.kind === 'ready' && r.userId === 'uuid-1' && spy.calls.join() === 'uuid-1',
+      'E2c: signed in and the login answered → ready, RevenueCat identified with the account\'s user id', { r, calls: spy.calls });
+  }
+  {
+    const spy = loginSpy(async () => null);
+    const r = await identifyForCheckout(signedIn, spy.login);
+    check(r.kind === 'identity_failed', 'E2c: the login answered null (RevenueCat unavailable) → identity_failed, no purchase', r);
+  }
+  {
+    const spy = loginSpy(async () => undefined);
+    const r = await identifyForCheckout(signedIn, spy.login);
+    check(r.kind === 'identity_failed', 'E2c: the login answered nothing → identity_failed', r);
+  }
+  {
+    const spy = loginSpy(async () => { throw new Error('There is no singleton instance'); });
+    const r = await identifyForCheckout(signedIn, spy.login);
+    check(r.kind === 'identity_failed', 'E2c: the login threw (Purchases.logIn failed) → identity_failed, never thrown on', r);
+  }
+
+  // ═══ The copy: plain Hebrew, no English, no em-dashes ═══
+  const texts = [...Object.values(CHECKOUT_COPY), ...Object.values(PENDING_GEMS_COPY)];
+  check(texts.every((t) => !/[A-Za-z]/.test(t)), 'E2c copy: no English words', texts.filter((t) => /[A-Za-z]/.test(t)));
+  check(texts.every((t) => !/[—–]/.test(t)), 'E2c copy: no em-dashes', texts.filter((t) => /[—–]/.test(t)));
+  check(texts.every((t) => /[֐-׿]/.test(t) && t.length <= 70), 'E2c copy: Hebrew and short (70 characters at most)', texts.map((t) => t.length));
+  check(/לא חויבתם/.test(CHECKOUT_COPY.identityFailedBody), 'E2c copy: a stopped purchase says nothing was charged');
+}
+
 async function main(): Promise<void> {
   await economyBusyRetry();
+  await checkoutIdentity();
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 }

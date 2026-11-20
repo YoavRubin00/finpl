@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
 import { formatNumber } from '../../utils/format';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
@@ -9,9 +10,13 @@ import { LottieIcon } from '../../components/ui/LottieIcon';
 import { useEconomy, useAwardGems, useAwardCoins, useSpendGems, spendableGems } from '../economy/useEconomy';
 import { expectPurchasedEconomyCredit } from '../economy/useEconomyUIStore';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
-import { purchaseGemBundle } from '../../services/revenueCat';
+import { loginRevenueCat, purchaseGemBundle } from '../../services/revenueCat';
 import { logPurchase } from '../../utils/fbEvents';
 import { track } from '../../lib/analytics/events';
+import { captureEvent } from '../../lib/posthog';
+import { useAuthStore } from '../auth/useAuthStore';
+import { useShopModalStore } from '../../stores/useShopModalStore';
+import { identifyForCheckout, CHECKOUT_COPY } from './checkoutIdentityCore';
 import type { GemBundle, CoinBundle } from './types';
 
 type AnyBundle = GemBundle | CoinBundle;
@@ -37,6 +42,7 @@ interface IAPModalProps {
 }
 
 export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPModalProps) {
+  const router = useRouter();
   const addGems = useAwardGems();
   const addCoins = useAwardCoins();
   const { data: economyDataIAP } = useEconomy();
@@ -73,6 +79,24 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     releasePurchaseLock();
   }, [visible, bundle, releasePurchaseLock]);
 
+  // A guest has no account the bought gems could be credited to: offer the
+  // sign-up first (nothing is charged), then back to the shop.
+  const promptAccount = useCallback(() => {
+    captureEvent('register_cta_shown', { source: 'gem_purchase' });
+    Alert.alert(CHECKOUT_COPY.needsAccountTitle, CHECKOUT_COPY.needsAccountBody, [
+      { text: CHECKOUT_COPY.needsAccountLater, style: 'cancel' },
+      {
+        text: CHECKOUT_COPY.needsAccountSignUp,
+        onPress: () => {
+          captureEvent('register_cta_accepted', { source: 'gem_purchase' });
+          onDismiss();
+          useShopModalStore.getState().close();
+          router.push(`/(auth)/register?returnTo=${encodeURIComponent('/shop')}` as never);
+        },
+      },
+    ]);
+  }, [onDismiss, router]);
+
   const handlePurchase = useCallback(async () => {
     if (!bundle) return;
     if (purchasingRef.current) return;
@@ -105,6 +129,18 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
       // Gem bundles, real-money purchase via RevenueCat
       try {
         if (HAS_RC_KEY) {
+          // The Pro checkout's identity step (PricingScreen): the webhook
+          // credits the gems to the account RevenueCat knows the buyer as, so a
+          // guest, or a session whose RevenueCat login failed at launch, must
+          // not pay anonymously. Nothing is charged when this stops.
+          const identity = await identifyForCheckout(useAuthStore.getState(), loginRevenueCat);
+          if (identity.kind !== 'ready') {
+            track({ name: 'purchase_failed', props: { bundle_id: bundle.id, bundle_type: 'gem_bundle', reason: identity.kind } });
+            releasePurchaseLock();
+            if (identity.kind === 'needs_account') promptAccount();
+            else Alert.alert(CHECKOUT_COPY.identityFailedTitle, CHECKOUT_COPY.identityFailedBody);
+            return;
+          }
           await purchaseGemBundle(bundle.id);
           // The server credits bought gems from the RevenueCat webhook (and,
           // since 2026-11-20, drops a purchase-sized gem delta from the app —
@@ -167,7 +203,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
       onPurchaseSuccess();
       onDismiss();
     }, 1800);
-  }, [bundle, addGems, addCoins, spendGems, onPurchaseSuccess, onDismiss, economyDataIAP, releasePurchaseLock]);
+  }, [bundle, addGems, addCoins, spendGems, onPurchaseSuccess, onDismiss, economyDataIAP, releasePurchaseLock, promptAccount]);
 
   const handleDismiss = useCallback(() => {
     if (bundle) {
