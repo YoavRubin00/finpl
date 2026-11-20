@@ -170,6 +170,11 @@ export function buildAccountDeletePlan(ctx: AccountDeleteContext, columns: Colum
     if (has('content_reports', 'target_type', 'target_id')) {
       if (theirShares) conds.push(sql`(target_type = 'portfolio' AND target_id IN (${theirShares}))`);
       if (theirComments) conds.push(sql`(target_type = 'comment' AND target_id IN (${theirComments}))`);
+      // Others' comments on their shares go with the shares (below), so the
+      // reports about those comments would point at nothing.
+      if (theirShares && has('portfolio_comments', 'id', 'portfolio_id')) {
+        conds.push(sql`(target_type = 'comment' AND target_id IN (SELECT id FROM portfolio_comments WHERE portfolio_id IN (${theirShares})))`);
+      }
     }
     add('content_reports', sql`DELETE FROM content_reports WHERE ${anyOf(conds)}`);
   }

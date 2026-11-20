@@ -18,8 +18,17 @@ import {
   type EconomyRow,
   type EconomyStore,
 } from './economyGuard';
+import {
+  pgErrorCode,
+  PG_UNDEFINED_COLUMN as UNDEFINED_COLUMN,
+  PG_UNDEFINED_TABLE as UNDEFINED_TABLE,
+  PG_UNIQUE_VIOLATION as UNIQUE_VIOLATION,
+} from './pgError';
 import { verifyProWithRevenueCat } from './revenueCatVerify';
 import type { SubscriptionDeps, SubscriptionStore } from './subscriptionSync';
+
+// Kept here too: tests and callers import it from this module.
+export { pgErrorCode };
 
 /** neon-http's db.execute returns { rows }; older paths saw a bare array. */
 function rowsOf<T>(result: unknown): T[] {
@@ -27,21 +36,6 @@ function rowsOf<T>(result: unknown): T[] {
   if (Array.isArray(withRows?.rows)) return withRows.rows as T[];
   return Array.isArray(result) ? (result as T[]) : [];
 }
-
-/** SQLSTATE of a driver error, also when drizzle wrapped it (DrizzleQueryError.cause). */
-export function pgErrorCode(err: unknown): string | null {
-  let e: unknown = err;
-  for (let i = 0; i < 4 && e && typeof e === 'object'; i++) {
-    const code = (e as { code?: unknown }).code;
-    if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) return code;
-    e = (e as { cause?: unknown }).cause;
-  }
-  return null;
-}
-
-const UNDEFINED_TABLE = '42P01';
-const UNDEFINED_COLUMN = '42703';
-const UNIQUE_VIOLATION = '23505';
 
 interface EconomySqlRow {
   xp: number | string | null;

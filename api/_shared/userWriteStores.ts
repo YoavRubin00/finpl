@@ -11,6 +11,7 @@ import { createPgRateLimitStore } from './authStores';
 import type { CallerDeps } from './callerAuth';
 import type { CoinGrantDeps, CoinGrantStore, GrantTarget } from './coinGrants';
 import { getDb, type Db } from './db';
+import { pgErrorCode, PG_UNIQUE_VIOLATION } from './pgError';
 import type { PaperTradeStore, TradeDeps } from './paperTrade';
 import { capturePostHog } from './posthogCapture';
 import type { ReferralDeps, ReferralFriend, ReferralStore } from './referral';
@@ -103,10 +104,11 @@ function coinGrantStore(db: Db): CoinGrantStore {
   };
 }
 
+/** The code is taken by another account (user_profiles_referral_code_key). */
 function isUniqueViolation(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message.toLowerCase() : '';
-  const code = (err as { code?: unknown } | null)?.code;
-  return code === '23505' || msg.includes('unique') || msg.includes('duplicate');
+  // drizzle wraps the Postgres error: the SQLSTATE is on err.cause, not on err
+  // (see pgError.ts). Reading err.code alone turned every collision into a 500.
+  return pgErrorCode(err) === PG_UNIQUE_VIOLATION;
 }
 
 function referralCodeStore(db: Db): ReferralCodeStore {
