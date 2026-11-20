@@ -157,6 +157,17 @@ export type AppEvent =
   // per extra mount, with the time since the first one.
   | { name: 'root_layout_remounted'; props: { mount: number; ms_since_first_mount: number } }
   | { name: 'boot_network_settled'; props: { ms: number; path: 'cached' | 'network' | 'timeout'; result: 'ok' | 'auth_invalid' | 'no_profile' | 'error' | 'superseded' } }
+  // A persisted store had still not loaded from storage after a limit (boot
+  // fix B6, 20.11): zustand never finishes loading a store whose saved JSON
+  // fails to parse or whose read fails, and nothing reported it. `store` is
+  // the store's storage key, `ms` how long it had been waited for. `effect`:
+  //   waiting  - launch work that needs the store (login bonus and streak
+  //              day-mark, comeback stamp, quest refresh, session reset) keeps
+  //              waiting and runs only if the store loads later (after 5 s)
+  //   rendered - the root layout stopped waiting for the auth store and
+  //              rendered; until it loads it reads as signed out (after 8 s)
+  // Once per store and effect per app process.
+  | { name: 'store_hydration_stuck'; props: { store: string; ms: number; effect: 'waiting' | 'rendered' } }
 
   // ── Lesson / Module ────────────────────────────────────────────────────
   // SCHEMA UNIFICATION (Yoav 11.7): the emitters historically sent module_id

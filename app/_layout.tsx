@@ -162,7 +162,13 @@ import { useTutorialStore } from "../src/stores/useTutorialStore";
 import { useGoogleAuth } from "../src/features/auth/useGoogleAuth";
 import { useIsModuleCompleted } from "../src/features/chapter-1-content/useProgress";
 import { useCompletedModulesStore } from "../src/features/economy/useCompletedModulesStore";
-import { whenAllHydrated, whenHydrated, type HydratingStore } from "../src/lib/stores/whenHydrated";
+import {
+  storeName,
+  whenAllHydrated,
+  whenHydrated,
+  whenHydratedReportingSlow,
+  type HydratingStore,
+} from "../src/lib/stores/whenHydrated";
 import { track } from "../src/lib/analytics/events";
 
 // ── Persisted stores and launch timing (boot review 20.11) ──
@@ -170,11 +176,35 @@ import { track } from "../src/lib/analytics/events";
 // never initialises, see src/lib/zustandStorage.ts). Until a store has loaded
 // it holds its initial state, and a write is overwritten by the loaded state
 // (a mount-time daily login bonus could be granted again on every launch).
-/** Run `fn` once the store has loaded; at once when it already has. */
+
+/** A store still not loaded after this long is reported (boot fix B6). */
+const STORE_STUCK_REPORT_MS = 5000;
+/** The root layout renders without the auth store after this long (B6). Past
+ *  the boot's own 5 s wait for it, so a store that is only slow still loads
+ *  first; one that never loads no longer keeps the loader up forever. */
+const AUTH_STORE_RENDER_CAP_MS = 8000;
+
+const reportedStuckStores = new Set<string>();
+/** store_hydration_stuck, once per store and effect per app process. zustand
+ *  never finishes loading a store whose saved JSON fails to parse or whose
+ *  read fails, and gives no sign of it. */
+function reportStuckStore(store: HydratingStore, ms: number, effect: "waiting" | "rendered"): void {
+  const name = storeName(store);
+  if (reportedStuckStores.has(`${name}:${effect}`)) return;
+  reportedStuckStores.add(`${name}:${effect}`);
+  try {
+    track({ name: "store_hydration_stuck", props: { store: name, ms, effect } });
+  } catch { /* non-fatal */ }
+}
+
+/** Run `fn` once the store has loaded; at once when it already has. A store
+ *  not loaded after STORE_STUCK_REPORT_MS is reported and `fn` goes on
+ *  waiting: run against an unloaded store, its writes would be overwritten by
+ *  the load (the launch bug this wait fixed). */
 function afterHydration(store: HydratingStore, fn: () => void): void {
   const run = () => { try { fn(); } catch { /* non-fatal */ } };
   if (store.persist.hasHydrated()) run();
-  else void whenHydrated(store).then(run);
+  else void whenHydratedReportingSlow(store, STORE_STUCK_REPORT_MS, (ms) => reportStuckStore(store, ms, "waiting")).then(run);
 }
 
 /** Stores the root layout's gates read on the first frame (walkthrough
@@ -828,17 +858,23 @@ function RootLayoutInner() {
   const bootAttemptRef = useRef(0);
   const [splashVisible, setSplashVisible] = useState(true);
 
-  // Routes render once the auth store has loaded (no cap, as always) and, for
-  // a user past onboarding, once the gate stores have too (capped): with the
-  // instant boot the first frame can come before them on a device, and e.g.
-  // the walkthrough re-arm below would read "never seen the tour" and show it
-  // to an established user.
+  // Routes render once the auth store has loaded and, for a user past
+  // onboarding, once the gate stores have too (capped): with the instant boot
+  // the first frame can come before them on a device, and e.g. the
+  // walkthrough re-arm below would read "never seen the tour" and show it to
+  // an established user.
+  // The auth store wait is capped too (boot fix B6, 20.11): a store that never
+  // loads (unreadable saved JSON) used to keep the loader up on every launch.
+  // Past AUTH_STORE_RENDER_CAP_MS it is reported and the layout renders (the
+  // boot already treats an unloaded auth store as "unknown"); the gate stores
+  // are then waited for as well, since nobody knows yet who this user is.
   useEffect(() => {
     let cancelled = false;
-    void whenHydrated(useAuthStore)
-      .then(() => {
+    void whenHydrated(useAuthStore, AUTH_STORE_RENDER_CAP_MS)
+      .then((auth) => {
+        if (auth.capped) reportStuckStore(useAuthStore, auth.ms, "rendered");
         const { isAuthenticated, hasCompletedOnboarding } = useAuthStore.getState();
-        if (!isAuthenticated || !hasCompletedOnboarding) return undefined;
+        if (!auth.capped && (!isAuthenticated || !hasCompletedOnboarding)) return undefined;
         return whenAllHydrated(ROOT_GATE_STORES, ROOT_GATE_STORES_CAP_MS);
       })
       .then(() => { if (!cancelled) setHydrated(true); });

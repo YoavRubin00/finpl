@@ -7,10 +7,21 @@
 //  - a slow storage hits the prime cap and the boot falls back to the network
 //    path; a fast one lets it open at once ('cached');
 //  - a second concurrent boot joins the first; "try again" starts a new one;
-//  - waiting for persisted stores to load, with and without a cap.
+//  - waiting for persisted stores to load, with and without a cap;
+//  - B6 (20.11): a store that never loads (a real zustand persist store whose
+//    saved JSON is unreadable) is reported once after a limit while the wait
+//    goes on, and the report names it by its storage key.
+import { create } from 'zustand';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import { createSnapshotStore, type SnapshotStorage } from '../src/features/economy/querySnapshotCore';
 import { createSingleFlight, decideBootPath, waitCapped } from '../src/lib/auth/bootCore';
-import { whenHydrated, whenAllHydrated, type HydratingStore } from '../src/lib/stores/whenHydrated';
+import {
+  storeName,
+  whenHydrated,
+  whenAllHydrated,
+  whenHydratedReportingSlow,
+  type HydratingStore,
+} from '../src/lib/stores/whenHydrated';
 
 let failed = 0;
 let passed = 0;
@@ -152,6 +163,70 @@ async function waitingForStores(): Promise<void> {
   check(!already.capped, 'already-loaded store resolves at once');
 }
 
+/** Settled within `ms`? (without waiting past it) */
+async function settledWithin<T>(p: Promise<T>, ms: number): Promise<boolean> {
+  let settled = false;
+  void p.then(() => { settled = true; }, () => { settled = true; });
+  await sleep(ms);
+  return settled;
+}
+
+async function stuckStoresAreReported(): Promise<void> {
+  // In time: no report.
+  const reports: number[] = [];
+  const inTime = await whenHydratedReportingSlow(fakePersistedStore(20), 100, (ms) => reports.push(ms));
+  await sleep(120);
+  check(!inTime.capped && reports.length === 0, 'B6: a store that loads in time is not reported');
+
+  // Never loads: one report at the limit, and the wait goes on (the launch
+  // effects keep skipping instead of running against an unloaded store).
+  const neverReports: number[] = [];
+  const never = whenHydratedReportingSlow(fakePersistedStore(null), 40, (ms) => neverReports.push(ms));
+  check(!(await settledWithin(never, 120)), 'B6: a store that never loads: the wait goes on past the limit');
+  check(neverReports.length === 1 && neverReports[0] === 40, `B6: ... and is reported once (${JSON.stringify(neverReports)})`);
+
+  // Loads late: reported, then the wait still ends when it loads.
+  const lateReports: number[] = [];
+  const late = await whenHydratedReportingSlow(fakePersistedStore(90), 40, (ms) => lateReports.push(ms));
+  check(!late.capped && late.ms >= 80 && lateReports.length === 1, `B6: a slow store is reported and still waited for (${late.ms}ms)`);
+
+  // Already loaded: at once, no timer.
+  const loadedReports: number[] = [];
+  const loaded = fakePersistedStore(0);
+  await sleep(5);
+  const at = await whenHydratedReportingSlow(loaded, 10, (ms) => loadedReports.push(ms));
+  await sleep(30);
+  check(at.ms === 0 && loadedReports.length === 0, 'B6: an already-loaded store resolves at once, never reported');
+
+  // A report that throws does not break the wait.
+  const throwing = await whenHydratedReportingSlow(fakePersistedStore(40), 10, () => { throw new Error('analytics down'); });
+  check(!throwing.capped, 'B6: a failing report does not break the wait');
+}
+
+async function aRealStoreWithUnreadableJson(): Promise<void> {
+  // zustand 5 persist over an async storage, as on devices: the saved value
+  // fails to parse, so the store never finishes loading and nothing says so.
+  const data = new Map<string, string>([['economy-ui-store-v1', '{"state":{"coins":1']]);
+  const storage: StateStorage = {
+    getItem: async (k) => { await sleep(5); return data.get(k) ?? null; },
+    setItem: async (k, v) => { data.set(k, v); },
+    removeItem: async (k) => { data.delete(k); },
+  };
+  const useCorrupt = create<{ coins: number }>()(
+    persist(() => ({ coins: 0 }), { name: 'economy-ui-store-v1', storage: createJSONStorage(() => storage) }),
+  );
+  const reports: Array<{ store: string; ms: number }> = [];
+  const wait = whenHydratedReportingSlow(useCorrupt, 60, (ms) => reports.push({ store: storeName(useCorrupt), ms }));
+  const settled = await settledWithin(wait, 150);
+  check(!useCorrupt.persist.hasHydrated() && !settled, 'B6: unreadable saved JSON: zustand never finishes loading the store');
+  check(reports.length === 1 && reports[0].store === 'economy-ui-store-v1',
+    `B6: reported once, by its storage key (${JSON.stringify(reports)})`);
+
+  const plain = fakePersistedStore(0);
+  const throwingName: HydratingStore = { persist: { ...plain.persist, getOptions: () => { throw new Error('x'); } } };
+  check(storeName(plain) === 'unknown' && storeName(throwingName) === 'unknown', "B6: a store without a name reports 'unknown'");
+}
+
 async function main(): Promise<void> {
   await primeReadsTheRightAccount();
   await writeWinsOverALatePrime();
@@ -160,6 +235,8 @@ async function main(): Promise<void> {
   await primeCapDecidesThePath();
   await secondBootJoinsTheFirst();
   await waitingForStores();
+  await stuckStoresAreReported();
+  await aRealStoreWithUnreadableJson();
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);
 }
