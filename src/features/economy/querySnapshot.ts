@@ -66,10 +66,15 @@ export function readSnapshot<T>(key: string, isValue: (v: unknown) => v is T): S
   return { authId: env.authId, at: env.at, value: env.value };
 }
 
-/** Persist a server-confirmed value for the current authId. Fire-and-forget. */
-export function writeSnapshot<T>(key: string, value: T | null | undefined): void {
+/**
+ * Persist a server-confirmed value. Fire-and-forget. Keyed by `forAuthId` when
+ * given (the account the request was made for, so an answer that lands after
+ * a sign-out / account switch can't be filed under the next account), else
+ * by the current authId.
+ */
+export function writeSnapshot<T>(key: string, value: T | null | undefined, forAuthId?: string): void {
   if (value === null || value === undefined) return;
-  const authId = useAuthStore.getState().authId;
+  const authId = forAuthId ?? useAuthStore.getState().authId;
   if (!authId) return;
   const env: SnapshotEnvelope<T> = { authId, at: Date.now(), value };
   memory.set(key, env);

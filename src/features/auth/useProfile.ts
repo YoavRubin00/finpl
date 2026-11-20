@@ -2,8 +2,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getProfile, updateProfile, type ProfileRow } from '../../lib/api/profile';
 import { useAuthStore } from './useAuthStore';
+import { guardedQueryFn } from '../../lib/queryGuard';
 
 export const profileQueryKey = ['profile'] as const;
+
+/** GET /api/sync/profile as a query function that never overwrites a newer
+ *  local write (queryGuard). */
+export const profileQueryFn = guardedQueryFn(profileQueryKey, async () => (await getProfile()).profile);
 
 export function useProfile() {
   // Skip for guests — they have no server-side profile and would just 401.
@@ -11,7 +16,7 @@ export function useProfile() {
   const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: profileQueryKey,
-    queryFn: async () => (await getProfile()).profile,
+    queryFn: profileQueryFn,
     staleTime: 60_000,
     enabled: isAuthenticated && !isGuest,
   });

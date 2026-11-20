@@ -6,6 +6,7 @@ import { checkProEntitlement, RC_ENTITLEMENT_PRO } from '../../services/revenueC
 import type { CustomerInfo } from '../../services/revenueCat';
 import { useAuthStore } from '../auth/useAuthStore';
 import { readSnapshot, writeSnapshot } from '../economy/querySnapshot';
+import { guardedQueryFn } from '../../lib/queryGuard';
 
 export const subscriptionQueryKey = ['subscription'] as const;
 
@@ -36,16 +37,18 @@ export function readSubscriptionSnapshot(): SubscriptionState | null {
 }
 
 /** Call with a server answer only. */
-export function writeSubscriptionSnapshot(sub: SubscriptionState | null | undefined): void {
-  writeSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, normalizeSubscription(sub));
+export function writeSubscriptionSnapshot(sub: SubscriptionState | null | undefined, forAuthId?: string): void {
+  writeSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, normalizeSubscription(sub), forAuthId);
 }
 
-/** GET the subscription and record it as the last known state. */
-export async function fetchSubscription(): Promise<SubscriptionState | null> {
-  const sub = (await getSubscription()).subscription;
-  writeSubscriptionSnapshot(sub);
-  return sub;
-}
+/** GET the subscription as a query function: a late answer never overwrites a
+ *  newer write such as a purchase's answer (queryGuard), and only answers it
+ *  keeps become the last known state. */
+export const subscriptionQueryFn = guardedQueryFn(
+  subscriptionQueryKey,
+  async () => (await getSubscription()).subscription,
+  (sub, { authId }) => writeSubscriptionSnapshot(sub, authId),
+);
 
 export function useSubscription() {
   // Skip for guests — they have no RevenueCat entitlement yet; useIsPro()
@@ -61,7 +64,7 @@ export function useSubscription() {
     queryKey: subscriptionQueryKey,
     queryFn: async () => {
       if (devWebPro) return { isPro: true, proExpiresAt: null, proSource: null } as SubscriptionState;
-      return fetchSubscription();
+      return subscriptionQueryFn();
     },
     staleTime: 30_000,
     enabled: (isAuthenticated && !isGuest) || devWebPro,

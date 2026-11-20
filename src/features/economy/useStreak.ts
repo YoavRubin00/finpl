@@ -10,6 +10,7 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { captureEvent, setPersonProperties } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
 import { readSnapshot, writeSnapshot } from './querySnapshot';
+import { guardedQueryFn } from '../../lib/queryGuard';
 
 export const streakQueryKey = ['streak'] as const;
 
@@ -30,9 +31,17 @@ export function streakPlaceholder(): StreakState | undefined {
 }
 
 /** Record a server-confirmed streak as the cold-open snapshot. */
-export function writeStreakSnapshot(streak: StreakState | null | undefined): void {
-  writeSnapshot(STREAK_SNAPSHOT_KEY, streak);
+export function writeStreakSnapshot(streak: StreakState | null | undefined, forAuthId?: string): void {
+  writeSnapshot(STREAK_SNAPSHOT_KEY, streak, forAuthId);
 }
+
+/** GET /api/sync/streak as a query function: a late answer never overwrites
+ *  the streak tick's newer POST answer (queryGuard); snapshots only answers it keeps. */
+export const streakQueryFn = guardedQueryFn(
+  streakQueryKey,
+  async () => (await getStreak()).streak,
+  (streak, { authId }) => writeStreakSnapshot(streak, authId),
+);
 
 export function useStreak() {
   // Skip for guests — server streak is keyed off authId; guests use the local
@@ -41,11 +50,7 @@ export function useStreak() {
   const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: streakQueryKey,
-    queryFn: async () => {
-      const streak = (await getStreak()).streak;
-      writeSnapshot(STREAK_SNAPSHOT_KEY, streak); // successful fetch only
-      return streak;
-    },
+    queryFn: streakQueryFn, // snapshots successful fetches only
     staleTime: 60_000,
     enabled: isAuthenticated && !isGuest,
     // UX-21: last server-confirmed streak for THIS authId while pending.

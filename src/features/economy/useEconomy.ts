@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { applyEconomyDelta, getEconomy, type Economy } from '../../lib/api/economy';
 import { useAuthStore } from '../auth/useAuthStore';
+import { guardedQueryFn } from '../../lib/queryGuard';
 import { readSnapshot, writeSnapshot } from './querySnapshot';
 
 export const economyQueryKey = ['economy'] as const;
@@ -25,9 +26,17 @@ export function economyPlaceholder(): Economy | undefined {
 }
 
 /** Record a server-confirmed economy row as the cold-open snapshot. */
-export function writeEconomySnapshot(economy: Economy | null | undefined): void {
-  writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy);
+export function writeEconomySnapshot(economy: Economy | null | undefined, forAuthId?: string): void {
+  writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy, forAuthId);
 }
+
+/** GET /api/sync/economy as a query function: never overwrites a newer local
+ *  write (queryGuard), snapshots only the answers it keeps. */
+export const economyQueryFn = guardedQueryFn(
+  economyQueryKey,
+  async () => (await getEconomy()).economy,
+  (economy, { authId }) => writeEconomySnapshot(economy, authId),
+);
 
 export function useEconomy() {
   // Guests cannot read their economy server-side — they have no auth token,
@@ -38,12 +47,8 @@ export function useEconomy() {
   const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: economyQueryKey,
-    queryFn: async () => {
-      const economy = (await getEconomy()).economy;
-      // Snapshot only on a successful fetch (event-driven, never per render).
-      writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy);
-      return economy;
-    },
+    // Snapshot only on a successful fetch (event-driven, never per render).
+    queryFn: economyQueryFn,
     staleTime: 30_000,
     enabled: isAuthenticated && !isGuest,
     // UX-21: placeholder = last snapshot for THIS authId (readSnapshot returns

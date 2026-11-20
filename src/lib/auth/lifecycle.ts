@@ -15,23 +15,21 @@ import { tokenStore, backfillFlag } from './secureStore';
 import { queryClient } from '../queryClient';
 import { resetAllLocalStores, getLocalStorageKeys } from '../stores/registry';
 import { runBackfillV1 } from './backfill';
-import { profileQueryKey } from '../../features/auth/useProfile';
-import { economyQueryKey, economyPlaceholder, writeEconomySnapshot } from '../../features/economy/useEconomy';
-import { streakQueryKey, streakPlaceholder, writeStreakSnapshot } from '../../features/economy/useStreak';
+import { profileQueryKey, profileQueryFn } from '../../features/auth/useProfile';
+import { economyQueryKey, economyQueryFn, economyPlaceholder } from '../../features/economy/useEconomy';
+import { streakQueryKey, streakQueryFn, streakPlaceholder } from '../../features/economy/useStreak';
 import {
   subscriptionQueryKey,
+  subscriptionQueryFn,
   readSubscriptionSnapshot,
   writeSubscriptionSnapshot,
 } from '../../features/subscription/useSubscription';
-import { progressQueryKey } from '../../features/chapter-1-content/useProgress';
-import { userStatsQueryKey } from '../../features/user-stats/useUserStats';
+import { progressQueryKey, progressQueryFn } from '../../features/chapter-1-content/useProgress';
+import { userStatsQueryKey, userStatsQueryFn } from '../../features/user-stats/useUserStats';
 import { getProfile, type ProfileRow } from '../api/profile';
-import { getEconomy } from '../api/economy';
-import { getStreak } from '../api/streak';
-import { getSubscription, syncSubscription, type SubscriptionState } from '../api/subscription';
-import { getProgress } from '../api/progress';
-import { getUserStats } from '../api/userStats';
+import { syncSubscription, type SubscriptionState } from '../api/subscription';
 import { ApiError } from '../api/client';
+import { markSeeded, serverAnswerSince } from '../queryGuard';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { captureEvent, identifyUser, resetUser } from '../posthog';
 import { track } from '../analytics/events';
@@ -59,6 +57,10 @@ const RC_CACHE_READ_TIMEOUT_MS = 500;
 /** Upper bound on waiting for the auth store to load from disk (MMKV: ~instant). */
 const AUTH_HYDRATION_TIMEOUT_MS = 1000;
 
+/** How long the waiting boot path waits for a sign-out already under way
+ *  (RevenueCat logOut is a network call) before deciding what to render. */
+const SIGN_OUT_WAIT_MS = 2000;
+
 export type BootPath = 'cached' | 'network' | 'timeout' | 'no_token';
 export type BootOutcome = 'signed_in' | 'signed_out' | 'retry';
 /** How the boot's server work ended. See boot_network_settled in analytics/events.ts. */
@@ -85,9 +87,19 @@ export interface BootResult {
  */
 let bootGeneration = 0;
 
-/** The user chose to go on without waiting for the boot's sign-in to finish. */
-export function abandonPendingBoot(): void {
+/**
+ * The user chose to go on without signing in (retry screen: a stored token
+ * but no saved session on this device). Forgets the stored session the way a
+ * sign-out does (token + backfill flag) but keeps local data. The boot still
+ * running can then never sign this device in or out later (its 401 no longer
+ * matches the stored token), and a later Google/Apple sign-in signs in
+ * instead of linking to the abandoned account (useGoogleAuth / useAppleAuth
+ * treat a stored token as "already signed in").
+ */
+export async function abandonPendingBoot(): Promise<void> {
   bootGeneration++;
+  await tokenStore.clear().catch(() => { /* non-fatal */ });
+  await backfillFlag.reset().catch(() => { /* non-fatal */ });
 }
 
 /**
@@ -174,136 +186,66 @@ function waitForAuthHydration(): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Values put in the cache from saved snapshots. They stand in until the server
- * answers and are never mistaken for newer local writes (see guardedQueryFn).
- */
-const seededValues = new WeakSet<object>();
-
-function isSeeded(value: unknown): boolean {
-  return typeof value === 'object' && value !== null && seededValues.has(value);
-}
-
-/**
  * Puts a saved last-known value in the cache for the first frame. Marked stale
- * (updatedAt 0) so the boot read and any mounting screen still ask the server.
+ * (updatedAt 0) so the boot read and any mounting screen still ask the server,
+ * and marked seeded so the server answer always replaces it (queryGuard).
  * Skipped when the cache already holds something (newer, or the dev override).
  */
 function seedFromSnapshot<T extends object>(key: QueryKey, value: T | null | undefined): boolean {
   if (!value) return false;
   if (queryClient.getQueryData(key) !== undefined) return false;
   queryClient.setQueryData<T>(key, value, { updatedAt: 0 });
-  seededValues.add(value);
+  markSeeded(value);
   return true;
 }
 
 /**
- * Query function for a boot read. If something wrote the same query while the
- * request was in flight (an optimistic reward such as the cold-start login
- * bonus, a mutation's own server answer, a purchase), that write is newer than
- * this answer, so it is kept and the late answer is dropped. Seeded snapshots
- * don't count as writes: the server answer always replaces them.
- *
- * Today's boot never had this problem because nothing could write before the
- * reads finished; rendering from saved state first makes it possible.
+ * A boot read through the query cache. The query functions are the screens'
+ * own (each wrapped by queryGuard), so whoever starts the request, the boot or
+ * a hook that mounted first, a late answer never overwrites a newer local
+ * write, and snapshots are written only for kept answers, under the account
+ * the request was made for.
  */
-function guardedQueryFn<T>(key: QueryKey, fetcher: () => Promise<T>, onAccepted?: (value: T) => void): () => Promise<T> {
-  return async () => {
-    const startCount = queryClient.getQueryState(key)?.dataUpdateCount ?? 0;
-    let value: T;
-    try {
-      value = await fetcher();
-    } catch (err) {
-      captureEvent('hydration_failed', {
-        queryKey: JSON.stringify(key),
-        reason: err instanceof Error ? err.message : String(err),
-      });
-      throw err;
-    }
-    const state = queryClient.getQueryState<T>(key);
-    if (state && state.dataUpdateCount !== startCount && state.data !== undefined && !isSeeded(state.data)) {
-      // Keep the newer write; mark the query stale so the next ordinary refetch
-      // (mount, focus, reconnect) reconciles once the writes have settled.
-      // setTimeout, not a microtask: react-query stores this result after the
-      // function returns, and that store would clear the flag.
-      setTimeout(() => {
-        void queryClient.invalidateQueries({ queryKey: key, refetchType: 'none' });
-      }, 0);
-      return state.data;
-    }
-    onAccepted?.(value);
-    return value;
-  };
-}
-
-function bootFetch<T>(
-  key: QueryKey,
-  fetcher: () => Promise<T>,
-  opts?: { onAccepted?: (value: T) => void; failFast?: boolean },
-): Promise<T> {
+function bootFetch<T>(key: QueryKey, queryFn: () => Promise<T>, opts?: { failFast?: boolean }): Promise<T> {
   return queryClient.fetchQuery<T>({
     queryKey: key,
-    queryFn: guardedQueryFn(key, fetcher, opts?.onAccepted),
+    queryFn,
     // The profile read decides whether the session is valid, so it answers at
     // once like the plain request it replaces: no retries, and an error even
     // when react-query thinks the device is offline (instead of pausing).
     ...(opts?.failFast ? { retry: false, networkMode: 'always' as const } : {}),
+  }).catch((err: unknown) => {
+    captureEvent('hydration_failed', {
+      queryKey: JSON.stringify(key),
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
   });
 }
 
-/**
- * Snapshot writes are keyed by the signed-in authId. A sign-in that has not
- * reached the auth store yet has none, so its writes wait for flush().
- */
-function createSnapshotWrites() {
-  const held: Array<() => void> = [];
-  return {
-    write(fn: () => void): void {
-      if (useAuthStore.getState().authId) fn();
-      else held.push(fn);
-    },
-    flush(): void {
-      for (const fn of held.splice(0)) {
-        try { fn(); } catch { /* non-fatal */ }
-      }
-    },
-  };
-}
-type SnapshotWrites = ReturnType<typeof createSnapshotWrites>;
-
-interface ServerStateFetch {
-  /** Settles when every read has settled. Never rejects. */
-  done: Promise<void>;
-  /** The server's subscription answer, once accepted. undefined while unknown,
-   *  after a failure, or when a newer local write won. */
-  subscription: () => SubscriptionState | null | undefined;
-}
-
-/** The server reads behind the first screens. All of them run at once. */
-function fetchServerState(opts: { includeProfile: boolean; snapshots: SnapshotWrites }): ServerStateFetch {
-  let subscriptionAnswer: SubscriptionState | null | undefined;
+/** The server reads behind the first screens. All of them run at once.
+ *  Settles when every read has settled; never rejects. */
+function fetchServerState(opts: { includeProfile: boolean }): Promise<void> {
   const reads: Promise<unknown>[] = [
-    bootFetch(economyQueryKey, async () => (await getEconomy()).economy, {
-      onAccepted: (v) => opts.snapshots.write(() => writeEconomySnapshot(v)),
-    }),
-    bootFetch(streakQueryKey, async () => (await getStreak()).streak, {
-      onAccepted: (v) => opts.snapshots.write(() => writeStreakSnapshot(v)),
-    }),
-    bootFetch(subscriptionQueryKey, async () => (await getSubscription()).subscription, {
-      onAccepted: (v) => {
-        subscriptionAnswer = v;
-        opts.snapshots.write(() => writeSubscriptionSnapshot(v));
-      },
-    }),
-    bootFetch(progressQueryKey, async () => (await getProgress()).progress),
-    bootFetch(userStatsQueryKey, async () => (await getUserStats()).userStats),
+    bootFetch(economyQueryKey, economyQueryFn),
+    bootFetch(streakQueryKey, streakQueryFn),
+    bootFetch(subscriptionQueryKey, subscriptionQueryFn),
+    bootFetch(progressQueryKey, progressQueryFn),
+    bootFetch(userStatsQueryKey, userStatsQueryFn),
   ];
-  if (opts.includeProfile) {
-    reads.push(bootFetch(profileQueryKey, async () => (await getProfile()).profile));
-  }
-  return {
-    done: Promise.all(reads.map((p) => p.catch(() => undefined))).then(() => undefined),
-    subscription: () => subscriptionAnswer,
-  };
+  if (opts.includeProfile) reads.push(bootFetch(profileQueryKey, profileQueryFn));
+  return Promise.all(reads.map((p) => p.catch(() => undefined))).then(() => undefined);
+}
+
+/**
+ * The subscription the server reported during this boot/sign-in, read from the
+ * cache so it doesn't matter who made the request: the root layout's useIsPro()
+ * hook usually starts it at mount and the boot's read joins it, so the boot's
+ * own query function never runs (boot review 20.11: that left the RevenueCat
+ * sync without a server answer, so it never ran on a cold start).
+ */
+function serverSubscriptionSince(sinceMs: number): SubscriptionState | null | undefined {
+  return serverAnswerSince<SubscriptionState | null>(subscriptionQueryKey, sinceMs);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -383,12 +325,28 @@ async function syncRevenueCatToServer(serverSub: SubscriptionState | null, gen: 
 }
 
 function startRevenueCatSync(serverSub: SubscriptionState | null | undefined, gen: number): void {
-  // No accepted server answer this time (failed, or a newer local write such as
-  // a purchase won): nothing reliable to compare with, so no write.
+  // No server answer this time (failed or never asked): nothing reliable to
+  // compare with, so no write.
   if (serverSub === undefined) return;
   void syncRevenueCatToServer(serverSub, gen).catch((err: unknown) => {
     captureEvent('rc_server_sync_failed', { reason: err instanceof Error ? err.message : String(err) });
   });
+}
+
+/**
+ * The reads of a sign-in (or of a boot with no saved session) ran before the
+ * auth store had this account's authId, so their query functions could not
+ * file a snapshot. Record the subscription answer now, under the new account,
+ * so the next cold start can open at once with the right Pro state.
+ */
+function snapshotSubscriptionForNewSession(
+  serverSub: SubscriptionState | null | undefined,
+  authId: string,
+  gen: number,
+): void {
+  if (serverSub === undefined || gen !== bootGeneration) return;
+  if (useAuthStore.getState().authId !== authId) return;
+  writeSubscriptionSnapshot(serverSub, authId);
 }
 
 /**
@@ -424,6 +382,7 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
   // A cold boot still finishing in the background must not apply its older
   // session over this one.
   const gen = ++bootGeneration;
+  const startedAt = Date.now();
 
   await tokenStore.set(token);
 
@@ -434,7 +393,6 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
   // single largest blocker on sign-in / cold boot. Backfill must finish before
   // the reads (so they read migrated data), so it stays sequenced with them.
   const rcLogin = loginRevenueCatAndReport(profile.id);
-  const snapshots = createSnapshotWrites();
 
   const serverHydrate = (async () => {
     if (!(await backfillFlag.isDone())) {
@@ -445,12 +403,10 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
         if (__DEV__) console.warn('[backfill] failed:', e);
       }
     }
-    const server = fetchServerState({ includeProfile: true, snapshots });
-    await server.done;
-    return server;
+    await fetchServerState({ includeProfile: true });
   })();
 
-  const [, server] = await Promise.all([rcLogin, serverHydrate]);
+  await Promise.all([rcLogin, serverHydrate]);
 
   useAuthStore.getState().signIn({
     userId: profile.id,
@@ -459,7 +415,8 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
     email: profile.email ?? null,
     hasCompletedOnboarding: profile.hasCompletedOnboarding,
   });
-  snapshots.flush();
+  const serverSub = serverSubscriptionSince(startedAt);
+  snapshotSubscriptionForNewSession(serverSub, profile.authId, gen);
 
   // Identify the user in PostHog so all subsequent events land on a stable
   // distinct_id — and so the anon distinct_id from before sign-in is merged
@@ -500,7 +457,7 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
   // Push the device's RevenueCat entitlement state to the server when it
   // differs. Fire-and-forget AFTER the reads so it compares against the
   // server's fresh answer, and so a slow native RC read never blocks.
-  startRevenueCatSync(server.subscription(), gen);
+  startRevenueCatSync(serverSub, gen);
 }
 
 // In-flight guard: prefetchAll's 6 parallel 401s used to fan out to 6 concurrent
@@ -572,30 +529,35 @@ export async function signOut(): Promise<void> {
  * read the first screens' data, identify RevenueCat, then confirm the session
  * in the auth store and PostHog and sync RevenueCat to the server.
  */
-async function hydrateSession(gen: number, backfillDone: boolean): Promise<BootNetworkResult> {
-  const snapshots = createSnapshotWrites();
-  let server: ServerStateFetch | null = null;
+async function hydrateSession(
+  gen: number,
+  backfillDone: boolean,
+  bootToken: string,
+  startedAt: number,
+): Promise<BootNetworkResult> {
+  let reads: Promise<void> | null = null;
   let profile: ProfileRow | null;
   try {
     if (backfillDone) {
       // Everything at once: the reads don't need the profile, and reading the
       // profile through the query cache means it is fetched once, not twice.
-      server = fetchServerState({ includeProfile: false, snapshots });
-      profile = await bootFetch(profileQueryKey, async () => (await getProfile()).profile, { failFast: true });
+      reads = fetchServerState({ includeProfile: false });
+      profile = await bootFetch(profileQueryKey, profileQueryFn, { failFast: true });
     } else {
       profile = (await getProfile()).profile;
     }
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      // The server rejected the token. client.ts already started the sign-out
-      // (onUnauthorized); wait for it so this session is never shown as
-      // signed in. A timeout or a network error never gets here.
-      await signOut().catch(() => { /* swallow */ });
-      return 'auth_invalid';
-    }
+    if (err instanceof ApiError && err.status === 401) return endRejectedSession(bootToken);
+    // A sign-out during the boot (another request's 401) clears the cache,
+    // which cancels this read: that is a signed-out session, not a network error.
+    if (await sessionEndedDuringBoot()) return 'auth_invalid';
     if (__DEV__) console.warn('[boot] profile fetch failed:', err);
     return 'error';
   }
+  // A newer boot, a sign-in or a sign-out took over while we waited: nothing
+  // below is ours to do any more (no backfill upload, no RevenueCat login for
+  // this account after another one's).
+  if (gen !== bootGeneration) return 'superseded';
   if (!profile) return 'no_profile';
 
   if (!backfillDone) {
@@ -612,12 +574,13 @@ async function hydrateSession(gen: number, backfillDone: boolean): Promise<BootN
     // Nothing was uploaded: the profile fetched above is still the server's,
     // so seed it instead of fetching it again. After an upload the backfill
     // stored the new profile itself; after a failed one, read it fresh.
+    if (gen !== bootGeneration) return 'superseded';
     if (!uploaded && !failed) queryClient.setQueryData(profileQueryKey, profile);
-    server = fetchServerState({ includeProfile: true, snapshots });
+    reads = fetchServerState({ includeProfile: true });
   }
 
   const rcLogin = loginRevenueCatAndReport(profile.id);
-  await Promise.all([rcLogin, server?.done]);
+  await Promise.all([rcLogin, reads]);
 
   // A newer boot, a sign-in or a sign-out took over while we waited.
   if (gen !== bootGeneration) return 'superseded';
@@ -630,7 +593,10 @@ async function hydrateSession(gen: number, backfillDone: boolean): Promise<BootN
     displayName: profile.displayName ?? null,
     email: profile.email ?? null,
   });
-  snapshots.flush();
+  const serverSub = serverSubscriptionSince(startedAt);
+  // Covers a boot with no saved session, whose reads ran before the auth store
+  // had an authId; for a saved session the query function already filed it.
+  snapshotSubscriptionForNewSession(serverSub, profile.authId, gen);
 
   // Re-identify on every cold boot of an authenticated session so PostHog
   // continues attributing this device's events to the same user instead of
@@ -646,8 +612,40 @@ async function hydrateSession(gen: number, backfillDone: boolean): Promise<BootN
     is_guest: false,
   });
 
-  startRevenueCatSync(server?.subscription(), gen);
+  startRevenueCatSync(serverSub, gen);
   return 'ok';
+}
+
+/**
+ * Whether the session this boot started with ended during it: a sign-out ran
+ * or is running (another request's 401, the user). Waits a bounded time for a
+ * sign-out already under way. A rotated token (X-Auth-Refreshed-Token) is
+ * still the same session, so only a missing token counts.
+ */
+async function sessionEndedDuringBoot(): Promise<boolean> {
+  if (signOutInFlight) {
+    const waited = await withTimeout(signOutInFlight.catch(() => undefined), SIGN_OUT_WAIT_MS);
+    if (waited === TIMED_OUT) return true; // still running: the session is ending
+  }
+  const stored = await tokenStore.get().catch(() => 'unreadable');
+  return !stored;
+}
+
+/**
+ * The server answered 401 for the boot's token. Sign out only while that
+ * token is still the stored session (client.ts follows the same rule): after
+ * "continue without signing in" or a sign-in with another account, a late 401
+ * for the old token must not wipe what the user did since.
+ */
+async function endRejectedSession(bootToken: string): Promise<BootNetworkResult> {
+  const stored = await tokenStore.get().catch(() => null);
+  if (stored === bootToken) {
+    // client.ts may already have started this sign-out; signOut() joins it.
+    await signOut().catch(() => { /* swallow */ });
+    return 'auth_invalid';
+  }
+  // Already signed out (client.ts finished first), or another session now.
+  return stored === null ? 'auth_invalid' : 'superseded';
 }
 
 function finishBoot(
@@ -744,7 +742,7 @@ export async function bootFromToken(): Promise<BootResult> {
   const cached = hasSession && proKnown && backfillDone && !isTokenExpiredLocally(token);
   let path: 'cached' | 'network' | 'timeout' = cached ? 'cached' : 'network';
 
-  const hydration: Promise<BootNetworkResult> = hydrateSession(gen, backfillDone)
+  const hydration: Promise<BootNetworkResult> = hydrateSession(gen, backfillDone, token, startedAt)
     .catch((): BootNetworkResult => 'error')
     .then((result) => {
       try {
@@ -760,6 +758,9 @@ export async function bootFromToken(): Promise<BootResult> {
   if (raced === TIMED_OUT) {
     path = 'timeout';
     if (hasSession) {
+      // Another request's 401 may have signed the user out meanwhile (an
+      // expired token): render that, not the old session.
+      if (await sessionEndedDuringBoot()) return finishBoot(startedAt, 'timeout', 'signed_out', false);
       await seedProFromStoreCache();
       return finishBoot(startedAt, 'timeout', 'signed_in', true);
     }
@@ -772,8 +773,10 @@ export async function bootFromToken(): Promise<BootResult> {
   }
   if (raced === 'auth_invalid') return finishBoot(startedAt, 'network', 'signed_out', false);
   // 'error' | 'no_profile' | 'superseded': not a definite sign-out, so a saved
-  // session goes on with saved state, as before.
+  // session goes on with saved state, as before, unless a sign-out ran
+  // during the boot.
   if (hasSession) {
+    if (await sessionEndedDuringBoot()) return finishBoot(startedAt, 'network', 'signed_out', false);
     await seedProFromStoreCache();
     return finishBoot(startedAt, 'network', 'signed_in', true);
   }

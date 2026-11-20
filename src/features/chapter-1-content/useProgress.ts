@@ -5,8 +5,13 @@ import { getProgress, upsertModuleProgress, type ModuleProgressRow } from '../..
 import { queryClient } from '../../lib/queryClient';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { useAuthStore } from '../auth/useAuthStore';
+import { guardedQueryFn } from '../../lib/queryGuard';
 
 export const progressQueryKey = ['progress'] as const;
+
+/** GET /api/sync/progress as a query function that never overwrites a newer
+ *  local write (queryGuard). */
+export const progressQueryFn = guardedQueryFn(progressQueryKey, async () => (await getProgress()).progress);
 
 /**
  * Locally-persisted completed module IDs for a chapter prefix. Read from the
@@ -28,7 +33,7 @@ export function useProgress() {
   const isGuest = useAuthStore((s) => s.isGuest);
   const query = useQuery({
     queryKey: progressQueryKey,
-    queryFn: async () => (await getProgress()).progress,
+    queryFn: progressQueryFn,
     staleTime: 5 * 60_000,
     enabled: isAuthenticated && !isGuest,
   });
@@ -49,12 +54,16 @@ export function useProgress() {
 
 export function useIsModuleCompleted(moduleId: string): boolean {
   const { data } = useProgress();
-  // The durable local store is a superset of the server's completions (see
-  // useProgress). Reading it too keeps this right on a cold open that renders
-  // before the server progress arrives (boot without waiting, 20.11). The
-  // root layout's walkthrough re-arm and popup gates read this hook.
+  // For a signed-in user the durable local store is a superset of the server's
+  // completions (see useProgress). Reading it too keeps this right on a cold
+  // open that renders before the server progress arrives (boot without
+  // waiting, 20.11); the root layout's walkthrough re-arm and popup gates read
+  // this hook. Signed-in accounts only: guests have no server progress, and
+  // for them this hook has always been false, which those gates rely on.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isGuest = useAuthStore((s) => s.isGuest);
   const doneLocally = useCompletedModulesStore((s) => s.completedIds.includes(moduleId));
-  if (doneLocally) return true;
+  if (doneLocally && isAuthenticated && !isGuest) return true;
   if (!data) return false;
   const row = data.find((m) => m.moduleId === moduleId);
   return row?.status === 'completed';
