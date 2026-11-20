@@ -8,6 +8,7 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { primeSnapshot, readSnapshot, writeSnapshot } from '../economy/querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
 import { createStoreProOverride } from './proOverrideCore';
+import { withExpiryApplied } from './subscriptionSeedCore';
 
 export const subscriptionQueryKey = ['subscription'] as const;
 
@@ -69,8 +70,12 @@ function normalizeSubscription(sub: SubscriptionState | null | undefined): Subsc
   return sub ?? { isPro: false, proExpiresAt: null, proSource: null };
 }
 
+/** The saved Pro state as the server would report it now (boot fix B3,
+ *  subscriptionSeedCore.ts): a saved Pro whose expiry has passed reads as not
+ *  Pro, so the cold start never seeds it as Pro. */
 export function readSubscriptionSnapshot(): SubscriptionState | null {
-  return readSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, isSubscriptionState)?.value ?? null;
+  const saved = readSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, isSubscriptionState)?.value ?? null;
+  return saved ? withExpiryApplied(saved, Date.now()) : null;
 }
 
 /** Call with a server answer only. A value the store's override produced is

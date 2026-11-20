@@ -40,6 +40,11 @@ import {
   noteStoreCustomerInfo,
   clearStoreProOverride,
 } from '../../features/subscription/useSubscription';
+import {
+  fallsBackToStoreCache,
+  showStoreCacheProIfNoServerAnswer,
+  toEpochMs,
+} from '../../features/subscription/subscriptionSeedCore';
 import { resetSnapshotMemory } from '../../features/economy/querySnapshot';
 import { whenHydrated } from '../stores/whenHydrated';
 import { createSingleFlight, decideBootPath, TIMED_OUT, waitCapped, withTimeout } from './bootCore';
@@ -292,14 +297,6 @@ function rcProState(info: CustomerInfo): { isPro: boolean; proExpiresAt: string 
   return { isPro: pro !== undefined, proExpiresAt: pro?.expirationDate ?? null };
 }
 
-/** Postgres prints `2026-12-20 10:00:00+00`; Hermes only parses ISO. */
-function toEpochMs(value: string | null | undefined): number | null {
-  if (!value) return null;
-  const iso = value.trim().replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00');
-  const ms = Date.parse(iso);
-  return Number.isFinite(ms) ? ms : null;
-}
-
 /**
  * Would POSTing this RevenueCat state change what the server reports?
  * Since 2026-11-20 the server ignores the device's expiry while it reports Pro
@@ -396,19 +393,28 @@ function snapshotSubscriptionForNewSession(
 }
 
 /**
- * A signed-in user with no saved server Pro state (the first launch after this
- * code ships) whose server did not answer in time: RevenueCat's own cached
- * customer info is the last known Pro state on this device. Only ever used to
- * show Pro (never to downgrade), and replaced by the first server answer.
+ * A signed-in user whose server gave no subscription answer (offline, a
+ * failed or slow boot): RevenueCat's own cached customer info is the last
+ * known Pro state on this device. It goes in while the cache holds no server
+ * answer, i.e. nothing, or a saved seed that is not Pro (boot fix B2, 20.11:
+ * before, any saved seed blocked it, so a saved "not Pro" kept a paying user
+ * Free all launch). Only ever to show Pro, never over a server answer, never a
+ * downgrade; it goes in as a seed, so the first server answer replaces it.
+ * Bounded: RevenueCat's cache is a local read, capped anyway. See
+ * subscriptionSeedCore.ts.
  */
-async function seedProFromStoreCache(): Promise<void> {
+async function seedProFromStoreCache(gen: number): Promise<void> {
   if (Platform.OS === 'web') return;
-  if (queryClient.getQueryData(subscriptionQueryKey) !== undefined) return;
-  const info = await withTimeout(getCustomerInfo().catch(() => null), RC_CACHE_READ_TIMEOUT_MS);
-  if (info === TIMED_OUT || !info) return;
-  const { isPro, proExpiresAt } = rcProState(info);
-  if (!isPro) return;
-  seedFromSnapshot<SubscriptionState>(subscriptionQueryKey, { isPro: true, proExpiresAt, proSource: null });
+  await showStoreCacheProIfNoServerAnswer({
+    cacheState: () => queryClient.getQueryState(subscriptionQueryKey),
+    readStoreCache: async () => {
+      const info = await withTimeout(getCustomerInfo().catch(() => null), RC_CACHE_READ_TIMEOUT_MS);
+      return info === TIMED_OUT || !info ? null : rcProState(info);
+    },
+    // A sign-in, a sign-out or a newer boot since: not this boot's to show.
+    isCurrent: () => gen === bootGeneration,
+    seed: (value) => { seedQueryData<SubscriptionState>(subscriptionQueryKey, value); },
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -927,6 +933,14 @@ async function runBoot(attempt: number): Promise<BootResult> {
       return result;
     });
 
+  // B2: whenever the server work ends in 'error', on any path (the 'cached'
+  // one has rendered long before), a saved session whose subscription is still
+  // the saved non-Pro seed shows RevenueCat's cached Pro instead. The paths
+  // that wait below also run it before their first frame.
+  void hydration
+    .then((result) => (fallsBackToStoreCache(result, hasSession) ? seedProFromStoreCache(gen) : undefined))
+    .catch(() => { /* non-fatal */ });
+
   if (cached) return finishBoot(startedAt, waits, 'cached', 'signed_in', true);
 
   const raced = await withTimeout(hydration, BOOT_NETWORK_TIMEOUT_MS);
@@ -939,14 +953,14 @@ async function runBoot(attempt: number): Promise<BootResult> {
       // Another request's 401 may have signed the user out meanwhile (an
       // expired token): render that, not the old session.
       if (await sessionEndedDuringBoot()) return finishBoot(startedAt, waits, 'timeout', 'signed_out', false);
-      if (hasSession) await seedProFromStoreCache();
+      if (hasSession) await seedProFromStoreCache(gen);
       return finishBoot(startedAt, waits, 'timeout', 'signed_in', true);
     }
     return finishBoot(startedAt, waits, 'timeout', 'retry', false, hydration);
   }
 
   if (raced === 'ok') {
-    if (hasSession) await seedProFromStoreCache(); // no-op unless the subscription read failed
+    if (hasSession) await seedProFromStoreCache(gen); // no-op unless the subscription read failed
     return finishBoot(startedAt, waits, 'network', 'signed_in', true);
   }
   if (raced === 'auth_invalid') return finishBoot(startedAt, waits, 'network', 'signed_out', false);
@@ -955,7 +969,7 @@ async function runBoot(attempt: number): Promise<BootResult> {
   // during the boot.
   if (saved) {
     if (await sessionEndedDuringBoot()) return finishBoot(startedAt, waits, 'network', 'signed_out', false);
-    if (hasSession) await seedProFromStoreCache();
+    if (hasSession) await seedProFromStoreCache(gen);
     return finishBoot(startedAt, waits, 'network', 'signed_in', true);
   }
   if (raced === 'error') return finishBoot(startedAt, waits, 'network', 'retry', false, hydration);
