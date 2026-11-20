@@ -1,16 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { eq, sql } from 'drizzle-orm';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { eq } from 'drizzle-orm';
 import { userProfiles } from '../../src/db/schema';
 import { GEM_BUNDLES } from '../../src/features/shop/gemBundles';
 import { capturePostHog } from '../_shared/posthogCapture';
-
-function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
-  const sqlConnection = neon(url);
-  return drizzle(sqlConnection);
-}
+import { getDb } from '../_shared/db';
+import { runGuarded } from '../_shared/economyGuard';
+import { creditPurchaseGems, economyStore, resolveProfileId } from '../_shared/economyStores';
+import { candidateUserKeys, creditForProduct, type PurchaseCredit } from '../_shared/iapCredit';
 
 // Accept either the clean server var or the EXPO_PUBLIC client var (back-compat
 // with .env.example). RC may send the secret as a raw header or as `Bearer …`.
@@ -18,12 +14,17 @@ const RC_WEBHOOK_SECRET =
   process.env.RC_WEBHOOK_SECRET ?? process.env.EXPO_PUBLIC_RC_WEBHOOK_SECRET;
 
 interface RevenueCatEvent {
+  /** RevenueCat's unique event id (stable across redeliveries). */
+  id?: string;
   type: string;
   // Usually our userProfiles.id (UUID), set client-side via
   // loginRevenueCat(profile.id). The email-registration path is the one
   // exception (no server UUID yet) and logs RC in with the EMAIL instead.
   app_user_id: string;
+  original_app_user_id?: string;
+  aliases?: string[];
   product_id: string;
+  transaction_id?: string;
   entitlement_ids?: string[];
   purchased_at_ms: number;
   expiration_at_ms?: number;
@@ -37,20 +38,10 @@ interface WebhookBody {
   event: RevenueCatEvent;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * Resolve which column the RC app_user_id matches on. The id column is a
- * Postgres `uuid` — comparing it against a non-UUID string (email /
- * `$RCAnonymousID:…`) forces an invalid-uuid CAST error that 500s the webhook,
- * so we branch on format rather than OR-ing both columns. UUID → id (common);
- * email-looking → email (in-session email registration); pure-anonymous → 0
- * rows (correct no-op, no account to grant yet). The PREVIOUS handler matched
- * ONLY on email, so the common UUID path silently updated 0 rows.
- */
-function resolveMatchClause(appUserId: string) {
-  if (UUID_RE.test(appUserId)) return eq(userProfiles.id, appUserId);
-  return eq(userProfiles.email, appUserId);
+/** Legacy fallback: a product id equal to one of our internal bundle ids. */
+function legacyBundleCredit(productId: string): PurchaseCredit | null {
+  const bundle = GEM_BUNDLES.find((b) => b.id === productId);
+  return bundle ? { kind: 'gem_bundle', gems: bundle.gems, poolCoins: 0 } : null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -76,49 +67,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const appUserId = event.app_user_id;
-    const matchClause = resolveMatchClause(appUserId);
     const db = getDb();
 
     console.log(`[RevenueCat Webhook] ${event.type} for ${appUserId}`);
 
-    // Handle gem bundle purchases (consumables)
+    // The account: app_user_id (our UUID, or the email on the email-
+    // registration path), else the original id / aliases (a purchase made
+    // before the SDK logIn finished arrives under an anonymous id).
+    const userId = await resolveProfileId(db, candidateUserKeys(event));
+
+    // ── Consumables (gem bundles, starter pack) ──
+    // The ONLY place purchased gems are credited (/api/sync/economy drops the
+    // app's purchase-sized gem deltas since 2026-11-20). Once per RevenueCat
+    // event id: a redelivered webhook credits nothing (revenuecat_events, 0018).
     if (event.type === 'NON_RENEWING_PURCHASE') {
-      const productId = event.product_id;
-      let gemsToAdd = 0;
-      const match = productId.match(/\d+$/);
-      if (match) {
-        gemsToAdd = parseInt(match[0], 10);
-      } else {
-        const matchedBundle = GEM_BUNDLES.find((b) => b.id === productId);
-        if (matchedBundle) gemsToAdd = matchedBundle.gems;
+      const productId = typeof event.product_id === 'string' ? event.product_id : '';
+      const credit = creditForProduct(productId, event.purchased_at_ms, Date.now()) ?? legacyBundleCredit(productId);
+      if (!credit) {
+        console.warn(`[RevenueCat Webhook] unknown consumable ${JSON.stringify(productId)}: nothing credited`);
+        return res.status(200).json({ ok: true, message: 'Unknown product' });
       }
-
-      if (gemsToAdd > 0) {
-        await db
-          .update(userProfiles)
-          .set({
-            gems: sql`${userProfiles.gems} + ${gemsToAdd}`,
-            updatedAt: new Date().toISOString(),
-          })
-          .where(matchClause);
-
-        console.log(`[RevenueCat Webhook] Added ${gemsToAdd} gems`);
-        return res.status(200).json({ ok: true, message: `Added ${gemsToAdd} gems` });
+      if (!userId) {
+        console.warn(`[RevenueCat Webhook] consumable ${productId}: no matching profile, nothing credited`);
+        return res.status(200).json({ ok: true, message: 'No matching user' });
       }
+      const eventKey =
+        typeof event.id === 'string' && event.id
+          ? event.id
+          : typeof event.transaction_id === 'string' && event.transaction_id
+            ? `${event.type}:${event.transaction_id}`
+            : null;
+      const outcome = await creditPurchaseGems(db, {
+        eventKey,
+        userId,
+        eventType: event.type,
+        productId,
+        gems: credit.gems,
+        poolCoins: credit.poolCoins,
+      });
+      if (outcome === 'duplicate') {
+        console.log(`[RevenueCat Webhook] duplicate event ${eventKey}: already credited`);
+        return res.status(200).json({ ok: true, message: 'Already credited' });
+      }
+      // Starter pack coins: the app credits them itself (as it always has);
+      // fund the user's returns pool so that credit passes the coin caps, and
+      // release anything a cap held back meanwhile.
+      if (credit.poolCoins > 0) {
+        try {
+          await runGuarded(
+            userId,
+            { xp: 0, coins: 0, gems: 0 },
+            { store: economyStore(db), now: () => Date.now() },
+            'webhook/revenuecat',
+            { poolCredit: credit.poolCoins },
+          );
+        } catch (err) {
+          // Gems are credited already; a missing pool only means the app's
+          // coin credit goes through the free budget instead.
+          console.error('[RevenueCat Webhook] pool credit failed', err);
+        }
+      }
+      console.log(`[RevenueCat Webhook] Added ${credit.gems} gems (${credit.kind}, ${outcome})`);
+      return res.status(200).json({ ok: true, message: `Added ${credit.gems} gems` });
     }
 
     // distinct_id for PostHog MUST be userProfiles.id (the UUID the client
     // passes to identifyUser), so server lifecycle events merge onto the same
-    // person as in-app events. When RC sent the email, look the id up.
-    let distinctId = appUserId;
-    if (!UUID_RE.test(appUserId)) {
-      const rows = await db
-        .select({ id: userProfiles.id })
-        .from(userProfiles)
-        .where(matchClause)
-        .limit(1);
-      if (rows[0]?.id) distinctId = rows[0].id;
-    }
+    // person as in-app events.
+    const distinctId = userId ?? appUserId;
 
     // Handle Pro subscriptions
     const isProEvent = event.entitlement_ids?.includes('FinPlay Pro');
@@ -146,11 +162,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // entitlements; the client uses this (via /api/sync/subscription) to
         // show the one-time "קיבלתם Pro במתנה" modal + the expiry banner.
         const proSource = event.period_type === 'PROMOTIONAL' ? 'promotional' : 'store';
-        await db
-          .update(userProfiles)
-          .set({ isPro: true, proExpiresAt: expiresAt, proSource, updatedAt: new Date().toISOString() })
-          .where(matchClause);
-        console.log(`[RevenueCat Webhook] Granted PRO (${proSource})`);
+        if (userId) {
+          await db
+            .update(userProfiles)
+            .set({ isPro: true, proExpiresAt: expiresAt, proSource, updatedAt: new Date().toISOString() })
+            .where(eq(userProfiles.id, userId));
+          console.log(`[RevenueCat Webhook] Granted PRO (${proSource})`);
+        } else {
+          console.warn('[RevenueCat Webhook] Pro grant: no matching profile');
+        }
 
         // Each RC type → a distinct PostHog event so the funnel can split
         // "trial converted to paid" (RENEWAL after a TRIAL) from "fresh
@@ -168,11 +188,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     } else if (event.type === 'EXPIRATION' || event.type === 'BILLING_ISSUE') {
       if (isProEvent) {
-        await db
-          .update(userProfiles)
-          .set({ isPro: false, updatedAt: new Date().toISOString() })
-          .where(matchClause);
-        console.log(`[RevenueCat Webhook] Revoked PRO`);
+        if (userId) {
+          await db
+            .update(userProfiles)
+            .set({ isPro: false, updatedAt: new Date().toISOString() })
+            .where(eq(userProfiles.id, userId));
+          console.log(`[RevenueCat Webhook] Revoked PRO`);
+        }
 
         await capturePostHog(
           event.type === 'BILLING_ISSUE' ? 'subscription_billing_issue' : 'subscription_expired',

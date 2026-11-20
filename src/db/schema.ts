@@ -184,6 +184,47 @@ export const bridgeClicks = pgTable("bridge_clicks", {
 	check("bridge_clicks_action_check", sql`action = ANY (ARRAY['redeem'::text, 'link_open'::text])`),
 ]);
 
+// One row per (user, benefit) redeemed through POST /api/bridge/redeem (0018).
+// The server deducts the cost from user_profiles.coins and inserts this row in
+// one statement; the primary key makes a replay a no-op.
+// (0018 also adds user_profiles.economy_guard / economy_guard_version, which
+// are deliberately NOT declared on userProfiles above: endpoints that select()
+// every declared column would break if they were declared before the
+// migration runs. Raw SQL in api/_shared/economyStores.ts uses them.)
+export const bridgeRedemptions = pgTable("bridge_redemptions", {
+	userId: uuid("user_id").notNull(),
+	benefitId: text("benefit_id").notNull(),
+	costCoins: integer("cost_coins").notNull(),
+	redeemedAt: timestamp("redeemed_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+	primaryKey({ columns: [table.userId, table.benefitId], name: "bridge_redemptions_pkey" }),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "bridge_redemptions_user_fk"
+		}).onDelete("cascade"),
+	check("bridge_redemptions_cost_check", sql`cost_coins >= 0`),
+]);
+
+// RevenueCat consumable purchases that credited gems (0018). event_id is
+// RevenueCat's event id: a redelivered webhook conflicts and credits nothing.
+export const revenuecatEvents = pgTable("revenuecat_events", {
+	eventId: text("event_id").primaryKey().notNull(),
+	userId: uuid("user_id"),
+	eventType: text("event_type").notNull(),
+	productId: text("product_id"),
+	gems: integer().notNull().default(0),
+	coins: integer().notNull().default(0),
+	receivedAt: timestamp("received_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+	index("idx_revenuecat_events_user").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "revenuecat_events_user_fk"
+		}).onDelete("set null"),
+]);
+
 export const crowdQuestionVotes = pgTable("crowd_question_votes", {
 	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
 	userId: uuid("user_id").notNull(),

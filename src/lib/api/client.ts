@@ -63,6 +63,7 @@ const SESSION_ONLY_PATHS = new Set<string>([
   '/api/referral/redeem',
   '/api/trading/trade',
   '/api/account/delete',
+  '/api/bridge/redeem',
 ]);
 
 function requiresSession(path: string): boolean {

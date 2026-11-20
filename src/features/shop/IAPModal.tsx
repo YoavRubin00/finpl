@@ -7,6 +7,7 @@ import { formatNumber } from '../../utils/format';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { useEconomy, useAwardGems, useAwardCoins, useSpendGems } from '../economy/useEconomy';
+import { expectPurchasedEconomyCredit } from '../economy/useEconomyUIStore';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { purchaseGemBundle } from '../../services/revenueCat';
 import { logPurchase } from '../../utils/fbEvents';
@@ -104,10 +105,16 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
       try {
         if (HAS_RC_KEY) {
           await purchaseGemBundle(bundle.id);
+          // The server credits bought gems from the RevenueCat webhook (and,
+          // since 2026-11-20, drops a purchase-sized gem delta from the app —
+          // sending one here used to credit every purchase twice). Show them
+          // now and re-read the server balance until the webhook has landed.
+          expectPurchasedEconomyCredit({ gemsDelta: bundle.gems });
+        } else {
+          // No RC key on this platform → dev preview path: grant locally so the
+          // flow stays clickable instead of throwing "Purchases not configured".
+          addGems(bundle.gems);
         }
-        // No RC key on this platform → dev preview path: grant locally so the
-        // flow stays clickable instead of throwing "Purchases not configured".
-        addGems(bundle.gems);
         // Facebook attribution — only on real-money branch with RC key. The
         // dev grant path (no RC) shouldn't pollute Ads Manager ROAS data.
         if (HAS_RC_KEY) {

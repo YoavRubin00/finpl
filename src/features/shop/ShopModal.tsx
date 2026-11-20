@@ -6,7 +6,7 @@ import { Coins, Diamond, X, ArrowRight, ChevronRight } from "lucide-react-native
 import LottieView from "lottie-react-native";
 import { useRouter } from "expo-router";
 import { useEconomy, useSpendCoins, useSpendGems } from "../economy/useEconomy";
-import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useEconomyUIStore, fireEconomyDelta } from "../economy/useEconomyUIStore";
 import { useHeartsStore, MAX_HEARTS } from "../subscription/useHeartsStore";
 import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
@@ -183,16 +183,16 @@ export function ShopModal() {
     close();
   }, [close]);
 
-  const addCoinsHookSM = useEconomyUIStore((s) => s.addCoins);
   const handleGemExchange = useCallback((gemsNeeded: number, coinsReward: number) => {
     if (gems < gemsNeeded) {
       Alert.alert("אין מספיק ג'מס", `צריך ${gemsNeeded} 💎 להמרה זו.`);
       return;
     }
-    spendGemsHookSM(gemsNeeded);
-    addCoinsHookSM(coinsReward);
+    // One request with both sides, so the server pays the coins out of the
+    // gems debited (see ShopScreen.handleGemExchange).
+    fireEconomyDelta({ gemsDelta: -gemsNeeded, coinsDelta: coinsReward });
     successHaptic();
-  }, [gems, spendGemsHookSM, addCoinsHookSM]);
+  }, [gems]);
 
   return (
     <Modal

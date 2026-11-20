@@ -1,20 +1,20 @@
 // api/sync/subscription.ts
+//
+// GET  → { ok, subscription: { isPro, proExpiresAt, proSource } | null }
+// POST { isPro, proExpiresAt? } → same shape, the server's state after the call.
+//
+// POST rules (api/_shared/subscriptionSync.ts): the app can no longer make an
+// account Pro on its own word (RevenueCat must confirm, or the purchase
+// webhook must have landed), can no longer remove or shorten a Pro granted on
+// the server (promotional / manual / gift), and its expiry is never written
+// over an active Pro. Store-sourced Pro still follows the device's "not Pro".
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { eq } from 'drizzle-orm';
 import { userProfiles } from '../../src/db/schema';
 import { getDb } from '../_shared/db';
+import { createSubscriptionDeps } from '../_shared/economyStores';
+import { applyExpiry, handleSubscriptionPost } from '../_shared/subscriptionSync';
 import { withAuth } from '../_shared/withAuth';
-
-interface SubscriptionSyncBody {
-  isPro: boolean;
-  proExpiresAt?: string | null;
-}
-
-interface SubscriptionRow {
-  isPro: boolean | null;
-  proExpiresAt: string | null;
-  proSource: string | null;
-}
 
 const SUBSCRIPTION_COLUMNS = {
   isPro: userProfiles.isPro,
@@ -22,48 +22,22 @@ const SUBSCRIPTION_COLUMNS = {
   proSource: userProfiles.proSource,
 };
 
-/**
- * Report-only expiry guard (Yoav 2026-07-19): a grant whose pro_expires_at is
- * in the past must never be REPORTED as Pro, even when is_pro=true is still
- * stored (e.g. a promotional entitlement whose EXPIRATION webhook was missed).
- * Deliberately NO DB write here — the webhook stays the single writer; this
- * endpoint just tells the truth.
- */
-function applyExpiry(row: SubscriptionRow | undefined): SubscriptionRow | null {
-  if (!row) return null;
-  const expired =
-    row.proExpiresAt !== null && new Date(row.proExpiresAt).getTime() <= Date.now();
-  return expired ? { ...row, isPro: false } : row;
-}
-
 export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => {
-  const db = getDb();
-
   if (req.method === 'GET') {
+    const db = getDb();
     const rows = await db
       .select(SUBSCRIPTION_COLUMNS)
       .from(userProfiles)
       .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
+    // Report-only expiry guard: no DB write here — the webhook stays the
+    // writer; this endpoint just tells the truth.
     return res.status(200).json({ ok: true, subscription: applyExpiry(rows[0]) });
   }
 
   if (req.method === 'POST') {
-    const body = (req.body ?? {}) as SubscriptionSyncBody;
-    if (typeof body.isPro !== 'boolean') {
-      return res.status(400).json({ error: 'Missing isPro boolean' });
-    }
-    // UPDATE … RETURNING: one DB round trip instead of UPDATE then SELECT.
-    const rows = await db
-      .update(userProfiles)
-      .set({
-        isPro: body.isPro,
-        proExpiresAt: body.proExpiresAt ?? null,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(userProfiles.id, ctx.userId))
-      .returning(SUBSCRIPTION_COLUMNS);
-    return res.status(200).json({ ok: true, subscription: applyExpiry(rows[0]) });
+    const result = await handleSubscriptionPost(ctx.userId, req.body ?? {}, createSubscriptionDeps());
+    return res.status(result.status).json(result.body);
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

@@ -82,6 +82,9 @@ export function useIsPro(): boolean {
   return data?.isPro === true;
 }
 
+/** Re-reads after a purchase the server could not confirm yet (ms after it). */
+const PURCHASE_RECHECK_MS = [5_000, 15_000, 45_000];
+
 export function useSyncFromRevenueCat() {
   const qc = useQueryClient();
   return useMutation({
@@ -91,11 +94,44 @@ export function useSyncFromRevenueCat() {
         ? customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined
         : await checkProEntitlement();
       const proExpiresAt = customerInfo?.entitlements.active[RC_ENTITLEMENT_PRO]?.expirationDate ?? null;
-      return (await syncSubscription({ isPro, proExpiresAt })).subscription;
+      const subscription = (await syncSubscription({ isPro, proExpiresAt })).subscription;
+      return { subscription, rcIsPro: isPro, rcExpiresAt: proExpiresAt };
     },
-    onSuccess: (sub) => {
-      qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, sub);
+    onSuccess: ({ subscription: sub, rcIsPro, rcExpiresAt }) => {
       writeSubscriptionSnapshot(sub);
+      if (rcIsPro && sub?.isPro !== true) {
+        // Since 2026-11-20 the server makes an account Pro only once
+        // RevenueCat confirms it (or its webhook lands), so right after a
+        // purchase it can still say "not Pro". Show the store's answer for now
+        // (not saved as the last known state) and re-read the server shortly.
+        qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, {
+          isPro: true,
+          proExpiresAt: rcExpiresAt,
+          proSource: sub?.proSource ?? null,
+        });
+        recheckAfterPurchase(qc, 0);
+        return;
+      }
+      qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, sub);
     },
   });
+}
+
+/** Keeps the store's "Pro" on screen until the server agrees; after the last
+ *  re-read the server's answer stands, whatever it is. */
+function recheckAfterPurchase(qc: ReturnType<typeof useQueryClient>, attempt: number): void {
+  const last = attempt >= PURCHASE_RECHECK_MS.length - 1;
+  setTimeout(() => {
+    void (async () => {
+      try {
+        const sub = (await getSubscription()).subscription;
+        if (sub?.isPro === true || last) {
+          qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, sub);
+          writeSubscriptionSnapshot(sub);
+          return;
+        }
+      } catch { /* try again below */ }
+      if (!last) recheckAfterPurchase(qc, attempt + 1);
+    })();
+  }, PURCHASE_RECHECK_MS[attempt]);
 }

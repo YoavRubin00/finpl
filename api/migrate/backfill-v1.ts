@@ -3,6 +3,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { eq } from 'drizzle-orm';
 import { moduleProgress, userProfiles } from '../../src/db/schema';
 import { getDb } from '../_shared/db';
+import { ECONOMY_LIMITS, runGuarded } from '../_shared/economyGuard';
+import { createEconomyDeps } from '../_shared/economyStores';
 import { withAuth } from '../_shared/withAuth';
 import { mergeProfile, mergeModule, type LocalProfile, type LocalModuleProgress, type ServerProfile, type ServerModuleProgress } from '../_shared/backfillMerge';
 
@@ -73,20 +75,45 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     if (gap > 1) mergedProfile.currentStreak = 0;
   }
 
+  // Economy fields are never SET from the body any more (2026-11-20). This
+  // endpoint used to write max(server, client) for coins / gems / xp and OR the
+  // client's isPro in, so any signed-in caller could set any balance or make
+  // itself Pro, around every check in /api/sync/economy. Now:
+  //   - an increase of coins / gems / xp goes through the same guard as a
+  //     reward (api/_shared/economyGuard.ts: pool, daily budget, held coins,
+  //     purchase-sized gem deltas dropped);
+  //   - isPro is ignored: Pro comes from RevenueCat (webhook or the verified
+  //     /api/sync/subscription path);
+  //   - streaks and virtual balance keep the max rule, bounded to sane values.
+  const MAX_STREAK_DAYS = 3650;
+  const vbMerged = parseFloat(mergedProfile.virtualBalance);
+  const virtualBalance =
+    Number.isFinite(vbMerged) && Math.abs(vbMerged) <= ECONOMY_LIMITS.maxAbsVirtualBalance
+      ? mergedProfile.virtualBalance
+      : serverProfile.virtualBalance;
   await db
     .update(userProfiles)
     .set({
-      xp: mergedProfile.xp,
-      coins: mergedProfile.coins,
-      gems: mergedProfile.gems,
-      currentStreak: mergedProfile.currentStreak,
-      longestStreak: mergedProfile.longestStreak,
-      virtualBalance: mergedProfile.virtualBalance,
-      isPro: mergedProfile.isPro,
+      currentStreak: Math.min(Math.max(0, Math.floor(mergedProfile.currentStreak) || 0), MAX_STREAK_DAYS),
+      longestStreak: Math.min(Math.max(0, Math.floor(mergedProfile.longestStreak) || 0), MAX_STREAK_DAYS),
+      virtualBalance,
       preferences: mergedProfile.preferences ?? undefined,
       updatedAt: new Date().toISOString(),
     })
     .where(eq(userProfiles.id, ctx.userId));
+
+  const increase = (merged: number, server: number): number => {
+    const d = Math.round(merged - server);
+    return Number.isFinite(d) && d > 0 ? Math.min(d, ECONOMY_LIMITS.maxAbsDelta) : 0;
+  };
+  const economyDelta = {
+    xp: increase(mergedProfile.xp, serverProfile.xp),
+    coins: increase(mergedProfile.coins, serverProfile.coins),
+    gems: increase(mergedProfile.gems, serverProfile.gems),
+  };
+  if (economyDelta.xp > 0 || economyDelta.coins > 0 || economyDelta.gems > 0) {
+    await runGuarded(ctx.userId, economyDelta, createEconomyDeps(), 'migrate/backfill');
+  }
 
   if (Array.isArray(body.modules) && body.modules.length > 0) {
     const userId = profileRow.id;

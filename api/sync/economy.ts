@@ -1,16 +1,21 @@
 // api/sync/economy.ts
+//
+// GET  → { ok, economy: { xp, coins, gems, level, virtualBalance } | null }
+// POST { xpDelta?, coinsDelta?, gemsDelta?, virtualBalanceSet? }
+//      → same shape, the server's balance after the write.
+//
+// POST no longer applies the client's numbers as-is: api/_shared/economyGuard.ts
+// floors debits at zero, pays coin credits from the user's returns pool or a
+// daily free budget (the rest is held and paid later), drops purchase-sized gem
+// deltas (purchased gems come from the RevenueCat webhook) and caps earned gems
+// per day. A capped request still answers 200 with the server's balance.
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { userProfiles } from '../../src/db/schema';
 import { getDb } from '../_shared/db';
+import { handleEconomyPost } from '../_shared/economyGuard';
+import { createEconomyDeps } from '../_shared/economyStores';
 import { withAuth } from '../_shared/withAuth';
-
-interface EconomyDeltaBody {
-  xpDelta?: number;
-  coinsDelta?: number;
-  gemsDelta?: number;
-  virtualBalanceSet?: number;
-}
 
 const ECONOMY_COLUMNS = {
   xp: userProfiles.xp,
@@ -21,9 +26,8 @@ const ECONOMY_COLUMNS = {
 };
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => {
-  const db = getDb();
-
   if (req.method === 'GET') {
+    const db = getDb();
     const rows = await db
       .select(ECONOMY_COLUMNS)
       .from(userProfiles)
@@ -33,35 +37,8 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
   }
 
   if (req.method === 'POST') {
-    const body = (req.body ?? {}) as EconomyDeltaBody;
-
-    const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-    if (typeof body.xpDelta === 'number' && body.xpDelta !== 0) {
-      updates.xp = sql`COALESCE(${userProfiles.xp}, 0) + ${body.xpDelta}`;
-    }
-    if (typeof body.coinsDelta === 'number' && body.coinsDelta !== 0) {
-      updates.coins = sql`COALESCE(${userProfiles.coins}, 0) + ${body.coinsDelta}`;
-    }
-    if (typeof body.gemsDelta === 'number' && body.gemsDelta !== 0) {
-      updates.gems = sql`COALESCE(${userProfiles.gems}, 0) + ${body.gemsDelta}`;
-    }
-    if (typeof body.virtualBalanceSet === 'number' && Number.isFinite(body.virtualBalanceSet)) {
-      updates.virtualBalance = body.virtualBalanceSet.toString();
-    }
-
-    if (Object.keys(updates).length === 1) {
-      return res.status(400).json({ error: 'No deltas provided' });
-    }
-
-    // UPDATE … RETURNING: one DB round trip instead of UPDATE then SELECT.
-    // Same columns, same row (the post-update values), same `null` when the
-    // profile row does not exist.
-    const rows = await db
-      .update(userProfiles)
-      .set(updates)
-      .where(eq(userProfiles.id, ctx.userId))
-      .returning(ECONOMY_COLUMNS);
-    return res.status(200).json({ ok: true, economy: rows[0] ?? null });
+    const result = await handleEconomyPost(ctx.userId, req.body ?? {}, createEconomyDeps());
+    return res.status(result.status).json(result.body);
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

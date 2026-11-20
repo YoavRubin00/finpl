@@ -31,12 +31,10 @@ import Animated, {
   ZoomIn,
   Easing,
 } from 'react-native-reanimated';
-import { useEconomy, economyQueryKey } from '../economy/useEconomy';
-import { queryClient } from '../../lib/queryClient';
-import type { Economy } from '../../lib/api/economy';
+import { useEconomy } from '../economy/useEconomy';
 import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
-import { useBridgeStore } from './useBridgeStore';
+import { useBridgeStore, type BridgeRedeemResult } from './useBridgeStore';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
 import { captureEvent } from '../../lib/posthog';
 import { BRIDGE_BENEFITS, VISIBLE_BRIDGE_CATEGORIES } from './bridgeData';
@@ -403,10 +401,16 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
     }
   }, []);
 
+  // One redemption request at a time: the server call takes a moment and a
+  // second tap must not start another one (the server would answer
+  // alreadyRedeemed anyway, but the UI would celebrate twice).
+  const redeemInFlightRef = useRef(false);
+
   // Direct purchase shortcut: bypasses the confirmation modal. Used by the
   // big blue cost button on the card itself — needed because the modal
   // confirm flow had visibility issues on Android.
-  const handleQuickPurchase = useCallback((benefit: Benefit) => {
+  const handleQuickPurchase = useCallback(async (benefit: Benefit) => {
+    if (redeemInFlightRef.current) return;
     const alreadyRedeemed = isBenefitRedeemed(benefit.id);
     if (alreadyRedeemed) {
       // Re-open partner URL only, don't re-spend.
@@ -425,11 +429,18 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       }
       return;
     }
-    const success = redeemBenefit(benefit.id);
-    if (success) {
+    redeemInFlightRef.current = true;
+    let result: BridgeRedeemResult;
+    try {
+      result = await redeemBenefit(benefit.id);
+    } finally {
+      redeemInFlightRef.current = false;
+    }
+    if (result.ok) {
       setSuccessTitle(benefit.title);
       setShowConfetti(true);
-      trackBridgeClick(benefit.id, 'redeem', email);
+      // Signed-in redemptions are recorded by the server itself.
+      if (!result.serverChecked) trackBridgeClick(benefit.id, 'redeem', email);
       captureEvent('bridge_redeem_confirmed', {
         benefit_id: benefit.id,
         partner_name: benefit.partnerName,
@@ -437,6 +448,8 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         cost_coins: benefit.costCoins,
         entry_point: 'quick_purchase',
         is_pro: isPro,
+        server_checked: result.serverChecked,
+        already_redeemed: result.alreadyRedeemed,
       });
       if (benefit.partnerUrl) {
         captureEvent('bridge_partner_url_opened', {
@@ -451,7 +464,6 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         openPartnerUrl(benefit.partnerUrl);
       }
     } else {
-      const currentCoins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
       // Track failed-to-redeem attempts too — the funnel needs to see them
       // to distinguish "didn't try" from "tried but blocked".
       captureEvent('bridge_redeem_failed', {
@@ -459,23 +471,24 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         partner_name: benefit.partnerName,
         category: benefit.category,
         cost_coins: benefit.costCoins,
-        reason: !benefit.isAvailable ? 'not_available' : currentCoins < benefit.costCoins ? 'insufficient_coins' : 'unknown',
-        coins_at_attempt: currentCoins,
+        reason: result.reason === 'failed' ? 'unknown' : result.reason,
+        coins_at_attempt: result.coins,
         entry_point: 'quick_purchase',
         is_pro: isPro,
       });
-      if (!benefit.isAvailable) {
+      if (result.reason === 'not_available') {
         setToast(bridgeToastFor({ kind: 'not_available' }));
-      } else if (currentCoins < benefit.costCoins) {
-        setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: benefit.costCoins, coins: currentCoins }));
+      } else if (result.reason === 'insufficient_coins') {
+        setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: benefit.costCoins, coins: result.coins }));
       } else {
         setToast(bridgeToastFor({ kind: 'redeem_failed' }));
       }
     }
   }, [isBenefitRedeemed, redeemBenefit, openPartnerUrl, email, isPro]);
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = useCallback(async () => {
     if (!selectedBenefit) return;
+    if (redeemInFlightRef.current) return;
     const alreadyRedeemed = isBenefitRedeemed(selectedBenefit.id);
     // Re-opening a previously redeemed benefit: just open the URL again,
     // don't re-spend coins.
@@ -497,13 +510,20 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       }
       return;
     }
-    const success = redeemBenefit(selectedBenefit.id);
+    redeemInFlightRef.current = true;
+    let result: BridgeRedeemResult;
+    try {
+      result = await redeemBenefit(selectedBenefit.id);
+    } finally {
+      redeemInFlightRef.current = false;
+    }
     setModalVisible(false);
     setSelectedBenefit(null);
-    if (success) {
+    if (result.ok) {
       setSuccessTitle(selectedBenefit.title);
       setShowConfetti(true);
-      trackBridgeClick(selectedBenefit.id, 'redeem', email);
+      // Signed-in redemptions are recorded by the server itself.
+      if (!result.serverChecked) trackBridgeClick(selectedBenefit.id, 'redeem', email);
       captureEvent('bridge_redeem_confirmed', {
         benefit_id: selectedBenefit.id,
         partner_name: selectedBenefit.partnerName,
@@ -511,6 +531,8 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         cost_coins: selectedBenefit.costCoins,
         entry_point: 'modal',
         is_pro: isPro,
+        server_checked: result.serverChecked,
+        already_redeemed: result.alreadyRedeemed,
       });
       if (selectedBenefit.partnerUrl) {
         captureEvent('bridge_partner_url_opened', {
@@ -526,21 +548,20 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       }
     } else {
       // Surface the failure to the user so they understand why nothing happened.
-      const coins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
       captureEvent('bridge_redeem_failed', {
         benefit_id: selectedBenefit.id,
         partner_name: selectedBenefit.partnerName,
         category: selectedBenefit.category,
         cost_coins: selectedBenefit.costCoins,
-        reason: !selectedBenefit.isAvailable ? 'not_available' : coins < selectedBenefit.costCoins ? 'insufficient_coins' : 'unknown',
-        coins_at_attempt: coins,
+        reason: result.reason === 'failed' ? 'unknown' : result.reason,
+        coins_at_attempt: result.coins,
         entry_point: 'modal',
         is_pro: isPro,
       });
-      if (!selectedBenefit.isAvailable) {
+      if (result.reason === 'not_available') {
         setToast(bridgeToastFor({ kind: 'not_available' }));
-      } else if (coins < selectedBenefit.costCoins) {
-        setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: selectedBenefit.costCoins, coins }));
+      } else if (result.reason === 'insufficient_coins') {
+        setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: selectedBenefit.costCoins, coins: result.coins }));
       } else {
         setToast(bridgeToastFor({ kind: 'redeem_failed' }));
       }

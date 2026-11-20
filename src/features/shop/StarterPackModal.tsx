@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
-import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { useEconomyUIStore, expectPurchasedEconomyCredit } from '../economy/useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { getAvatarById } from '../avatars/avatarData';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
@@ -68,8 +68,17 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
   }, [visible, pack.id, isMinor]);
 
   const grantPack = useCallback(() => {
+    // Coins: still credited by the app; the RevenueCat webhook funds the
+    // server's returns pool with the pack's coins so this credit passes the
+    // coin caps (api/_shared/iapCredit.ts).
     addCoins(pack.coins);
-    addGems(pack.gems);
+    if (HAS_RC_KEY) {
+      // Gems: credited by the webhook only (the server drops a purchase-sized
+      // gem delta from the app since 2026-11-20). Show them now, re-read later.
+      expectPurchasedEconomyCredit({ gemsDelta: pack.gems });
+    } else {
+      addGems(pack.gems); // dev preview without a store key
+    }
     for (const aid of pack.avatarIds) {
       addOwnedAvatar(aid);
     }
