@@ -37,13 +37,16 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     const result = await resolveGoogleToken(token, { clientIds: getGoogleClientIds(), fetchImpl: fetch });
     if (!result.ok) {
       console.warn(`[auth/link] google token rejected: reason=${result.reason}`);
-      return res.status(401).json({ ok: false, code: 'GOOGLE_TOKEN_INVALID', error: 'Invalid Google token' });
+      // 400, not 401: this request carries a valid session, and the app treats
+      // a 401 on such a request as "session rejected" (it signs the user out
+      // and wipes the device). A bad provider token is only a failed link.
+      return res.status(400).json({ ok: false, code: 'GOOGLE_TOKEN_INVALID', error: 'Invalid Google token' });
     }
     subject = result.sub;
   } else if (body.provider === 'apple') {
     const identityToken = typeof body.identityToken === 'string' ? body.identityToken.trim() : '';
     if (!identityToken) {
-      return res.status(401).json({ ok: false, code: 'APPLE_TOKEN_REQUIRED', error: 'Apple identity token is required' });
+      return res.status(400).json({ ok: false, code: 'APPLE_TOKEN_REQUIRED', error: 'Apple identity token is required' });
     }
     let keys = await getAppleKeys({ forceRefresh: false });
     const kid = appleTokenKid(identityToken);
@@ -56,7 +59,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     });
     if (!result.ok) {
       console.warn(`[auth/link] apple token rejected: reason=${result.reason}`);
-      return res.status(401).json({ ok: false, code: 'APPLE_TOKEN_INVALID', error: 'Invalid Apple identity token' });
+      return res.status(400).json({ ok: false, code: 'APPLE_TOKEN_INVALID', error: 'Invalid Apple identity token' });
     }
     subject = result.sub;
   } else {
