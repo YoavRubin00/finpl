@@ -13,16 +13,25 @@
 // guardedQueryFn, whether the boot or a screen's hook started the request.
 import type { QueryClient, QueryKey } from '@tanstack/react-query';
 
+// A seed is a saved snapshot put in the cache with updatedAt 0 (lifecycle.ts
+// seedFromSnapshot), and the guard tells it apart by that updatedAt, never by
+// object identity: when the server's answer equals the seed (nothing changed
+// since the last launch, the usual case), react-query's structural sharing
+// keeps the seeded object in the cache, now with the answer's updatedAt. Read
+// by identity, that answer looked like "still the seed" and the launch's
+// RevenueCat-to-server sync never ran (boot fix B1, 20.11).
 export interface QueryGuard {
-  /** Mark a value put in the cache from a saved snapshot: it stands in until
-   *  the server answers and is never mistaken for a newer local write. */
+  /** Mark a value put in the cache from a saved snapshot (stored with
+   *  updatedAt 0). The guard itself decides by updatedAt; isSeeded is for
+   *  callers that need to know whether a cached object came from a snapshot. */
   markSeeded(value: object): void;
   isSeeded(value: unknown): boolean;
   /**
    * Wraps a query function. If the query got a newer write while the request
-   * was in flight (anything but a seeded snapshot), that write is kept, this
-   * answer is dropped and the query is marked stale so the next ordinary
-   * refetch (mount, focus, reconnect) reconciles once the writes have settled.
+   * was in flight (anything but a seeded snapshot, i.e. stored with a real
+   * updatedAt), that write is kept, this answer is dropped and the query is
+   * marked stale so the next ordinary refetch (mount, focus, reconnect)
+   * reconciles once the writes have settled.
    *
    * `onAccepted` (e.g. a snapshot write) runs only for an answer that was
    * kept, with the authId the request was made for, and only when that account
@@ -38,7 +47,8 @@ export interface QueryGuard {
    * The data a query got from the server since `sinceMs`, whoever made the
    * request (the boot or a hook that mounted first: the boot joins an
    * in-flight request instead of making its own). A GET answer, or a write
-   * stored since then such as a POST's answer. Seeded snapshots (stored with
+   * stored since then such as a POST's answer, also when it equals the seed
+   * and the cache kept the seeded object. Seeded snapshots (stored with
    * updatedAt 0) and anything older don't count. undefined = no answer.
    */
   serverAnswerSince<T>(key: QueryKey, sinceMs: number): T | undefined;
@@ -68,7 +78,8 @@ export function createQueryGuard(client: QueryClient, getAuthId: () => string | 
         if (!query || cache.find({ queryKey: key, exact: true }) !== query) return value;
 
         const state = query.state;
-        if (state.dataUpdateCount !== startCount && state.data !== undefined && !isSeeded(state.data)) {
+        // Written meanwhile, and not a seed (updatedAt 0): a newer local write.
+        if (state.dataUpdateCount !== startCount && state.data !== undefined && state.dataUpdatedAt !== 0) {
           // setTimeout, not a microtask: react-query stores this function's
           // result after it returns, and that store would clear the stale flag.
           setTimeout(() => {
@@ -84,8 +95,9 @@ export function createQueryGuard(client: QueryClient, getAuthId: () => string | 
     },
     serverAnswerSince<T>(key: QueryKey, sinceMs: number): T | undefined {
       const state = client.getQueryState<T>(key);
-      if (!state || state.status !== 'success' || state.dataUpdatedAt < sinceMs) return undefined;
-      if (state.data === undefined || isSeeded(state.data)) return undefined;
+      if (!state || state.status !== 'success' || state.data === undefined) return undefined;
+      // A seed (updatedAt 0) or an answer from before `sinceMs`.
+      if (state.dataUpdatedAt === 0 || state.dataUpdatedAt < sinceMs) return undefined;
       return state.data;
     },
   };

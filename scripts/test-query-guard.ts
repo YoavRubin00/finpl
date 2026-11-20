@@ -7,7 +7,10 @@
 //    (that is what lets the RevenueCat sync run on a cold start);
 //  - a late GET must not overwrite a newer write (the streak tick's POST);
 //  - a late answer after a sign-out / another sign-in must not be filed under
-//    the next account.
+//    the next account;
+//  - B1 (boot fix round, 20.11): a server answer equal to the seed (the usual
+//    launch, nothing changed) is still the server's answer, although
+//    react-query keeps the seeded object in the cache.
 import { QueryClient, QueryObserver } from '@tanstack/query-core';
 import { createQueryGuard } from '../src/lib/queryGuardCore';
 
@@ -100,6 +103,80 @@ async function seededThenAnswered(): Promise<void> {
   check(written.length === 1, 'server answer snapshotted');
 }
 
+/** What the network hands back: a fresh object every time, never the cached one. */
+const fromJson = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
+async function seedEqualToTheAnswer(): Promise<void> {
+  // B1 (20.11): the common launch. Nothing changed since the last one, so the
+  // saved snapshot (a JSON copy of an earlier answer) equals the server's
+  // answer. React-query's structural sharing then keeps the SEEDED object in
+  // the cache, so a check by object identity read the answer as "still the
+  // seed" and the launch RevenueCat-to-server sync never ran.
+  for (const who of ['boot', 'hook'] as const) {
+    const client = makeClient();
+    let authId: string | null = 'A';
+    const guard = createQueryGuard(client, () => authId);
+    const key = ['subscription'];
+    const server: Sub = { isPro: false, proExpiresAt: null, proSource: null };
+    const snapshots: Array<{ authId: string; value: Sub | null }> = [];
+    const subscriptionQueryFn = guard.guardedQueryFn<Sub | null>(
+      key,
+      async () => { await sleep(10); return fromJson(server); },
+      (v, ctx) => snapshots.push({ authId: ctx.authId, value: v }),
+    );
+
+    let unsub = () => {};
+    if (who === 'hook') {
+      // The root layout's useIsPro() starts the GET before the boot seeds.
+      const observer = new QueryObserver(client, { queryKey: key, queryFn: subscriptionQueryFn });
+      unsub = observer.subscribe(() => {});
+      await sleep(1);
+    }
+    const bootStartedAt = Date.now();
+    const seed = fromJson(server); // the saved snapshot, read back from storage
+    client.setQueryData(key, seed, { updatedAt: 0 });
+    guard.markSeeded(seed);
+    check(guard.serverAnswerSince(key, bootStartedAt) === undefined, `B1 (${who} reads first): before the answer the seed is not a server answer`);
+    await client.fetchQuery({ queryKey: key, queryFn: subscriptionQueryFn });
+
+    check(client.getQueryData(key) === seed, `B1 (${who} reads first): react-query kept the seeded object for the equal answer (structural sharing)`);
+    const answer = guard.serverAnswerSince<Sub | null>(key, bootStartedAt);
+    check(answer !== undefined && answer !== null && answer.isPro === false,
+      `B1 (${who} reads first): the unchanged answer counts as the server's, so the RevenueCat sync runs`);
+    check(snapshots.length === 1 && snapshots[0].authId === 'A', `B1 (${who} reads first): the answer is snapshotted once`);
+    check(guard.serverAnswerSince(key, Date.now() + 1000) === undefined, `B1 (${who} reads first): an answer from before 'since' does not count`);
+    unsub();
+    authId = null;
+  }
+}
+
+async function writeEqualToTheSeedIsKept(): Promise<void> {
+  // B1 hardening: the guard tells a seed by its updatedAt 0, not by object
+  // identity. A newer write that happens to equal the seed (the tick's POST
+  // answer) keeps the seeded object in the cache with a fresh updatedAt; it
+  // must still win over the older GET answer in flight.
+  const client = makeClient();
+  const guard = createQueryGuard(client, () => 'A');
+  const key = ['streak'];
+  const seed = fromJson({ currentStreak: 4 });
+  client.setQueryData(key, seed, { updatedAt: 0 });
+  guard.markSeeded(seed);
+  const snapshots: unknown[] = [];
+  const streakQueryFn = guard.guardedQueryFn(
+    key,
+    async () => { await sleep(30); return { currentStreak: 3 }; }, // read before the tick
+    (v) => snapshots.push(v),
+  );
+  const observer = new QueryObserver(client, { queryKey: key, queryFn: streakQueryFn });
+  const unsub = observer.subscribe(() => {});
+  await sleep(5);
+  client.setQueryData(key, fromJson({ currentStreak: 4 })); // the tick's POST answer, equal to the seed
+  await sleep(40);
+  check((client.getQueryData(key) as { currentStreak: number }).currentStreak === 4, 'B1: a write equal to the seed still wins over the older GET');
+  check(snapshots.length === 0, 'B1: that dropped GET answer is not snapshotted');
+  unsub();
+}
+
 async function accountSwitchDuringRead(): Promise<void> {
   // F3: a slow read for A; A signs out (cache cleared) and B signs in.
   const client = makeClient();
@@ -141,6 +218,8 @@ async function main(): Promise<void> {
   await hookOwnedSubscriptionRead();
   await lateStreakGet();
   await seededThenAnswered();
+  await seedEqualToTheAnswer();
+  await writeEqualToTheSeedIsKept();
   await accountSwitchDuringRead();
   console.log(`\n${passed} passed, ${failed} failed`);
   // The clients' gc timers would keep Node alive for gcTime.
