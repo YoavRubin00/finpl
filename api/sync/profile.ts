@@ -7,7 +7,13 @@ import { withAuth } from '../_shared/withAuth';
 
 interface ProfileUpsertBody {
   displayName?: string | null;
-  email?: string | null;
+  // `email` is NOT accepted (2026-11-20). The address is written by the server
+  // only, from a verified sign-in. A client-set email let a signed-in user put
+  // someone else's address on their own row: sign-in falls back to matching by
+  // lower(email), so that person could later land in the attacker's account,
+  // and account deletion would have removed rows matched by that address. No
+  // app build ever sent the field, and no production row differs from its
+  // sign-in address (checked read-only before removing it).
   avatarUrl?: string | null;
   preferences?: Record<string, unknown> | null;
   // Numeric fields are NOT accepted on /profile anymore.
@@ -32,7 +38,6 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
 
     const setFields: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (body.displayName !== undefined && body.displayName !== null) setFields.displayName = body.displayName;
-    if (body.email !== undefined && body.email !== null) setFields.email = body.email;
     if (body.avatarUrl !== undefined && body.avatarUrl !== null) setFields.avatarUrl = body.avatarUrl;
     if (body.preferences !== undefined && body.preferences !== null) setFields.preferences = body.preferences;
 
