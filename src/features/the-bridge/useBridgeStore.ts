@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { queryClient } from '../../lib/queryClient';
-import { economyQueryKey } from '../economy/useEconomy';
+import { economyQueryKey, withPendingGems } from '../economy/useEconomy';
 import { fireEconomyDelta } from '../economy/useEconomyUIStore';
 import type { Economy } from '../../lib/api/economy';
 import { ApiError } from '../../lib/api/client';
@@ -77,13 +77,13 @@ export const useBridgeStore = create<BridgeState>()(
 
         try {
           const res = await redeemBridgeBenefit(benefitId);
-          queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy);
+          queryClient.setQueryData<Economy | null>(economyQueryKey, withPendingGems(res.economy));
           markRedeemed();
           return { ok: true, serverChecked: true, alreadyRedeemed: res.alreadyRedeemed };
         } catch (err) {
           if (err instanceof ApiError && err.status === 409) {
             const economy = (err.body as { economy?: Economy } | null)?.economy;
-            if (economy) queryClient.setQueryData<Economy | null>(economyQueryKey, economy);
+            if (economy) queryClient.setQueryData<Economy | null>(economyQueryKey, withPendingGems(economy));
             return { ok: false, reason: 'insufficient_coins', coins: economy?.coins ?? cachedCoins() };
           }
           if (err instanceof ApiError && err.status === 404) {

@@ -23,6 +23,7 @@ import {
   economyQueryFn,
   economyPlaceholder,
   primeEconomySnapshot,
+  clearPendingGems,
 } from '../../features/economy/useEconomy';
 import {
   streakQueryKey,
@@ -529,6 +530,7 @@ export async function signOut(): Promise<void> {
       }
 
       queryClient.clear();
+      clearPendingGems(); // bought gems shown while the server confirms them (in memory)
       resetAllLocalStores();
       // Saved snapshots held in memory (keyed by authId, so never readable by
       // the next account, but nothing of this account should stay loaded).
@@ -602,6 +604,7 @@ export async function wipeDeviceForDeletedAccount(scope: 'account' | 'guest'): P
   //    financial profile, ...), then every persisted key except the few that
   //    describe the device rather than the account.
   queryClient.clear();
+  clearPendingGems();
   resetAllLocalStores();
   resetSnapshotMemory();
   await resetLocalOnlyStores();

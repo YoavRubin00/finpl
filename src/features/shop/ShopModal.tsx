@@ -5,7 +5,8 @@ import Animated from "react-native-reanimated";
 import { Coins, Diamond, X, ArrowRight, ChevronRight } from "lucide-react-native";
 import LottieView from "lottie-react-native";
 import { useRouter } from "expo-router";
-import { useEconomy, useSpendCoins, useSpendGems } from "../economy/useEconomy";
+import { useEconomy, useSpendCoins, useSpendGems, spendableGems } from "../economy/useEconomy";
+import { PENDING_GEMS_COPY } from "../economy/pendingGemsCore";
 import { useEconomyUIStore, fireEconomyDelta } from "../economy/useEconomyUIStore";
 import { useHeartsStore, MAX_HEARTS } from "../subscription/useHeartsStore";
 import { useIsPro } from "../subscription/useSubscription";
@@ -56,6 +57,9 @@ export function ShopModal() {
   const { data: economyDataSM } = useEconomy();
   const coins = economyDataSM?.coins ?? 0;
   const gems = economyDataSM?.gems ?? 0;
+  // What gem spends and exchanges may use: bought gems the server has not
+  // credited yet are shown (in `gems`) but not spendable (pendingGemsCore.ts).
+  const spendable = spendableGems(economyDataSM);
   const spendCoinsHookSM = useSpendCoins();
   const spendGemsHookSM = useSpendGems();
   const restoreAllHearts = useHeartsStore((s) => s.restoreAllHearts);
@@ -85,10 +89,10 @@ export function ShopModal() {
 
   const canAffordItem = useCallback(
     (item: ShopItem): boolean => {
-      if ((item.gemCost ?? 0) > 0) return gems >= (item.gemCost ?? 0);
+      if ((item.gemCost ?? 0) > 0) return spendable >= (item.gemCost ?? 0);
       return coins >= effectiveCoinCost(item);
     },
-    [coins, gems, effectiveCoinCost],
+    [coins, spendable, effectiveCoinCost],
   );
 
   const handleBuyPress = useCallback(
@@ -104,7 +108,7 @@ export function ShopModal() {
 
     const isGemItem = (pendingItem.gemCost ?? 0) > 0;
     const cost = isGemItem ? (pendingItem.gemCost ?? 0) : effectiveCoinCost(pendingItem);
-    const canAffordNow = isGemItem ? gems >= cost : coins >= cost;
+    const canAffordNow = isGemItem ? spendable >= cost : coins >= cost;
 
     if (canAffordNow) {
       if (isGemItem) spendGemsHookSM(cost); else spendCoinsHookSM(cost);
@@ -170,7 +174,7 @@ export function ShopModal() {
       }
     }
     setPendingItem(null);
-  }, [pendingItem, coins, gems, spendCoinsHookSM, spendGemsHookSM, effectiveCoinCost, restoreAllHearts, addOwnedAvatar, setAvatar]);
+  }, [pendingItem, coins, spendable, spendCoinsHookSM, spendGemsHookSM, effectiveCoinCost, restoreAllHearts, addOwnedAvatar, setAvatar]);
 
   const handleCancel = useCallback(() => {
     setPendingItem(null);
@@ -184,15 +188,18 @@ export function ShopModal() {
   }, [close]);
 
   const handleGemExchange = useCallback((gemsNeeded: number, coinsReward: number) => {
-    if (gems < gemsNeeded) {
-      Alert.alert("אין מספיק ג'מס", `צריך ${gemsNeeded} 💎 להמרה זו.`);
+    // Bought gems still on their way are not exchangeable (see
+    // ShopScreen.handleGemExchange).
+    if (spendable < gemsNeeded) {
+      if (gems >= gemsNeeded) Alert.alert(PENDING_GEMS_COPY.title, PENDING_GEMS_COPY.body);
+      else Alert.alert("אין מספיק ג'מס", `צריך ${gemsNeeded} 💎 להמרה זו.`);
       return;
     }
     // One request with both sides, so the server pays the coins out of the
     // gems debited (see ShopScreen.handleGemExchange).
     fireEconomyDelta({ gemsDelta: -gemsNeeded, coinsDelta: coinsReward });
     successHaptic();
-  }, [gems]);
+  }, [gems, spendable]);
 
   return (
     <Modal
@@ -311,7 +318,7 @@ export function ShopModal() {
               possibleRewards={['XP', '💎', '🪙', '❤️', '⚡']}
               totalRewardCount={17}
               onPress={() => {
-                if (gems < 50) { setMysteryToast('noGems'); return; }
+                if (spendable < 50) { setMysteryToast('noGems'); return; }
                 setMysteryToast('comingSoon');
               }}
             />
@@ -404,7 +411,7 @@ export function ShopModal() {
             <Text style={[ms.sectionSub, RTL]}>יש לך {gems} 💎</Text>
           </View>
           {GEM_EXCHANGE_RATES.map((rate) => {
-            const can = gems >= rate.gems;
+            const can = spendable >= rate.gems;
             return (
               <Pressable
                 key={rate.gems}

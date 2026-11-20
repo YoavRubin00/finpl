@@ -5,8 +5,45 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { guardedQueryFn } from '../../lib/queryGuard';
 import { whenHydrated } from '../../lib/stores/whenHydrated';
 import { isSnapshotPrimed, primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
+import { createPendingGems } from './pendingGemsCore';
+
+export { spendableGems } from './pendingGemsCore';
 
 export const economyQueryKey = ['economy'] as const;
+
+// ─── Bought gems the server has not credited yet (pendingGemsCore.ts) ───────
+// In memory only, for the signed-in account; cleared on sign-out and account
+// wipe (lifecycle.ts). Every server answer written into the economy cache goes
+// through withPendingGems(); every gem change the app sends goes through
+// notePendingGemDelta().
+const pendingGems = createPendingGems();
+const currentAuthId = (): string | null => useAuthStore.getState().authId;
+
+/** The value to cache for a server answer (or the cached value): bought gems
+ *  the server still lacks stay on top, as `pendingGems` (not spendable). */
+export function withPendingGems(economy: Economy | null): Economy | null {
+  return pendingGems.apply(economy, currentAuthId(), Date.now()) ?? null;
+}
+
+/** The app is sending this gem change to the server (a reward, a spend). */
+export function notePendingGemDelta(gemsDelta: number | null | undefined): void {
+  pendingGems.noteDelta(gemsDelta);
+}
+
+/** A store purchase of `gems` just completed. `current` = what the cache shows. */
+export function recordPurchasedGems(gems: number, current: Economy | null | undefined): boolean {
+  return pendingGems.recordPurchase(currentAuthId(), gems, current, Date.now());
+}
+
+/** Ends the pending gems once their window has passed. True when it did. */
+export function expirePendingGems(): boolean {
+  return pendingGems.expireIfDue(Date.now());
+}
+
+/** Sign-out / account wipe. */
+export function clearPendingGems(): void {
+  pendingGems.clear();
+}
 
 /** Persisted last-known economy (UX-21 flash-of-zero). Keyed by authId inside. */
 const ECONOMY_SNAPSHOT_KEY = 'economy-snapshot:v1';
@@ -62,13 +99,17 @@ export async function whenEconomyBaseReady(): Promise<void> {
   await Promise.race([primeEconomySnapshot(), new Promise<void>((r) => setTimeout(r, left))]);
 }
 
-/** GET /api/sync/economy as a query function: never overwrites a newer local
- *  write (queryGuard), snapshots only the answers it keeps. */
-export const economyQueryFn = guardedQueryFn(
+/** GET /api/sync/economy, guarded: never overwrites a newer local write
+ *  (queryGuard), snapshots only the answers it keeps (as the server sent them). */
+const guardedEconomyRead = guardedQueryFn(
   economyQueryKey,
   async () => (await getEconomy()).economy,
   (economy, { authId }) => writeEconomySnapshot(economy, authId),
 );
+
+/** The economy query function (screens and the boot): the guarded read, with
+ *  bought gems the server has not credited yet kept on screen. */
+export const economyQueryFn = async (): Promise<Economy | null> => withPendingGems(await guardedEconomyRead());
 
 export function useEconomy() {
   // Guests cannot read their economy server-side — they have no auth token,
@@ -108,6 +149,7 @@ export function useApplyEconomyDelta() {
     mutationKey: economyQueryKey,
     mutationFn: async (input: DeltaInput) => (await applyEconomyDelta(input)).economy,
     onMutate: async (input) => {
+      notePendingGemDelta(input.gemsDelta);
       await qc.cancelQueries({ queryKey: economyQueryKey });
       const prev = qc.getQueryData<Economy | null>(economyQueryKey);
       qc.setQueryData<Economy | null>(economyQueryKey, (old) => {
@@ -133,7 +175,7 @@ export function useApplyEconomyDelta() {
     // into the cache instead of invalidating, which would trigger a redundant
     // GET /api/sync/economy after every XP/coin/gem mutation.
     onSuccess: (economy) => {
-      qc.setQueryData(economyQueryKey, economy);
+      qc.setQueryData(economyQueryKey, withPendingGems(economy));
       // Server-authoritative row → keep the cold-open snapshot fresh (UX-21).
       writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy);
     },

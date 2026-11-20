@@ -6,7 +6,7 @@ import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
 import { formatNumber } from '../../utils/format';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LottieIcon } from '../../components/ui/LottieIcon';
-import { useEconomy, useAwardGems, useAwardCoins, useSpendGems } from '../economy/useEconomy';
+import { useEconomy, useAwardGems, useAwardCoins, useSpendGems, spendableGems } from '../economy/useEconomy';
 import { expectPurchasedEconomyCredit } from '../economy/useEconomyUIStore';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { purchaseGemBundle } from '../../services/revenueCat';
@@ -90,8 +90,9 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     });
 
     if (isCoinBundle(bundle)) {
-      // Coin bundles cost gems, local transaction
-      const currentGems = economyDataIAP?.gems ?? 0;
+      // Coin bundles cost gems, local transaction. Bought gems the server has
+      // not credited yet are not spendable (pendingGemsCore.ts).
+      const currentGems = spendableGems(economyDataIAP);
       if (currentGems < bundle.gemCost) {
         track({ name: 'purchase_failed', props: { bundle_id: bundle.id, bundle_type: 'coin_bundle', reason: 'insufficient_gems' } });
         releasePurchaseLock();

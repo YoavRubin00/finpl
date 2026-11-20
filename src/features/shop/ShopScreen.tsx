@@ -17,7 +17,8 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEconomy, useSpendCoins, useSpendGems } from '../economy/useEconomy';
+import { useEconomy, useSpendCoins, useSpendGems, spendableGems } from '../economy/useEconomy';
+import { PENDING_GEMS_COPY } from '../economy/pendingGemsCore';
 import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStore';
 import { useStreak } from '../economy/useStreak';
 import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
@@ -73,6 +74,13 @@ function missingCurrencyToast(currency: 'coins' | 'gems', missing: number): Shop
         accentColor: TOAST_WARN,
       };
 }
+
+/** A gem spend that only the bought gems still on their way would cover. */
+const GEMS_PENDING_TOAST: ShopToast = {
+  title: PENDING_GEMS_COPY.title,
+  body: PENDING_GEMS_COPY.body,
+  accentColor: '#0891b2',
+};
 
 // ── Section background themes ───────────────────────────────────────────────
 const SECTION_COLORS = {
@@ -337,6 +345,9 @@ export function ShopScreen() {
   const { data: economyData } = useEconomy();
   const coins = economyData?.coins ?? 0;
   const gems = economyData?.gems ?? 0;
+  // What gem spends and exchanges may use: bought gems the server has not
+  // credited yet are shown (in `gems`) but not spendable (pendingGemsCore.ts).
+  const spendable = spendableGems(economyData);
   const xp = economyData?.xp ?? 0;
   const { data: streakData } = useStreak();
   const streak = streakData?.currentStreak ?? 0;
@@ -408,7 +419,7 @@ export function ShopScreen() {
 
   const isAvatarItem = (item: ShopItem) => item.category === 'avatars' && item.id.startsWith('avatar-');
   const canAffordItem = (item: ShopItem) => {
-    if ((item.gemCost ?? 0) > 0) return gems >= (item.gemCost ?? 0);
+    if ((item.gemCost ?? 0) > 0) return spendable >= (item.gemCost ?? 0);
     return coins >= item.coinCost;
   };
 
@@ -434,20 +445,21 @@ export function ShopScreen() {
     }
     if (!canAfford) {
       // Was a silent no-op behind a greyed-out price pill: say what is missing.
+      // Enough only with the bought gems still on their way: say so instead.
       setShopToast(isGem
-        ? missingCurrencyToast('gems', (item.gemCost ?? 0) - gems)
+        ? (gems >= (item.gemCost ?? 0) ? GEMS_PENDING_TOAST : missingCurrencyToast('gems', (item.gemCost ?? 0) - spendable))
         : missingCurrencyToast('coins', item.coinCost - coins));
       return;
     }
     setPendingItem(item);
-  }, [coins, gems, ownedAvatars, setAvatar]);
+  }, [coins, gems, spendable, ownedAvatars, setAvatar]);
 
   const handleConfirm = useCallback(() => {
     if (!pendingItem) return;
     const isGem = (pendingItem.gemCost ?? 0) > 0;
     const gemCost = pendingItem.gemCost ?? 0;
     const coinCost = pendingItem.coinCost;
-    const canAfford = isGem ? gems >= gemCost : coins >= coinCost;
+    const canAfford = isGem ? spendable >= gemCost : coins >= coinCost;
     if (canAfford) {
       if (isGem) { spendGemsHook(gemCost); } else { spendCoinsHook(coinCost); }
       const eco = useEconomyUIStore.getState();
@@ -499,16 +511,18 @@ export function ShopScreen() {
       }
     }
     setPendingItem(null);
-  }, [pendingItem, coins, gems, spendCoinsHook, spendGemsHook, restoreAllHearts, addOwnedAvatar, setAvatar]);
+  }, [pendingItem, coins, spendable, spendCoinsHook, spendGemsHook, restoreAllHearts, addOwnedAvatar, setAvatar]);
 
   const handleGemExchange = useCallback((gemsNeeded: number, coinsReward: number) => {
-    const canAfford = gems >= gemsNeeded;
+    // Bought gems still on their way are not exchangeable: the server would
+    // take no gems for them and still pay the coins (economy fix round 20.11).
+    const canAfford = spendable >= gemsNeeded;
     track({
       name: 'shop_gem_exchange_tapped',
       props: { gems_cost: gemsNeeded, coins_reward: coinsReward, can_afford: canAfford },
     });
     if (!canAfford) {
-      setShopToast(missingCurrencyToast('gems', gemsNeeded - gems));
+      setShopToast(gems >= gemsNeeded ? GEMS_PENDING_TOAST : missingCurrencyToast('gems', gemsNeeded - spendable));
       return;
     }
     // One request carrying both sides (2026-11-20): the server bounds coin
@@ -517,7 +531,7 @@ export function ShopScreen() {
     // raced, and the coins could land first).
     fireEconomyDelta({ gemsDelta: -gemsNeeded, coinsDelta: coinsReward });
     successHaptic();
-  }, [gems]);
+  }, [gems, spendable]);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.bg }]}>
@@ -708,7 +722,7 @@ export function ShopScreen() {
               <SectionHeader title="המרת יהלומים" subtitle={`יש לכם ${formatNumber(gems)} 💎`} />
               <View style={styles2.exchangeCardGrid}>
                 {GEM_EXCHANGE_RATES.map((rate, i) => {
-                  const can = gems >= rate.gems;
+                  const can = spendable >= rate.gems;
                   return (
                     <Animated.View key={rate.gems} entering={FadeInDown.duration(150)} style={styles.goldGridItem}>
                       <AnimatedPressable

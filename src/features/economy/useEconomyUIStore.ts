@@ -15,7 +15,18 @@ import { useAuthStore } from "../auth/useAuthStore";
 import * as Notifications from "expo-notifications";
 import { applyEconomyDelta } from "../../lib/api/economy";
 import { queryClient } from "../../lib/queryClient";
-import { economyQueryKey, economyPlaceholder, economyBaseReady, whenEconomyBaseReady } from "./useEconomy";
+import {
+  economyQueryKey,
+  economyPlaceholder,
+  economyBaseReady,
+  whenEconomyBaseReady,
+  withPendingGems,
+  notePendingGemDelta,
+  recordPurchasedGems,
+  expirePendingGems,
+  spendableGems,
+} from "./useEconomy";
+import { PENDING_GEMS_REREAD_MS } from "./pendingGemsCore";
 import { registerLocalStore } from "../../lib/stores/registry";
 import type { Economy } from "../../lib/api/economy";
 import type { StreakState } from "../../lib/api/streak";
@@ -360,15 +371,21 @@ export function fireEconomyDelta(delta: EconomyDeltaInput) {
   } else {
     void whenEconomyBaseReady().then(showOptimistic, showOptimistic);
   }
+  // Bought gems still on their way are shown on top of the server's answers;
+  // the gem change this request carries moves what they are compared with.
+  notePendingGemDelta(delta.gemsDelta);
   applyEconomyDelta(delta)
     // Server response IS the authoritative economy — write it straight to the
     // cache instead of invalidating (which would trigger a second GET round-trip
     // for data we already have in hand). Since 2026-11-20 the server bounds
     // client deltas (api/_shared/economyGuard.ts): when a cap applies the
     // answer is the server's balance, so the display snaps to the truth.
+    // Bought gems the server has not credited yet stay on screen on top of it
+    // (pendingGemsCore.ts). A 503 ECONOMY_BUSY is sent once more inside
+    // applyEconomyDelta (nothing was written).
     .then((res) => {
       answered = true;
-      queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy);
+      queryClient.setQueryData<Economy | null>(economyQueryKey, withPendingGems(res.economy));
       // (Removed 2026-11-20: a follow-up upsertInventory() "mirror" POST to
       // /api/sync/profile used to fire here after every delta. It sent no
       // Authorization header, so production's Bearer-only /api/sync/profile
@@ -382,16 +399,43 @@ export function fireEconomyDelta(delta: EconomyDeltaInput) {
 /**
  * Real-money purchases (gem bundles, the starter pack's gems): the server
  * credits them from the RevenueCat webhook, never from an app delta (it drops
- * purchase-sized gem deltas since 2026-11-20). Show the bought amount at once,
- * then re-read the server balance a few times until the webhook has landed.
+ * purchase-sized gem deltas since 2026-11-20). The bought gems are shown at
+ * once as PENDING (pendingGemsCore.ts): every server answer written into the
+ * cache keeps them on top until one includes them, or for about 3 minutes.
+ * They are not spendable meanwhile (spendableGems). The server balance is
+ * re-read after 5 s, 20 s, 60 s and 3 min; the last re-read shows the server's
+ * balance as it is.
  */
 export function expectPurchasedEconomyCredit(delta: { gemsDelta?: number; coinsDelta?: number }): void {
-  applyEconomyDeltaLocally(delta);
-  for (const ms of [5_000, 20_000, 60_000]) {
+  const gems = delta.gemsDelta ?? 0;
+  if (gems > 0) {
+    const cached = queryClient.getQueryData<Economy | null>(economyQueryKey);
+    const current = cached === undefined ? (economyPlaceholder() ?? null) : cached;
+    if (recordPurchasedGems(gems, current)) {
+      queryClient.setQueryData<Economy | null>(economyQueryKey, withPendingGems(current ?? emptyEconomy()));
+    } else {
+      // No signed-in account (the checkout requires one): shown as before.
+      applyEconomyDeltaLocally({ gemsDelta: gems });
+    }
+  }
+  if (delta.coinsDelta) applyEconomyDeltaLocally({ coinsDelta: delta.coinsDelta });
+  for (const ms of PENDING_GEMS_REREAD_MS) {
     setTimeout(() => {
+      // Past the window: take the overlay off what is shown now, so the
+      // display falls back to the server's balance even if this re-read is
+      // dropped (a newer local write) or nothing on screen reads the economy.
+      if (expirePendingGems()) {
+        queryClient.setQueryData<Economy | null>(economyQueryKey, (old) =>
+          old === undefined ? undefined : withPendingGems(old),
+        );
+      }
       void queryClient.invalidateQueries({ queryKey: economyQueryKey });
     }, ms);
   }
+}
+
+function emptyEconomy(): Economy {
+  return { xp: 0, coins: 0, gems: 0, level: null, virtualBalance: '0' };
 }
 
 function applyEconomyDeltaLocally(delta: EconomyDeltaInput): void {
@@ -831,7 +875,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         if (source === "gems") {
           const REPAIR_COST = 30;
           const cached = queryClient.getQueryData<Economy | null>(economyQueryKey);
-          const gems = cached?.gems ?? 0;
+          // Bought gems the server has not credited yet are not spendable.
+          const gems = spendableGems(cached);
           if (gems < REPAIR_COST) return false;
           fireEconomyDelta({ gemsDelta: -REPAIR_COST });
         }

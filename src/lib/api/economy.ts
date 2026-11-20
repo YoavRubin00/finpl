@@ -8,6 +8,12 @@ export interface Economy {
   gems: number | null;
   level: number | null;
   virtualBalance: string;
+  /**
+   * App-side only, never sent by the server: how much of `gems` is bought gems
+   * the server has not credited yet (shown, not spendable). Set on the cached
+   * value by src/features/economy/pendingGemsCore.ts.
+   */
+  pendingGems?: number;
 }
 
 export function getEconomy() {
