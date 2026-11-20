@@ -302,13 +302,38 @@ function RootLayoutInner() {
   useStreakSkinWatcher();
 
   // ── Session time tracking: foreground/background events ──
+  // A session ends on "background", or on "inactive" once it has run at least
+  // 10 seconds: swiping the app away from the iOS app switcher only ever
+  // reports "inactive". A shorter session survives an "inactive" blip
+  // (Control Center, a system dialog, Face ID), and a long "inactive" (a phone
+  // call) is not counted as app time. 0 seconds sends nothing (20.11).
   const foregroundEnteredAt = useRef<number | null>(Date.now());
+  const inactiveAt = useRef<number | null>(null);
   const backgroundedAt = useRef<number | null>(null);
   useEffect(() => {
+    const SESSION_MIN_ON_INACTIVE_MS = 10_000;
+    const endSession = (endAt: number) => {
+      if (foregroundEnteredAt.current === null) return;
+      const secs = Math.round((endAt - foregroundEnteredAt.current) / 1000);
+      foregroundEnteredAt.current = null;
+      if (secs <= 0) return;
+      useUserStatsUIStore.getState().addSessionSeconds(secs);
+      apiRecordSessionTime(secs)
+        // The POST answers with the updated stats row: store it instead of
+        // invalidating, which fetched the same row again.
+        .then((res) => {
+          if (res?.userStats !== undefined) queryClient.setQueryData(userStatsQueryKey, res.userStats);
+        })
+        .catch(() => { /* fire-and-forget */ });
+    };
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        // A brief iOS "inactive" blip (Control Center, a system dialog, Face ID)
-        // no longer ends the session, so only start a new one when none is open.
+        // Back from a long "inactive" (a call): the short session open before
+        // it ends where the interruption began; the call itself isn't app time.
+        if (inactiveAt.current !== null && Date.now() - inactiveAt.current >= SESSION_MIN_ON_INACTIVE_MS) {
+          endSession(inactiveAt.current);
+        }
+        inactiveAt.current = null;
         if (foregroundEnteredAt.current === null) foregroundEnteredAt.current = Date.now();
         // Coming back after 15+ minutes is a new "open": it gets its own single greeting (13.11).
         // A quick switch to another app and back is the same open — no new popup.
@@ -333,25 +358,18 @@ function RootLayoutInner() {
         // the "phone left charging for 8 days" pattern where the app is
         // still in memory but the lapse window has elapsed).
         try { useComebackRewardStore.getState().registerAppOpen(Date.now()); } catch { /* non-fatal */ }
-      } else if (state === "background") {
-        // Only a real background ends the session (20.11): "inactive" fires on
-        // every brief iOS interruption and used to send a session-time POST
-        // each time, often for 0 seconds.
-        if (backgroundedAt.current === null) backgroundedAt.current = Date.now();
-        if (foregroundEnteredAt.current !== null) {
-          const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
-          foregroundEnteredAt.current = null;
-          if (secs > 0) {
-            useUserStatsUIStore.getState().addSessionSeconds(secs);
-            apiRecordSessionTime(secs)
-              // The POST answers with the updated stats row: store it instead
-              // of invalidating, which fetched the same row again.
-              .then((res) => {
-                if (res?.userStats !== undefined) queryClient.setQueryData(userStatsQueryKey, res.userStats);
-              })
-              .catch(() => { /* fire-and-forget */ });
-          }
+      } else if (state === "inactive") {
+        const now = Date.now();
+        inactiveAt.current = now;
+        if (foregroundEnteredAt.current !== null && now - foregroundEnteredAt.current >= SESSION_MIN_ON_INACTIVE_MS) {
+          endSession(now);
         }
+      } else if (state === "background") {
+        if (backgroundedAt.current === null) backgroundedAt.current = Date.now();
+        // active → inactive → background: the session ended when it went
+        // inactive. Already ended there (10s+)? endSession is a no-op.
+        endSession(inactiveAt.current ?? Date.now());
+        inactiveAt.current = null;
       }
     });
     return () => sub.remove();
