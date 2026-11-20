@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import LottieView from 'lottie-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
+import { PausableImage } from '../../../components/ui/PausableImage';
+import { PausableLottie } from '../../../components/ui/PausableLottie';
+import { useScreenLive } from '../../../hooks/useScreenLive';
 import { useModuleSharkCall } from './useModuleSharkCall';
 
 const RTL = { writingDirection: 'rtl' as const };
@@ -39,6 +40,9 @@ interface Props {
  */
 export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.ReactElement | null {
   const { available, eligible, openCall, modals } = useModuleSharkCall(moduleId, moduleTitle);
+  // The 97-frame talking loop and the PRO Lottie sit on the learn map: play
+  // them only while the map is seen and the app is active (perf pass 20.11).
+  const live = useScreenLive();
 
   // OTA-safety: on a binary without the native live-voice SDK this flag is
   // false → hide the call card entirely so its lazy native import never runs.
@@ -66,7 +70,7 @@ export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.Rea
             >✦</Text>
           ))}
           <View style={styles.iconWrap}>
-            <ExpoImage source={SHARK_TALKING} style={{ width: 46, height: 46 }} contentFit="contain" accessible={false} />
+            <PausableImage source={SHARK_TALKING} playing={live} style={{ width: 46, height: 46 }} contentFit="contain" accessible={false} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[RTL, styles.kicker, { color: eligible ? '#67e8f9' : '#facc15' }]} numberOfLines={1}>
@@ -84,7 +88,7 @@ export function ModuleSharkCallCard({ moduleId, moduleTitle }: Props): React.Rea
             </View>
           ) : (
             <View style={styles.proChip}>
-              <LottieView source={PRO_LOTTIE} autoPlay loop style={{ width: 22, height: 22 }} />
+              <PausableLottie source={PRO_LOTTIE} playing={live} loop style={{ width: 22, height: 22 }} />
               <Text style={styles.proText}>PRO</Text>
             </View>
           )}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Image as ExpoImage } from "expo-image";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { PausableImage } from "../../components/ui/PausableImage";
+import { useScreenLive } from "../../hooks/useScreenLive";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FINN_FIRE } from "../retention-loops/finnMascotConfig";
 import Animated, {
@@ -67,9 +68,11 @@ export function StreakAtRiskBanner() {
   const canShow = useBannerSlot('streak_at_risk', isAtRisk && !dismissed, BANNER_PRIORITY.streakAtRisk);
 
   // Heat (13.11): the glow used to start at 18:00 and never stop — even after the banner was
-  // dismissed or hidden. Now it runs only while the banner is actually on screen.
+  // dismissed or hidden. Now it runs only while the banner is actually on screen, and (20.11)
+  // only while the map itself is on screen with the app active.
+  const live = useScreenLive();
   useEffect(() => {
-    if (!canShow) {
+    if (!canShow || !live) {
       cancelAnimation(glowOpacity);
       glowOpacity.value = 0.15;
       return;
@@ -83,7 +86,7 @@ export function StreakAtRiskBanner() {
       true
     );
     return () => cancelAnimation(glowOpacity);
-  }, [canShow, glowOpacity]);
+  }, [canShow, live, glowOpacity]);
   if (!canShow) return null;
 
   return (
@@ -117,7 +120,7 @@ export function StreakAtRiskBanner() {
           </View>
           {/* Finn on left */}
           <View style={{ width: 96, height: 96, borderRadius: 48, overflow: 'hidden', backgroundColor: 'transparent' }}>
-            <ExpoImage source={FINN_FIRE} accessible={false} style={{ width: 96, height: 96, opacity: 0.92 }} contentFit="contain" />
+            <PausableImage source={FINN_FIRE} playing={live} accessible={false} style={{ width: 96, height: 96, opacity: 0.92 }} contentFit="contain" />
           </View>
         </Pressable>
 

@@ -25,6 +25,7 @@ import { buildSystemPrompt } from '../chat/buildChatPrompt';
 import { MarkdownText } from '../chat/MarkdownText';
 import { streamChatRequest } from '../../utils/streamChat';
 import { captureEvent } from '../../lib/posthog';
+import { learnMapHref } from '../../lib/navigation/learnMap';
 import { getModuleChatFAQs, getDefaultFAQsForTitle } from './moduleChatFAQs';
 import { useTopicChatLimitStore, DAILY_LIMIT } from './useTopicChatLimitStore';
 import { useTopicProgressStore } from './useTopicProgressStore';
@@ -76,8 +77,11 @@ const MessageBubble = React.memo(function MessageBubble({
     >
       {isBot && (
         <View style={msgStyles.avatarCircle}>
+          {/* Static first frame, as in the main chat: one 177-frame loop per
+              bot message was pure heat (perf pass 20.11). */}
           <ExpoImage
             source={FINN_STANDARD}
+            autoplay={false}
             style={{ width: 22, height: 22 }}
             contentFit="contain"
             accessible={false}
@@ -330,7 +334,7 @@ export function TopicChatScreen(): React.ReactElement {
                   if (router.canGoBack()) {
                     router.back();
                   } else {
-                    router.replace(`/(tabs)/learn?expandedModule=${moduleId}` as never);
+                    router.replace(learnMapHref({ expandedModule: moduleId }) as never);
                   }
                 }}
                 style={headerStyles.backBtn}
@@ -391,6 +395,7 @@ export function TopicChatScreen(): React.ReactElement {
                 <View style={msgStyles.avatarCircle}>
                   <ExpoImage
                     source={FINN_STANDARD}
+                    autoplay={false}
                     style={{ width: 22, height: 22 }}
                     contentFit="contain"
                     accessible={false}

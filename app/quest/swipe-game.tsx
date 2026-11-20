@@ -35,6 +35,7 @@ import { DilemmaCard } from "../../src/features/daily-challenges/DilemmaCard";
 import { InvestmentCard } from "../../src/features/daily-challenges/InvestmentCard";
 import { MythFeedCard } from "../../src/features/myth-or-tachles/MythFeedCard";
 import { tapHaptic, successHaptic } from "../../src/utils/haptics";
+import { learnMapHref } from "../../src/lib/navigation/learnMap";
 
 // Game rotation pool — 10 playable cards. Index by `Math.floor(Date.now() /
 // 86400000) % 10` so the same day-of-year always picks the same game (UTC
@@ -87,7 +88,7 @@ export default function QuestDailyGamePage(): React.ReactElement {
     if (finishedRef.current) return;
     tapHaptic();
     if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/learn" as never);
+    else router.replace(learnMapHref() as never);
   }, [router]);
 
   const handleFinish = useCallback(() => {
@@ -96,7 +97,7 @@ export default function QuestDailyGamePage(): React.ReactElement {
     successHaptic();
     setTimeout(() => {
       if (router.canGoBack()) router.back();
-      else router.replace("/(tabs)/learn" as never);
+      else router.replace(learnMapHref() as never);
     }, 800);
   }, [router]);
 

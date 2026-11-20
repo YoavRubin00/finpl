@@ -32,6 +32,9 @@ interface TopicChipProps {
    *  gold halo to direct attention without crowding the whole grid
    *  with motion. */
   recommended?: boolean;
+  /** Screen focused + app active (from the parent layout). The recommended
+   *  chip's breathing loop runs only while true. Default true. */
+  live?: boolean;
   onPress: (topic: Topic) => void;
 }
 
@@ -81,6 +84,7 @@ export const TopicChip = React.memo(function TopicChip({
   topic,
   completed,
   recommended = false,
+  live = true,
   onPress,
 }: TopicChipProps): React.ReactElement {
   const scale = useSharedValue(1);
@@ -162,9 +166,10 @@ export const TopicChip = React.memo(function TopicChip({
   // Audit follow-up (דואו 2026-06-11): the gold chip was static — no
   // breathing pulse. Brawl Stars / Duolingo "do this next" cues always
   // animate. Loop 1 → 1.05 → 1 every ~1.4s while the chip is the
-  // recommended next step; cancel on completion / reduced motion.
+  // recommended next step; cancel on completion / reduced motion, and while
+  // the map is not on screen or the app is in the background (perf 20.11).
   useEffect(() => {
-    if (!isRecommended || reduceMotion) {
+    if (!isRecommended || reduceMotion || !live) {
       cancelAnimation(pulseScale);
       pulseScale.value = withTiming(1, { duration: 180 });
       return;
@@ -178,7 +183,7 @@ export const TopicChip = React.memo(function TopicChip({
       false,
     );
     return () => cancelAnimation(pulseScale);
-  }, [isRecommended, reduceMotion, pulseScale]);
+  }, [isRecommended, reduceMotion, live, pulseScale]);
   const bg = completed
     ? DONE_BG
     : isRecommended

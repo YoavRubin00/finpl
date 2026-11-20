@@ -188,6 +188,7 @@ import { useModulePrefetch, getCachedVideoPath, prefetchModuleAudio } from "../.
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
 import type { LessonContext } from "../chat/buildChatPrompt";
+import { learnMapHref } from "../../lib/navigation/learnMap";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
@@ -2664,9 +2665,13 @@ export function LessonFlowScreen() {
     // other module, so the first lesson is continuous ("מקושר וברצף, לא בנפרד").
     if (mod.id === 'mod-0-1' && returnTo !== 'topic-tree') {
       exitHandledRef.current = true;
-      router.replace(
-        `/(tabs)/learn?completedPhase=intro&completedModuleId=${encodeURIComponent(mod.id)}&expandedModule=${encodeURIComponent(mod.id)}&onboardingPhase=welcome` as never,
-      );
+      // Back to the live map (dismissTo), not a second (tabs) tree (perf 20.11).
+      returnToMap(learnMapHref({
+        completedPhase: 'intro',
+        completedModuleId: mod.id,
+        expandedModule: mod.id,
+        onboardingPhase: 'welcome',
+      }));
       return;
     }
     const target: FlowPhase =
@@ -2680,7 +2685,7 @@ export function LessonFlowScreen() {
     } else {
       setPendingPostIntroPhase(target);
     }
-  }, [mod, imagesReady, router, returnTo]);
+  }, [mod, imagesReady, router, returnTo, returnToMap]);
 
   // Mark "in-lesson" so the Daily Bridge nudge (and any other session-level
   // CTA) knows not to interrupt the user mid-module.
@@ -3240,8 +3245,12 @@ export function LessonFlowScreen() {
       });
       router.back();
     } else {
-      const kindParam = completedKind ? `&completedKind=${encodeURIComponent(completedKind)}` : '';
-      const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}${kindParam}`;
+      const path = learnMapHref({
+        completedPhase: completed,
+        completedModuleId: id,
+        expandedModule: id,
+        completedKind: completedKind || undefined,
+      });
       router.replace(path as never);
     }
   }, [phase, returnTo, id, router, cardFilter, autoFlow, mod, mod01QuestionResolved]);

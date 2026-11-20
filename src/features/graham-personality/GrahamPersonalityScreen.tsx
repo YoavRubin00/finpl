@@ -30,6 +30,7 @@ import { SIM4, RTL } from '../chapter-4-content/simulations/simTheme';
 import { STITCH } from '../../constants/theme';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
+import { learnMapHref } from '../../lib/navigation/learnMap';
 
 import { useGrahamPersonality } from './useGrahamPersonality';
 import { PERSONALITY_QUESTIONS, TOTAL_QUESTIONS } from './personalityData';
@@ -277,7 +278,7 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(tabs)/learn');
+      router.replace(learnMapHref() as never);
     }
   }, [router, playSound]);
 

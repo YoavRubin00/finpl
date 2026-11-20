@@ -21,6 +21,7 @@ import type { Benefit } from './types';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
 import { captureEvent } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
+import { learnMapHref } from '../../lib/navigation/learnMap';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { getIsraelDateISO } from '../../utils/israelTime';
@@ -139,7 +140,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
 
   const handleLearnPath = () => {
     try { track({ name: 'bridge_earn_path_tapped', props: { benefit_id: benefit.id, path: 'learn' } }); } catch { /* non-fatal */ }
-    router.push('/(tabs)/learn' as never);
+    router.push(learnMapHref() as never);
   };
 
   const handleAdPath = () => {

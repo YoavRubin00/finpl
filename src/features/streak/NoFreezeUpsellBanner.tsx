@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Image as ExpoImage } from "expo-image";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { PausableImage } from "../../components/ui/PausableImage";
+import { useScreenLive } from "../../hooks/useScreenLive";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FINN_FIRE } from "../retention-loops/finnMascotConfig";
 import Animated, {
@@ -62,6 +63,8 @@ export function NoFreezeUpsellBanner() {
 
   // UX-14: yields to streak-at-risk / first-lesson when they want the slot.
   const canShow = useBannerSlot('no_freeze_upsell', shouldShow && !dismissed, BANNER_PRIORITY.noFreezeUpsell);
+  // Animated mascot plays only while the map is seen (perf pass 20.11).
+  const live = useScreenLive();
   if (!canShow) return null;
 
   const canAfford = coins >= FREEZE_COST_COINS;
@@ -100,8 +103,9 @@ export function NoFreezeUpsellBanner() {
           </View>
           {/* Finn */}
           <View style={{ width: 96, height: 96, borderRadius: 48, overflow: 'hidden', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-            <ExpoImage
+            <PausableImage
             source={FINN_FIRE}
+            playing={live}
             accessible={false}
             style={[{ width: 64, height: 64 }, { opacity: 0.92 }]}
             contentFit="contain"

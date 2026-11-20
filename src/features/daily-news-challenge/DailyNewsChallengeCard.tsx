@@ -12,10 +12,12 @@ import Animated, {
   withTiming,
   useReducedMotion,
   Easing,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import { Newspaper, Sparkles, CheckCircle2, ChevronLeft, Snowflake } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
+import { useScreenLive } from '../../hooks/useScreenLive';
 import { tapHaptic } from '../../utils/haptics';
 import { useDailyNewsChallengeStore } from './useDailyNewsChallengeStore';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
@@ -71,6 +73,9 @@ export function DailyNewsChallengeCard({
   // the card stays discoverable, but without the looping animation.
   const glow = useSharedValue(0);
   const eyebrow = useMemo(() => timeOfDayBadge(), []);
+  // Pulse only while the map is on screen and the app is active (perf 20.11):
+  // the loop used to keep running behind other tabs, lessons and a locked phone.
+  const live = useScreenLive();
   useEffect(() => {
     if (completed || !isPulseHours()) {
       glow.value = 0;
@@ -78,6 +83,10 @@ export function DailyNewsChallengeCard({
     }
     if (reducedMotion) {
       glow.value = 0.7;
+      return;
+    }
+    if (!live) {
+      cancelAnimation(glow);
       return;
     }
     glow.value = withRepeat(
@@ -88,7 +97,8 @@ export function DailyNewsChallengeCard({
       -1,
       false,
     );
-  }, [completed, glow, reducedMotion]);
+    return () => cancelAnimation(glow);
+  }, [completed, glow, reducedMotion, live]);
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
   // DNC-specific streak counter was retired — the unified daily streak in
   // the header (GlobalWealthHeader → useEconomyUIStore.currentStreak) is the

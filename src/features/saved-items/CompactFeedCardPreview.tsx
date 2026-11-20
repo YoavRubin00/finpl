@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { Bookmark, ChevronLeft } from "lucide-react-native";
 import type { FeedItem } from "../finfeed/types";
 import { tapHaptic } from "../../utils/haptics";
+import { learnMapHref } from "../../lib/navigation/learnMap";
 
 interface Props {
   item: FeedItem;
@@ -169,10 +170,8 @@ export function CompactFeedCardPreview({ item, onPress }: Props) {
     if (onPress) {
       onPress();
     } else {
-      router.push({
-        pathname: "/(tabs)/learn",
-        params: { scrollToFeedId: item.id },
-      } as never);
+      // The feed this param used to scroll is gone; the map ignores it.
+      router.push(learnMapHref({ scrollToFeedId: item.id }) as never);
     }
   };
 

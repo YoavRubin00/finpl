@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { View, Text, StyleSheet, AppState, Pressable, type DimensionValue } from "react-native";
-import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { PausableImage } from "../../components/ui/PausableImage";
 import Animated, {
   useReducedMotion,
   useSharedValue,
@@ -166,12 +166,14 @@ export function EnergyStationCard({
     <View style={styles.wrap}>
       <GlowCard glowColor={ENERGY.glow} pressable={false} style={styles.card}>
         <View style={styles.row}>
-          {/* Charging Captain Shark */}
-          <ExpoImage
+          {/* Charging Captain Shark. `autoplay={live}` alone never paused it on
+              Android (read only when the image loads); PausableImage also calls
+              stop/startAnimating (perf pass 20.11). */}
+          <PausableImage
             source={sharkSrc}
             style={styles.shark}
             contentFit="contain"
-            autoplay={live}
+            playing={live}
             accessible={false}
             pointerEvents="none"
           />

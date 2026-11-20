@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 
 import { DilemmaCard } from "../../src/features/daily-challenges/DilemmaCard";
 import { tapHaptic } from "../../src/utils/haptics";
+import { learnMapHref } from "../../src/lib/navigation/learnMap";
 
 export default function QuestDailyDilemmaPage(): React.ReactElement {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function QuestDailyDilemmaPage(): React.ReactElement {
   const handleClose = useCallback(() => {
     tapHaptic();
     if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/learn" as never);
+    else router.replace(learnMapHref() as never);
   }, [router]);
 
   // DilemmaCard already navigates the user to /(tabs)/learn via its
@@ -35,7 +36,7 @@ export default function QuestDailyDilemmaPage(): React.ReactElement {
     if (finishedRef.current) return;
     finishedRef.current = true;
     if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/learn" as never);
+    else router.replace(learnMapHref() as never);
   }, [router]);
 
   return (

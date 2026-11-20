@@ -40,6 +40,17 @@ const DAILY_COPY: Record<number, string> = {
 
 const MIN_DAYS_BETWEEN = 3;
 
+// The screen this nudge may fire on, as expo-router segments. It was the old
+// feed tab, `(tabs)/learn`, which since 30.5 was a second copy of the learn map
+// that users only reached through a few links (~1-3 shows a week in PostHog,
+// cta_nudge_shown surface=invite_modal, Aug-Nov 2026). Since 20.11 that route
+// is a redirect to the map, so nobody stays on it and the nudge can never fire.
+// null = no home screen: the modal starts no timers at all (it used to poll every
+// 15s for the whole session). To bring it back, give it a screen test, e.g. the
+// map: (seg) => seg[0] === '(tabs)' && (seg[1] === undefined || seg[1] === 'index').
+// That is a product call: on the map it would reach far more users than before.
+const NUDGE_HOME = null as ((segments: string[]) => boolean) | null;
+
 function daysBetweenISO(aISO: string, bISO: string): number {
   const a = Date.parse(`${aISO}T00:00:00Z`);
   const b = Date.parse(`${bISO}T00:00:00Z`);
@@ -62,7 +73,7 @@ export function InviteFriendsNudgeModal() {
   // the tuned DAILY_COPY below when the cloud is cold/empty.
   const [cloudCta, setCloudCta] = useState(() => pickBarCta('referral'));
   useEffect(() => {
-    if (cloudCta) return;
+    if (cloudCta || !NUDGE_HOME) return;
     let alive = true;
     loadBarCtas().then(() => { if (alive) setCloudCta(pickBarCta('referral')); });
     return () => { alive = false; };
@@ -92,6 +103,9 @@ export function InviteFriendsNudgeModal() {
 
   useEffect(() => {
     if (shownRef.current) return;
+    // No screen to fire on → no polling (see NUDGE_HOME).
+    const isHome = NUDGE_HOME;
+    if (!isHome) return;
     if (!isAuthenticated || !hasCompletedOnboarding) return;
     if (isGuest) return;
     if (profile?.ageGroup === 'minor') return;
@@ -120,9 +134,8 @@ export function InviteFriendsNudgeModal() {
       }
       const s = useNudgeQueueStore.getState();
       if (s.inLesson) return;
-      // Only fire while the user is on the feed tab — never on other screens.
-      const seg = segmentsRef.current as string[];
-      if (seg[0] !== '(tabs)' || seg[1] !== 'learn') return;
+      // Only fire while the user is on its home screen — never on other screens.
+      if (!isHome(segmentsRef.current as string[])) return;
       if (!s.canShow('referral')) return;
       const sessionAge = Date.now() - s.sessionStartedAt;
       if (sessionAge < MIN_SESSION_MS) return;

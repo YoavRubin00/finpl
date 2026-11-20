@@ -4,7 +4,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from "react-native";
-import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeInDown,
   useSharedValue,
@@ -25,6 +24,8 @@ import LottieView from "lottie-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEntranceAnimation, fadeInUp, fadeInScale, SPRING_BOUNCY } from "../../utils/animations";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { PausableImage } from "../../components/ui/PausableImage";
+import { useAppActive } from "../../hooks/useAppActive";
 import { useEconomy } from "../economy/useEconomy";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useTradingStore } from "../trading-hub/useTradingStore";
@@ -43,6 +44,10 @@ const HOLDINGS_PINK = "#ec4899";
 
 export function InvestmentsHubScreen() {
   const isFocused = useIsFocused();
+  // The Finn mascots here are 177-frame animated WebPs: play only while this
+  // tab is on screen and the app is active (perf pass 20.11).
+  const appActive = useAppActive();
+  const mascotLive = isFocused && appActive;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data: economyData } = useEconomy();
@@ -221,7 +226,8 @@ export function InvestmentsHubScreen() {
               <Text style={s.finnMessage}>בונים אימפריה{"\n"}פיננסית</Text>
             </View>
             <View style={s.finnLottieWrap}>
-              <ExpoImage source={FINN_STANDARD} accessible={false}
+              <PausableImage source={FINN_STANDARD} accessible={false}
+                playing={mascotLive && !showAssetsIntro}
                 style={s.finnLottie}
                 contentFit="contain"
                />
@@ -383,8 +389,9 @@ export function InvestmentsHubScreen() {
             <Animated.View entering={FadeInDown.duration(300)}>
               {/* Finn */}
               <View style={s.introFinnWrap}>
-                <ExpoImage
+                <PausableImage
                   source={FINN_STANDARD}
+                  playing={mascotLive}
                   style={{ width: 80, height: 80 }}
                   contentFit="contain"
                   accessible={false}

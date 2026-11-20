@@ -28,6 +28,9 @@ interface Props {
   salePrice?: string;
   timeLeftSeconds?: number;
   onPress?: () => void;
+  /** Screen focused + app active. The sunburst turns and the own countdown
+   *  ticks only while true. Default true. */
+  active?: boolean;
 }
 
 function formatHMS(s: number): string {
@@ -49,27 +52,40 @@ export const FlashOfferBanner = React.memo(function FlashOfferBanner({
   salePrice = '₪19.90',
   timeLeftSeconds,
   onPress,
+  active = true,
 }: Props) {
   const [remaining, setRemaining] = useState<number>(timeLeftSeconds ?? 8048);
   useEffect(() => {
     if (timeLeftSeconds === undefined) return;
     setRemaining(timeLeftSeconds);
   }, [timeLeftSeconds]);
+  // Own 1s countdown only when the caller does not drive `timeLeftSeconds`
+  // (DailyDealsSection already re-renders it every second: two timers for one
+  // clock), and only while seen (perf pass 20.11).
+  const ownClock = timeLeftSeconds === undefined;
   useEffect(() => {
+    if (!ownClock || !active) return;
     const id = setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [ownClock, active]);
 
-  // Sunburst rotation
+  // Sunburst rotation — turns only while seen. Resumes from the current angle
+  // (one full turn on from there) so there is no jump when it restarts.
   const rotation = useSharedValue(0);
   useEffect(() => {
+    if (!active) {
+      cancelAnimation(rotation);
+      return;
+    }
+    const from = rotation.value % 360;
+    rotation.value = from;
     rotation.value = withRepeat(
-      withTiming(360, { duration: 8000, easing: Easing.linear }),
+      withTiming(from + 360, { duration: 8000, easing: Easing.linear }),
       -1,
       false,
     );
     return () => cancelAnimation(rotation);
-  }, [rotation]);
+  }, [rotation, active]);
   const burstStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
   }));

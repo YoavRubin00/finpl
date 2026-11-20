@@ -20,6 +20,7 @@ import { useSavedItemsStore } from "./useSavedItemsStore";
 import { useIsPro } from "../subscription/useSubscription";
 import { lessonRouteById } from "../subscription/moduleAccess";
 import { CompactFeedCardPreview } from "./CompactFeedCardPreview";
+import { learnMapHref } from "../../lib/navigation/learnMap";
 import type { SavedItem } from "./savedItemTypes";
 import { MAX_SAVED_ITEMS } from "./savedItemTypes";
 
@@ -171,10 +172,7 @@ export function SavedItemsScreen() {
                         <CompactFeedCardPreview
                           item={item.feedItemSnapshot}
                           onPress={() =>
-                            router.push({
-                              pathname: "/(tabs)/learn",
-                              params: { scrollToFeedId: item.feedItemId ?? "" },
-                            } as never)
+                            router.push(learnMapHref({ scrollToFeedId: item.feedItemId }) as never)
                           }
                         />
                       ) : (
