@@ -22,15 +22,18 @@ export const subscriptionQueryKey = ['subscription'] as const;
 const storePro = createStoreProOverride();
 
 /** A fresh RevenueCat customer info for the signed-in account: sets the
- *  override when it lists Pro, ends it when it does not. */
+ *  override when it lists Pro, ends it when it does not. Never throws: it runs
+ *  inside purchase flows, right after the store has charged. */
 export function noteStoreCustomerInfo(info: CustomerInfo | null | undefined): void {
   if (!info) return;
-  const entitlement = info.entitlements.active[RC_ENTITLEMENT_PRO];
-  storePro.noteStoreAnswer(
-    useAuthStore.getState().authId,
-    entitlement ? { expirationDate: entitlement.expirationDate ?? null } : null,
-    Date.now(),
-  );
+  try {
+    const entitlement = info.entitlements?.active?.[RC_ENTITLEMENT_PRO];
+    storePro.noteStoreAnswer(
+      useAuthStore.getState().authId,
+      entitlement ? { expirationDate: entitlement.expirationDate ?? null } : null,
+      Date.now(),
+    );
+  } catch { /* display state only: a malformed answer changes nothing */ }
 }
 
 /** Sign-out / account wipe. */
