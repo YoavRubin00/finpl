@@ -22,13 +22,15 @@ import type { Economy } from '../../lib/api/economy';
  * skipPortfolio=true when closing a short: the BUY is audit-logged but must
  * not create a phantom long row in paper_portfolio.
  *
- * Auth (authId + syncToken) is resolved inside syncPaperTrading.logTrade so
- * this store doesn't need to import from the auth layer.
+ * Auth (the session token, via the shared API client) is resolved inside
+ * syncPaperTrading.logTrade so this store doesn't need to import from the
+ * auth layer.
  */
 /**
  * Fire a trade and reconcile local state with the server response.
  *
- *   - On HTTP 402 (server says insufficient balance, e.g. cross-device race),
+ *   - On HTTP 402 (server says insufficient balance, e.g. cross-device race;
+ *     the server since 2026-11-20 no longer sends it — trades spend `coins`),
  *     `onRejected` is invoked so the caller can undo its optimistic mutation
  *     (credit back the spend, remove the position, etc.). The local store had
  *     already been mutated optimistically; without rollback it would drift.

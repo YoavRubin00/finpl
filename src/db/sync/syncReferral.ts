@@ -1,4 +1,5 @@
 import { getApiBase } from '../apiBase';
+import { api, ApiError } from '../../lib/api/client';
 
 export interface ReferredFriendRow {
   authId: string;
@@ -69,36 +70,35 @@ export type RegisterCodeResult =
  * "הקישור להזמנה מתחלף בלי הפסקה" — the boolean-only API caused the
  * store to mint a fresh code on every retry, including network errors,
  * which the screen then re-displayed on every render).
+ *
+ * Goes through the shared API client, which attaches the session token; the
+ * server registers the code on the token's user (since 2026-11-20). Without a
+ * token (guest, or a session that still needs a sign-in code) the client
+ * answers 401 locally, nothing is sent, and the result is a transient
+ * 'network' failure — the code is kept and retried later. `authId` is still
+ * sent so a server older than that change keeps working.
  */
 export async function registerReferralCode(
   authId: string,
   referralCode: string,
 ): Promise<RegisterCodeResult> {
-  const base = getApiBase();
   try {
-    const res = await fetch(`${base}/api/referral/register-code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authId, referralCode }),
-    });
-    if (res.ok) {
-      // The server always answers with the CANONICAL code from the DB. When
-      // it differs from what we sent, the DB already holds another code for
-      // this user and the caller must adopt it (stale-QR self-heal). Older
-      // deploys answered a bare { ok: true } — tolerate a missing field.
-      let canonicalCode: string | null = null;
-      try {
-        const json = (await res.json()) as { ok: true; canonicalCode?: string | null };
-        canonicalCode = json.canonicalCode ?? null;
-      } catch { /* body parse failure — treat as no canonical info */ }
-      return { ok: true, canonicalCode };
+    const json = await api.post<
+      { authId: string; referralCode: string },
+      { ok: true; canonicalCode?: string | null } | null
+    >('/api/referral/register-code', { authId, referralCode });
+    // The server always answers with the CANONICAL code from the DB. When
+    // it differs from what we sent, the DB already holds another code for
+    // this user and the caller must adopt it (stale-QR self-heal). Older
+    // deploys answered a bare { ok: true } — tolerate a missing field.
+    return { ok: true, canonicalCode: json?.canonicalCode ?? null };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (err.status === 409) return { ok: false, reason: 'collision' };
+      if (err.status === 400) return { ok: false, reason: 'invalid' };
     }
-    if (res.status === 409) return { ok: false, reason: 'collision' };
-    if (res.status === 400) return { ok: false, reason: 'invalid' };
-    // 5xx / unexpected status — treat as transient, do NOT regenerate.
-    return { ok: false, reason: 'network' };
-  } catch {
-    // Thrown fetch = offline / DNS / aborted — definitely transient.
+    // 401 (no session) / 5xx / unexpected status / offline / unparseable body —
+    // treat as transient, do NOT regenerate.
     return { ok: false, reason: 'network' };
   }
 }

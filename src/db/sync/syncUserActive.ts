@@ -1,5 +1,4 @@
-import { getApiBase } from '../apiBase';
-import { tokenStore } from '../../lib/auth/secureStore';
+import { api, ApiError } from '../../lib/api/client';
 import { getIsraelDateISO } from '../../utils/israelTime';
 
 // Once per (user, Israel-local day) per app process. The server treats every
@@ -12,8 +11,14 @@ let lastPingedKey: string | null = null;
 let inFlightKey: string | null = null;
 
 /**
- * Tells the server "this user is active today" by updating
- * `user_profiles.last_active_date = CURRENT_DATE`.
+ * Tells the server "this user is active today" (last_active_date + the same
+ * streak advance as /api/sync/streak).
+ *
+ * Goes through the shared API client, which attaches the session token; the
+ * server acts on the token's user and refuses tokenless pings (since
+ * 2026-11-20). Without a token (guest, or a session that still needs a sign-in
+ * code) the client answers 401 locally and nothing is sent. `authId` is still
+ * sent so a server older than that change keeps working.
  *
  * Fire-and-forget — the caller should not await this in UI-critical paths.
  * Failures are silently swallowed (logged in dev only) so a flaky network
@@ -25,23 +30,12 @@ export async function pingActiveToday(authId: string): Promise<void> {
   inFlightKey = key;
 
   try {
-    const base = getApiBase();
-    const token = await tokenStore.get();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const res = await fetch(`${base}/api/users/ping`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ authId }),
-    });
-    if (res.ok) {
-      lastPingedKey = key;
-    } else if (__DEV__) {
-      console.warn(`[pingActiveToday] failed: ${res.status}`);
-    }
+    await api.post<{ authId: string }, { ok: boolean }>('/api/users/ping', { authId });
+    lastPingedKey = key;
   } catch (err) {
-    if (__DEV__) console.warn('[pingActiveToday] threw', err);
+    if (__DEV__ && !(err instanceof ApiError && err.status === 401)) {
+      console.warn('[pingActiveToday] failed', err);
+    }
   } finally {
     if (inFlightKey === key) inFlightKey = null;
   }

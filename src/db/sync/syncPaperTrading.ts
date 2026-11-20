@@ -1,6 +1,4 @@
-import { getApiBase } from '../apiBase';
-import { useAuthStore } from '../../features/auth/useAuthStore';
-import { tokenStore } from '../../lib/auth/secureStore';
+import { api, ApiError } from '../../lib/api/client';
 
 export type TradeType = 'BUY' | 'SELL';
 
@@ -15,8 +13,8 @@ interface LogTradeParams {
   /**
    * Signed change to user_profiles.virtual_balance for this trade.
    * Negative on opens (debit), positive on closes (credit, PnL-adjusted).
-   * The server gates negative deltas; insufficient-balance trades return 402
-   * and write nothing — the next /api/sync/profile pull will reconcile state.
+   * The server applies it as a ledger entry (it no longer rejects trades on
+   * that balance — the app spends `coins`, see api/_shared/paperTrade.ts).
    */
   cashDelta: number;
   /**
@@ -33,9 +31,10 @@ interface LogTradeParams {
  *             post-update server-authoritative value (caller may hard-set it
  *             into the local store to reconcile any drift).
  *   ok=false, status=402: server rejected for insufficient balance —
- *             caller MUST undo the optimistic local mutation.
- *   ok=false, no status:  network/parse error — caller keeps optimistic
- *             state; the next /api/sync/profile GET will reconcile.
+ *             caller MUST undo the optimistic local mutation. (The current
+ *             server never answers 402; kept for compatibility.)
+ *   ok=false, other status / none: auth, validation, network or parse error —
+ *             caller keeps optimistic state; the next profile GET reconciles.
  */
 export type LogTradeResult =
   | { ok: true; virtualBalance: number }
@@ -44,33 +43,32 @@ export type LogTradeResult =
 /**
  * Appends one trade to the server log, updates the denormalized portfolio
  * (BUY upserts avg cost; SELL decrements quantity), and applies cashDelta
- * to user_profiles.virtual_balance — all within a single CTE on the server.
+ * to user_profiles.virtual_balance — all within a single statement on the
+ * server.
+ *
+ * Goes through the shared API client: the server identifies the user from the
+ * session token only (no authId in the body). Without a token (guest) the
+ * client answers 401 locally and nothing is sent. Sent once, never retried —
+ * the server endpoint is not idempotent.
  *
  * The client-side Zustand store remains source of truth for in-session UI;
  * the server copy is for cross-device restore, analytics, and authoritative
  * balance reconciliation.
  */
 export async function logTrade(params: LogTradeParams): Promise<LogTradeResult> {
-  const { email: authId } = useAuthStore.getState();
-  if (!authId || params.quantity <= 0 || params.priceAtExecution <= 0) {
+  if (params.quantity <= 0 || params.priceAtExecution <= 0) {
     return { ok: false };
   }
   try {
-    const base = getApiBase();
-    const token = await tokenStore.get();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${base}/api/trading/trade`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ ...params, authId }),
-    });
-    if (!res.ok) return { ok: false, status: res.status };
-    const json = (await res.json()) as { ok: boolean; virtualBalance?: string };
-    const balance = json.virtualBalance !== undefined ? parseFloat(json.virtualBalance) : NaN;
+    const json = await api.post<LogTradeParams, { ok: boolean; virtualBalance?: string } | null>(
+      '/api/trading/trade',
+      params,
+    );
+    const balance = json?.virtualBalance !== undefined ? parseFloat(json.virtualBalance) : NaN;
     if (!Number.isFinite(balance)) return { ok: false };
     return { ok: true, virtualBalance: balance };
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError) return { ok: false, status: err.status };
     return { ok: false };
   }
 }
