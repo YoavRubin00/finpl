@@ -11,6 +11,7 @@ import { captureEvent, setPersonProperties } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
 import { primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
+import { serverStreakArrivals } from './launchStreakWait';
 
 export const streakQueryKey = ['streak'] as const;
 
@@ -41,11 +42,19 @@ export function primeStreakSnapshot(): Promise<void> {
 }
 
 /** GET /api/sync/streak as a query function: a late answer never overwrites
- *  the streak tick's newer POST answer (queryGuard); snapshots only answers it keeps. */
+ *  the streak tick's newer POST answer (queryGuard); snapshots only answers it keeps.
+ *  A kept answer is also a real server streak for the launch's login bonus
+ *  (launchStreakWait.ts), noted on the next tick: this callback runs before
+ *  react-query stores the answer, and the bonus must read the answer, not the
+ *  seed it replaces. A dropped answer (the guard kept a newer write, such as
+ *  the economy store's local seed) notes nothing. */
 export const streakQueryFn = guardedQueryFn(
   streakQueryKey,
   async () => (await getStreak()).streak,
-  (streak, { authId }) => writeStreakSnapshot(streak, authId),
+  (streak, { authId }) => {
+    writeStreakSnapshot(streak, authId);
+    setTimeout(() => serverStreakArrivals.note(), 0);
+  },
 );
 
 export function useStreak() {
@@ -80,6 +89,8 @@ export function useRecordDailyActivity() {
       // shared emitter can detect a genuine streak extension.
       const prev = qc.getQueryData<StreakState | null>(streakQueryKey)?.currentStreak ?? 0;
       qc.setQueryData<StreakState | null>(streakQueryKey, streak);
+      // The server's streak is in the cache: the launch's login bonus may run on it.
+      serverStreakArrivals.note();
       writeSnapshot(STREAK_SNAPSHOT_KEY, streak);
       try {
         setPersonProperties({
@@ -180,6 +191,7 @@ export function markDailyActivityCompleted(): void {
   void recordDailyActivity(todayIsraelDate())
     .then((res) => {
       queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
+      serverStreakArrivals.note(); // a real server streak (see launchStreakWait.ts)
       writeSnapshot(STREAK_SNAPSHOT_KEY, res.streak);
       // Keep the PostHog person streak props fresh (incl. server resets to 1/0).
       try {

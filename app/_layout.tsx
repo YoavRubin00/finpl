@@ -82,6 +82,12 @@ import {
 import { useAuthStore } from "../src/features/auth/useAuthStore";
 import { useEconomyUIStore } from "../src/features/economy/useEconomyUIStore";
 import { useStreakDailyTick } from "../src/features/economy/useStreak";
+import {
+  createLaunchLoginBonus,
+  LAUNCH_STREAK_WAIT_MS,
+  serverStreakArrivals,
+  waitForLaunchStreak,
+} from "../src/features/economy/launchStreakWait";
 import { setOnUnauthorized } from "../src/lib/api/client";
 import { signOut as lifecycleSignOut, bootFromToken, abandonPendingBoot } from "../src/lib/auth/lifecycle";
 import { tokenStore } from "../src/lib/auth/secureStore";
@@ -183,6 +189,30 @@ const ROOT_GATE_STORES: HydratingStore[] = [
   useNudgeQueueStore,
 ];
 const ROOT_GATE_STORES_CAP_MS = 2000;
+
+/**
+ * The daily login bonus, at launch and on every return to the foreground (boot
+ * fix B5, 20.11). It also decides whether a missed day spends a streak freeze,
+ * from the ['streak'] query, which at launch first holds the LOCAL calendar's
+ * streak (the economy store seeds it when it loads). So a launch with a
+ * session token waits for a real server streak answer, at most
+ * LAUNCH_STREAK_WAIT_MS, then runs anyway; guests and launches without a token
+ * run at once. A foreground run during that wait is left to the launch's run.
+ * Never on the path to the first frame. See launchStreakWait.ts.
+ */
+const loginBonus = createLaunchLoginBonus({
+  wait: (mark) => waitForLaunchStreak({
+    mark,
+    capMs: LAUNCH_STREAK_WAIT_MS,
+    isGuest: () => useAuthStore.persist.hasHydrated() && useAuthStore.getState().isGuest === true,
+    hasToken: () => tokenStore.get().then((t) => !!t),
+    arrivals: serverStreakArrivals,
+  }),
+  award: () => useEconomyUIStore.getState().awardLoginBonus(),
+  onWaited: (result) => {
+    if (__DEV__) console.log("[launch] login bonus after the streak wait:", JSON.stringify(result));
+  },
+});
 
 // Per app process, not per mount: the root layout can mount twice at launch
 // (two boot_completed events 40-400 ms apart on devices before the boot was
@@ -401,8 +431,9 @@ function RootLayoutInner() {
         // a freeze. awardLoginBonus is idempotent per IL-day
         // (lastLoginBonusDate guard), so this is a no-op after the first
         // 'active' of each Israeli calendar day — once the store has loaded
-        // (iOS can report 'active' right at launch, before it has).
-        afterHydration(useEconomyUIStore, () => useEconomyUIStore.getState().awardLoginBonus());
+        // (iOS can report 'active' right at launch, before it has). While the
+        // launch's run waits for the server's streak, it is left to that run.
+        afterHydration(useEconomyUIStore, () => loginBonus.foreground());
         // Foreground crossing midnight Israel-time: re-run the lazy day-key
         // check inside the quests store so the 4 stars + chest reset
         // immediately on resume, not on the next time the user navigates to
@@ -575,8 +606,11 @@ function RootLayoutInner() {
   // had loaded, read lastSessionAt as never, stamped it and paid nothing. Once
   // this effect waited for the load it would have paid on every cold start, so
   // it stays off until the bonus is decided and capped on the server.
+  // With a session token the bonus also waits for the server's streak (B5,
+  // see loginBonus above); only answers after this mount count.
   useEffect(() => {
-    afterHydration(useEconomyUIStore, () => useEconomyUIStore.getState().awardLoginBonus());
+    const mark = serverStreakArrivals.count();
+    afterHydration(useEconomyUIStore, () => { void loginBonus.launch(mark); });
   }, []);
 
   // Reset Shark CTA session tokens on cold start (so BridgeCTA / ReferralCTA can fire once per session)
