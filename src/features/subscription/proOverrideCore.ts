@@ -79,6 +79,22 @@ function serverAnswerOf<T extends SubscriptionLike>(value: T | null | undefined)
   return value;
 }
 
+/**
+ * The store's fresh "Pro" shown over a server answer when no override applies
+ * to it (none could be set: no account yet, a malformed answer). Marked like
+ * an override's value, with the server answer behind it, so a snapshot (rawOf)
+ * saves the server's answer, never this, and apply() later works from the
+ * server answer (boot fix B10, 20.11: a raw {isPro:true} written into the
+ * cache could be saved as the account's Pro).
+ */
+export function storeProOverServer(
+  server: SubscriptionLike | null | undefined,
+  proExpiresAt: string | null,
+): OverriddenSubscription {
+  const answer = (serverAnswerOf(server) ?? null) as SubscriptionLike | null;
+  return { isPro: true, proExpiresAt, proSource: answer?.proSource ?? null, overriddenServerAnswer: answer };
+}
+
 /** RevenueCat dates are ISO strings; anything unparseable counts as none. */
 export function parseStoreDate(value: string | null | undefined): number | null {
   if (typeof value !== 'string' || !value) return null;

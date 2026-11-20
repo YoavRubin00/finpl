@@ -39,7 +39,9 @@ import {
   primeSubscriptionSnapshot,
   noteStoreCustomerInfo,
   clearStoreProOverride,
+  withStoreProOverride,
 } from '../../features/subscription/useSubscription';
+import { storeProOverServer } from '../../features/subscription/proOverrideCore';
 import {
   fallsBackToStoreCache,
   showStoreCacheProIfNoServerAnswer,
@@ -351,20 +353,26 @@ async function syncRevenueCatToServer(serverSub: SubscriptionState | null, gen: 
   const res = await syncSubscription(fresh);
   if (gen !== bootGeneration) return; // signed out meanwhile: don't touch the next session's cache
   writeSubscriptionSnapshot(res.subscription);
+  // What is shown goes through the store's override (noted above from the
+  // fresh answer), never as a raw {isPro:true} (boot fix B10, 20.11): a raw
+  // value carried no trace of the server's answer, so a later write from the
+  // cache (a re-sign-in in the same process) could save it as the account's Pro.
+  const shown = withStoreProOverride(res.subscription);
   if (fresh.isPro && res.subscription?.isPro !== true) {
     // The server makes an account Pro only when RevenueCat confirms it or its
     // webhook has landed (2026-11-20), so it can lag the store. The store's
     // fresh answer is shown for this session; the server's answer stays the
-    // saved state, and the next launch asks again.
-    queryClient.setQueryData<SubscriptionState | null>(subscriptionQueryKey, {
-      isPro: true,
-      proExpiresAt: fresh.proExpiresAt,
-      proSource: res.subscription?.proSource ?? null,
-    });
+    // saved state, and the next launch asks again. Should no override apply
+    // (none could be set), the store's answer is still shown, marked with the
+    // server's answer behind it, so it is never saved either.
+    queryClient.setQueryData<SubscriptionState | null>(
+      subscriptionQueryKey,
+      shown?.isPro === true ? shown : storeProOverServer(res.subscription, fresh.proExpiresAt),
+    );
     captureEvent('rc_server_pro_unconfirmed', { has_server_row: res.subscription !== null });
     return;
   }
-  queryClient.setQueryData<SubscriptionState | null>(subscriptionQueryKey, res.subscription);
+  queryClient.setQueryData<SubscriptionState | null>(subscriptionQueryKey, shown);
 }
 
 function startRevenueCatSync(serverSub: SubscriptionState | null | undefined, gen: number): void {

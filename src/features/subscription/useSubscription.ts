@@ -7,7 +7,7 @@ import type { CustomerInfo } from '../../services/revenueCat';
 import { useAuthStore } from '../auth/useAuthStore';
 import { primeSnapshot, readSnapshot, writeSnapshot } from '../economy/querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
-import { createStoreProOverride } from './proOverrideCore';
+import { createStoreProOverride, storeProOverServer } from './proOverrideCore';
 import { withExpiryApplied } from './subscriptionSeedCore';
 
 export const subscriptionQueryKey = ['subscription'] as const;
@@ -157,13 +157,14 @@ export function useSyncFromRevenueCat() {
         // RevenueCat confirms it (or its webhook lands), so right after a
         // purchase it can still say "not Pro". Show the store's answer (not
         // saved as the last known state; the override keeps it through
-        // refetches) and re-read the server shortly.
+        // refetches) and re-read the server shortly. Without an override
+        // (no fresh customer info), it is marked with the server's answer
+        // behind it, so it is never saved as Pro either (B10).
         const shown = withStoreProOverride(sub);
-        qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, shown?.isPro === true ? shown : {
-          isPro: true,
-          proExpiresAt: rcExpiresAt,
-          proSource: sub?.proSource ?? null,
-        });
+        qc.setQueryData<SubscriptionState | null>(
+          subscriptionQueryKey,
+          shown?.isPro === true ? shown : storeProOverServer(sub, rcExpiresAt),
+        );
         recheckAfterPurchase(qc, 0);
         return;
       }

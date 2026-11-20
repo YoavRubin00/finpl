@@ -9,7 +9,10 @@
 //  - the override lasts until the entitlement's expiry (24 h without one), is
 //    per account, ends when a fresh store answer lacks the entitlement, on
 //    sign-out and on the account wipe;
-//  - only what is shown changes: the snapshot keeps the server's answer.
+//  - only what is shown changes: the snapshot keeps the server's answer;
+//  - B10 (boot fix round, 20.11): the launch sync's "Pro" goes through the
+//    override, or is marked with the server's answer when no override applies
+//    (storeProOverServer), so a later write from the cache never saves it.
 // The second half drives a real react-query client through the query guard,
 // wired the way src/features/subscription/useSubscription.ts wires it.
 import { QueryClient, QueryObserver } from '@tanstack/query-core';
@@ -17,6 +20,7 @@ import {
   createStoreProOverride,
   NO_EXPIRY_OVERRIDE_MS,
   parseStoreDate,
+  storeProOverServer,
   type SubscriptionLike,
 } from '../src/features/subscription/proOverrideCore';
 import { createQueryGuard } from '../src/lib/queryGuardCore';
@@ -139,6 +143,73 @@ function coreCases(): void {
 
   check(parseStoreDate('2026-12-20T12:00:00Z') === Date.parse('2026-12-20T12:00:00Z') && parseStoreDate(null) === null && parseStoreDate('') === null,
     'parseStoreDate reads RevenueCat\'s ISO dates');
+
+  // ═══ B10: the store's "Pro" shown with no override behind it ═══
+  {
+    const o = createStoreProOverride();
+    const marked = storeProOverServer(notPro, in30Days);
+    check(marked.isPro === true && marked.proExpiresAt === in30Days && marked.proSource === null,
+      'B10: shown as Pro with the store\'s expiry', marked);
+    check(o.rawOf(marked) === notPro, 'B10: rawOf gives the server answer behind it (what a snapshot saves)');
+    const copy = JSON.parse(JSON.stringify(marked)) as SubscriptionLike;
+    check(o.rawOf(copy)?.isPro === false, 'B10: also from a copy (structural sharing)', o.rawOf(copy));
+    check(o.rawOf(storeProOverServer(null, null)) === null, 'B10: a server answer of null (no row) stays null');
+    check(storeProOverServer({ isPro: false, proExpiresAt: null, proSource: 'promotional' }, null).proSource === 'promotional',
+      'B10: the server\'s source is kept');
+    check(o.apply(marked, A, T0) === notPro, 'B10: with no override, the next apply() (a refetch) shows the server\'s answer');
+    o.noteStoreAnswer(A, { expirationDate: in30Days }, T0);
+    const overridden = o.apply(notPro, A, T0)!;
+    check(o.rawOf(storeProOverServer(overridden, in30Days)) === notPro, 'B10: marking an overridden value works from its server answer (no nesting)');
+  }
+}
+
+/**
+ * B10 (20.11): the launch's RevenueCat-to-server sync showed the store's Pro by
+ * writing a raw {isPro:true} into the cache. If a screen's GET was in flight,
+ * the guard kept that write as the query's result, stored after a re-sign-in
+ * in the same process had begun, so serverAnswerSince handed it to the
+ * sign-in's snapshotSubscriptionForNewSession, which saved it as the account's
+ * Pro. The value is now the override's (or marked), so the snapshot saves the
+ * server's answer.
+ */
+async function b10Cases(): Promise<void> {
+  for (const how of ['raw {isPro:true} (before B10)', 'through the override', 'marked (no override)'] as const) {
+    const client = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, gcTime: 5 * 60_000, retry: false } } });
+    const authId: string | null = A;
+    const guard = createQueryGuard(client, () => authId);
+    const key = ['subscription'];
+    const o = createStoreProOverride();
+    const saved: Array<SubscriptionLike | null> = [];
+    const writeSubscriptionSnapshot = (sub: SubscriptionLike | null | undefined) => {
+      saved.push((o.rawOf(sub) ?? null) as SubscriptionLike | null);
+    };
+    // A screen's read, in flight.
+    const read = guard.guardedQueryFn<SubscriptionLike | null>(key, async () => { await sleep(30); return { ...notPro }; });
+    const inFlight = client.fetchQuery({ queryKey: key, queryFn: read });
+    await sleep(5);
+    // The launch sync: the store says Pro, the server's POST answer says not Pro.
+    if (how === 'through the override') o.noteStoreAnswer(authId, { expirationDate: in30Days }, T0);
+    const postAnswer = { ...notPro };
+    const shown = how === 'raw {isPro:true} (before B10)'
+      ? { isPro: true, proExpiresAt: in30Days, proSource: null }
+      : how === 'through the override'
+        ? o.apply(postAnswer, authId, T0)
+        : storeProOverServer(postAnswer, in30Days);
+    client.setQueryData(key, shown);
+    // A re-sign-in of the same account begins before the read completes.
+    const signInStartedAt = Date.now();
+    await sleep(1);
+    await inFlight;
+    const fromCache = guard.serverAnswerSince<SubscriptionLike | null>(key, signInStartedAt);
+    check(fromCache?.isPro === true, `B10 (${how}): setup: the guard kept the sync's Pro, and the sign-in takes it for the server's answer`);
+    writeSubscriptionSnapshot(fromCache); // snapshotSubscriptionForNewSession
+    const last = saved[saved.length - 1];
+    if (how === 'raw {isPro:true} (before B10)') {
+      check(last?.isPro === true, `B10 (${how}): the account was saved as Pro (the bug)`, last);
+    } else {
+      check(last?.isPro === false, `B10 (${how}): the snapshot saves the server's "not Pro"`, last);
+    }
+  }
 }
 
 /** The app binding (useSubscription.ts) against a real react-query client. */
@@ -211,6 +282,7 @@ async function cacheCases(): Promise<void> {
 async function main(): Promise<void> {
   coreCases();
   await cacheCases();
+  await b10Cases();
   console.log(`\n${passed} passed, ${failed} failed`);
   // The query client's gc timers would keep Node alive for gcTime.
   process.exit(failed > 0 ? 1 : 0);
