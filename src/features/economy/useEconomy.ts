@@ -4,8 +4,8 @@ import { applyEconomyDelta, getEconomy, type Economy } from '../../lib/api/econo
 import { useAuthStore } from '../auth/useAuthStore';
 import { guardedQueryFn } from '../../lib/queryGuard';
 import { whenHydrated } from '../../lib/stores/whenHydrated';
-import { isSnapshotPrimed, primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
-import { createPendingGems } from './pendingGemsCore';
+import { ECONOMY_SNAPSHOT_KEY, isSnapshotPrimed, primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
+import { createPendingGems, withoutPendingGems } from './pendingGemsCore';
 
 export { spendableGems } from './pendingGemsCore';
 
@@ -45,8 +45,8 @@ export function clearPendingGems(): void {
   pendingGems.clear();
 }
 
-/** Persisted last-known economy (UX-21 flash-of-zero). Keyed by authId inside. */
-const ECONOMY_SNAPSHOT_KEY = 'economy-snapshot:v1';
+// Persisted last-known economy (UX-21 flash-of-zero) under ECONOMY_SNAPSHOT_KEY
+// (querySnapshotCore.ts). Keyed by authId inside.
 
 function isEconomy(v: unknown): v is Economy {
   if (!v || typeof v !== 'object') return false;
@@ -63,9 +63,11 @@ export function economyPlaceholder(): Economy | undefined {
   return readSnapshot(ECONOMY_SNAPSHOT_KEY, isEconomy)?.value;
 }
 
-/** Record a server-confirmed economy row as the cold-open snapshot. */
+/** Record a server-confirmed economy row as the cold-open snapshot. Only the
+ *  server's part: bought gems still pending are dropped (a value read back
+ *  from the cache may carry them; boot fix B7). */
 export function writeEconomySnapshot(economy: Economy | null | undefined, forAuthId?: string): void {
-  writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy, forAuthId);
+  writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy ? withoutPendingGems(economy) : economy, forAuthId);
 }
 
 /** Load the saved balance from storage (AsyncStorage on devices). */

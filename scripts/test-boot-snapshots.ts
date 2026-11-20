@@ -10,10 +10,27 @@
 //  - waiting for persisted stores to load, with and without a cap;
 //  - B6 (20.11): a store that never loads (a real zustand persist store whose
 //    saved JSON is unreadable) is reported once after a limit while the wait
-//    goes on, and the report names it by its storage key.
+//    goes on, and the report names it by its storage key;
+//  - B7: the snapshot key names live in one place and sign-out removes all
+//    three from storage; a sign-in files its balance and streak (not only the
+//    Pro state) under the new account, never a seed, an older answer, another
+//    account's or bought gems still pending.
+import fs from 'node:fs';
+import path from 'node:path';
 import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
-import { createSnapshotStore, type SnapshotStorage } from '../src/features/economy/querySnapshotCore';
+import { QueryClient } from '@tanstack/query-core';
+import {
+  createSnapshotStore,
+  ECONOMY_SNAPSHOT_KEY,
+  fileIfStillSignedIn,
+  SNAPSHOT_STORAGE_KEYS,
+  STREAK_SNAPSHOT_KEY,
+  SUBSCRIPTION_SNAPSHOT_KEY,
+  type SnapshotStorage,
+} from '../src/features/economy/querySnapshotCore';
+import { createPendingGems, withoutPendingGems, type GemsCarrier } from '../src/features/economy/pendingGemsCore';
+import { createQueryGuard } from '../src/lib/queryGuardCore';
 import { createSingleFlight, decideBootPath, waitCapped } from '../src/lib/auth/bootCore';
 import {
   storeName,
@@ -47,7 +64,12 @@ function fakeAsyncStorage(delayMs: number, initial: Record<string, string> = {},
       data.set(key, value);
     },
   };
-  return { storage, data, reads: () => reads };
+  /** zustandStorage.removeItem, as signOut calls it. */
+  const removeItem = async (key: string) => {
+    await sleep(1);
+    data.delete(key);
+  };
+  return { storage, data, reads: () => reads, removeItem };
 }
 
 interface Sub { isPro: boolean | null; proExpiresAt: string | null; proSource: string | null }
@@ -227,6 +249,126 @@ async function aRealStoreWithUnreadableJson(): Promise<void> {
   check(storeName(plain) === 'unknown' && storeName(throwingName) === 'unknown', "B6: a store without a name reports 'unknown'");
 }
 
+// ─── B7 (boot fix round B, 20.11) ───────────────────────────────────────────
+
+const ROOT = path.resolve(__dirname, '..');
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(full, out);
+    else if (/\.(ts|tsx)$/.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+function snapshotKeysAreOneList(): void {
+  const names = [...SNAPSHOT_STORAGE_KEYS].sort();
+  check(names.join() === ['economy-snapshot:v1', 'streak-snapshot:v1', 'subscription-snapshot:v1'].join(),
+    'B7: the sign-out list names the three snapshot keys', names);
+  check(ECONOMY_SNAPSHOT_KEY !== STREAK_SNAPSHOT_KEY && STREAK_SNAPSHOT_KEY !== SUBSCRIPTION_SNAPSHOT_KEY,
+    'B7: three distinct keys');
+  // Nothing in the app defines its own copy of a key name, so what sign-out
+  // removes can never drift from what is written.
+  const literal = /['"`](economy|streak|subscription)-snapshot:v\d/;
+  const definers = [...walk(path.join(ROOT, 'src')), ...walk(path.join(ROOT, 'app'))]
+    .filter((f) => literal.test(fs.readFileSync(f, 'utf8')))
+    .map((f) => path.relative(ROOT, f).replace(/\\/g, '/'));
+  check(definers.length === 1 && definers[0] === 'src/features/economy/querySnapshotCore.ts',
+    'B7: the key names are written down once (querySnapshotCore.ts), every user imports them', definers);
+}
+
+async function signOutLeavesNoSnapshot(): Promise<void> {
+  const fake = fakeAsyncStorage(5);
+  let authId: string | null = 'a@example.com';
+  const store = createSnapshotStore({ storage: fake.storage, getAuthId: () => authId });
+  store.write(ECONOMY_SNAPSHOT_KEY, { coins: 1200, gems: 30 });
+  store.write(STREAK_SNAPSHOT_KEY, { currentStreak: 9 });
+  store.write(SUBSCRIPTION_SNAPSHOT_KEY, { isPro: true, proExpiresAt: null, proSource: 'store' });
+  await sleep(10);
+  check(SNAPSHOT_STORAGE_KEYS.every((k) => (fake.data.get(k) ?? '').includes('a@example.com')),
+    "setup: the three snapshots are on disk, each with the account's email");
+
+  // lifecycle.ts signOut: memory first, then the keys, then the auth store.
+  store.reset();
+  await Promise.all(SNAPSHOT_STORAGE_KEYS.map((k) => fake.removeItem(k)));
+  authId = null;
+  check(SNAPSHOT_STORAGE_KEYS.every((k) => !fake.data.has(k)), 'B7: after sign-out none of them is on disk');
+
+  // The next launch, same account signing in again: nothing to read until the
+  // server answers (a new sign-in files fresh ones).
+  authId = 'a@example.com';
+  const next = createSnapshotStore({ storage: fake.storage, getAuthId: () => authId });
+  await Promise.all(SNAPSHOT_STORAGE_KEYS.map((k) => next.prime(k)));
+  check(next.read(SUBSCRIPTION_SNAPSHOT_KEY, isSub) === null, 'B7: a later launch reads no saved Pro state for that account');
+}
+
+interface Eco extends GemsCarrier { xp: number | null; coins: number | null; gems: number | null; level: number | null; virtualBalance: string }
+interface Streak { currentStreak: number | null; longestStreak: number | null; lastActiveDate: string | null }
+const isEco = (v: unknown): v is Eco => !!v && typeof v === 'object' && 'coins' in (v as object);
+const isStreak = (v: unknown): v is Streak => !!v && typeof v === 'object' && 'currentStreak' in (v as object);
+
+async function aNewSessionFilesItsAnswers(): Promise<void> {
+  // signInWithProfile: the reads run before signIn() sets the authId, so the
+  // guarded query functions file nothing; after it, the answers since the
+  // sign-in began are filed under the new account (lifecycle.ts
+  // snapshotForNewSession, with the app's writers).
+  const client = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, gcTime: 5 * 60_000, retry: false } } });
+  let authId: string | null = null;
+  const guard = createQueryGuard(client, () => authId);
+  const fake = fakeAsyncStorage(1);
+  const snapshots = createSnapshotStore({ storage: fake.storage, getAuthId: () => authId });
+  const pending = createPendingGems();
+  const writeEconomy = (v: Eco | null, id: string) => snapshots.write(ECONOMY_SNAPSHOT_KEY, v ? withoutPendingGems(v) : v, id);
+  const writeStreak = (v: Streak | null, id: string) => snapshots.write(STREAK_SNAPSHOT_KEY, v, id);
+  const writeSub = (v: Sub | null, id: string) => snapshots.write(SUBSCRIPTION_SNAPSHOT_KEY, v, id);
+  const B = 'b@example.com';
+
+  const serverEco: Eco = { xp: 40, coins: 2500, gems: 60, level: 2, virtualBalance: '0' };
+  const ecoRead = guard.guardedQueryFn<Eco | null>(['economy'], async () => { await sleep(5); return { ...serverEco }; },
+    (v, ctx) => writeEconomy(v, ctx.authId));
+  const streakRead = guard.guardedQueryFn<Streak | null>(['streak'], async () => { await sleep(5); return { currentStreak: 6, longestStreak: 9, lastActiveDate: '2026-11-20' }; },
+    (v, ctx) => writeStreak(v, ctx.authId));
+  // A seed in the subscription query (a boot with a saved session would have one): never filed.
+  guard.seed(['subscription'], { isPro: true, proExpiresAt: null, proSource: 'store' });
+
+  const startedAt = Date.now();
+  await Promise.all([
+    client.fetchQuery({ queryKey: ['economy'], queryFn: async () => pending.apply(await ecoRead(), authId, Date.now()) ?? null }),
+    client.fetchQuery({ queryKey: ['streak'], queryFn: streakRead }),
+  ]);
+  check(fake.data.size === 0, 'setup: the reads ran with no account, so nothing was filed');
+
+  authId = B; // signIn()
+  // A purchase's gems shown as pending ride on the cached balance (a guest has
+  // none; this checks the writer keeps them out all the same).
+  pending.recordPurchase(B, 500, client.getQueryData<Eco>(['economy']), Date.now());
+  client.setQueryData<Eco | null>(['economy'], (old) => pending.apply(old ?? null, authId, Date.now()) ?? null);
+  check(client.getQueryData<Eco>(['economy'])?.pendingGems === 500, 'setup: the cached balance shows 500 bought gems as pending');
+
+  const filed = {
+    economy: fileIfStillSignedIn(guard.serverAnswerSince<Eco | null>(['economy'], startedAt), B, authId, writeEconomy),
+    streak: fileIfStillSignedIn(guard.serverAnswerSince<Streak | null>(['streak'], startedAt), B, authId, writeStreak),
+    subscription: fileIfStillSignedIn(guard.serverAnswerSince<Sub | null>(['subscription'], startedAt), B, authId, writeSub),
+  };
+  check(filed.economy && filed.streak, 'B7: after the sign-in, the balance and the streak are filed', filed);
+  check(!filed.subscription, 'B7: a seed is not a server answer: not filed');
+  const eco = snapshots.read(ECONOMY_SNAPSHOT_KEY, isEco);
+  check(eco?.authId === B && eco.value.coins === 2500 && eco.value.gems === 60 && eco.value.pendingGems === undefined,
+    'B7: the balance is filed under the new account as the server sent it (pending gems never saved)', eco);
+  check(snapshots.read(STREAK_SNAPSHOT_KEY, isStreak)?.value.currentStreak === 6, 'B7: the streak is filed under the new account');
+
+  // Not filed: an answer from before the sign-in began, or another account by now.
+  const later = Date.now() + 1000;
+  check(!fileIfStillSignedIn(guard.serverAnswerSince<Eco | null>(['economy'], later), B, authId, writeEconomy),
+    'B7: no answer since the start: nothing filed');
+  check(!fileIfStillSignedIn({ ...serverEco }, B, 'c@example.com', writeEconomy) && !fileIfStillSignedIn({ ...serverEco }, B, null, writeEconomy),
+    'B7: another account signed in by now (or none): nothing filed');
+  check(!fileIfStillSignedIn<Eco | null>({ ...serverEco }, B, B, () => { throw new Error('disk full'); }),
+    'B7: a failing write is reported, never thrown');
+}
+
 async function main(): Promise<void> {
   await primeReadsTheRightAccount();
   await writeWinsOverALatePrime();
@@ -237,6 +379,9 @@ async function main(): Promise<void> {
   await waitingForStores();
   await stuckStoresAreReported();
   await aRealStoreWithUnreadableJson();
+  snapshotKeysAreOneList();
+  await signOutLeavesNoSnapshot();
+  await aNewSessionFilesItsAnswers();
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);
 }

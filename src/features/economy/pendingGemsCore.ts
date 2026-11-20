@@ -79,8 +79,9 @@ export function spendableGems(value: GemsCarrier | null | undefined): number {
   return Math.max(0, rawGems(value));
 }
 
-/** The value without any pending part (unchanged object when it has none). */
-function withoutPending<T extends GemsCarrier>(value: T): T {
+/** The value without any pending part, i.e. the server's view (the same
+ *  object when it has none). What a snapshot saves (useEconomy.ts). */
+export function withoutPendingGems<T extends GemsCarrier>(value: T): T {
   if (value.pendingGems === undefined) return value;
   const copy: T = { ...value, gems: rawGems(value) };
   delete (copy as GemsCarrier).pendingGems;
@@ -137,7 +138,7 @@ export function createPendingGems(windowMs: number = PENDING_GEMS_WINDOW_MS): Pe
 
     apply(value, authId, nowMs) {
       if (!value) return value;
-      const base = withoutPending(value);
+      const base = withoutPendingGems(value);
       if (!state) return base;
       if (!authId || state.authId !== authId || nowMs >= state.expiresAt) {
         state = null;

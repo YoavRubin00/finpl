@@ -9,14 +9,14 @@ import { useEconomyUIStore } from './useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { captureEvent, setPersonProperties } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
-import { primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
+import { STREAK_SNAPSHOT_KEY, primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
 import { serverStreakArrivals } from './launchStreakWait';
 
 export const streakQueryKey = ['streak'] as const;
 
-/** Persisted last-known streak (UX-21 flash-of-zero on the header flame). */
-const STREAK_SNAPSHOT_KEY = 'streak-snapshot:v1';
+// Persisted last-known streak (UX-21 flash-of-zero on the header flame) under
+// STREAK_SNAPSHOT_KEY (querySnapshotCore.ts).
 
 function isStreakState(v: unknown): v is StreakState {
   if (!v || typeof v !== 'object') return false;

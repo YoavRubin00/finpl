@@ -19,6 +19,14 @@ import { readStringSync, zustandStorage } from '../../lib/zustandStorage';
 import { useAuthStore } from '../auth/useAuthStore';
 import { createSnapshotStore, type SnapshotEnvelope } from './querySnapshotCore';
 
+export {
+  ECONOMY_SNAPSHOT_KEY,
+  STREAK_SNAPSHOT_KEY,
+  SUBSCRIPTION_SNAPSHOT_KEY,
+  SNAPSHOT_STORAGE_KEYS,
+  fileIfStillSignedIn,
+} from './querySnapshotCore';
+
 const store = createSnapshotStore({
   storage: zustandStorage,
   readSync: readStringSync,
@@ -52,8 +60,9 @@ export function isSnapshotPrimed(key: string): boolean {
   return store.isPrimed(key);
 }
 
-/** Forget the snapshots held in memory (sign-out). Storage keeps them, keyed
- *  by authId, so they can never be read for another account. */
+/** Forget the snapshots held in memory (sign-out, account wipe). A prime
+ *  still in flight can't refill it. Storage is separate: sign-out removes
+ *  SNAPSHOT_STORAGE_KEYS (lifecycle.ts), the account wipe removes every key. */
 export function resetSnapshotMemory(): void {
   store.reset();
 }

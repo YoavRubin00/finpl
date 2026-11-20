@@ -20,6 +20,7 @@ import {
   PENDING_GEMS_WINDOW_MS,
   rawGems,
   spendableGems,
+  withoutPendingGems,
   type GemsCarrier,
 } from '../src/features/economy/pendingGemsCore';
 import { createQueryGuard } from '../src/lib/queryGuardCore';
@@ -186,6 +187,17 @@ function coreCases(): void {
       'spendableGems never goes below 0');
     check(PENDING_GEMS_REREAD_MS.join() === [5_000, 20_000, 60_000, PENDING_GEMS_WINDOW_MS + 1_000].join(),
       're-reads at 5 s, 20 s, 60 s and just after 3 minutes', PENDING_GEMS_REREAD_MS);
+  }
+
+  // ═══ What a snapshot saves (boot fix B7: writeEconomySnapshot) ═══
+  {
+    const shown: Eco = { ...eco(600, 1200), pendingGems: 500 };
+    const saved = withoutPendingGems(shown);
+    check(saved.gems === 100 && saved.coins === 1200 && saved.pendingGems === undefined && !('pendingGems' in saved),
+      'withoutPendingGems: the server part only (600 shown, 500 pending → 100), the field removed', saved);
+    check(shown.pendingGems === 500 && shown.gems === 600, 'withoutPendingGems: the shown value is not changed');
+    const plain = eco(7);
+    check(withoutPendingGems(plain) === plain, 'withoutPendingGems: a server answer comes back as it is (same object)');
   }
 }
 

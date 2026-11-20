@@ -15,6 +15,40 @@ export interface SnapshotEnvelope<T> {
   value: T;
 }
 
+/**
+ * The saved snapshots' storage keys (AsyncStorage on devices). Each envelope
+ * carries the account's authId (its verified email) with its balance, streak
+ * or Pro state, so a sign-out removes them (boot fix B7, 20.11; the account
+ * wipe removes every key anyway). Used by useEconomy.ts, useStreak.ts and
+ * useSubscription.ts, and by lifecycle.ts through querySnapshot.ts.
+ */
+export const ECONOMY_SNAPSHOT_KEY = 'economy-snapshot:v1';
+export const STREAK_SNAPSHOT_KEY = 'streak-snapshot:v1';
+export const SUBSCRIPTION_SNAPSHOT_KEY = 'subscription-snapshot:v1';
+export const SNAPSHOT_STORAGE_KEYS: readonly string[] = [ECONOMY_SNAPSHOT_KEY, STREAK_SNAPSHOT_KEY, SUBSCRIPTION_SNAPSHOT_KEY];
+
+/**
+ * Files a server answer under `authId` (boot fix B7, 20.11): for the answers a
+ * sign-in's reads (and a boot's with no saved session) got before the auth
+ * store had the account's authId, so their query functions filed nothing.
+ * Only when there is an answer (undefined = none) and only while `authId` is
+ * still the signed-in account. True when written.
+ */
+export function fileIfStillSignedIn<T>(
+  answer: T | undefined,
+  authId: string,
+  currentAuthId: string | null,
+  write: (value: T, authId: string) => void,
+): boolean {
+  if (answer === undefined || !authId || currentAuthId !== authId) return false;
+  try {
+    write(answer, authId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface SnapshotStorage {
   getItem(key: string): string | null | Promise<string | null>;
   setItem(key: string, value: string): unknown;

@@ -5,7 +5,7 @@ import { getSubscription, syncSubscription, type SubscriptionState } from '../..
 import { checkProEntitlement, RC_ENTITLEMENT_PRO } from '../../services/revenueCat';
 import type { CustomerInfo } from '../../services/revenueCat';
 import { useAuthStore } from '../auth/useAuthStore';
-import { primeSnapshot, readSnapshot, writeSnapshot } from '../economy/querySnapshot';
+import { SUBSCRIPTION_SNAPSHOT_KEY, primeSnapshot, readSnapshot, writeSnapshot } from '../economy/querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
 import { createStoreProOverride, storeProOverServer } from './proOverrideCore';
 import { withExpiryApplied } from './subscriptionSeedCore';
@@ -48,14 +48,11 @@ export function withStoreProOverride(sub: SubscriptionState | null): Subscriptio
   return storePro.apply(sub, useAuthStore.getState().authId, Date.now());
 }
 
-/**
- * Last server-confirmed subscription for this account (keyed by authId inside),
- * so a cold start can show a paying user as Pro before the server answers
- * (boot without waiting on the network, 20.11). Written only from server
- * answers, never from a guess. A definite server answer replaces it; a timeout
- * or an error never does.
- */
-const SUBSCRIPTION_SNAPSHOT_KEY = 'subscription-snapshot:v1';
+// Last server-confirmed subscription for this account (keyed by authId inside),
+// under SUBSCRIPTION_SNAPSHOT_KEY (querySnapshotCore.ts), so a cold start can
+// show a paying user as Pro before the server answers (boot without waiting on
+// the network, 20.11). Written only from server answers, never from a guess. A
+// definite server answer replaces it; a timeout or an error never does.
 
 function isSubscriptionState(v: unknown): v is SubscriptionState {
   if (!v || typeof v !== 'object') return false;

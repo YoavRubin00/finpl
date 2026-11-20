@@ -23,6 +23,7 @@ import {
   economyQueryFn,
   economyPlaceholder,
   primeEconomySnapshot,
+  writeEconomySnapshot,
   clearPendingGems,
 } from '../../features/economy/useEconomy';
 import {
@@ -30,6 +31,7 @@ import {
   streakQueryFn,
   streakPlaceholder,
   primeStreakSnapshot,
+  writeStreakSnapshot,
 } from '../../features/economy/useStreak';
 import {
   subscriptionQueryKey,
@@ -47,13 +49,19 @@ import {
   showStoreCacheProIfNoServerAnswer,
   toEpochMs,
 } from '../../features/subscription/subscriptionSeedCore';
-import { resetSnapshotMemory } from '../../features/economy/querySnapshot';
+import {
+  fileIfStillSignedIn,
+  resetSnapshotMemory,
+  SNAPSHOT_STORAGE_KEYS,
+} from '../../features/economy/querySnapshot';
 import { whenHydrated } from '../stores/whenHydrated';
 import { createSingleFlight, decideBootPath, TIMED_OUT, waitCapped, withTimeout } from './bootCore';
 import { progressQueryKey, progressQueryFn } from '../../features/chapter-1-content/useProgress';
 import { userStatsQueryKey, userStatsQueryFn } from '../../features/user-stats/useUserStats';
 import { getProfile, type ProfileRow } from '../api/profile';
 import { syncSubscription, type SubscriptionState } from '../api/subscription';
+import type { Economy } from '../api/economy';
+import type { StreakState } from '../api/streak';
 import { ApiError } from '../api/client';
 import { seedQueryData, serverAnswerSince } from '../queryGuard';
 import { useAuthStore } from '../../features/auth/useAuthStore';
@@ -387,17 +395,22 @@ function startRevenueCatSync(serverSub: SubscriptionState | null | undefined, ge
 /**
  * The reads of a sign-in (or of a boot with no saved session) ran before the
  * auth store had this account's authId, so their query functions could not
- * file a snapshot. Record the subscription answer now, under the new account,
- * so the next cold start can open at once with the right Pro state.
+ * file a snapshot. Record the server's answers since the sign-in (boot) began
+ * now, under the new account, while it is still the signed-in one, so the
+ * next cold start can open at once with the right Pro state and, with
+ * `wallet`, the right balance and streak (boot fix B7, 20.11: only the
+ * subscription was filed, and that next launch showed 0 coins and a 0 streak
+ * until the server answered). The writers keep the server's own answers: the
+ * answer behind the store's Pro override, the balance without bought gems
+ * still pending.
  */
-function snapshotSubscriptionForNewSession(
-  serverSub: SubscriptionState | null | undefined,
-  authId: string,
-  gen: number,
-): void {
-  if (serverSub === undefined || gen !== bootGeneration) return;
-  if (useAuthStore.getState().authId !== authId) return;
-  writeSubscriptionSnapshot(serverSub, authId);
+function snapshotForNewSession(authId: string, gen: number, startedAt: number, opts: { wallet: boolean }): void {
+  if (gen !== bootGeneration) return;
+  const current = useAuthStore.getState().authId;
+  fileIfStillSignedIn(serverSubscriptionSince(startedAt), authId, current, writeSubscriptionSnapshot);
+  if (!opts.wallet) return;
+  fileIfStillSignedIn(serverAnswerSince<Economy | null>(economyQueryKey, startedAt), authId, current, writeEconomySnapshot);
+  fileIfStillSignedIn(serverAnswerSince<StreakState | null>(streakQueryKey, startedAt), authId, current, writeStreakSnapshot);
 }
 
 /**
@@ -476,7 +489,7 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
     hasCompletedOnboarding: profile.hasCompletedOnboarding,
   });
   const serverSub = serverSubscriptionSince(startedAt);
-  snapshotSubscriptionForNewSession(serverSub, profile.authId, gen);
+  snapshotForNewSession(profile.authId, gen, startedAt, { wallet: true });
 
   // Identify the user in PostHog so all subsequent events land on a stable
   // distinct_id — and so the anon distinct_id from before sign-in is merged
@@ -520,6 +533,16 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
   startRevenueCatSync(serverSub, gen);
 }
 
+/** Removes the saved snapshots (SNAPSHOT_STORAGE_KEYS) from the storage the
+ *  snapshot store writes them to. Never rejects. */
+async function removeSavedSnapshots(): Promise<void> {
+  await Promise.all(SNAPSHOT_STORAGE_KEYS.map((key) =>
+    Promise.resolve()
+      .then(() => zustandStorage.removeItem(key))
+      .catch(() => { /* non-fatal */ }),
+  ));
+}
+
 // In-flight guard: prefetchAll's 6 parallel 401s used to fan out to 6 concurrent
 // signOut() calls, each firing rc_logout_failed + sign_out_completed. Now any
 // caller arriving while a sign-out is running just awaits the same promise.
@@ -556,6 +579,11 @@ export async function signOut(): Promise<void> {
       // Saved snapshots held in memory (keyed by authId, so never readable by
       // the next account, but nothing of this account should stay loaded).
       resetSnapshotMemory();
+      // ...and on disk (boot fix B7, 20.11): each one carries the account's
+      // email (its authId) with its balance, Pro state or streak, and the next
+      // sign-in writes fresh ones. Before the auth store is cleared, so an app
+      // killed half-way leaves none behind.
+      await removeSavedSnapshots();
 
       const keys = getLocalStorageKeys();
       if (keys.length > 0) {
@@ -668,6 +696,8 @@ async function hydrateSession(
   backfillDone: boolean,
   bootToken: string,
   startedAt: number,
+  /** A signed-in session was saved on this device when the boot began. */
+  hadSession: boolean,
 ): Promise<BootNetworkResult> {
   let reads: Promise<void> | null = null;
   let profile: ProfileRow | null;
@@ -729,8 +759,9 @@ async function hydrateSession(
   });
   const serverSub = serverSubscriptionSince(startedAt);
   // Covers a boot with no saved session, whose reads ran before the auth store
-  // had an authId; for a saved session the query function already filed it.
-  snapshotSubscriptionForNewSession(serverSub, profile.authId, gen);
+  // had an authId; for a saved session the query functions already filed them
+  // (the subscription is filed again either way, as before).
+  snapshotForNewSession(profile.authId, gen, startedAt, { wallet: !hadSession });
 
   // Re-identify on every cold boot of an authenticated session so PostHog
   // continues attributing this device's events to the same user instead of
@@ -932,7 +963,7 @@ async function runBoot(attempt: number): Promise<BootResult> {
   }) === 'cached';
   let path: 'cached' | 'network' | 'timeout' = cached ? 'cached' : 'network';
 
-  const hydration: Promise<BootNetworkResult> = hydrateSession(gen, backfillDone, token, startedAt)
+  const hydration: Promise<BootNetworkResult> = hydrateSession(gen, backfillDone, token, startedAt, hasSession)
     .catch((): BootNetworkResult => 'error')
     .then((result) => {
       try {
