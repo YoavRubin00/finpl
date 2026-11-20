@@ -3,9 +3,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { eq } from 'drizzle-orm';
 import { moduleProgress, userProfiles } from '../../src/db/schema';
 import { getDb } from '../_shared/db';
-import { ECONOMY_LIMITS, runGuarded } from '../_shared/economyGuard';
+import { ECONOMY_LIMITS, runGuarded, type EconomyDeps } from '../_shared/economyGuard';
 import { createEconomyDeps } from '../_shared/economyStores';
-import { withAuth } from '../_shared/withAuth';
+import { withAuth, type AuthContext } from '../_shared/withAuth';
 import { mergeProfile, mergeModule, type LocalProfile, type LocalModuleProgress, type ServerProfile, type ServerModuleProgress } from '../_shared/backfillMerge';
 
 interface BackfillBody {
@@ -29,7 +29,15 @@ function todayIsraelDate(): string {
   }).format(new Date());
 }
 
-export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => {
+/** The handler behind withAuth; `economyDeps` is injectable for the local
+ *  Postgres harness (a store that races the compare-and-swap). */
+export function createBackfillHandler(economyDeps: () => EconomyDeps = createEconomyDeps) {
+  return (req: VercelRequest, res: VercelResponse, ctx: AuthContext) => backfillV1(req, res, ctx, economyDeps);
+}
+
+export default withAuth(createBackfillHandler());
+
+async function backfillV1(req: VercelRequest, res: VercelResponse, ctx: AuthContext, economyDeps: () => EconomyDeps) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -80,11 +88,32 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
   // client's isPro in, so any signed-in caller could set any balance or make
   // itself Pro, around every check in /api/sync/economy. Now:
   //   - an increase of coins / gems / xp goes through the same guard as a
-  //     reward (api/_shared/economyGuard.ts: pool, daily budget, held coins,
-  //     purchase-sized gem deltas dropped);
+  //     reward (api/_shared/economyGuard.ts), as a "legacy difference": coins
+  //     the guard already holds for the user count as on their way (a retry
+  //     never counts them twice), and the gem difference goes through the 24h
+  //     earned-gem budget (never dropped wholesale as purchase-shaped, never
+  //     unbounded: the endpoint takes any body, as often as asked);
+  //   - the guard's compare-and-swap ran out → 503 before anything is
+  //     written: the app keeps its legacy data and sends it again next launch;
   //   - isPro is ignored: Pro comes from RevenueCat (webhook or the verified
   //     /api/sync/subscription path);
   //   - streaks and virtual balance keep the max rule, bounded to sane values.
+  const increase = (merged: number, server: number): number => {
+    const d = Math.round(merged - server);
+    return Number.isFinite(d) && d > 0 ? Math.min(d, ECONOMY_LIMITS.maxAbsDelta) : 0;
+  };
+  const economyDelta = {
+    xp: increase(mergedProfile.xp, serverProfile.xp),
+    coins: increase(mergedProfile.coins, serverProfile.coins),
+    gems: increase(mergedProfile.gems, serverProfile.gems),
+  };
+  if (economyDelta.xp > 0 || economyDelta.coins > 0 || economyDelta.gems > 0) {
+    const guarded = await runGuarded(ctx.userId, economyDelta, economyDeps(), 'migrate/backfill', { legacyDifference: true });
+    if (guarded.kind === 'busy') {
+      return res.status(503).json({ error: 'Busy, try again', code: 'ECONOMY_BUSY' });
+    }
+  }
+
   const MAX_STREAK_DAYS = 3650;
   const vbMerged = parseFloat(mergedProfile.virtualBalance);
   const virtualBalance =
@@ -101,19 +130,6 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
       updatedAt: new Date().toISOString(),
     })
     .where(eq(userProfiles.id, ctx.userId));
-
-  const increase = (merged: number, server: number): number => {
-    const d = Math.round(merged - server);
-    return Number.isFinite(d) && d > 0 ? Math.min(d, ECONOMY_LIMITS.maxAbsDelta) : 0;
-  };
-  const economyDelta = {
-    xp: increase(mergedProfile.xp, serverProfile.xp),
-    coins: increase(mergedProfile.coins, serverProfile.coins),
-    gems: increase(mergedProfile.gems, serverProfile.gems),
-  };
-  if (economyDelta.xp > 0 || economyDelta.coins > 0 || economyDelta.gems > 0) {
-    await runGuarded(ctx.userId, economyDelta, createEconomyDeps(), 'migrate/backfill');
-  }
 
   if (Array.isArray(body.modules) && body.modules.length > 0) {
     const userId = profileRow.id;
@@ -176,4 +192,4 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     profile: finalProfile[0] ?? null,
     progress: finalProgress,
   });
-});
+}
