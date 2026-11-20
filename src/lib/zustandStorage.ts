@@ -6,6 +6,7 @@ type MMKVInstance = {
   getString: (key: string) => string | undefined;
   set: (key: string, value: string) => void;
   delete: (key: string) => void;
+  clearAll?: () => void;
 };
 
 let mmkvInstance: MMKVInstance | null = null;
@@ -76,3 +77,18 @@ export const zustandStorage: StateStorage = {
     AsyncStorage.removeItem(name).catch(() => {});
   },
 };
+
+/**
+ * Account deletion: drop everything the app persisted on this device, in both
+ * stores (MMKV when available, and AsyncStorage, which also holds the stores
+ * from before MMKV and the keys written directly, e.g. a pending invite).
+ * Throws only if AsyncStorage itself fails.
+ */
+export async function clearAllPersistedState(): Promise<void> {
+  const m = getMmkv();
+  if (m && typeof m.clearAll === 'function') {
+    try { m.clearAll(); } catch { /* fall through to AsyncStorage */ }
+  }
+  const keys = await AsyncStorage.getAllKeys();
+  if (keys.length > 0) await AsyncStorage.multiRemove(keys);
+}

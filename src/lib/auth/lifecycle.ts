@@ -14,6 +14,7 @@ import {
 import { tokenStore, backfillFlag } from './secureStore';
 import { queryClient } from '../queryClient';
 import { resetAllLocalStores, getLocalStorageKeys } from '../stores/registry';
+import { clearAllPersistedState } from '../zustandStorage';
 import { runBackfillV1 } from './backfill';
 import { profileQueryKey, profileQueryFn } from '../../features/auth/useProfile';
 import { economyQueryKey, economyQueryFn, economyPlaceholder } from '../../features/economy/useEconomy';
@@ -518,6 +519,47 @@ export async function signOut(): Promise<void> {
     }
   })();
   return signOutInFlight;
+}
+
+/**
+ * After the server deleted the account (POST /api/account/delete answered
+ * 200), or for a guest's device-only deletion: forget the session and wipe
+ * everything the account left on this device. Unlike signOut() it removes ALL
+ * persisted state (the app then starts like a fresh install, on the welcome
+ * screen) and cancels scheduled local notifications. Never throws.
+ */
+export async function wipeDeviceForDeletedAccount(scope: 'account' | 'guest'): Promise<void> {
+  // A boot or sign-in still finishing must not sign this session back in.
+  bootGeneration++;
+
+  // 1. The session first: nothing still running can use it, and client.ts only
+  //    stores a refreshed token while the token it sent is still the stored one.
+  await tokenStore.clear().catch(() => { /* non-fatal */ });
+  await backfillFlag.reset().catch(() => { /* non-fatal */ });
+
+  // 2. RevenueCat back to an anonymous customer on this device. This does NOT
+  //    cancel an App Store / Google Play subscription: only the user can, in
+  //    the store (the confirmation dialog says so).
+  await logoutRevenueCat().catch(() => { /* non-fatal: already anonymous */ });
+
+  // 3. Reminders scheduled for this user.
+  if (Platform.OS !== 'web') {
+    try {
+      const Notifications = await import('expo-notifications');
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    } catch { /* non-fatal */ }
+  }
+
+  // 4. Server answers in memory, every local store, then everything persisted.
+  queryClient.clear();
+  resetAllLocalStores();
+  useAuthStore.getState().clear();
+  await clearAllPersistedState().catch(() => { /* non-fatal */ });
+
+  // 5. Detach the device from the deleted person in PostHog, then count the
+  //    deletion on the new anonymous id (no person properties).
+  resetUser();
+  captureEvent('account_deleted', { scope });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
