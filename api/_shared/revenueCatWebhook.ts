@@ -36,7 +36,9 @@
 //     event carries one (never shortened). RevenueCat sends EXPIRATION if the
 //     grace period ends without payment.
 //   EXPIRATION: Pro removed, unless the event's expiry is older than the
-//     stored one (a late redelivery after a renewal).
+//     stored one (a late redelivery after a renewal). A refund or a
+//     revocation (expiration_reason CUSTOMER_SUPPORT / DEVELOPER_INITIATED)
+//     ends the period early, so it always removes Pro.
 //   CANCELLATION: analytics only (the period is still paid).
 // Logs carry the resolved profile id, or a short hash of app_user_id (it can
 // be an email), never the raw value. Any error answers a generic 500 (no SQL,
@@ -91,7 +93,8 @@ export interface RcWebhookDeps {
   grantPro(userId: string, fields: { expiresAt: string | null; proSource: 'store' | 'promotional' }): Promise<void>;
   /** BILLING_ISSUE: move pro_expires_at to the grace period's end (never earlier). */
   extendProForGrace(userId: string, graceExpiresAt: string): Promise<void>;
-  /** EXPIRATION: 'skipped' when the stored expiry is later than the event's. */
+  /** EXPIRATION: 'skipped' when the stored expiry is later than the event's;
+   *  a null eventExpiresAt always revokes. */
   expirePro(userId: string, eventExpiresAt: string | null): Promise<'revoked' | 'skipped'>;
   capture(event: string, distinctId: string, props: Record<string, unknown>): Promise<void>;
   /** Never rejects (the production one waits for the send, at most ~3 s). */
@@ -284,9 +287,15 @@ export async function handleRevenueCatWebhook(input: RcWebhookInput, deps: RcWeb
       }
     } else if (type === 'EXPIRATION') {
       if (isProEvent) {
+        // A refund (CUSTOMER_SUPPORT) or a revocation (DEVELOPER_INITIATED,
+        // e.g. a promotional grant ended early) ends the period BEFORE the
+        // stored expiry, which the stale test below would read as a late
+        // redelivery: those always revoke (null), as before 2026-11-20.
+        const reason = str(event.expiration_reason, 64);
+        const endsEarly = reason === 'CUSTOMER_SUPPORT' || reason === 'DEVELOPER_INITIATED';
         let result: 'revoked' | 'skipped' | 'no_profile' = 'no_profile';
-        if (userId) result = await deps.expirePro(userId, expiresAt);
-        log('info', { outcome: result === 'skipped' ? 'expiration_skipped_stale' : `expiration_${result}`, userId: userId ?? null, expiresAt });
+        if (userId) result = await deps.expirePro(userId, endsEarly ? null : expiresAt);
+        log('info', { outcome: result === 'skipped' ? 'expiration_skipped_stale' : `expiration_${result}`, userId: userId ?? null, expiresAt, reason });
         await deps.capture('subscription_expired', distinctId, { ...baseProps, stale_redelivery: result === 'skipped' });
       }
     } else if (type === 'CANCELLATION') {

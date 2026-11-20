@@ -1277,6 +1277,25 @@ class MemoryWebhookWorld {
     const real = await deliver(w, sub({ type: 'EXPIRATION', expiration_at_ms: periodEnd + 30 * DAY_MS }));
     check(real.status === 200 && p.isPro === false && w.captures.filter((c) => c.event === 'subscription_expired').length === 2,
       'webhook Pro: the current period\'s EXPIRATION → Pro removed', p);
+
+    // A refund or an early revocation ends the period BEFORE the stored expiry:
+    // not a stale redelivery, Pro is removed (as master did on every EXPIRATION).
+    const yearly = '66666666-6666-4666-8666-666666666666';
+    w.add(yearly, { isPro: true, proExpiresAt: new Date(T0 + 365 * DAY_MS).toISOString(), proSource: 'store' });
+    const refund = await deliver(w, sub({ type: 'EXPIRATION', app_user_id: yearly, expiration_at_ms: T0, expiration_reason: 'CUSTOMER_SUPPORT' }));
+    check(refund.status === 200 && w.profiles.get(yearly)!.isPro === false && w.expireCalls[w.expireCalls.length - 1][1] === null
+      && w.logs.some((l) => l.line.outcome === 'expiration_revoked' && l.line.userId === yearly && l.line.reason === 'CUSTOMER_SUPPORT'),
+    'webhook Pro: a refund (EXPIRATION, reason CUSTOMER_SUPPORT) a year before the stored expiry → Pro removed', w.profiles.get(yearly));
+    const promoEarly = '77777777-7777-4777-8777-777777777777';
+    w.add(promoEarly, { isPro: true, proExpiresAt: new Date(T0 + 30 * DAY_MS).toISOString(), proSource: 'promotional' });
+    const revokedPromo = await deliver(w, sub({ type: 'EXPIRATION', app_user_id: promoEarly, expiration_at_ms: T0, expiration_reason: 'DEVELOPER_INITIATED' }));
+    check(revokedPromo.status === 200 && w.profiles.get(promoEarly)!.isPro === false,
+      'webhook Pro: a promotional grant revoked early (EXPIRATION, reason DEVELOPER_INITIATED) → Pro removed', w.profiles.get(promoEarly));
+    const renewed = '88888888-8888-4888-8888-888888888888';
+    w.add(renewed, { isPro: true, proExpiresAt: new Date(periodEnd + 30 * DAY_MS).toISOString(), proSource: 'store' });
+    const staleUnsub = await deliver(w, sub({ type: 'EXPIRATION', app_user_id: renewed, expiration_at_ms: periodEnd, expiration_reason: 'UNSUBSCRIBE' }));
+    check(staleUnsub.status === 200 && w.profiles.get(renewed)!.isPro === true && w.expireCalls[w.expireCalls.length - 1][1] === new Date(periodEnd).toISOString(),
+      'webhook Pro: a natural end (reason UNSUBSCRIBE) older than the stored expiry is still a stale redelivery → skipped', w.profiles.get(renewed));
     const notPro = await deliver(w, { type: 'EXPIRATION', id: 'x', app_user_id: promoUser, entitlement_ids: ['Other'], expiration_at_ms: periodEnd });
     check(notPro.status === 200 && w.profiles.get(promoUser)!.isPro === true, 'webhook Pro: an event for another entitlement changes nothing');
     const cancel = await deliver(w, sub({ type: 'CANCELLATION', app_user_id: promoUser }));
