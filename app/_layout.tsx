@@ -276,8 +276,12 @@ function RootLayoutInner() {
   const upgradeNudge = useUpgradeNudgeBanner();
   // Both top banners count as the open's single greeting (13.11): they no longer stack on a modal or
   // on each other.
-  const aiGranted = useOpenSlot('aiInsight', aiVisible, OPEN_PRIORITY.aiInsight);
-  const upgradeGranted = useOpenSlot('upgradeNudge', upgradeNudge.visible, OPEN_PRIORITY.upgradeNudge);
+  // Never over a lesson (20.11): these banners sit at the very top, over the lesson's exit/progress
+  // row, and showed inside lessons ~38 times in 30 days (13 users in the FIRST lesson), where rage
+  // clicks cluster.
+  const bannerInLesson = useNudgeQueueStore((s) => s.inLesson);
+  const aiGranted = useOpenSlot('aiInsight', aiVisible && !bannerInLesson, OPEN_PRIORITY.aiInsight);
+  const upgradeGranted = useOpenSlot('upgradeNudge', upgradeNudge.visible && !bannerInLesson, OPEN_PRIORITY.upgradeNudge);
 
   // R8 T3.2 — Comeback Reward boot hook. Stamps `lastSeenAt` on every
   // foreground; if the gap crosses 7 days, queues a pending claim that

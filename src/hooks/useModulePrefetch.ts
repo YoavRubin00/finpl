@@ -275,6 +275,11 @@ async function runPrefetchAudio(uri: string): Promise<boolean> {
       if (!RETRYABLE_HTTP_STATUSES.has(result.status)) break;
     } catch (err) {
       lastReason = err instanceof Error ? err.message : 'unknown';
+      // iOS can purge Library/Caches between the directory check and the download ("Directory …
+      // module-audio does not exist", 8 failures for one user, 20.11): recreate it before retrying.
+      if (lastReason.includes('does not exist')) {
+        await FileSystem.makeDirectoryAsync(AUDIO_CACHE_DIR, { intermediates: true }).catch(() => {});
+      }
     }
     if (attempt < RETRY_DELAYS_MS.length) {
       await sleep(jittered(RETRY_DELAYS_MS[attempt]));
