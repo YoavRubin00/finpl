@@ -9,7 +9,7 @@ import { useTomorrowChestStore, tomorrowChestStatus } from './useTomorrowChestSt
 import { FINN_HAPPY } from './finnMascotConfig';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
-import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
+import { useNudgeQueueStore, useOpenSlot, OPEN_PRIORITY } from '../../stores/useNudgeQueueStore';
 import { useEconomyUIStore, deriveStreakFromDates } from '../economy/useEconomyUIStore';
 import { getIsraelDateISO } from '../../utils/israelTime';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
@@ -93,33 +93,23 @@ export function StarterCapitalGrantHost(): React.ReactElement | null {
   const [grantDay, setGrantDay] = useState(2);
   const firedRef = useRef(false);
 
+  // One greeting per open (13.11) made this host starve: it polled for a free
+  // stage, but on every new day the streak celebration registered first and
+  // owned the open — grants fell to 0/week (PostHog, week of 15.11) and with
+  // them the bridge's main entry. It now REGISTERS for the open's slot like
+  // the other greetings, ranked above the streak (a one-time grant that opens
+  // the bridge beats a daily celebration) and below the chest ceremony.
+  const chestReady = tomorrowChestStatus(chestOpensOnDate) === 'ready';
+  const slotGranted = useOpenSlot('starterCapital', eligible && !chestReady && !firedRef.current, OPEN_PRIORITY.starterCapital);
+
   useEffect(() => {
-    if (firedRef.current || !eligible) return;
-    let cancelled = false;
-    let retry: ReturnType<typeof setTimeout> | null = null;
-    const attempt = (waited: number) => {
-      if (cancelled || firedRef.current) return;
-      const scheduleRetry = () => {
-        // The day-2 stage is contested (resolution → chest ceremony →
-        // streak milestone). Wait our turn for up to ~45s, then let the
-        // next session catch it — the grant is idempotent and not
-        // session-critical, only order-critical.
-        if (waited < 45000) retry = setTimeout(() => attempt(waited + 3000), 3000);
-      };
-      // Ruled order: the tomorrow-chest landing ceremony (the day-2 ritual)
-      // goes first. A ready chest that was opened re-arms to 'sealed'; an
-      // ignored one keeps us quiet this session — fine.
-      const chestStatus = tomorrowChestStatus(useTomorrowChestStore.getState().opensOnDate);
-      if (chestStatus === 'ready') { scheduleRetry(); return; }
-      // Global popup stage — the streak celebration (milestone) reserves it
-      // when it fires, so this also sequences us behind the isHabitDay ritual.
-      const nudges = useNudgeQueueStore.getState();
-      // 'launch' = it shares the open's single greeting (13.11).
-      if (!nudges.canTakePopupSlot('launch')) { scheduleRetry(); return; }
+    if (firedRef.current || !eligible || !slotGranted) return;
+    {
       // Wager must STILL be settled at fire time (a resolution can appear
       // between effect eval and now).
       const wagerState = useSharkWagerStore.getState();
-      if (wagerState.wager !== null || wagerState.lastResolution !== null) { scheduleRetry(); return; }
+      if (wagerState.wager !== null || wagerState.lastResolution !== null) return;
+      const nudges = useNudgeQueueStore.getState();
 
       firedRef.current = true;
       const granted = useEconomyUIStore.getState().grantStarterCapital();
@@ -143,15 +133,8 @@ export function StarterCapitalGrantHost(): React.ReactElement | null {
       setGrantDay(day);
       setVisible(true);
       successHaptic();
-    };
-    // Let the streak celebration / chest ceremony land first.
-    const t = setTimeout(() => attempt(0), 2600);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-      if (retry) clearTimeout(retry);
-    };
-  }, [eligible]);
+    }
+  }, [eligible, slotGranted]);
 
   const handleBridgeCTA = () => {
     successHaptic();

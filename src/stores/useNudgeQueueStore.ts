@@ -31,11 +31,13 @@ export type PopupKind = 'auto' | 'launch' | 'earned';
 export const OPEN_PRIORITY = {
   streakRepair: 100,
   wagerResult: 95,
+  // Day-2 ruled order: wager result → chest ceremony → starter capital → streak. The chest and the
+  // one-time grant (the bridge's main entry) outrank the daily streak celebration (20.11).
+  tomorrowChest: 93,
+  starterCapital: 92,
   streak: 90,
   comeback: 85,
-  tomorrowChest: 80,
   freezeSave: 75,
-  starterCapital: 70,
   notifPrimer: 65,
   levelUp: 60,
   proPromoGranted: 55,
