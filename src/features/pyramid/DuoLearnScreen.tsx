@@ -26,6 +26,10 @@ import Animated, {
 import LottieView from "lottie-react-native";
 import Svg, { Circle } from "react-native-svg";
 import { LottieIcon } from "../../components/ui/LottieIcon";
+import { PausableImage } from "../../components/ui/PausableImage";
+import { PausableLottie } from "../../components/ui/PausableLottie";
+import { useAppActive } from "../../hooks/useAppActive";
+import { useScreenLive } from "../../hooks/useScreenLive";
 import { LinearGradient } from "expo-linear-gradient";
 import { InvestorsJournalSheet } from "../investors-journal/InvestorsJournalSheet";
 import { useInvestorsJournalStore, currentJournalMonth } from "../investors-journal/useInvestorsJournalStore";
@@ -35,17 +39,29 @@ import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/n
 // PRO-lock badge Lottie, isolated so it can pause off-tab: the raw always-on
 // <LottieView loop> ran one loop per locked module (3-8 mounted at once on the
 // map) even while the user was on another tab (2026-07-03 animation thinning).
+// Also paused while the app is in the background (perf pass 20.11).
 function ProLockBadgeLottie() {
   const isFocused = useIsFocused();
+  const appActive = useAppActive();
   if (!isFocused) return null;
   return (
-    <LottieView
+    <PausableLottie
       source={require("../../../assets/lottie/Pro Animation 3rd.json")}
       style={styles.proLottie}
-      autoPlay
+      playing={appActive}
       loop
     />
   );
+}
+
+/** Stable function identity that always calls the latest `fn`. Handlers passed
+ *  to the memoised ChapterSection/ModuleNode keep the path from re-rendering
+ *  when only a handler's closure changed (perf pass 20.11). Call only from
+ *  event handlers, never during render. */
+function useLatestCallback<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
+  const ref = useRef(fn);
+  ref.current = fn;
+  return useCallback((...args: A) => ref.current(...args), []);
 }
 import { Lock, Home, Shield, Scale, TrendingUp, Crown, FastForward, X, Star, ChevronUp } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
@@ -593,17 +609,119 @@ function ProgressStars({ completedCount, totalCount }: { completedCount: number;
 }
 
 // ---------------------------------------------------------------------------
+// Active-node mascot (Captain Shark beside the "next to learn" module)
+// ---------------------------------------------------------------------------
+
+// Daily-challenge CTA (Yoav 2026-06-27): while NO daily challenge is done
+// today, the active node's Captain-Shark wears the "daily challenge!" loop to
+// nudge a tap — the shark already opens Daily Quests via onQuestPress. Reverts
+// to the normal mascot once ANY of news / dilemma / swipe is done today.
+// Primitive (boolean) selectors only — never a fresh object/array (Zustand v5).
+// Read only by the ONE active node's mascot + bubble: it used to run in every
+// ModuleNode (~48 × 3 selectors on each store write; perf pass 20.11).
+function useDailyChallengePending(): boolean {
+  const newsChallengeDone = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
+  const dilemmaDone = useDailyChallengesStore((s) => s.getDilemmaPlaysToday() > 0);
+  const swipeDone = useDailyChallengesStore((s) => s.getSwipeGamePlaysToday() > 0);
+  return !(newsChallengeDone || dilemmaDone || swipeDone);
+}
+
+function MapMascot() {
+  const dailyChallengePending = useDailyChallengePending();
+  // Bob + WebP only while the map is on screen and the app is active: the
+  // standard mascot is a 177-frame animated WebP and the bob a forever loop,
+  // both used to run behind other tabs, lessons and a locked phone.
+  const live = useScreenLive();
+
+  // Subtle "alive" bob + pulse on the active mascot while a daily challenge is
+  // pending — pulls the eye toward the CTA. The asset is a crisp static webp
+  // (~10KB); the motion lives in-app (Reanimated), which avoids the ghosting a
+  // baked video loop introduced and keeps the bundle light (Yoav 2026-06-27).
+  const mascotReduceMotion = useReducedMotion();
+  const mascotPulse = useSharedValue(0);
+  useEffect(() => {
+    if (dailyChallengePending && !mascotReduceMotion && live) {
+      mascotPulse.value = withRepeat(
+        withSequence(withTiming(1, { duration: 1050 }), withTiming(0, { duration: 1050 })),
+        -1,
+        false,
+      );
+    } else {
+      cancelAnimation(mascotPulse);
+      mascotPulse.value = 0;
+    }
+    return () => cancelAnimation(mascotPulse);
+  }, [dailyChallengePending, mascotReduceMotion, live, mascotPulse]);
+  const mascotPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -5 * mascotPulse.value }, { scale: 1 + 0.05 * mascotPulse.value }],
+  }));
+
+  return (
+    <Animated.View style={mascotPulseStyle}>
+      <PausableImage
+        source={dailyChallengePending ? FINN_DAILY_CHALLENGE : FINN_STANDARD}
+        playing={live}
+        accessible={false}
+        style={{ width: CHAR_SIZE, height: CHAR_SIZE }}
+        contentFit="contain"
+      />
+    </Animated.View>
+  );
+}
+
+function MapMascotPhrase() {
+  const dailyChallengePending = useDailyChallengePending();
+  return (
+    <Text style={styles.speechText} numberOfLines={2}>
+      {dailyChallengePending ? FINN_PHRASE_CHALLENGE_PENDING : FINN_PHRASE_CHALLENGE_DONE}
+    </Text>
+  );
+}
+
+/** Easter-egg coin above a completed node: loops only while the map is seen. */
+function EasterEggCoinLottie() {
+  const live = useScreenLive();
+  return (
+    <PausableLottie
+      source={require("../../../assets/lottie/wired-flat-298-coins-hover-jump.json")}
+      style={{ width: 28, height: 28 }}
+      playing={live}
+      loop
+    />
+  );
+}
+
+/** Rocket on the "skip to chapter 1" pill: loops only while the map is seen. */
+function SkipIntroRocketLottie() {
+  const live = useScreenLive();
+  return (
+    <PausableLottie
+      source={require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json')}
+      style={{ width: 24, height: 24 }}
+      playing={live}
+      loop
+      speed={0.8}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ModuleNode, with 3D depth effect
 // ---------------------------------------------------------------------------
 
-function ModuleNode({
+// Memoised (perf pass 20.11): a re-render of a chapter (accordion toggle, quest
+// progress, pearl completion) used to re-render every node in it. All props are
+// now stable values or stable callbacks, so only the nodes that changed render.
+const ModuleNode = React.memo(function ModuleNode({
   module,
+  chapterId,
   state,
   offsetX,
   arenaId,
   showCharacter,
   nodeType,
   modIndex,
+  isLocked,
   isProLocked,
   isBonus,
   isComingSoon,
@@ -613,7 +731,8 @@ function ModuleNode({
   friendEmojis,
   hasEasterEgg,
   onClaimEasterEgg,
-  onPress,
+  onModulePress,
+  onLockedPress,
   questCompletedCount,
   questTotalCount,
   onQuestPress,
@@ -624,12 +743,15 @@ function ModuleNode({
   onProPress,
 }: {
   module: Module;
+  chapterId: string;
   state: "completed" | "active" | "locked";
   offsetX: number;
   arenaId: number;
   showCharacter: boolean;
   nodeType: NodeType;
   modIndex: number;
+  /** Tap opens the locked/upgrade sheet instead of the module. */
+  isLocked: boolean;
   isProLocked: boolean;
   /** bonusModule flag — playable extra content that never blocks progression */
   isBonus: boolean;
@@ -643,7 +765,8 @@ function ModuleNode({
   friendEmojis?: string[];
   hasEasterEgg?: boolean;
   onClaimEasterEgg?: () => void;
-  onPress: () => void;
+  onModulePress: (moduleId: string, chapterId: string, moduleIndex: number) => void;
+  onLockedPress: () => void;
   questCompletedCount?: number;
   questTotalCount?: number;
   onQuestPress?: () => void;
@@ -662,38 +785,11 @@ function ModuleNode({
 }) {
   const colors = ARENA_COLORS[arenaId];
 
-  // Daily-challenge CTA (Yoav 2026-06-27): while NO daily challenge is done
-  // today, the active node's Captain-Shark wears the "daily challenge!" loop to
-  // nudge a tap — the shark already opens Daily Quests via onQuestPress. Reverts
-  // to the normal mascot once ANY of news / dilemma / swipe is done today.
-  // Primitive (boolean) selectors only — never a fresh object/array (Zustand v5).
-  const newsChallengeDone = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
-  const dilemmaDone = useDailyChallengesStore((s) => s.getDilemmaPlaysToday() > 0);
-  const swipeDone = useDailyChallengesStore((s) => s.getSwipeGamePlaysToday() > 0);
-  const dailyChallengePending = !(newsChallengeDone || dilemmaDone || swipeDone);
-
-  // Subtle "alive" bob + pulse on the active mascot while a daily challenge is
-  // pending — pulls the eye toward the CTA. The asset is a crisp static webp
-  // (~10KB); the motion lives in-app (Reanimated), which avoids the ghosting a
-  // baked video loop introduced and keeps the bundle light (Yoav 2026-06-27).
-  const mascotReduceMotion = useReducedMotion();
-  const mascotPulse = useSharedValue(0);
-  useEffect(() => {
-    if (showCharacter && dailyChallengePending && !mascotReduceMotion) {
-      mascotPulse.value = withRepeat(
-        withSequence(withTiming(1, { duration: 1050 }), withTiming(0, { duration: 1050 })),
-        -1,
-        false,
-      );
-    } else {
-      cancelAnimation(mascotPulse);
-      mascotPulse.value = 0;
-    }
-    return () => cancelAnimation(mascotPulse);
-  }, [showCharacter, dailyChallengePending, mascotReduceMotion, mascotPulse]);
-  const mascotPulseStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -5 * mascotPulse.value }, { scale: 1 + 0.05 * mascotPulse.value }],
-  }));
+  const moduleId = module.id;
+  const handlePress = useCallback(() => {
+    if (isLocked) onLockedPress();
+    else onModulePress(moduleId, chapterId, modIndex);
+  }, [isLocked, onLockedPress, onModulePress, moduleId, chapterId, modIndex]);
 
   // Completed + active → arena color; locked → gray
   const bgColor = state === "locked" ? "#e5e7eb" : colors.bg;
@@ -735,9 +831,7 @@ function ModuleNode({
               style={{ width: CHAR_SIZE, height: CHAR_SIZE }}
             >
               <View style={{ width: CHAR_SIZE, height: CHAR_SIZE }}>
-                <Animated.View style={mascotPulseStyle}>
-                  <ExpoImage source={dailyChallengePending ? FINN_DAILY_CHALLENGE : FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
-                </Animated.View>
+                <MapMascot />
               </View>
             </Pressable>
             {questTotalCount !== undefined && questTotalCount > 0 && (
@@ -889,9 +983,7 @@ function ModuleNode({
             }]}
           >
             <View style={styles.speechArrow} />
-            <Text style={styles.speechText} numberOfLines={2}>
-              {dailyChallengePending ? FINN_PHRASE_CHALLENGE_PENDING : FINN_PHRASE_CHALLENGE_DONE}
-            </Text>
+            <MapMascotPhrase />
           </Animated.View>
         </>
       )}
@@ -909,7 +1001,7 @@ function ModuleNode({
           ]}
         />
         <Pressable
-          onPress={onPress}
+          onPress={handlePress}
           accessibilityRole="button"
           accessibilityLabel={module.title}
           accessibilityState={{ disabled: state === "locked" }}
@@ -986,12 +1078,7 @@ function ModuleNode({
                 height: 28,
               }}
             >
-              <LottieView
-                source={require("../../../assets/lottie/wired-flat-298-coins-hover-jump.json")}
-                style={{ width: 28, height: 28 }}
-                autoPlay
-                loop
-              />
+              <EasterEggCoinLottie />
             </Animated.View>
           </Pressable>
         )}
@@ -1036,7 +1123,7 @@ function ModuleNode({
       </View>
     </View>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // PRO upgrade modal (locked module tap)
@@ -1282,11 +1369,7 @@ const ChapterSection = React.memo(function ChapterSection({
           accessibilityLabel="כבר יש לי בסיס, דלג לפרק 1"
         >
           <View style={{ width: 24, height: 24, overflow: 'hidden' }} accessible={false}>
-            <LottieView
-              source={require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json')}
-              style={{ width: 24, height: 24 }}
-              autoPlay loop speed={0.8}
-            />
+            <SkipIntroRocketLottie />
           </View>
           <Text style={{ fontFamily: 'Heebo_500Medium', color: '#1d4ed8', fontSize: 12 }}>כבר יש לי בסיס, דלג לפרק 1</Text>
           <FastForward size={13} color="#1d4ed8" />
@@ -1377,12 +1460,14 @@ const ChapterSection = React.memo(function ChapterSection({
             <View key={module.id} style={isActive ? { position: 'relative' } : undefined}>
               <ModuleNode
                 module={module}
+                chapterId={chapter.id}
                 state={state}
                 offsetX={getNodeOffset(i)}
                 arenaId={arena.id}
                 showCharacter={isActive}
                 nodeType={nodeType}
                 modIndex={i}
+                isLocked={isLocked}
                 isProLocked={!isPro && PRO_LOCKED_SIMS.has(module.id)}
                 isBonus={!!module.bonusModule}
                 isComingSoon={!!module.comingSoon}
@@ -1400,13 +1485,8 @@ const ChapterSection = React.memo(function ChapterSection({
                 onLoungePress={isActive ? onLoungePress : undefined}
                 onProPress={isActive ? onProPress : undefined}
                 loungeBadge={isActive ? loungeBadge : undefined}
-                onPress={() => {
-                  if (isLocked) {
-                    onLockedPress();
-                  } else {
-                    onModulePress(module.id, chapter.id, i);
-                  }
-                }}
+                onModulePress={onModulePress}
+                onLockedPress={onLockedPress}
               />
               {/* Daily News Challenge — newspaper icon anchored directly
                   under the MIDDLE star of the row that sits below the
@@ -3014,6 +3094,14 @@ export function DuoLearnScreen() {
     [isPro, handleSkipIntro],
   );
 
+  // Stable identities for the chapter sections (perf pass 20.11). These three
+  // change whenever the open accordion or progress changes, which defeated
+  // ChapterSection's memo and re-rendered all six chapters (every node) on each
+  // accordion tap. The wrappers always run the latest handler.
+  const stableModulePress = useLatestCallback(handleModulePress);
+  const stableTopicSelected = useLatestCallback(handleTopicSelected);
+  const stableAdvanceToNextModule = useLatestCallback(handleTopicTreeAdvanceToNextModule);
+
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
   const handleRoadmapPress = useCallback(() => setRoadmapVisible(true), []);
   const handleQuestPress = useCallback(() => {
@@ -3088,6 +3176,8 @@ export function DuoLearnScreen() {
     rewardClaimed: questRewardClaimed,
     onPress: handleQuestPress,
   }), [questCompletedCount, questTotalCount, questAllCompleted, questRewardClaimed, handleQuestPress]);
+
+  const expandedModuleId = topicTreeModule?.module.id ?? null;
 
   return (
     <View style={styles.root}>
@@ -3421,7 +3511,7 @@ export function DuoLearnScreen() {
                 isPro={isPro}
                 sectionIndex={idx}
                 displayName={displayName}
-                onModulePress={handleModulePress}
+                onModulePress={stableModulePress}
                 onLockedPress={handleLockedPress}
                 friendsOnModule={friendsOnModule}
                 easterEggNodeId={easterEggNodeId}
@@ -3453,11 +3543,17 @@ export function DuoLearnScreen() {
                 onPearlPress={handlePearlPress}
                 onInvestorQuizPress={handleInvestorQuizPress}
                 completedPearlIds={completedPearlIds}
-                expandedTopicTreeModuleId={topicTreeModule?.module.id ?? null}
-                onTopicSelected={handleTopicSelected}
+                // Only the chapter that holds the open accordion gets its id, so
+                // opening/closing it re-renders that chapter, not all six.
+                expandedTopicTreeModuleId={
+                  expandedModuleId && chapter.modules.some((m) => m.id === expandedModuleId)
+                    ? expandedModuleId
+                    : null
+                }
+                onTopicSelected={stableTopicSelected}
                 onTopicTreeModuleCompleted={handleModuleCompletedFromTree}
                 onTopicTreeContinueAfterChest={handleTopicTreeContinueAfterChest}
-                onTopicTreeAdvanceToNextModule={handleTopicTreeAdvanceToNextModule}
+                onTopicTreeAdvanceToNextModule={stableAdvanceToNextModule}
                 onPearlReady={registerPearlRef}
                 onRecommendedChipRef={registerRecommendedChipRef}
                 onEndCardsRef={registerEndCardsRef}

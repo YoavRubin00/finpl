@@ -77,8 +77,11 @@ const MessageBubble = React.memo(function MessageBubble({
     >
       {isBot && (
         <View style={msgStyles.avatarCircle}>
+          {/* Static first frame, as in the main chat: one 177-frame loop per
+              bot message was pure heat (perf pass 20.11). */}
           <ExpoImage
             source={FINN_STANDARD}
+            autoplay={false}
             style={{ width: 22, height: 22 }}
             contentFit="contain"
             accessible={false}
@@ -392,6 +395,7 @@ export function TopicChatScreen(): React.ReactElement {
                 <View style={msgStyles.avatarCircle}>
                   <ExpoImage
                     source={FINN_STANDARD}
+                    autoplay={false}
                     style={{ width: 22, height: 22 }}
                     contentFit="contain"
                     accessible={false}

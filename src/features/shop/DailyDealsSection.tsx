@@ -18,7 +18,7 @@ import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { successHaptic } from '../../utils/haptics';
 import { formatNumber } from '../../utils/format';
-import { useAppActive } from '../../hooks/useAppActive';
+import { useScreenLive } from '../../hooks/useScreenLive';
 import type { DailyDeal } from './types';
 
 function getTodayISO(): string {
@@ -52,7 +52,9 @@ export function DailyDealsSection() {
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
   const [pendingDeal, setPendingDeal] = useState<DailyDeal | null>(null);
   const [starterPackOpen, setStarterPackOpen] = useState(false);
-  const appActive = useAppActive();
+  // Shop tab focused + app active. The 1s countdown (and the flash banner's
+  // sunburst) used to keep running after leaving the shop tab (perf 20.11).
+  const live = useScreenLive();
 
   const deals = useMemo(() => generateDailyDeals(dateKey), [dateKey]);
 
@@ -68,10 +70,10 @@ export function DailyDealsSection() {
       }
     };
     tick();
-    if (!appActive) return;
+    if (!live) return;
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [dateKey, appActive]);
+  }, [dateKey, live]);
 
   const addGemsHookDD = useAwardGems();
   const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
@@ -174,6 +176,7 @@ export function DailyDealsSection() {
             salePrice={STARTER_PACK_PRICE_LABEL}
             timeLeftSeconds={Math.floor(remaining / 1000)}
             onPress={() => setStarterPackOpen(true)}
+            active={live}
           />
         </View>
       )}
@@ -206,7 +209,7 @@ export function DailyDealsSection() {
                 if (deal.item.imageUrl) return (
                   <ExpoImage source={{ uri: deal.item.imageUrl }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e0f2fe' }} contentFit="cover" cachePolicy="memory-disk" transition={180} />
                 );
-                if (deal.item.lottieSource) return <LottieIcon source={deal.item.lottieSource} size={40} />;
+                if (deal.item.lottieSource) return <LottieIcon source={deal.item.lottieSource} size={40} active={live} />;
                 return <Text style={styles.emoji}>{deal.item.emoji}</Text>;
               })()}
 

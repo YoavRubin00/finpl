@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { FastForward } from 'lucide-react-native';
+import { PausableImage } from '../../../components/ui/PausableImage';
+import { useScreenLive } from '../../../hooks/useScreenLive';
 import { TopicChip } from './TopicChip';
 import { scenesForModule } from '../pathScenes';
 import type { Topic } from '../types';
@@ -152,6 +153,9 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   // gutter OPPOSITE the chip's lean for max clearance. Suppressed entirely
   // under reduced-motion (pure decoration). No-ops while PATH_SCENES is empty.
   const reduceMotion = useReducedMotion();
+  // The gutter loops (127-frame WebPs) and the gold chip's breathing play only
+  // while the map is on screen and the app is active (perf pass 20.11).
+  const live = useScreenLive();
   const moduleId = sorted[0]?.moduleId;
   const scenes = useMemo(() => {
     const n = sorted.length;
@@ -219,8 +223,9 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                 ...(s.side === 'right' ? { right: s.offset } : { left: s.offset }),
               }}
             >
-              <ExpoImage
+              <PausableImage
                 source={s.source}
+                playing={live}
                 accessible={false}
                 contentFit="contain"
                 style={{
@@ -309,6 +314,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   recommended={
                     !isCompleted && recommendedTopicId === topic.id
                   }
+                  live={live}
                   onPress={onTopicPress}
                 />
               </View>

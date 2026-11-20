@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeInDown, FadeOut, useReducedMotion } from "react-native-reanimated";
+import { PausableImage } from "../../components/ui/PausableImage";
+import { useScreenLive } from "../../hooks/useScreenLive";
 import { useRouter } from "expo-router";
 import { X } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
@@ -124,6 +125,9 @@ export function ThirdChestProBanner() {
     markDismissed();
   }, [markDismissed]);
 
+  // Animated mascot plays only while the map is seen (perf pass 20.11).
+  const live = useScreenLive();
+
   if (!visible) return null;
 
   return (
@@ -151,7 +155,7 @@ export function ThirdChestProBanner() {
             </Text>
           </View>
           <View style={styles.mascotWrap}>
-            <ExpoImage source={FINN_HAPPY} accessible={false} style={styles.mascot} contentFit="contain" />
+            <PausableImage source={FINN_HAPPY} playing={live} accessible={false} style={styles.mascot} contentFit="contain" />
           </View>
         </View>
 

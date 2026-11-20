@@ -1,6 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { LottieIcon } from "../../components/ui/LottieIcon";
+import { PausableImage } from "../../components/ui/PausableImage";
+import { useScreenLive } from "../../hooks/useScreenLive";
 import { FINN_STANDARD, FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import {
   View,
@@ -33,6 +35,7 @@ import Animated, {
   SlideInUp,
   Easing,
   runOnJS,
+  cancelAnimation,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore } from "../auth/useAuthStore";
@@ -278,6 +281,12 @@ function TypingIndicator({ emoji }: { emoji: string }) {
     dot1.value = bounce;
     dot2.value = withDelay(150, bounce);
     dot3.value = withDelay(300, bounce);
+    // Stop the endless bounce when the indicator unmounts (reply arrived).
+    return () => {
+      cancelAnimation(dot1);
+      cancelAnimation(dot2);
+      cancelAnimation(dot3);
+    };
   }, [dot1, dot2, dot3]);
 
   const style1 = useAnimatedStyle(() => ({
@@ -502,8 +511,11 @@ const MessageBubble = React.memo(function MessageBubble({
     <View style={[msgStyles.messageRow, isBot ? msgStyles.messageRowBot : msgStyles.messageRowUser]}>
       {isBot && (
         <View style={msgStyles.avatarCircle}>
+          {/* Static first frame: every bot message used to run its own copy of
+              the 177-frame mascot loop at 22px, all at once (perf 20.11). */}
           <ExpoImage
             source={FINN_STANDARD}
+            autoplay={false}
             style={{ width: 22, height: 22 }}
             contentFit="contain"
             accessible={false}
@@ -633,8 +645,13 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     transform: [{ scale: sendPulse.value }],
   }));
 
+  // Keyed on "has a draft" (not on every keystroke, which restarted the loop
+  // per character) and only while the chat is on screen with the app active —
+  // a typed-but-unsent draft used to pulse forever behind other tabs (perf 20.11).
+  const hasDraft = input.trim().length > 0;
+  const screenLive = useScreenLive();
   useEffect(() => {
-    if (input.trim()) {
+    if (hasDraft && screenLive) {
       sendPulse.value = withRepeat(
         withSequence(
           withSpring(1.1, { damping: 6, stiffness: 200 }),
@@ -643,9 +660,11 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
         -1,
       );
     } else {
+      cancelAnimation(sendPulse);
       sendPulse.value = withSpring(1);
     }
-  }, [input, sendPulse]);
+    return () => cancelAnimation(sendPulse);
+  }, [hasDraft, screenLive, sendPulse]);
 
   // Aggregate completed modules across ALL chapters for full context-awareness
   const allCompletedModules = useMemo(
@@ -1077,9 +1096,9 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
           <View style={headerStyles.row}>
             <View style={headerStyles.avatarCircle} accessible={false}>
               {companion.headerImage
-                ? <ExpoImage source={companion.headerImage} style={{ width: 36, height: 36 }} contentFit="contain" />
+                ? <PausableImage source={companion.headerImage} playing={screenLive} style={{ width: 36, height: 36 }} contentFit="contain" />
                 : companion.headerLottie
-                  ? <View><LottieIcon source={companion.headerLottie} size={36} autoPlay loop /></View>
+                  ? <View><LottieIcon source={companion.headerLottie} size={36} autoPlay loop active={screenLive} /></View>
                   : <Text style={headerStyles.avatarEmoji}>{companion.emoji}</Text>}
             </View>
             <View style={headerStyles.info}>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, ActivityIndicator } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PausableImage } from '../../../components/ui/PausableImage';
+import { useScreenLive } from '../../../hooks/useScreenLive';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
@@ -51,6 +52,9 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
   const generating = useModuleComprehensionStore((s) => s.generatingModuleId === moduleId);
 
   const [open, setOpen] = useState(false);
+  // The 97-frame shark loop plays only while the map is seen (not behind
+  // another tab, a lesson, the report sheet or a locked phone; perf 20.11).
+  const live = useScreenLive();
 
   // The module summary report needs NO native module (just an AI backend call),
   // so it ships to production via OTA — unlike the live voice call, which stays
@@ -96,7 +100,7 @@ export function ModuleReportCard({ moduleId, moduleTitle }: Props): React.ReactE
             >✦</Text>
           ))}
           <View style={styles.avatarWrap}>
-            <ExpoImage source={SHARK_CALL_IDLE} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
+            <PausableImage source={SHARK_CALL_IDLE} playing={live && !open} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[RTL, styles.kicker]} numberOfLines={1}>סיכום אישי</Text>

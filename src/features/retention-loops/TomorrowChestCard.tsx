@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, AppState } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Lock, Gift } from 'lucide-react-native';
+import { useScreenLive } from '../../hooks/useScreenLive';
 import { useTomorrowChestStore, tomorrowChestStatus } from './useTomorrowChestStore';
 import { getNextLessonTarget } from './nextLessonTarget';
 import { getIsraelDateISO, israelDatePlusDays, msUntilNextIsraelMidnight } from '../../utils/israelTime';
@@ -27,19 +28,33 @@ export function TomorrowChestCard(): React.ReactElement | null {
   const consecutiveOpenDays = useTomorrowChestStore((s) => s.consecutiveOpenDays);
   const lastOpenedOnDate = useTomorrowChestStore((s) => s.lastOpenedOnDate);
 
-  // Re-derive status when the app foregrounds (sealed→ready at IL midnight),
-  // and tick every minute while SEALED so the countdown stays honest.
+  // Re-derive status when the map comes back on screen or the app foregrounds
+  // (sealed→ready at IL midnight), and tick every minute while SEALED so the
+  // countdown stays honest. The tick runs only while the map is seen: it used to
+  // run every minute for the whole session, with no chest, behind other tabs and
+  // with the phone locked (perf pass 20.11).
   const [ilToday, setIlToday] = useState<string>(() => getIsraelDateISO());
   const [, setMinuteTick] = useState(0);
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') setIlToday(getIsraelDateISO());
-    });
-    const interval = setInterval(() => setMinuteTick((t) => t + 1), 60_000);
-    return () => { sub.remove(); clearInterval(interval); };
-  }, []);
-
+  const live = useScreenLive();
   const status = tomorrowChestStatus(opensOnDate, ilToday);
+  const ticking = status === 'sealed' && live;
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    // Mount already read fresh values; refresh on every later return to view.
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    if (!live) return;
+    setIlToday(getIsraelDateISO());
+    setMinuteTick((t) => t + 1);
+  }, [live]);
+  useEffect(() => {
+    if (!ticking) return;
+    const interval = setInterval(() => {
+      setIlToday(getIsraelDateISO());
+      setMinuteTick((t) => t + 1);
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [ticking]);
+
   if (status === 'none') return null;
 
   if (status === 'ready') {
