@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
+  Alert,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -26,7 +27,8 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
-import { useEconomy, useSpendGems } from '../economy/useEconomy';
+import { useEconomy, useSpendGems, spendableGems } from '../economy/useEconomy';
+import { PENDING_GEMS_COPY } from '../economy/pendingGemsCore';
 import { useModifiersStore } from '../economy/useModifiersStore';
 import { useMacroEventStore, MACRO_COOLDOWN_MS } from './useMacroEventStore';
 import {
@@ -100,21 +102,29 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
   const [isUnlockedPremium, setIsUnlockedPremium] = useState(false);
   const { data: economyDataME } = useEconomy();
   const gems = economyDataME?.gems ?? 0;
+  // Bought gems the server has not credited yet are shown (in `gems`) but not
+  // spendable (pendingGemsCore.ts): the server would take only what it holds
+  // and the webhook would still credit the whole purchase.
+  const spendable = spendableGems(economyDataME);
   const spendGemsHookME = useSpendGems();
   const addModifier = useModifiersStore((s) => s.addModifier);
   const showPremiumLock = event.isPremium && !isUnlockedPremium && answerState === 'idle';
 
   const handleUnlockPremium = useCallback(() => {
-    if (gems >= 2) {
+    if (spendable >= 2) {
       tapHaptic();
       spendGemsHookME(2);
       setIsUnlockedPremium(true);
       successHaptic();
+    } else if (gems >= 2) {
+      // Enough only with the bought gems still on their way.
+      errorHaptic();
+      Alert.alert(PENDING_GEMS_COPY.title, PENDING_GEMS_COPY.body);
     } else {
       errorHaptic();
       // Need 2 gems
     }
-  }, [gems, spendGemsHookME]);
+  }, [gems, spendable, spendGemsHookME]);
   const [chosenDirection, setChosenDirection] = useState<'up' | 'down' | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [streakBonusVisible, setStreakBonusVisible] = useState(false);
