@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, useWindowDimensions, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, KeyboardAvoidingView, Platform, useWindowDimensions, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -9,10 +9,7 @@ import LottieView from "lottie-react-native";
 import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
 import { useRouter, type Href } from "expo-router";
 import { useTutorialStore } from "../../stores/useTutorialStore";
-import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp, ChevronRight } from "lucide-react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SkiaInteractiveChart } from "../../components/ui/SkiaInteractiveChart";
-import type { ChartDataPoint } from "../../components/ui/SkiaInteractiveChart";
+import { Pencil, ChevronRight } from "lucide-react-native";
 
 import Animated, {
   useSharedValue,
@@ -23,7 +20,6 @@ import Animated, {
   withSequence,
   withRepeat,
   withDelay,
-  cancelAnimation,
   Easing,
   runOnJS,
   FadeIn,
@@ -42,14 +38,10 @@ import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { EmailCodeStep, sendEmailCode } from "../auth/EmailCodeStep";
 import type { VerifiedSession } from "../../lib/api/auth";
 import { useAppleAuth } from "../auth/useAppleAuth";
-import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
 import { captureEvent } from "../../lib/posthog";
 import { track } from "../../lib/analytics/events";
 import { onboardingStepProps, isTrackedOnboardingStep, ONBOARDING_STEP_ORDER } from "./onboardingSteps";
-import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
-import { FREE_AVATARS } from "../avatars/avatarData";
-import type { AvatarDefinition } from "../avatars/avatarData";
 import type {
   FinancialDream,
   FinancialGoal,
@@ -64,7 +56,6 @@ import type {
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHAT_BG = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/HOMEPAGE.png' };
-const SLIDE_MS = 300;
 // UX-50(א) (Yoav 18.9.26): was 1150ms × 3 screens = 3.45s of dead time on
 // the exact screens where the funnel leaks most (screen-1 = −18.6%). The
 // typing effect still plays; the advance just doesn't wait for it to finish.
@@ -273,82 +264,8 @@ function BubbleOverlay() {
   );
 }
 
-// ─── Animated bubble transition (replaces corrupt Lottie files) ───────────────
-
-const TRANSITION_BUBBLES = Array.from({ length: 14 }, (_, i) => ({
-  size: 12 + Math.random() * 36,
-  left: 5 + Math.random() * 85,
-  delay: Math.random() * 200,
-  duration: 500 + Math.random() * 400,
-}));
-
-function AnimatedBubbleTransition() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      {TRANSITION_BUBBLES.map((b, i) => (
-        <AnimatedBubble key={i} size={b.size} left={b.left} delay={b.delay} duration={b.duration} />
-      ))}
-    </View>
-  );
-}
-
-function AnimatedBubble({ size, left, delay, duration }: { size: number; left: number; delay: number; duration: number }) {
-  const ty = useSharedValue(0);
-  const opacity = useSharedValue(0);
-  const scale = useSharedValue(0.3);
-
-  useEffect(() => {
-    ty.value = withDelay(delay, withTiming(-SCREEN_HEIGHT * 0.8, { duration, easing: Easing.out(Easing.quad) }));
-    opacity.value = withDelay(delay, withSequence(
-      withTiming(0.7, { duration: duration * 0.3 }),
-      withTiming(0, { duration: duration * 0.7 }),
-    ));
-    scale.value = withDelay(delay, withTiming(1, { duration: duration * 0.5 }));
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    position: "absolute" as const,
-    bottom: -20,
-    left: `${left}%` as `${number}%`,
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    backgroundColor: "rgba(8,145,178,0.25)",
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.3)",
-    transform: [{ translateY: ty.value }, { scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  return <Animated.View style={style} />;
-}
-
-const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 // ─── Shared step shell ────────────────────────────────────────────────────────
-
-function TypingDots() {
-  const t = useSharedValue(0);
-  const reducedMotion = useReducedMotion();
-  useEffect(() => {
-    if (reducedMotion) return;
-    t.value = withRepeat(withTiming(1, { duration: 600, easing: Easing.linear }), -1, false);
-    return () => { cancelAnimation(t); };
-  }, [t, reducedMotion]);
-  const dot = (offset: number) =>
-    useAnimatedStyle(() => {
-      const phase = (t.value + offset) % 1;
-      const scale = 0.6 + 0.6 * Math.abs(Math.sin(phase * Math.PI));
-      return { opacity: 0.4 + 0.6 * Math.abs(Math.sin(phase * Math.PI)), transform: [{ scale }] };
-    });
-  return (
-    <View style={styles.typingDotsRow}>
-      <Animated.View style={[styles.typingDot, dot(0)]} />
-      <Animated.View style={[styles.typingDot, dot(0.33)]} />
-      <Animated.View style={[styles.typingDot, dot(0.66)]} />
-    </View>
-  );
-}
 
 function StepShell({
   stepIndex,
@@ -424,12 +341,6 @@ function StepShell({
     opacity: headerOpacity.value,
   }));
 
-  const sharkAnimStyle = useAnimatedStyle(() => ({
-    transform: [
-      { rotate: `${sharkWobble.value * 4}deg` },
-      { scale: 1 + Math.abs(sharkWobble.value) * 0.04 },
-    ],
-  }));
 
   return (
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
@@ -475,6 +386,14 @@ function StepShell({
 // outside onboarding), so it is no longer a summary row either. A stored
 // financialDream is kept untouched on the profile.
 type EditableStep = 'goal' | 'knowledge' | 'daily-goal';
+
+const KNOWLEDGE_LABELS: Record<KnowledgeLevel, string> = {
+  none: "אפס ידע",
+  beginner: "ידע בסיסי",
+  some: "ידע ממוצע",
+  experienced: "ידע מתקדם",
+  expert: "ידע ברמת כריש",
+};
 
 function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Collected; onDone: () => void; onEditStep?: (step: EditableStep) => void }) {
   const ctaScale = useSharedValue(0);
@@ -620,24 +539,6 @@ const AGE_LOTTIES: Record<number, number> = {
   3: require("../../../assets/lottie/wired-flat-433-cup-prize-hover-roll.json") as number,
 };
 
-const TIME_LOTTIES: Record<LearningTime, number> = {
-  "morning": require("../../../assets/lottie/wired-flat-804-sun-hover-rays.json") as number,
-  "evening": require("../../../assets/lottie/wired-flat-3003-clock-new-year-24-hr-hover-pinch.json") as number,
-  "during-day": require("../../../assets/lottie/wired-flat-721-hand-with-phone-hover-scroll.json") as number,
-};
-
-const STYLE_LOTTIES: Record<LearningStyle, number> = {
-  "theory-first": require("../../../assets/lottie/wired-flat-779-books-hover-hit.json") as number,
-  "practice-along": require("../../../assets/lottie/gaming.json") as number,
-  "no-preference": require("../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json") as number,
-};
-
-const DEADLINE_LOTTIES: Record<DeadlineStress, number> = {
-  "no-stress": require("../../../assets/lottie/wired-flat-804-sun-hover-rays.json") as number,
-  "maybe": require("../../../assets/lottie/wired-flat-424-question-bubble-hover-wiggle.json") as number,
-  "high-stress": require("../../../assets/lottie/wired-flat-2534-work-life-balance-hover-pinch.json") as number,
-};
-
 // ─── Goal question (welcome screen for new users; GoalStep in redo) ──────────
 
 // Welcome copy (2026-11-20): one line on what the app is, then the goal
@@ -781,137 +682,6 @@ function AgeStep({ knowledge, onNext, onBack, initialAgeGroup }: { knowledge: Kn
   );
 }
 
-// ─── Step: Q4 Learning time ───────────────────────────────────────────────────
-
-const TIMES: { id: LearningTime; label: string; sub: string }[] = [
-  { id: "morning", label: "בוקר עם הקפה", sub: "התחלת יום חכמה" },
-  { id: "evening", label: "לפני השינה", sub: "סיום היום ב-level up" },
-  { id: "during-day", label: "כשיש זמן", sub: "5 דקות בכל מקום" },
-];
-
-function LearningTimeStep({ onNext }: { onNext: (v: LearningTime) => void }) {
-  const [sel, setSel] = useState<LearningTime | null>(null);
-  const advancedRef = useRef(false);
-  useEffect(() => { advancedRef.current = false; }, []);
-  const tap = useCallback((id: LearningTime) => {
-    if (advancedRef.current) return;
-    advancedRef.current = true;
-    setSel(id);
-    setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
-  }, [onNext]);
-
-  return (
-    <StepShell stepIndex={5} question="מתי הכי טוב לך ללמוד?" finnState={sel ? "tablet" : "thinking"}>
-      {TIMES.map((t, i) => (
-        <AnimatedCard key={t.id} index={i} label={t.label} sublabel={t.sub}
-          selected={sel === t.id} onPress={() => tap(t.id)}
-          lottieSource={TIME_LOTTIES[t.id]} />
-      ))}
-      <View style={{ alignItems: "center", marginTop: 12 }}>
-        <LottieIcon
-          source={{ uri: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/lottie/appointment-booking.json" }}
-          size={120}
-          autoPlay
-          loop
-        />
-      </View>
-    </StepShell>
-  );
-}
-
-// ─── Step: Q5 Learning style ──────────────────────────────────────────────────
-
-const LEARN_STYLES: { id: LearningStyle; label: string; sub: string }[] = [
-  { id: "theory-first", label: "קודם תיאוריה", sub: "להבין לפני שמתרגלים" },
-  { id: "practice-along", label: "לתרגל תוך כדי", sub: "learning by doing" },
-  { id: "no-preference", label: "לא משנה לי", sub: "תפתיע אותי" },
-];
-
-function LearningStyleStep({ ageGroup, birthYear, onNext }: { ageGroup: AgeGroup | null; birthYear: number | null; onNext: (v: LearningStyle) => void }) {
-  const [sel, setSel] = useState<LearningStyle | null>(null);
-  const advancedRef = useRef(false);
-  useEffect(() => { advancedRef.current = false; }, []);
-  const tap = useCallback((id: LearningStyle) => {
-    if (advancedRef.current) return;
-    advancedRef.current = true;
-    setSel(id);
-    setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
-  }, [onNext]);
-
-  const age = birthYear ? new Date().getFullYear() - birthYear : null;
-  const dynamicHint = ageGroup === "minor"
-    ? "בגילכם לקלוט חומר חדש זה משחק ילדים. איך אתם מעדיפים ללמוד?"
-    : age !== null && age >= 30
-      ? "אף פעם לא מאוחר ללמוד טריקים חדשים! איך הכי נוח לך ללמוד?"
-      : undefined;
-
-  return (
-    <StepShell stepIndex={6} question="איך הכי כיף לך ללמוד?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
-      {LEARN_STYLES.map((s, i) => (
-        <AnimatedCard key={s.id} index={i} label={s.label} sublabel={s.sub}
-          selected={sel === s.id} onPress={() => tap(s.id)}
-          lottieSource={STYLE_LOTTIES[s.id]} />
-      ))}
-    </StepShell>
-  );
-}
-
-// ─── Step: Q6 Deadline stress (Instagram poll) ────────────────────────────────
-
-const DEADLINE_OPTS: { id: DeadlineStress; label: string }[] = [
-  { id: "no-stress", label: "בכלל לא" },
-  { id: "maybe", label: "אולי" },
-  { id: "high-stress", label: "ממש!" },
-];
-
-function DeadlineStep({ onNext }: { onNext: (v: DeadlineStress) => void }) {
-  const [sel, setSel] = useState<DeadlineStress | null>(null);
-  const advancedRef = useRef(false);
-  useEffect(() => { advancedRef.current = false; }, []);
-
-  const wrapTy = useSharedValue(30);
-  const wrapOpacity = useSharedValue(0);
-  useEffect(() => {
-    wrapTy.value = withDelay(200, withSpring(0, { damping: 13 }));
-    wrapOpacity.value = withDelay(200, withTiming(1, { duration: 250 }));
-  }, []);
-  const wrapStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: wrapTy.value }],
-    opacity: wrapOpacity.value,
-  }));
-
-  function tap(id: DeadlineStress) {
-    if (advancedRef.current) return;
-    advancedRef.current = true;
-    setSel(id);
-    setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
-  }
-
-  return (
-    <StepShell stepIndex={7} question="דדליינים = לחץ?" hint="משפיע על ה-Streak שלך" finnState={sel ? (sel === "high-stress" ? "empathy" : "tablet") : "thinking"}>
-      <Animated.View style={[styles.pollRow, wrapStyle]}>
-        {DEADLINE_OPTS.map((d) => (
-          <Pressable
-            key={d.id}
-            onPress={() => tap(d.id)}
-            accessibilityRole="button"
-            accessibilityLabel={d.label}
-            accessibilityState={{ selected: sel === d.id }}
-            style={[styles.pollBtn, sel === d.id && styles.pollBtnSelected]}
-          >
-            <View style={{ width: 36, height: 36 }}>
-              <LottieIcon source={DEADLINE_LOTTIES[d.id]} size={36} autoPlay loop />
-            </View>
-            <Text style={[styles.pollLabel, sel === d.id && styles.pollLabelSelected]}>
-              {d.label}
-            </Text>
-          </Pressable>
-        ))}
-      </Animated.View>
-    </StepShell>
-  );
-}
-
 // ─── Step: Q7 Daily goal (2×2 grid) ──────────────────────────────────────────
 
 const DAILY_LOTTIES: Record<number, number> = {
@@ -993,607 +763,6 @@ function DailyGoalStep({ onNext, onBack, initialValue, skipCommitOverlay }: { on
   );
 }
 
-// ─── Step: Q8 Companion (2×2 grid with Lottie) ───────────────────────────────
-
-const COMPANION_LOTTIE: Record<CompanionId, number> = {
-  "warren-buffett": require("../../../assets/lottie/wired-flat-688-speaker-lecturer-male-hover-pinch.json") as number,
-  "moshe-peled": require("../../../assets/lottie/wired-flat-694-intern-male-hover-pinch.json") as number,
-  "rachel": require("../../../assets/lottie/wired-flat-695-woman-style-19-hover-pinch.json") as number,
-  "robot": require("../../../assets/lottie/wired-flat-746-technology-integrated-circuits-hover-pinch.json") as number,
-};
-
-const COMPANIONS: { id: CompanionId; label: string; sub: string }[] = [
-  { id: "warren-buffett", label: "קפטן שארק", sub: "חכם וסבלני" },
-  { id: "moshe-peled", label: "קפטן שארק", sub: "ישראלי ותכל'סי" },
-  { id: "rachel", label: "קפטן שארק", sub: "חם ומעודד" },
-  { id: "robot", label: "קפטן שארק", sub: "אנליטי ומדויק" },
-];
-
-const DREAM_LABELS: Record<FinancialDream, string> = {
-  trip: "טיול",
-  car: "רכב",
-  apartment: "דירה",
-  freedom: "חופש כלכלי",
-};
-
-const KNOWLEDGE_LABELS: Record<KnowledgeLevel, string> = {
-  none: "אפס ידע",
-  beginner: "ידע בסיסי",
-  some: "ידע ממוצע",
-  experienced: "ידע מתקדם",
-  expert: "ידע ברמת כריש",
-};
-
-function CompanionStep({ dream, knowledge, onNext }: { dream: FinancialDream | null; knowledge: KnowledgeLevel | null; onNext: (v: CompanionId) => void }) {
-  const [sel, setSel] = useState<CompanionId | null>(null);
-  const tap = useCallback((id: CompanionId) => {
-    setSel(id);
-    setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
-  }, [onNext]);
-
-  const dreamLabel = dream ? DREAM_LABELS[dream] : null;
-  const knowledgeLabel = knowledge ? KNOWLEDGE_LABELS[knowledge] : null;
-  const dynamicHint = dreamLabel && knowledgeLabel
-    ? `אוקיי, קלטתי. היעד: ${dreamLabel}. נראה מי הכי מתאים ללוות אותך...`
-    : "הדמות תאמן ותעודד אתכם";
-
-  return (
-    <StepShell stepIndex={9} question="מי ילווה אותך?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
-      <View style={styles.grid}>
-        {COMPANIONS.map((c, i) => (
-          <AnimatedGridCard
-            key={c.id}
-            index={i}
-            emoji=""
-            label={c.label}
-            sublabel={c.sub}
-            selected={sel === c.id}
-            onPress={() => tap(c.id)}
-            lottieSource={COMPANION_LOTTIE[c.id]}
-          />
-        ))}
-      </View>
-    </StepShell>
-  );
-}
-
-// ─── Step: Q9 Avatar picker ──────────────────────────────────────────────────
-
-function AvatarPickerStep({ onNext }: { onNext: (avatarId: string) => void }) {
-  const [sel, setSel] = useState<string | null>(null);
-
-  const ctaOpacity = useSharedValue(0);
-  const ctaScale = useSharedValue(0.8);
-
-  function handleSelect(id: string) {
-    setSel(id);
-    ctaOpacity.value = withTiming(1, { duration: 200 });
-    ctaScale.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) });
-  }
-
-  function handleContinue() {
-    if (sel) onNext(sel);
-  }
-
-  const ctaStyle = useAnimatedStyle(() => ({
-    opacity: ctaOpacity.value,
-    transform: [{ scale: ctaScale.value }],
-  }));
-
-  return (
-    <StepShell stepIndex={0} question="האווטאר שלך" hint="הדמות שתלווה אותך באפליקציה">
-      <View style={styles.avatarGrid}>
-        {FREE_AVATARS.map((avatar: AvatarDefinition, i: number) => (
-          <AvatarGridItem
-            key={avatar.id}
-            avatar={avatar}
-            selected={sel === avatar.id}
-            onPress={() => handleSelect(avatar.id)}
-            index={i}
-          />
-        ))}
-      </View>
-
-      <Animated.View style={[styles.avatarCtaWrap, ctaStyle]}>
-        <Pressable
-          onPress={handleContinue}
-          accessibilityRole="button"
-          accessibilityLabel="בואו נמשיך"
-          style={styles.avatarCta}
-        >
-          <Text style={styles.avatarCtaText}>בואו נמשיך</Text>
-        </Pressable>
-      </Animated.View>
-    </StepShell>
-  );
-}
-
-function AvatarGridItem({
-  avatar,
-  selected,
-  onPress,
-  index,
-}: {
-  avatar: AvatarDefinition;
-  selected: boolean;
-  onPress: () => void;
-  index: number;
-}) {
-  const ty = useSharedValue(40);
-  const opacity = useSharedValue(0);
-  const pressScale = useSharedValue(1);
-
-  useEffect(() => {
-    const d = index * 60;
-    ty.value = withDelay(d, withTiming(0, { duration: 250, easing: Easing.out(Easing.quad) }));
-    opacity.value = withDelay(d, withTiming(1, { duration: 200 }));
-  }, []);
-
-  useEffect(() => {
-    if (selected) {
-      pressScale.value = withSequence(
-        withTiming(0.98, { duration: 60 }),
-        withTiming(1, { duration: 120 })
-      );
-    }
-  }, [selected]);
-
-  const wrapStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: ty.value }, { scale: pressScale.value }],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View style={[styles.avatarItemWrap, wrapStyle]}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={avatar.name}
-        accessibilityState={{ selected }}
-        style={[styles.avatarItem, selected && styles.avatarItemSelected]}
-      >
-        <Text style={styles.avatarEmoji}>{avatar.emoji}</Text>
-        <Text style={[styles.avatarName, selected && styles.avatarNameActive]}>
-          {avatar.name}
-        </Text>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-
-// ─── Custom slider for onboarding sim ──────────────────────────────────────
-
-function OnboardingSlider({
-  label, value, min, max, step, onChange, emoji, prefix = "", suffix = "",
-  accentColor = "#0891b2", trackBg = "#cffafe", onInteract, showFingerHint = false,
-}: {
-  label: string; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; emoji: string; prefix?: string; suffix?: string;
-  accentColor?: string; trackBg?: string; onInteract?: () => void; showFingerHint?: boolean;
-}) {
-  const trackRef = useRef<View>(null);
-  const layoutRef = useRef({ x: 0, width: 0 });
-  const propsRef = useRef({ min, max, step, onChange, onInteract });
-  propsRef.current = { min, max, step, onChange, onInteract };
-  const interactedRef = useRef(false);
-
-  // Gesture callbacks all wrapped in try/catch — any throw inside a
-  // PanResponder handler propagates to Hermes → SIGABRT on iPad
-  // (Apple 2.1(a) reject pattern). Swallow + warn instead.
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-      onMoveShouldSetPanResponderCapture: (_, gestureState) =>
-        Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: (evt) => {
-        try {
-          if (!interactedRef.current) {
-            interactedRef.current = true;
-            try { propsRef.current.onInteract?.(); } catch { /* swallow */ }
-          }
-          const pageX = evt.nativeEvent.pageX;
-          // measureInWindow callback can fire after unmount on iPad — guard it.
-          trackRef.current?.measureInWindow((x: number, _y: number, width: number) => {
-            try {
-              layoutRef.current = { x, width };
-              updateVal(pageX);
-            } catch (e) {
-              console.warn("[OnboardingSlider.measure]", e instanceof Error ? e.message : String(e));
-            }
-          });
-        } catch (e) {
-          console.warn("[OnboardingSlider.grant]", e instanceof Error ? e.message : String(e));
-        }
-      },
-      onPanResponderMove: (evt) => {
-        try { updateVal(evt.nativeEvent.pageX); }
-        catch (e) { console.warn("[OnboardingSlider.move]", e instanceof Error ? e.message : String(e)); }
-      },
-    })
-  ).current;
-
-  function updateVal(pageX: number) {
-    try {
-      const { x, width } = layoutRef.current;
-      if (width <= 0) return;
-      const localX = Math.max(0, Math.min(pageX - x, width));
-      // RTL: right = max, left = min
-      const pct = 1 - (localX / width);
-      const { min: mn, max: mx, step: st, onChange: cb } = propsRef.current;
-      let v = mn + pct * (mx - mn);
-      v = Math.round(v / st) * st;
-      cb(Math.max(mn, Math.min(mx, v)));
-    } catch (e) {
-      console.warn("[OnboardingSlider.updateVal]", e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  const span = max - min;
-  const pct = span > 0 ? Math.max(0, Math.min(1, (value - min) / span)) : 0;
-
-  return (
-    <View style={{ marginBottom: 18, overflow: "visible", zIndex: showFingerHint ? 100 : 1 }}
-      accessibilityRole="adjustable"
-      accessibilityLabel={label}
-      accessibilityValue={{ min, max, now: value, text: `${prefix}${value.toLocaleString()}${suffix}` }}
-    >
-      <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
-          <Text style={{ fontSize: 16 }}>{emoji}</Text>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: "#6b7280", writingDirection: "rtl" }}>{label}</Text>
-        </View>
-        <View style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: trackBg }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: accentColor }}>{prefix}{value.toLocaleString()}{suffix}</Text>
-        </View>
-      </View>
-      <View
-        ref={trackRef}
-        style={{ height: 10, width: "100%", justifyContent: "center", borderRadius: 999, backgroundColor: trackBg, overflow: "visible", zIndex: 50 }}
-        onLayout={(e) => {
-          const { width } = e.nativeEvent.layout;
-          trackRef.current?.measureInWindow((x: number) => { layoutRef.current = { x, width }; });
-        }}
-        {...panResponder.panHandlers}
-      >
-        {/* RTL fill, anchored to right */}
-        <View style={{ position: "absolute", right: 0, height: "100%", borderRadius: 999, width: `${pct * 100}%`, backgroundColor: accentColor + "60" }} />
-        <View style={{
-          position: "absolute", right: `${pct * 100}%`, transform: [{ translateX: 16 }],
-          height: 32, width: 32, borderRadius: 16, backgroundColor: accentColor,
-          borderWidth: 3, borderColor: "#ffffff", alignItems: "center", justifyContent: "center",
-          shadowColor: accentColor, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6,
-          overflow: "visible", zIndex: 999,
-        }}>
-          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#ffffff" }} />
-          {/* Finger hint, moves with thumb, always on top */}
-          {showFingerHint && (
-            <Animated.Text
-              pointerEvents="none"
-              entering={FadeIn.duration(400)}
-              style={{ position: "absolute", top: 24, fontSize: 28, zIndex: 9999, elevation: 9999 }}
-            >👆</Animated.Text>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// ─── Step: "לשחק עם מספרים" Simulator during onboarding ────────────────────
-
-function SimOnboardingStep({ onNext }: { onNext: () => void }) {
-  const [initial, setInitial] = useState(0);
-  const [monthly, setMonthly] = useState(500);
-  const [years, setYears] = useState(10);
-  const [subStep, setSubStep] = useState<"play" | "summary">("play");
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [showCalcExplanation, setShowCalcExplanation] = useState(false);
-  const autoSlideRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef(Date.now());
-
-  // Auto-slide monthly from ₪500 to ₪5,000 over 3s, runs once on mount
-  useEffect(() => {
-    startTimeRef.current = Date.now();
-    autoSlideRef.current = setInterval(() => {
-      const t = Math.min((Date.now() - startTimeRef.current) / 3000, 1);
-      const eased = t * t; // simple ease-in for natural feel
-      const val = Math.round((500 + eased * 4500) / 50) * 50;
-      setMonthly(val);
-      if (t >= 1) {
-        if (autoSlideRef.current) clearInterval(autoSlideRef.current);
-        setHasInteracted(true);
-      }
-    }, 80);
-    return () => { if (autoSlideRef.current) clearInterval(autoSlideRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps, run exactly once
-
-  // Stop auto-slide when user interacts manually
-  useEffect(() => {
-    if (hasInteracted && autoSlideRef.current) {
-      clearInterval(autoSlideRef.current);
-      autoSlideRef.current = null;
-    }
-  }, [hasInteracted]);
-
-  const finalAmount = calculateCompoundInterest(initial, monthly, years, 0.10);
-  const totalInvested = initial + monthly * 12 * years;
-  const totalGrowth = finalAmount - totalInvested;
-  const growthPct = totalInvested > 0 ? ((totalGrowth / totalInvested) * 100).toFixed(0) : "0";
-
-  const chartData: ChartDataPoint[] = [];
-  const CHART_STEPS = Math.max(years * 4, 40);
-  for (let s = 0; s <= CHART_STEPS; s++) {
-    const t = s / CHART_STEPS;
-    const yr = t * years;
-    const val = calculateCompoundInterest(initial, monthly, yr, 0.10);
-    chartData.push({ x: t, y: finalAmount > 0 ? val / finalAmount : 0, label: `שנה ${Math.round(yr)}` });
-  }
-
-  const chartWidth = SCREEN_WIDTH - 80;
-
-  // ── Screen 2: Summary ──
-  if (subStep === "summary") {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-        <SafeAreaView style={{ flex: 1, paddingHorizontal: 24 }} edges={["top", "bottom"]}>
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", gap: 16, paddingVertical: 16 }}
-            showsVerticalScrollIndicator={false}
-          >
-            <ExpoImage source={FINN_HAPPY} style={{ width: 100, height: 100 }} contentFit="contain" />
-            <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b", textAlign: "center", writingDirection: "rtl" }}>
-              הכסף שלכם בעוד {years} שנים
-            </Text>
-            <Text style={{ fontSize: 38, fontWeight: "900", color: "#0891b2", textAlign: "center" }}>
-              ₪{finalAmount.toLocaleString()}
-            </Text>
-
-            {/* Stats row */}
-            <View style={{ flexDirection: "row", gap: 10, width: "100%" }}>
-              <View style={simStyles.statCard}>
-                <Text style={simStyles.statLabel}>סה"כ הושקע</Text>
-                <Text style={simStyles.statValue}>₪{totalInvested.toLocaleString()}</Text>
-              </View>
-              <View style={[simStyles.statCard, { borderColor: "#bbf7d0", backgroundColor: "rgba(240,253,244,0.92)" }]}>
-                <Text style={[simStyles.statLabel, { color: "#15803d" }]}>רווח מריבית דריבית</Text>
-                <Text style={[simStyles.statValue, { color: "#16a34a" }]}>+₪{totalGrowth.toLocaleString()}</Text>
-              </View>
-            </View>
-
-            {/* Growth badge */}
-            <View style={simStyles.growthBadge}>
-              <TrendingUp size={16} color="#16a34a" />
-              <Text style={simStyles.growthText}>תשואה של {growthPct}%</Text>
-            </View>
-
-            {/* Finn encouragement */}
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, backgroundColor: "rgba(8,145,178,0.06)", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "rgba(8,145,178,0.12)", width: "100%" }}>
-              <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36 }} contentFit="contain" />
-              <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#475569", writingDirection: "rtl", textAlign: "right", lineHeight: 19 }}>
-                גם אם עכשיו לא מבינים, אנחנו נלמד הכל יחד!
-              </Text>
-            </View>
-
-            {/* "איך חישבנו?" collapsible explanation — same pattern as the
-                dividend explainer on ReferralScreen. Expands in-place so the
-                numbers above stay visible while the user reads. */}
-            <View style={{ width: "100%" }}>
-              <Pressable
-                onPress={() => setShowCalcExplanation((v) => !v)}
-                style={simStyles.calcToggle}
-                accessibilityRole="button"
-                accessibilityLabel={showCalcExplanation ? "סגור הסבר חישוב" : "פתח הסבר חישוב"}
-                accessibilityState={{ expanded: showCalcExplanation }}
-                hitSlop={6}
-              >
-                <Text style={simStyles.calcToggleText}>איך חישבנו?</Text>
-                {showCalcExplanation ? (
-                  <ChevronUp size={16} color="#0891b2" />
-                ) : (
-                  <ChevronDown size={16} color="#0891b2" />
-                )}
-              </Pressable>
-              {showCalcExplanation && (
-                <Animated.View entering={FadeInDown.duration(220)} style={simStyles.calcCard}>
-                  <Text style={simStyles.calcTitle}>הנחת העבודה: 10% תשואה שנתית</Text>
-                  <Text style={simStyles.calcBody}>
-                    החישוב מבוסס על תשואה היסטורית ממוצעת של השוק האמריקאי
-                    (מדד S&P 500) לאורך עשרות שנים, ~10% בשנה במונחים נומינליים
-                    (לפני אינפלציה).
-                  </Text>
-                  <Text style={simStyles.calcBody}>
-                    אנחנו מניחים הפקדה חודשית קבועה, צבירה בריבית דריבית מדי
-                    חודש, ומתעלמים ממס רווחי הון (25% בישראל) ומדמי ניהול. אלו
-                    שוחקים את התשואה בפועל משמעותית.
-                  </Text>
-                  <Text style={[simStyles.calcBody, { color: "#64748b", fontSize: 12 }]}>
-                    זוהי דוגמה חינוכית בלבד ולא המלצה להשקעה. ביצועי עבר אינם
-                    מבטיחים ביצועים עתידיים.
-                  </Text>
-                </Animated.View>
-              )}
-            </View>
-          </ScrollView>
-
-          {/* Continue button */}
-          <Pressable onPress={onNext} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
-            <Text style={simStyles.continueBtnText}>המשך</Text>
-          </Pressable>
-          <View style={{ height: 16 }} />
-        </SafeAreaView>
-      </View>
-    );
-  }
-
-  // ── Screen 1: Play with numbers ──
-  return (
-    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-        {/* Progress bar */}
-        <View style={[styles.topRow, { paddingHorizontal: 20, backgroundColor: "rgba(240,249,255,0.85)" }]}>
-          <GlowBar current={2} />
-        </View>
-
-        {/* Scrollable content — keeps button reachable on small viewports
-            (e.g. iPad iPhone-scaled mode where vertical space is limited). */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, justifyContent: "space-between" }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Finn + Title */}
-          <View style={{ alignItems: "center", marginTop: 4, marginBottom: 6 }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 70, height: 70 }} contentFit="contain" />
-            <Text style={{ fontSize: 18, fontWeight: "900", color: "#0c4a6e", textAlign: "center", writingDirection: "rtl", marginTop: 4 }}>
-              לשחק עם המספרים
-            </Text>
-          </View>
-
-          {/* Hero card, future value + chart (compact) */}
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={simStyles.heroCard}>
-            <Text style={simStyles.heroLabel}>הכסף שלכם בעוד {years} שנים</Text>
-            <Text style={simStyles.heroValue}>₪{finalAmount.toLocaleString()}</Text>
-            <GestureHandlerRootView style={{ marginTop: 6 }}>
-              <SkiaInteractiveChart
-                data={chartData}
-                width={chartWidth - 32}
-                height={100}
-                lineColor="#0891b2"
-                glowColor="#22d3ee"
-                gradientColors={["rgba(34,211,238,0.18)", "rgba(34,211,238,0)"]}
-                onScrub={() => { }}
-                hapticMilestone={5}
-              />
-            </GestureHandlerRootView>
-          </Animated.View>
-
-          {/* Sliders */}
-          <Animated.View entering={FadeInDown.delay(300).springify()} style={[simStyles.slidersCard, { position: "relative" }]}>
-            <OnboardingSlider
-              label="סכום התחלתי" value={initial} min={0} max={1000000} step={5000}
-              prefix="₪" emoji="💵" accentColor="#10b981" trackBg="#d1fae5" onChange={setInitial}
-              onInteract={() => setHasInteracted(true)}
-            />
-            <OnboardingSlider
-              label="השקעה חודשית" value={monthly} min={50} max={20000} step={50}
-              prefix="₪" emoji="💰" accentColor="#0891b2" trackBg="#cffafe" onChange={setMonthly}
-              onInteract={() => setHasInteracted(true)}
-              showFingerHint={!hasInteracted}
-            />
-            <OnboardingSlider
-              label="טווח זמן" value={years} min={1} max={40} step={1}
-              suffix=" שנים" emoji="📅" accentColor="#60a5fa" trackBg="#dbeafe" onChange={setYears}
-              onInteract={() => setHasInteracted(true)}
-            />
-          </Animated.View>
-        </ScrollView>
-
-        {/* Next button — outside the ScrollView so it stays pinned to the bottom
-            and is always reachable, no matter how small the viewport. */}
-        <View style={{ paddingHorizontal: 20, paddingBottom: 8, paddingTop: 8 }}>
-          <Pressable onPress={() => setSubStep("summary")} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="הבא">
-            <Text style={simStyles.continueBtnText}>הבא</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    </View>
-  );
-}
-
-const simStyles = StyleSheet.create({
-  // STITCH Premium, 3D glow hero card
-  heroCard: {
-    borderRadius: 24, borderWidth: 1, borderColor: "rgba(14,165,233,0.15)",
-    padding: 20, paddingBottom: 10, marginBottom: 14, overflow: "hidden",
-    backgroundColor: "#ffffff",
-    shadowColor: "#0ea5e9", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 6,
-  },
-  heroLabel: {
-    fontSize: 13, fontWeight: "700", color: "#64748b", textAlign: "center", writingDirection: "rtl", marginBottom: 4,
-  },
-  heroValue: {
-    fontSize: 38, fontWeight: "900", color: "#0369a1", textAlign: "center", letterSpacing: -1,
-    textShadowColor: "rgba(14,165,233,0.2)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8,
-  },
-  scrubBadge: {
-    alignSelf: "center", backgroundColor: "#f0f9ff", borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 5, marginTop: 6, borderWidth: 1, borderColor: "#bae6fd",
-  },
-  scrubText: { fontSize: 12, fontWeight: "700", color: "#0284c7" },
-  // STITCH Premium, sliders card with soft depth
-  slidersCard: {
-    backgroundColor: "#ffffff", borderRadius: 22, borderWidth: 1,
-    borderColor: "rgba(186,230,253,0.5)", padding: 20, marginBottom: 14,
-    shadowColor: "#0c4a6e", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4,
-  },
-  // Stats cards, clean with subtle glow
-  statCard: {
-    flex: 1, backgroundColor: "#f8fafc", borderRadius: 18, padding: 16,
-    borderWidth: 1, borderColor: "rgba(186,230,253,0.4)", alignItems: "center",
-    shadowColor: "#0ea5e9", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  statLabel: { fontSize: 11, fontWeight: "700", color: "#64748b", textAlign: "center", writingDirection: "rtl", marginBottom: 4 },
-  statValue: { fontSize: 18, fontWeight: "900", color: "#0f172a" },
-  // Growth badge, green glow
-  growthBadge: {
-    flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#f0fdf4", borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16,
-    borderWidth: 1, borderColor: "rgba(34,197,94,0.2)", marginBottom: 12,
-    shadowColor: "#22c55e", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
-  },
-  growthText: { fontSize: 14, fontWeight: "800", color: "#16a34a", textAlign: "center", writingDirection: "rtl" },
-  // STITCH Premium, big 3D CTA button
-  continueBtn: {
-    width: "100%", backgroundColor: "#0891b2", borderRadius: 18, paddingVertical: 20,
-    alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0e7490",
-    shadowColor: "#0891b2", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
-  },
-  continueBtnText: { fontSize: 18, fontWeight: "900", color: "#ffffff" },
-  // "איך חישבנו?" collapsible — mirrors the dividend explainer on ReferralScreen.
-  calcToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 6,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-  calcToggleText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0891b2",
-    writingDirection: "rtl",
-    textAlign: "right",
-  },
-  calcCard: {
-    backgroundColor: "#f0f9ff",
-    borderWidth: 1,
-    borderColor: "rgba(14,165,233,0.15)",
-    borderRadius: 14,
-    padding: 16,
-    gap: 8,
-  },
-  calcTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#0f172a",
-    writingDirection: "rtl",
-    textAlign: "right",
-  },
-  calcBody: {
-    fontSize: 13,
-    color: "#475569",
-    lineHeight: 20,
-    writingDirection: "rtl",
-    textAlign: "right",
-  },
-});
 // ─── Intro (personalisation splash) ──────────────────────────────────────────
 
 interface IntroStepProps {
@@ -1611,10 +780,8 @@ function IntroStep({ onLoginSuccess, onPickGoal, initialGoal }: IntroStepProps) 
   //                question as tappable cards (2026-11-20: one flow for every
   //                new user; the welcome-hook and dream experiments are gone).
   //                "יש לי כבר חשבון" routes returning users to login.
-  //   "register" — Account-creation prompt. Not reachable from the welcome
-  //                any more (no code path sets it); kept untouched.
   //   "login"    — Apple/Google + email form for returning users.
-  const [subStep, setSubStep] = useState<"welcome" | "register" | "login">("welcome");
+  const [subStep, setSubStep] = useState<"welcome" | "login">("welcome");
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -1623,7 +790,6 @@ function IntroStep({ onLoginSuccess, onPickGoal, initialGoal }: IntroStepProps) 
   // failure — so any error (network/500) was invisible and the user just bounced
   // back to welcome. Subscribe here so the banner below can surface it.
   const authError = useAuthStore((s) => s.authError);
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const introRouter = useRouter();
   // A real signed-in account that has not finished onboarding (a session
   // restored on a reinstall) has nothing to log in to: hide the login link.
@@ -1652,23 +818,6 @@ function IntroStep({ onLoginSuccess, onPickGoal, initialGoal }: IntroStepProps) 
     try { captureEvent('welcome_viewed', { layout: 'goal_question' }); } catch { /* non-fatal */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Auto-check terms when returning from terms page after pressing "קראתי"
-  useEffect(() => {
-    if (subStep !== "register") return;
-    // Once terms have been accepted, stop polling entirely — the flag has
-    // already been consumed and there is nothing more to watch for. Without
-    // this short-circuit the interval keeps firing every 1.5s for the rest
-    // of the register sub-step (battery drain on long sessions).
-    if (termsAccepted) return;
-    const id = setInterval(() => {
-      if (consumeTermsAcceptedFlag()) {
-        setTermsAccepted(true);
-        clearInterval(id);
-      }
-    }, 1500);
-    return () => clearInterval(id);
-  }, [subStep, termsAccepted]);
 
   // Login form state. Email sign-in is email → mailed 6-digit code (2026-11-13).
   // The password field that used to sit here was never sent anywhere, and the
@@ -1768,7 +917,6 @@ function IntroStep({ onLoginSuccess, onPickGoal, initialGoal }: IntroStepProps) 
     try { successHaptic(); } catch { /* non-fatal */ }
     try { playIntroSound('btn_click_heavy'); } catch { /* non-fatal */ }
     try { captureEvent('welcome_primary_clicked', { destination: 'onboarding_guest', goal: id }); } catch { /* non-fatal */ }
-    setTermsAccepted(true);
     setTimeout(() => onPickGoal(id), AUTO_ADVANCE_MS);
   }
 
@@ -1886,130 +1034,6 @@ function IntroStep({ onLoginSuccess, onPickGoal, initialGoal }: IntroStepProps) 
           ) : null}
         </Animated.View>
         </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Register sub-state — unreachable (nothing sets it since the welcome
-  // became a direct question); kept as it was. Duolingo-style: prominent OAuth
-  // CTAs, visible-but-secondary "Start without account" button. Login link
-  // sits at the bottom for returning users.
-  if (subStep === "register") {
-    return (
-      <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
-        <Animated.View style={[introStyles.finnWrap, finnStyle, { marginBottom: 18 }]}>
-          <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={[introStyles.finnBg, { width: 160, height: 160, borderRadius: 80 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <ExpoImage source={FINN_HELLO} style={{ width: 130, height: 130 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
-          </LinearGradient>
-        </Animated.View>
-
-        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
-          <Text style={[introStyles.subtitle, { fontSize: 16, lineHeight: 25 }]}>
-            {"יצירת חשבון שומרת את ההתקדמות שלך בכל מכשיר."}
-          </Text>
-        </Animated.View>
-
-        <Animated.View style={[ctaAnimStyle, { width: "100%", gap: 10 }]}>
-          {/* Apple Sign-Up — required by App Store Guideline 4.8 on iOS */}
-          {appleAvailable && (
-            <Pressable
-              onPress={() => { setTermsAccepted(true); promptAppleSignIn().then(onLoginSuccess); }}
-              accessibilityRole="button"
-              accessibilityLabel="הרשמה עם Apple"
-              style={{
-                width: "100%",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                borderRadius: 14,
-                backgroundColor: "#000000",
-                paddingVertical: 15,
-                borderBottomWidth: 3,
-                borderBottomColor: "#1f2937",
-              }}
-            >
-              <Text style={{ fontSize: 18, color: "#ffffff" }}></Text>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff" }}>הרשמה עם Apple</Text>
-            </Pressable>
-          )}
-
-          {/* Google Sign-Up — feedback path identical to login subStep */}
-          <Pressable
-            onPress={() => {
-              setTermsAccepted(true);
-              if (!googleReady || !promptGoogleSignIn) {
-                useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסו שוב בעוד רגע.");
-                return;
-              }
-              promptGoogleSignIn();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="הרשמה עם Google"
-            style={[introStyles.googleBtn, { paddingVertical: 15 }, !googleReady && { opacity: 0.6 }]}
-          >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b" }}>הרשמה עם Google</Text>
-            <GoogleLogo size={20} />
-          </Pressable>
-
-          {/* "Or" divider — separates account creation from the guest path so
-              users see the boundary clearly. */}
-          <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 4 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
-            <Text style={{ marginHorizontal: 12, fontSize: 13, color: "#94a3b8", fontWeight: "600" }}>או</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
-          </View>
-
-          {/* Guest CTA — explicitly NOT a tiny link. Full-width outlined button
-              with the same vertical rhythm as the OAuth buttons so users see
-              it as a real alternative (not a hidden fallback). They asked for
-              this so first-time users don't bounce when they aren't ready to
-              create an account yet. */}
-          <Pressable
-            // (Unreachable sub-step.) No account → back to the welcome, where
-            // the goal question is the start.
-            onPress={() => { setTermsAccepted(true); setSubStep("welcome"); }}
-            style={{
-              width: "100%",
-              borderRadius: 14,
-              paddingVertical: 14,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1.5,
-              borderColor: "#0891b2",
-              backgroundColor: "#ecfeff",
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="המשך כאורח"
-          >
-            <Text style={{ color: "#0891b2", fontSize: 15, fontWeight: "800", writingDirection: "rtl" }}>
-              המשך כאורח
-            </Text>
-          </Pressable>
-
-          {/* Terms — implicit consent on any tap above (Duolingo pattern) */}
-          <Text
-            style={{ marginTop: 8, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16, maxWidth: 280, alignSelf: "center" }}
-          >
-            {"הלחיצה מהווה אישור של "}
-            <Text
-              style={{ color: "#0891b2", textDecorationLine: "underline" }}
-              accessibilityRole="link"
-              accessibilityLabel="תנאי השימוש ומדיניות הפרטיות"
-              onPress={() => introRouter.push("/(auth)/terms" as never)}
-            >
-              תנאי השימוש ומדיניות הפרטיות
-            </Text>
-          </Text>
-
-          {/* Existing-account link — bottom row, subtle but reachable */}
-          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לי חשבון, התחבר" style={{ marginTop: 6, alignSelf: "center", paddingVertical: 4 }}>
-            <Text style={introStyles.loginLink}>
-              {"כבר יש לי חשבון? "}
-              <Text style={introStyles.loginLinkAccent}>{"התחבר"}</Text>
-            </Text>
-          </Pressable>
-        </Animated.View>
       </SafeAreaView>
     );
   }
@@ -2300,9 +1324,8 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
 // celebration (finish, no UI) → welcome chest → mod-0-1. Redo (profile
 // screen): goal → age → profile-summary → building-profile.
 type FlowStep =
-  | "intro" | "first-sim" | "goal" | "knowledge" | "age" | "signup-gate" | "learning-time"
-  | "learning-style" | "deadline" | "daily-goal" | "companion" | "finance-experts"
-  | "avatar" | "building-profile" | "profile-summary" | "celebration";
+  | "intro" | "goal" | "knowledge" | "age" | "signup-gate" | "daily-goal"
+  | "building-profile" | "profile-summary" | "celebration";
 
 // Position of each LIVE step, used only to label a slide() as forward or back
 // for analytics. Steps that are not rendered any more are left out (→ 0).
@@ -2918,56 +1941,9 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 12,
   },
-  storyBarWrap: {
-    flex: 1,
-    flexDirection: "row",
-    gap: 4,
-  },
-  storySegmentBg: {
-    flex: 1,
-    height: 4,
-    borderRadius: 99,
-    backgroundColor: "#e5e7eb",
-    overflow: "hidden",
-  },
-  storySegmentFill: {
-    flex: 1,
-    borderRadius: 99,
-  },
-  stepCounter: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#52525b",
-    letterSpacing: 0.8,
-  },
   questionBlock: {
     paddingTop: 12,
     paddingBottom: 12,
-  },
-  questionRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 12,
-  },
-  mascotEmoji: {
-    fontSize: 60,
-    marginBottom: 14,
-  },
-  question: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: "#18181b",
-    lineHeight: 32,
-    marginBottom: 4,
-    writingDirection: "rtl",
-    textAlign: "right",
-  },
-  hint: {
-    fontSize: 13,
-    color: "#6b7280",
-    fontWeight: "500",
-    writingDirection: "rtl",
-    textAlign: "right",
   },
   optionsArea: {
     flex: 1,
@@ -2987,35 +1963,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-  },
-  finnTabletWrap: {
-    width: 124,
-    height: 124,
-    borderRadius: 62,
-    backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: "rgba(34,211,238,0.45)",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    flexShrink: 0,
-    shadowColor: "#0891b2",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  typingDotsRow: {
-    flexDirection: "row",
-    gap: 6,
-    marginTop: 8,
-    alignSelf: "flex-end",
-  },
-  typingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "#0891b2",
   },
   questionBubble: {
     fontSize: 20,
@@ -3135,127 +2082,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   // Poll (Q6)
-  pollRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 8,
-  },
-  pollBtn: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    borderWidth: 1.5,
-    borderColor: "#e5e7eb",
-    borderRadius: 20,
-    paddingVertical: 22,
-    alignItems: "center",
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  pollBtnSelected: {
-    borderColor: "#0891b2",
-    backgroundColor: "rgba(8,145,178,0.08)",
-    shadowColor: "#0891b2",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  pollEmoji: {
-    fontSize: 28,
-  },
-  pollLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#6b7280",
-    writingDirection: "rtl",
-    textAlign: "center",
-  },
-  pollLabelSelected: {
-    color: "#0891b2",
-  },
   // Confetti
-  confettiOrigin: {
-    position: "absolute",
-    alignSelf: "center",
-    top: "40%",
-  },
-  confettiDot: {
-    position: "absolute",
-  },
   // Celebration
-  celebShell: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  celebBadge: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "#ecfeff",
-    borderWidth: 2,
-    borderColor: "#0891b2",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
-    shadowColor: "#0891b2",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 28,
-    elevation: 18,
-  },
-  celebEmoji: {
-    fontSize: 56,
-  },
-  celebRewards: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
-  },
-  rewardPill: {
-    backgroundColor: "#ecfeff",
-    borderWidth: 1,
-    borderColor: "#0891b2",
-    borderRadius: 999,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  rewardPillGold: {
-    backgroundColor: "#fffbeb",
-    borderColor: "#f59e0b",
-  },
-  rewardXP: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: "#0891b2",
-  },
-  rewardCoins: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: "#fbbf24",
-  },
-  celebTitle: {
-    fontSize: 30,
-    fontWeight: "900",
-    color: "#18181b",
-    textAlign: "center",
-    writingDirection: "rtl",
-    marginBottom: 10,
-  },
-  celebSub: {
-    fontSize: 15,
-    color: "#6b7280",
-    textAlign: "center",
-    writingDirection: "rtl",
-    lineHeight: 23,
-    marginBottom: 36,
-  },
   celebCTA: {
     backgroundColor: "#0891b2",
     borderRadius: 999,
@@ -3274,140 +2102,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "900",
   },
-  codeToggle: {
-    marginTop: 20,
-    paddingVertical: 6,
-  },
-  codeToggleText: {
-    color: "#94a3b8",
-    fontSize: 13,
-    textAlign: "center",
-    textDecorationLine: "underline",
-  },
-  codeRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 24,
-    marginTop: 16,
-    alignItems: "center",
-  },
-  codeInput: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textAlign: "center",
-  },
-  codeSubmitBtn: {
-    backgroundColor: "#0891b2",
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  codeSubmitText: {
-    color: "#ffffff",
-    fontWeight: "800",
-    fontSize: 15,
-  },
-  codeTogglePrimed: {
-    backgroundColor: 'rgba(14,165,233,0.14)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  codeToggleTextPrimed: { color: '#0369a1', fontWeight: '800' },
-  codePastedText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0369a1',
-    textAlign: 'center',
-    writingDirection: 'rtl',
-    marginTop: 6,
-  },
-  codeSavedText: {
-    color: "#4ade80",
-    textAlign: "center",
-    fontSize: 14,
-    marginTop: 16,
-  },
   // Avatar picker
-  avatarGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  avatarItemWrap: {
-    width: "31%",
-  },
-  avatarItem: {
-    backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: "#e5e7eb",
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 110,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  avatarItemSelected: {
-    borderColor: "#d4a017",
-    backgroundColor: "rgba(212, 160, 23, 0.1)",
-    shadowColor: "#d4a017",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  avatarEmoji: {
-    fontSize: 42,
-    marginBottom: 8,
-  },
-  avatarName: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#4b5563",
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  avatarNameActive: {
-    color: "#fbbf24",
-  },
-  avatarCtaWrap: {
-    marginTop: 24,
-    alignItems: "center",
-  },
-  avatarCta: {
-    backgroundColor: "#0891b2",
-    borderRadius: 999,
-    paddingHorizontal: 52,
-    paddingVertical: 16,
-    borderBottomWidth: 4,
-    borderBottomColor: "#0e7490",
-    shadowColor: "#0891b2",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  avatarCtaText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "900",
-  },
 });
 
 
@@ -3447,16 +2142,6 @@ const introStyles = StyleSheet.create({
     lineHeight: 36,
     marginBottom: 14,
   },
-  titleAccent: {
-    color: "#0891b2",
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#6b7280",
-    textAlign: "center",
-    writingDirection: "rtl",
-    lineHeight: 24,
-  },
   cta: {
     backgroundColor: "#0891b2",
     borderRadius: 999,
@@ -3474,30 +2159,6 @@ const introStyles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "900",
-  },
-  loginLink: {
-    fontSize: 14,
-    color: "#6b7280",
-    writingDirection: "rtl",
-  },
-  loginLinkAccent: {
-    color: "#0891b2",
-    fontWeight: "700",
-  },
-  ctaOutline: {
-    borderRadius: 999,
-    paddingHorizontal: 40,
-    paddingVertical: 12,
-    borderWidth: 1.5,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#f8fafc",
-    width: "100%",
-    alignItems: "center",
-  },
-  ctaOutlineText: {
-    color: "#64748b",
-    fontSize: 15,
-    fontWeight: "700",
   },
   googleBtn: {
     flexDirection: "row",
