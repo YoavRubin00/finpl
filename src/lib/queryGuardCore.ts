@@ -36,7 +36,7 @@ export interface QueryGuard {
    * `value` when it replaces an earlier seed) and returned. Callers decide
    * whether a seed may go in (it overwrites whatever the cache holds).
    */
-  seed<T>(key: QueryKey, value: T): T | undefined;
+  seed<T extends object>(key: QueryKey, value: T): T | undefined;
   /**
    * Wraps a query function. If the query got a newer write while the request
    * was in flight (anything but a seeded snapshot, i.e. stored with a real
@@ -76,10 +76,10 @@ export function createQueryGuard(client: QueryClient, getAuthId: () => string | 
       seededValues.add(value);
     },
     isSeeded,
-    seed<T>(key: QueryKey, value: T): T | undefined {
+    seed<T extends object>(key: QueryKey, value: T): T | undefined {
       client.setQueryData<T>(key, value, { updatedAt: 0 });
       const stored = client.getQueryData<T>(key);
-      if (typeof stored === 'object' && stored !== null) seededValues.add(stored);
+      if (stored !== undefined) seededValues.add(stored);
       return stored;
     },
     guardedQueryFn(key, fetcher, onAccepted) {
