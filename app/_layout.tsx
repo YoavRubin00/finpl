@@ -59,7 +59,7 @@ void captureLaunchAttribution();
 
 import { Stack, useRouter, useSegments, useRootNavigationState, usePathname } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { AppState, Platform, Text, TextInput } from "react-native";
+import { AppState, InteractionManager, Platform, Text, TextInput } from "react-native";
 import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
 import { useDailyQuestsStore } from "../src/features/daily-quests/useDailyQuestsStore";
 import { recordSessionTime as apiRecordSessionTime } from "../src/lib/api/userStats";
@@ -629,10 +629,14 @@ function RootLayoutInner() {
   // failure (network, 5xx, or the REFEREE_NOT_FOUND race against user-row
   // creation) keeps the key so the next launch retries, capped by an attempt
   // counter so a permanently-stuck code doesn't retry forever.
+  // Deferred until after the first paint settles (perf pass 20.11): it loads
+  // the invite screen module + referral sync and makes a network call on every
+  // launch, none of which the first frame needs.
   useEffect(() => {
     if (!userEmail || !hasCompletedOnboarding) return;
     let cancelled = false;
-    (async () => {
+    const task = InteractionManager.runAfterInteractions(() => { void (async () => {
+      if (cancelled) return;
       try {
         const [{ default: AsyncStorage }, syncRef, screenMod] = await Promise.all([
           import('@react-native-async-storage/async-storage'),
@@ -679,8 +683,8 @@ function RootLayoutInner() {
           try { captureEvent('referral_redeem_failed', { source: 'pending_hook', reason: result.reason, final: false, invite_code: pending, attempt: attempts + 1 }); } catch { /* non-fatal */ }
         }
       } catch { /* non-fatal — pending key survives, redeem retries next launch */ }
-    })();
-    return () => { cancelled = true; };
+    })(); });
+    return () => { cancelled = true; task.cancel(); };
   }, [userEmail, hasCompletedOnboarding]);
 
   const [hydrated, setHydrated] = useState(false);

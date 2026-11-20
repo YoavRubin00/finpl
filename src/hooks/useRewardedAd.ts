@@ -60,7 +60,7 @@ if (Platform.OS !== "web") {
       USING_TEST_IDS = true;
       console.warn("[AdMob] Using TEST IDs — EXPO_PUBLIC_ADMOB_REWARDED_* env var not injected");
     }
-    console.log(`[AdMob] Initialized with ${USING_TEST_IDS ? "TEST" : "PROD"} unit: ${AD_UNIT_ID}`);
+    if (__DEV__) console.log(`[AdMob] Initialized with ${USING_TEST_IDS ? "TEST" : "PROD"} unit: ${AD_UNIT_ID}`);
   } catch (error) {
     console.warn("[AdMob] SDK require failed:", error);
   }
@@ -212,7 +212,7 @@ function loadAdSingleton(isMinor: boolean): void {
 
     unsubs.push(
       ad.addAdEventListener(mod.RewardedAdEventType.LOADED, () => {
-        console.log("[AdMob] Ad loaded");
+        if (__DEV__) console.log("[AdMob] Ad loaded");
         isLoading = false;
         adErrorStreak = 0;
         setLoaded(true);
@@ -223,7 +223,7 @@ function loadAdSingleton(isMinor: boolean): void {
       ad.addAdEventListener(mod.RewardedAdEventType.EARNED_REWARD, () => {
         // Mark earned only — do NOT fire the callback here. The user must
         // return to the app at the END of the ad (CLOSED), not mid-video.
-        console.log("[AdMob] Reward earned (deferred to CLOSED)");
+        if (__DEV__) console.log("[AdMob] Reward earned (deferred to CLOSED)");
         rewardEarned = true;
         maybeComplete();
       }),
@@ -231,7 +231,7 @@ function loadAdSingleton(isMinor: boolean): void {
 
     unsubs.push(
       ad.addAdEventListener(mod.AdEventType.CLOSED, () => {
-        console.log("[AdMob] Ad closed");
+        if (__DEV__) console.log("[AdMob] Ad closed");
         adClosed = true;
         // Re-mute immediately so nothing audible can leak between ads.
         setAdsMuted(true);
