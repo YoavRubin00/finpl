@@ -18,6 +18,7 @@ import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString } from '../_shared/validate';
 import { json } from '../_shared/json';
+import { CDN_CACHE_HEADER, cdnCacheValue } from '../../../api/_shared/cdnCache';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -112,7 +113,13 @@ export async function GET(request: Request): Promise<Response> {
       };
     });
 
-    return json({ ok: true, events });
+    // Curated public editorial, identical for every user (keyed by ?month= in
+    // the CDN cache key); rows change at most a few times a day via the
+    // token-gated POST. 5 minutes fresh + 1 hour stale-while-revalidate.
+    return json(
+      { ok: true, events },
+      { headers: { [CDN_CACHE_HEADER]: cdnCacheValue(300, 3600) } },
+    );
   } catch (err: unknown) {
     return safeErrorResponse(err, 'journal/events GET');
   }

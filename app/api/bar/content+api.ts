@@ -18,6 +18,7 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { barContent } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
+import { CDN_CACHE_HEADER, cdnCacheValue } from '../../../api/_shared/cdnCache';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -44,7 +45,13 @@ export async function GET(request: Request): Promise<Response> {
       .limit(50);
 
     const items = rows.map((r) => ({ key: r.contentKey, ...((r.payload ?? {}) as object) }));
-    return Response.json({ ok: true, items });
+    // Shared editorial content, identical for every user (keyed by ?type= in
+    // the CDN cache key). Bar's routine publishes about once a morning, so 5
+    // minutes fresh + 1 hour stale-while-revalidate is invisible to users.
+    return Response.json(
+      { ok: true, items },
+      { headers: { [CDN_CACHE_HEADER]: cdnCacheValue(300, 3600) } },
+    );
   } catch (err) {
     return safeErrorResponse(err, 'bar/content GET');
   }
