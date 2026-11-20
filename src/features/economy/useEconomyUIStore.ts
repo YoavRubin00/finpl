@@ -317,6 +317,13 @@ const INITIAL_STATE = {
 // Fire-and-forget economy delta (for non-hook action contexts)
 // ---------------------------------------------------------------------------
 
+type EconomyDeltaInput = {
+  xpDelta?: number;
+  coinsDelta?: number;
+  gemsDelta?: number;
+  virtualBalanceSet?: number;
+};
+
 /**
  * Canonical "fire and forget economy delta" for non-hook call sites (Zustand
  * actions, callbacks, async event handlers). Does three things:
@@ -331,17 +338,47 @@ const INITIAL_STATE = {
  * stop duplicating the `applyEconomyDelta(...).then(() => invalidate)`
  * boilerplate at 11 call sites and get optimistic UX for free.
  */
-export function fireEconomyDelta(delta: {
-  xpDelta?: number;
-  coinsDelta?: number;
-  gemsDelta?: number;
-  virtualBalanceSet?: number;
-}) {
+export function fireEconomyDelta(delta: EconomyDeltaInput) {
   // Optimistic cache update so useEconomy() consumers (the wealth header, etc.)
   // reflect the delta immediately. Without this the UI waits for the server
   // roundtrip + invalidate — which silently never resolves when /api/sync/economy
   // isn't deployed (DEV without server, missing route). XP earned in modules
   // was effectively invisible until next cold start.
+  applyEconomyDeltaLocally(delta);
+  applyEconomyDelta(delta)
+    // Server response IS the authoritative economy — write it straight to the
+    // cache instead of invalidating (which would trigger a second GET round-trip
+    // for data we already have in hand). Since 2026-11-20 the server bounds
+    // client deltas (api/_shared/economyGuard.ts): when a cap applies the
+    // answer is the server's balance, so the display snaps to the truth.
+    .then((res) => {
+      queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy);
+      // (Removed 2026-11-20: a follow-up upsertInventory() "mirror" POST to
+      // /api/sync/profile used to fire here after every delta. It sent no
+      // Authorization header, so production's Bearer-only /api/sync/profile
+      // answered 401 every time — and that endpoint ignores xp/coins/gems
+      // anyway; /api/sync/economy above already wrote them to the same row.
+      // One guaranteed-failing request per reward, no effect.)
+    })
+    .catch(() => { /* swallow — optimistic state stays until server is reachable */ });
+}
+
+/**
+ * Real-money purchases (gem bundles, the starter pack's gems): the server
+ * credits them from the RevenueCat webhook, never from an app delta (it drops
+ * purchase-sized gem deltas since 2026-11-20). Show the bought amount at once,
+ * then re-read the server balance a few times until the webhook has landed.
+ */
+export function expectPurchasedEconomyCredit(delta: { gemsDelta?: number; coinsDelta?: number }): void {
+  applyEconomyDeltaLocally(delta);
+  for (const ms of [5_000, 20_000, 60_000]) {
+    setTimeout(() => {
+      void queryClient.invalidateQueries({ queryKey: economyQueryKey });
+    }, ms);
+  }
+}
+
+function applyEconomyDeltaLocally(delta: EconomyDeltaInput): void {
   queryClient.setQueryData<Economy | null>(economyQueryKey, (cached) => {
     // Nothing read yet this launch (a reward on mount, e.g. the daily login
     // bonus, lands before the boot has seeded or read the economy): start from
@@ -369,20 +406,6 @@ export function fireEconomyDelta(delta: {
         : old.virtualBalance,
     };
   });
-  applyEconomyDelta(delta)
-    // Server response IS the authoritative economy — write it straight to the
-    // cache instead of invalidating (which would trigger a second GET round-trip
-    // for data we already have in hand).
-    .then((res) => {
-      queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy);
-      // (Removed 2026-11-20: a follow-up upsertInventory() "mirror" POST to
-      // /api/sync/profile used to fire here after every delta. It sent no
-      // Authorization header, so production's Bearer-only /api/sync/profile
-      // answered 401 every time — and that endpoint ignores xp/coins/gems
-      // anyway; /api/sync/economy above already wrote them to the same row.
-      // One guaranteed-failing request per reward, no effect.)
-    })
-    .catch(() => { /* swallow — optimistic state stays until server is reachable */ });
 }
 
 // ---------------------------------------------------------------------------

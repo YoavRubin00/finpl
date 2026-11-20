@@ -58,6 +58,7 @@ const SESSION_ONLY_PATHS = new Set<string>([
   '/api/economy/grant-coins',
   '/api/referral/register-code',
   '/api/trading/trade',
+  '/api/bridge/redeem',
 ]);
 
 function requiresSession(path: string): boolean {

@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEconomy, useSpendCoins, useSpendGems } from '../economy/useEconomy';
-import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStore';
 import { useStreak } from '../economy/useStreak';
 import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
 import { useIsPro } from '../subscription/useSubscription';
@@ -342,7 +342,6 @@ export function ShopScreen() {
   const streak = streakData?.currentStreak ?? 0;
   const spendCoinsHook = useSpendCoins();
   const spendGemsHook = useSpendGems();
-  const addCoins = useEconomyUIStore((s) => s.addCoins);
   const restoreAllHearts = useHeartsStore((s) => s.restoreAllHearts);
   const isPro = useIsPro();
   const avatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
@@ -512,10 +511,13 @@ export function ShopScreen() {
       setShopToast(missingCurrencyToast('gems', gemsNeeded - gems));
       return;
     }
-    spendGemsHook(gemsNeeded);
-    addCoins(coinsReward);
+    // One request carrying both sides (2026-11-20): the server bounds coin
+    // credits and pays exchange coins out of the gems debited, so the gem
+    // debit and the coin credit must arrive together (as two requests they
+    // raced, and the coins could land first).
+    fireEconomyDelta({ gemsDelta: -gemsNeeded, coinsDelta: coinsReward });
     successHaptic();
-  }, [gems, spendGemsHook, addCoins]);
+  }, [gems]);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.bg }]}>
