@@ -76,8 +76,35 @@ function callerDeps(db: Db): CallerDeps {
 
 // ─── Economy ─────────────────────────────────────────────────────────────────
 
+async function readEconomyRow(db: Db, userId: string): Promise<EconomyRow | null> {
+  const result = await db.execute(sql`
+    SELECT xp, coins, gems, level, virtual_balance FROM user_profiles WHERE id = ${userId}::uuid LIMIT 1
+  `);
+  const row = rowsOf<EconomySqlRow>(result)[0];
+  return row ? toEconomy(row) : null;
+}
+
 export function economyStore(db: Db): EconomyStore {
   return {
+    readEconomy: (userId) => readEconomyRow(db, userId),
+
+    async hasPurchaseEvent(userId, gems, sinceMs) {
+      try {
+        const result = await db.execute(sql`
+          SELECT 1 AS hit
+            FROM revenuecat_events
+           WHERE user_id = ${userId}::uuid
+             AND gems = ${gems}::integer
+             AND received_at >= ${new Date(sinceMs).toISOString()}::timestamptz
+           LIMIT 1
+        `);
+        return rowsOf(result).length > 0;
+      } catch (err) {
+        if (pgErrorCode(err) === UNDEFINED_TABLE) return false;
+        throw err;
+      }
+    },
+
     async read(userId) {
       let result: unknown;
       try {
@@ -147,13 +174,7 @@ export function createEconomyDeps(): EconomyDeps {
 // ─── Bridge redeem ───────────────────────────────────────────────────────────
 
 export function bridgeRedeemStore(db: Db): BridgeRedeemStore {
-  async function readEconomy(userId: string): Promise<EconomyRow | null> {
-    const result = await db.execute(sql`
-      SELECT xp, coins, gems, level, virtual_balance FROM user_profiles WHERE id = ${userId}::uuid LIMIT 1
-    `);
-    const row = rowsOf<EconomySqlRow>(result)[0];
-    return row ? toEconomy(row) : null;
-  }
+  const readEconomy = (userId: string) => readEconomyRow(db, userId);
 
   return {
     async redeem(userId, benefitId, costCoins, platform): Promise<RedeemOutcome> {
