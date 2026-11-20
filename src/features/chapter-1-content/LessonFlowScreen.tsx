@@ -74,7 +74,7 @@ import { IntroStepStrip } from "./IntroStepStrip";
 import { QuizStartPopup } from "./QuizStartPopup";
 import { SimulatorLoader } from "./SimulatorLoader";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
-import { useEconomy, economyQueryKey } from "../economy/useEconomy";
+import { useEconomy, economyQueryKey, spendableGems } from "../economy/useEconomy";
 import { useEconomyUIStore, fireEconomyDelta } from "../economy/useEconomyUIStore";
 import { useCompletedModulesStore } from "../economy/useCompletedModulesStore";
 import { useStreak, useRecordDailyActivity, markDailyActivityCompleted } from "../economy/useStreak";
@@ -1950,7 +1950,9 @@ function SlotsFullModal({
   onDiscard: () => void;
 }) {
   const { data: economyDataGem } = useEconomy();
-  const gems = economyDataGem?.gems ?? 0;
+  // Spendable gems only (boot fix B9, 20.11): bought gems the server has not
+  // credited yet are shown but not spendable (pendingGemsCore.ts).
+  const gems = spendableGems(economyDataGem);
   const canAfford = gems >= INSTANT_OPEN_GEM_COST;
 
   if (!visible || !rarity) return null;

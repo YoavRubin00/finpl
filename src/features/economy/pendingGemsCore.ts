@@ -79,6 +79,20 @@ export function spendableGems(value: GemsCarrier | null | undefined): number {
   return Math.max(0, rawGems(value));
 }
 
+/**
+ * Whether a gem spend of `cost` may go ahead (boot fix B9, 20.11): 'ok' when
+ * the gems the server has cover it (spendableGems); 'pending' when only the
+ * bought gems still on their way would (say so with PENDING_GEMS_COPY, don't
+ * send the user to buy more); 'short' when even the shown gems don't.
+ */
+export type GemSpendCheck = 'ok' | 'pending' | 'short';
+
+export function checkGemSpend(value: GemsCarrier | null | undefined, cost: number): GemSpendCheck {
+  if (spendableGems(value) >= cost) return 'ok';
+  const shown = finite(value?.gems) ? (value!.gems as number) : 0;
+  return shown >= cost ? 'pending' : 'short';
+}
+
 /** The value without any pending part, i.e. the server's view (the same
  *  object when it has none). What a snapshot saves (useEconomy.ts). */
 export function withoutPendingGems<T extends GemsCarrier>(value: T): T {

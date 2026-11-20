@@ -14,7 +14,7 @@ import { Image as ExpoImage } from "expo-image";
 import { AssetIcon } from "./AssetIcon";
 import { X } from "lucide-react-native";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
-import { useEconomy } from "../economy/useEconomy";
+import { spendableGems, useEconomy } from "../economy/useEconomy";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { useRealAssetsStore } from "./useRealAssetsStore";
 import {
@@ -71,7 +71,9 @@ export function MarketScreen() {
     const insets = useSafeAreaInsets();
     const { data: economyData } = useEconomy();
     const coins = economyData?.coins ?? 0;
-    const gems = economyData?.gems ?? 0;
+    // Spendable gems only (boot fix B9, 20.11): bought gems the server has not
+    // credited yet are shown but not spendable (pendingGemsCore.ts).
+    const gems = spendableGems(economyData);
     const ownedAssets = useRealAssetsStore((s) => s.ownedAssets);
     const purchaseAsset = useRealAssetsStore((s) => s.purchaseAsset);
     const purchaseWithMortgage = useRealAssetsStore((s) => s.purchaseWithMortgage);

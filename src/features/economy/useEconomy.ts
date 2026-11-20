@@ -14,7 +14,7 @@ import {
 } from './querySnapshot';
 import { createPendingGems, withoutPendingGems } from './pendingGemsCore';
 
-export { spendableGems } from './pendingGemsCore';
+export { spendableGems, checkGemSpend } from './pendingGemsCore';
 
 export const economyQueryKey = ['economy'] as const;
 

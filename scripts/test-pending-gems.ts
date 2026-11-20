@@ -10,11 +10,15 @@
 //  - pending gems are never spendable (honest #4: an exchange right after a
 //    purchase paid the coins while the server took no gems);
 //  - spends and rewards in between, several purchases, webhooks out of order,
-//    a capped reward, the 3-minute window, another account.
+//    a capped reward, the 3-minute window, another account;
+//  - boot fix B9 (20.11): one check for every gem spend (checkGemSpend: ok /
+//    pending / short), used by the streak repair, the daily deals and the
+//    lesson chest's instant open; B7: what a snapshot saves (withoutPendingGems).
 // The second half drives a real react-query client through the query guard,
 // wired the way src/features/economy/useEconomy.ts wires it.
 import { QueryClient, QueryObserver } from '@tanstack/query-core';
 import {
+  checkGemSpend,
   createPendingGems,
   PENDING_GEMS_REREAD_MS,
   PENDING_GEMS_WINDOW_MS,
@@ -187,6 +191,26 @@ function coreCases(): void {
       'spendableGems never goes below 0');
     check(PENDING_GEMS_REREAD_MS.join() === [5_000, 20_000, 60_000, PENDING_GEMS_WINDOW_MS + 1_000].join(),
       're-reads at 5 s, 20 s, 60 s and just after 3 minutes', PENDING_GEMS_REREAD_MS);
+  }
+
+  // ═══ Every gem spend (boot fix B9: checkGemSpend) ═══
+  {
+    // The streak repair (30), the lesson chest's instant open (10), a daily
+    // deal: the server has 20, 500 bought gems are on their way.
+    const p = createPendingGems();
+    p.recordPurchase(A, 500, eco(20), T0);
+    const shown = p.apply(eco(20), A, T0)!;
+    check(checkGemSpend(shown, 10) === 'ok', 'B9: 10 of the 20 the server has: ok');
+    check(checkGemSpend(shown, 20) === 'ok', 'B9: exactly what the server has: ok');
+    check(checkGemSpend(shown, 30) === 'pending', 'B9: the 30-gem repair with 520 shown but 20 spendable: pending (say they are on the way, not "buy more")');
+    check(checkGemSpend(shown, 520) === 'pending', 'B9: everything shown: still pending');
+    check(checkGemSpend(shown, 521) === 'short', 'B9: more than is shown: short');
+    const landed = p.apply(eco(520), A, T0 + 10_000)!;
+    check(checkGemSpend(landed, 30) === 'ok', 'B9: once the server has them: ok');
+    check(checkGemSpend(eco(29), 30) === 'short' && checkGemSpend(eco(30), 30) === 'ok', 'B9: no purchase pending: by the server balance alone');
+    check(checkGemSpend(null, 1) === 'short' && checkGemSpend(undefined, 1) === 'short' && checkGemSpend({ ...eco(0), gems: null }, 1) === 'short',
+      'B9: nothing loaded (or gems null): short');
+    check(checkGemSpend(null, 0) === 'ok', 'B9: a free spend is always ok');
   }
 
   // ═══ What a snapshot saves (boot fix B7: writeEconomySnapshot) ═══

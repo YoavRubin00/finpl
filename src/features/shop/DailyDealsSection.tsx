@@ -11,7 +11,8 @@ import { StarterPackModal } from './StarterPackModal';
 import { STARTER_PACK_PRICE_LABEL } from './starterPack';
 import { generateDailyDeals } from './dailyDeals';
 import { ConfirmModal } from './ConfirmModal';
-import { useEconomy, useSpendCoins, useSpendGems, useAwardGems } from '../economy/useEconomy';
+import { checkGemSpend, useEconomy, useSpendCoins, useSpendGems, useAwardGems } from '../economy/useEconomy';
+import { PENDING_GEMS_COPY } from '../economy/pendingGemsCore';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
 import { useIsPro } from '../subscription/useSubscription';
@@ -117,14 +118,21 @@ export function DailyDealsSection() {
   const handleConfirm = useCallback(() => {
     if (!pendingDeal) return;
     const isGem = pendingDeal.currency === 'gems';
-    const currentGems = economyDataDD?.gems ?? 0;
+    // Spendable gems only (boot fix B9, 20.11): bought gems the server has not
+    // credited yet are shown but not spendable (pendingGemsCore.ts).
+    const gemCheck = isGem ? checkGemSpend(economyDataDD, pendingDeal.discountedCost) : null;
     const currentCoins = economyDataDD?.coins ?? 0;
     const canAfford = isGem
-      ? currentGems >= pendingDeal.discountedCost
+      ? gemCheck === 'ok'
       : currentCoins >= pendingDeal.discountedCost;
 
     if (!canAfford) {
       setPendingDeal(null);
+      if (gemCheck === 'pending') {
+        // Enough only with the bought gems still on their way: say so.
+        Alert.alert(PENDING_GEMS_COPY.title, PENDING_GEMS_COPY.body);
+        return;
+      }
       // Same wording as the rest of the shop ("יהלומים" / "מטבעות"). The old
       // coins line offered to "buy gold for ₪", which the shop does not sell:
       // coins come from lessons or from the gem exchange.

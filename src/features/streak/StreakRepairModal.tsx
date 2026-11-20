@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { Flame } from "lucide-react-native";
-import { useEconomy } from "../economy/useEconomy";
+import { checkGemSpend, useEconomy } from "../economy/useEconomy";
+import { PENDING_GEMS_COPY } from "../economy/pendingGemsCore";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FINN_EMPATHIC } from "../retention-loops/finnMascotConfig";
 import { successHaptic, tapHaptic } from "../../utils/haptics";
@@ -21,7 +22,10 @@ interface StreakRepairModalProps {
 export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps) {
   const router = useRouter();
   const { data: economyData } = useEconomy();
-  const gems = economyData?.gems ?? 0;
+  // Spendable gems only (boot fix B9, 20.11): bought gems the server has not
+  // credited yet are shown but not spendable (pendingGemsCore.ts), and
+  // repairStreak itself refuses them, so the button did nothing.
+  const gemCheck = checkGemSpend(economyData, REPAIR_COST_GEMS);
   const previousStreak = useEconomyUIStore((s) => s.previousStreakBeforeBreak);
   const repairStreak = useEconomyUIStore((s) => s.repairStreak);
   const dismissRepairOffer = useEconomyUIStore((s) => s.dismissRepairOffer);
@@ -36,12 +40,19 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
     if (visible) trackImpression();
   }, [visible, trackImpression]);
 
-  const canAfford = gems >= REPAIR_COST_GEMS;
+  // Enough gems on screen (the bought ones still on their way included): the
+  // repair is offered; a tap says so when only those would pay for it.
+  const offerGemRepair = gemCheck !== 'short';
 
   const title = payload.title.replace('{streak}', String(previousStreak));
 
   const handleRepairGems = () => {
-    if (!canAfford) {
+    if (gemCheck === 'pending') {
+      tapHaptic();
+      Alert.alert(PENDING_GEMS_COPY.title, PENDING_GEMS_COPY.body);
+      return;
+    }
+    if (!offerGemRepair) {
       // Not enough gems → navigate to shop to buy gems
       tapHaptic();
       onDismiss();
@@ -122,11 +133,11 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
               onPress={handleRepairGems}
               style={styles.primaryBtn}
               accessibilityRole="button"
-              accessibilityLabel={canAfford ? `שחזרו את הרצף עם ${REPAIR_COST_GEMS} יהלומים` : "קנו יהלומים בחנות"}
+              accessibilityLabel={offerGemRepair ? `שחזרו את הרצף עם ${REPAIR_COST_GEMS} יהלומים` : "קנו יהלומים בחנות"}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.primaryBtnText}>
-                {canAfford ? `שחזרו את הרצף · ${REPAIR_COST_GEMS} 💎` : "קנו יהלומים בחנות 💎"}
+                {offerGemRepair ? `שחזרו את הרצף · ${REPAIR_COST_GEMS} 💎` : "קנו יהלומים בחנות 💎"}
               </Text>
             </Pressable>
 
