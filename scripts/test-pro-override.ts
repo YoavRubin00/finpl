@@ -168,9 +168,9 @@ function coreCases(): void {
  * writing a raw {isPro:true} into the cache. If a screen's GET was in flight,
  * the guard kept that write as the query's result, stored after a re-sign-in
  * in the same process had begun, so serverAnswerSince handed it to the
- * sign-in's snapshotSubscriptionForNewSession, which saved it as the account's
- * Pro. The value is now the override's (or marked), so the snapshot saves the
- * server's answer.
+ * sign-in's new-session snapshot (lifecycle.ts snapshotForNewSession), which
+ * saved it as the account's Pro. The value is now the override's (or marked),
+ * so the snapshot saves the server's answer.
  */
 async function b10Cases(): Promise<void> {
   for (const how of ['raw {isPro:true} (before B10)', 'through the override', 'marked (no override)'] as const) {
@@ -202,7 +202,7 @@ async function b10Cases(): Promise<void> {
     await inFlight;
     const fromCache = guard.serverAnswerSince<SubscriptionLike | null>(key, signInStartedAt);
     check(fromCache?.isPro === true, `B10 (${how}): setup: the guard kept the sync's Pro, and the sign-in takes it for the server's answer`);
-    writeSubscriptionSnapshot(fromCache); // snapshotSubscriptionForNewSession
+    writeSubscriptionSnapshot(fromCache); // lifecycle.ts snapshotForNewSession
     const last = saved[saved.length - 1];
     if (how === 'raw {isPro:true} (before B10)') {
       check(last?.isPro === true, `B10 (${how}): the account was saved as Pro (the bug)`, last);
