@@ -113,7 +113,8 @@ function coreCases(): void {
     const fromNull = o.apply(null, A, T0)!;
     check(fromNull.isPro === true && fromNull.proSource === null, 'the server has no row (null): Pro shown', fromNull);
     const promo = o.apply({ isPro: false, proExpiresAt: null, proSource: 'promotional' }, A, T0)!;
-    check(promo.isPro === true && promo.proSource === 'promotional', 'the server\'s source is kept', promo);
+    check(promo.isPro === true && promo.proSource === null && o.rawOf(promo)?.proSource === 'promotional',
+      'a lapsed gift row: the store\'s Pro is shown with no source (no gift banner); the saved answer keeps the row\'s source', promo);
     const none = createStoreProOverride();
     check(none.apply(notPro, A, T0) === notPro && none.apply(null, A, T0) === null, 'no override: everything passes through');
   }
@@ -154,8 +155,8 @@ function coreCases(): void {
     const copy = JSON.parse(JSON.stringify(marked)) as SubscriptionLike;
     check(o.rawOf(copy)?.isPro === false, 'B10: also from a copy (structural sharing)', o.rawOf(copy));
     check(o.rawOf(storeProOverServer(null, null)) === null, 'B10: a server answer of null (no row) stays null');
-    check(storeProOverServer({ isPro: false, proExpiresAt: null, proSource: 'promotional' }, null).proSource === 'promotional',
-      'B10: the server\'s source is kept');
+    check(storeProOverServer({ isPro: false, proExpiresAt: null, proSource: 'promotional' }, null).proSource === null,
+      'B10: shown with no source (a purchase, not the lapsed gift row)');
     check(o.apply(marked, A, T0) === notPro, 'B10: with no override, the next apply() (a refetch) shows the server\'s answer');
     o.noteStoreAnswer(A, { expirationDate: in30Days }, T0);
     const overridden = o.apply(notPro, A, T0)!;

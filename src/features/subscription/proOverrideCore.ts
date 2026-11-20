@@ -92,7 +92,10 @@ export function storeProOverServer(
   proExpiresAt: string | null,
 ): OverriddenSubscription {
   const answer = (serverAnswerOf(server) ?? null) as SubscriptionLike | null;
-  return { isPro: true, proExpiresAt, proSource: answer?.proSource ?? null, overriddenServerAnswer: answer };
+  // proSource null: this Pro comes from the store (a purchase), not from the
+  // server row. Copying the row's source showed a buyer whose free gift had
+  // lapsed ('promotional') the gift modal and the "your gift ends" banner.
+  return { isPro: true, proExpiresAt, proSource: null, overriddenServerAnswer: answer };
 }
 
 /** RevenueCat dates are ISO strings; anything unparseable counts as none. */
@@ -138,7 +141,9 @@ export function createStoreProOverride(): StoreProOverride {
       const shown: OverriddenSubscription = {
         isPro: true,
         proExpiresAt: state.expirationDate,
-        proSource: server?.proSource ?? null,
+        // The store's Pro (a purchase), never the lapsed row's source: see
+        // storeProOverServer. A live server Pro is returned untouched above.
+        proSource: null,
         overriddenServerAnswer: server,
       };
       return shown;
