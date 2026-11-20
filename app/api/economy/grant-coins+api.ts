@@ -1,83 +1,40 @@
-import { sql } from 'drizzle-orm';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { enforceRateLimit } from '../_shared/rateLimit';
+import { getClientId, enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import { sanitizeString, clampNumber } from '../_shared/validate';
-
-function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
-  const dbSql = neon(url);
-  return drizzle(dbSql);
-}
-
-interface GrantCoinsBody {
-  authId: string;
-  amount: number;
-  source: string;
-}
-
-/** Sources accepted from clients. Server-only sources (`referral-*`) are
- *  inserted directly by the referral endpoints and rejected here to prevent
- *  a malicious client from forging referral telemetry. */
-const VALID_SOURCES = new Set([
-  'lesson',
-  'quiz',
-  'daily-quest',
-  'signup-bonus',
-]);
+import { json } from '../_shared/json';
+import { handleGrantCoins } from '../../../api/_shared/coinGrants';
+import { createCoinGrantDeps } from '../../../api/_shared/userWriteStores';
 
 /**
- * POST /api/economy/grant-coins
+ * POST /api/economy/grant-coins  (Authorization: Bearer <session>)
  *
- * Append a coin grant event for a user. This is a TELEMETRY endpoint —
- * the local economy store remains the source of truth for the user's
- * actual balance. We log here so the referral dividend has data to compute.
+ * Body: { amount, source, authId? }
+ * → 200 { ok: true }
+ * → 400 invalid input · 401 invalid session · 403 body authId names another
+ *   user · 429 rate limited / DAILY_CAP
  *
- * Only sources in VALID_SOURCES are accepted (server-side enforcement of
- * what counts toward the dividend). Amount is clamped to [1, 100000] to
- * prevent abuse.
- *
- * Fire-and-forget from the client — failures are non-fatal and don't block
- * the user's local coin grant.
+ * Appends one coin_events row (referral-dividend TELEMETRY; the user's balance
+ * is /api/sync/economy's job). Per-source caps for signed-in callers and a
+ * narrow, rate-limited tokenless path for app bundles that predate the token
+ * — see api/_shared/coinGrants.ts, shared with production
+ * (api/economy/grant-coins.ts). Fire-and-forget from the client.
  */
 export async function POST(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'economy-grant-coins', { limit: 120, windowSec: 60 });
   if (blocked) return blocked;
 
+  let body: unknown;
   try {
-    const body = (await request.json()) as GrantCoinsBody;
-    const authId = sanitizeString(body.authId, 128);
-    const source = sanitizeString(body.source, 32);
-    const amount = clampNumber(body.amount, 1, 100000);
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
-    if (!authId) {
-      return Response.json({ error: 'Missing authId' }, { status: 400 });
-    }
-    if (!source || !VALID_SOURCES.has(source)) {
-      return Response.json({ error: 'Invalid source' }, { status: 400 });
-    }
-    if (amount === undefined) {
-      return Response.json({ error: 'Invalid amount' }, { status: 400 });
-    }
-
-    const db = getDb();
-
-    // coin_events is keyed by user_id (identity rekey, migration 0004) — the
-    // old auth_id column DOES NOT EXIST. This insert used auth_id since day
-    // one, so every call 500'd ("column does not exist"), the client's
-    // fire-and-forget swallowed it, and the table stayed EMPTY forever — which
-    // is why the referral dividend never had data to compute from
-    // (Yoav 2026-07-08, dividend-system repair). Resolve the uuid, then insert.
-    await db.execute(sql`
-      INSERT INTO coin_events (user_id, amount, source)
-      SELECT up.id, ${amount}, ${source}
-        FROM user_profiles up
-       WHERE up.auth_id = ${authId}
-       LIMIT 1
-    `);
-
-    return Response.json({ ok: true });
+  try {
+    const result = await handleGrantCoins(
+      { authorization: request.headers.get('authorization'), body, clientIp: getClientId(request) },
+      createCoinGrantDeps(),
+    );
+    return json(result.body, { status: result.status, headers: result.headers });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'economy/grant-coins POST');
   }
