@@ -2,9 +2,10 @@
 // Run: npx tsx scripts/test-user-write-auth.ts
 //
 // Exercises the real handlers behind POST /api/users/ping,
-// /api/economy/grant-coins, /api/referral/register-code and /api/trading/trade
-// (api/_shared/{userPing,coinGrants,referralRegisterCode,paperTrade}.ts +
-// callerAuth.ts) with real session JWTs (test secret), in-memory stores and a
+// /api/economy/grant-coins, /api/referral/register-code, GET /api/referral/me,
+// POST /api/referral/collect, POST /api/referral/redeem and /api/trading/trade
+// (api/_shared/{userPing,coinGrants,referralRegisterCode,referral,paperTrade}.ts
+// + callerAuth.ts) with real session JWTs (test secret), in-memory stores and a
 // fake clock. No network, no database.
 import jwt from 'jsonwebtoken';
 import { signSession, verifySession } from '../api/_shared/jwt';
@@ -26,6 +27,14 @@ import {
   type ReferralCodeStore,
 } from '../api/_shared/referralRegisterCode';
 import { handleTrade, type PaperTrade, type PaperTradeStore } from '../api/_shared/paperTrade';
+import {
+  DIVIDEND_DAILY_CAP,
+  SIGNUP_BONUS_COINS,
+  handleReferralCollect,
+  handleReferralMe,
+  handleReferralRedeem,
+  type ReferralStore,
+} from '../api/_shared/referral';
 
 const SECRET = 'test-only-secret-for-user-write-auth-0123456789';
 process.env.AUTH_JWT_SECRET = SECRET;
@@ -142,6 +151,77 @@ const referralStore: ReferralCodeStore = {
   },
 };
 
+// Referral world (me / collect / redeem). Victim invited Alice and the Apple
+// account; both earned learning coins yesterday.
+interface ReferralRow { refereeId: string; referrerId: string | null; code: string; credited: boolean; linkedAt: string }
+let referralRows: ReferralRow[] = [];
+let yesterdayCoins = new Map<string, number>();
+let dividendRows = new Map<string, number>(); // `${userId}:${utcDate}` → amount
+let refCoinEvents: Array<{ userId: string; amount: number; source: string }> = [];
+let friendshipsMade: Array<[string, string]> = [];
+const displayNames: Record<string, string> = { [ALICE_ID]: 'Alice', [APPLE_ID]: 'Kid', [VICTIM_ID]: 'Victim', [NOCODE_ID]: 'Nocode' };
+const utcToday = () => new Date(nowMs).toISOString().slice(0, 10);
+
+function freshReferrals(): void {
+  referralRows = [
+    { refereeId: ALICE_ID, referrerId: VICTIM_ID, code: 'FP-VICTM', credited: false, linkedAt: '2026-11-10T10:00:00.000Z' },
+    { refereeId: APPLE_ID, referrerId: VICTIM_ID, code: 'FP-VICTM', credited: false, linkedAt: '2026-11-12T10:00:00.000Z' },
+  ];
+  yesterdayCoins = new Map([[ALICE_ID, 1_000], [APPLE_ID, 3_000]]);
+  dividendRows = new Map();
+  refCoinEvents = [];
+  friendshipsMade = [];
+}
+
+const refStore: ReferralStore = {
+  async snapshot(userId) {
+    const u = users.get(userId);
+    if (!u) return null;
+    const mine = referralRows.filter((r) => r.referrerId === userId);
+    const friends = mine.map((r) => ({
+      key: `k${r.refereeId.slice(0, 8)}`,
+      displayName: displayNames[r.refereeId] ?? null,
+      linkedAt: r.linkedAt,
+      yesterdayLearningCoins: yesterdayCoins.get(r.refereeId) ?? 0,
+    }));
+    let credited = 0;
+    for (const r of mine) if (!r.credited) { r.credited = true; credited++; }
+    return {
+      referralCode: u.referralCode,
+      friends,
+      alreadyCollectedToday: dividendRows.has(`${userId}:${utcToday()}`),
+      newlyCreditedReferrals: credited,
+    };
+  },
+  async friendsYesterdayLearningCoins(userId) {
+    if (!users.has(userId)) return null;
+    return referralRows.filter((r) => r.referrerId === userId).reduce((s, r) => s + (yesterdayCoins.get(r.refereeId) ?? 0), 0);
+  },
+  async recordDividend(userId, amount) {
+    const key = `${userId}:${utcToday()}`;
+    if (dividendRows.has(key)) return 'already';
+    dividendRows.set(key, amount);
+    if (amount > 0) refCoinEvents.push({ userId, amount, source: 'referral-dividend' });
+    return 'recorded';
+  },
+  async findReferrerByCode(code) {
+    const u = [...users.values()].find((o) => o.referralCode === code);
+    return u ? { userId: u.id } : null;
+  },
+  async redeem(refereeId, referrerId, code, bonus) {
+    if (!users.has(refereeId)) return 'no_referee';
+    if (!users.has(referrerId)) return 'no_referrer';
+    if (referralRows.some((r) => r.refereeId === refereeId)) return 'already_redeemed';
+    referralRows.push({ refereeId, referrerId, code, credited: false, linkedAt: new Date(nowMs).toISOString() });
+    refCoinEvents.push({ userId: referrerId, amount: bonus, source: 'referral-signup-bonus' });
+    refCoinEvents.push({ userId: refereeId, amount: bonus, source: 'referral-signup-bonus' });
+    return 'redeemed';
+  },
+  async befriend(a, b) {
+    friendshipsMade.push([a, b]);
+  },
+};
+
 const tradesApplied: Array<{ userId: string; trade: PaperTrade }> = [];
 const tradeStore: PaperTradeStore = {
   async apply(userId, trade) {
@@ -167,9 +247,11 @@ const pingDeps = () => ({ profileEmail, store: pingStore, now: clock, logLegacy 
 const grantDeps = () => ({ profileEmail, store: coinStore, rateLimits: grantLimits, now: clock, logLegacy });
 const registerDeps = () => ({ profileEmail, store: referralStore, rateLimits: registerLimits, now: clock, capture, logLegacy });
 const tradeDeps = () => ({ profileEmail, store: tradeStore });
+const refDeps = () => ({ profileEmail, store: refStore, now: clock, capture, logLegacy });
 
 function resetWorld(): void {
   users = freshUsers();
+  freshReferrals();
   pingWrites.length = 0;
   coinEvents = [];
   tradesApplied.length = 0;
@@ -189,6 +271,7 @@ const tokenFor = (id: string) => {
 const ALICE = () => `Bearer ${tokenFor(ALICE_ID)}`;
 const APPLE = () => `Bearer ${tokenFor(APPLE_ID)}`;
 const NOCODE = () => `Bearer ${tokenFor(NOCODE_ID)}`;
+const VICTIM = () => `Bearer ${tokenFor(VICTIM_ID)}`;
 const GHOST = `Bearer ${signSession({ sub: GHOST_ID, authId: 'ghost@example.com' })}`;
 const GARBAGE = 'Bearer not-a-real-token';
 const EXPIRED = `Bearer ${jwt.sign({ sub: ALICE_ID, authId: 'alice@example.com' }, SECRET, { algorithm: 'HS256', expiresIn: -60 })}`;
@@ -480,6 +563,138 @@ async function main(): Promise<void> {
   {
     const r = await handleTrade(req(GHOST, buy), tradeDeps());
     check(r.status === 404, 'trade: valid token for a deleted profile → 404, nothing written');
+  }
+
+  // ═══ GET /api/referral/me ═══════════════════════════════════════════════════
+  resetWorld();
+  const meReq = (authorization: string | null, queryAuthId?: string | null) => ({ ...req(authorization, null), queryAuthId });
+  {
+    // Before the owner looks: an attacker with their own token names the victim.
+    const r = await handleReferralMe(meReq(ALICE(), 'victim@example.com'), refDeps());
+    check(r.status === 403 && r.body.code === 'AUTH_ID_MISMATCH', 'me: token + ?authId of another user → 403', r);
+    const none = await handleReferralMe(meReq(null, 'victim@example.com'), refDeps());
+    check(none.status === 401 && none.body.error === 'Missing Authorization header' && !('friends' in none.body),
+      'me: no token (1.5.1 client) → 401, no friends / code / numbers returned', none);
+    check(legacyLog.some((l) => l.endpoint === 'referral/me' && l.outcome === 'refused'), 'me: no token → [legacy-tokenless] referral/me refused');
+    check(referralRows.every((row) => !row.credited), 'me: refused calls flip no pending signup bonus (the owner still gets them)');
+  }
+  for (const [label, auth] of BAD_AUTH) {
+    const logsBefore = legacyLog.length;
+    const r = await handleReferralMe(meReq(auth, 'victim@example.com'), refDeps());
+    check(r.status === 401 && r.body.error === 'Invalid or expired token' && legacyLog.length === logsBefore && referralRows.every((row) => !row.credited),
+      `me: ${label} → 401, no data, no legacy fallback`, r);
+  }
+  {
+    const r = await handleReferralMe(meReq(VICTIM()), refDeps());
+    const friends = r.body.friends as Array<Record<string, unknown>>;
+    check(r.status === 200 && friends.length === 2 && r.body.referralCode === 'FP-VICTM', 'me: valid token → 200 with the token user\'s friends and code', r);
+    check(friends.every((f) => typeof f.authId === 'string' && !String(f.authId).includes('@') && !Object.values(f).some((v) => typeof v === 'string' && v.includes('@'))),
+      'me: friends carry an opaque key, never an email', friends);
+    check(r.body.totalYesterdayLearningCoins === 4_000 && r.body.dividendAvailable === DIVIDEND_DAILY_CAP && r.body.alreadyCollectedToday === false,
+      'me: dividend = 5% of 4,000 capped at 100', r.body);
+    check(r.body.pendingSignupBonus === 2 * SIGNUP_BONUS_COINS && r.body.todayDateUTC === '2026-11-20', 'me: both uncredited signup bonuses returned once (1,000)', r.body);
+    const again = await handleReferralMe(meReq(VICTIM(), 'victim@example.com'), refDeps());
+    check(again.status === 200 && again.body.pendingSignupBonus === 0, 'me: second call (1.5.1-style ?authId of self) → bonus already credited, 0');
+  }
+  {
+    const r = await handleReferralMe(meReq(APPLE(), 'kid@privaterelay.appleid.com'), refDeps());
+    check(r.status === 200 && (r.body.friends as unknown[]).length === 0, 'me: Apple account sending its relay email as ?authId → accepted');
+    const ghost = await handleReferralMe(meReq(GHOST), refDeps());
+    check(ghost.status === 401 && ghost.body.error === 'Invalid or expired token', 'me: valid token for a deleted account → 401 (not 500, not an empty 200)', ghost);
+    const near = await handleReferralMe(meReq(`Bearer ${jwt.sign({ sub: VICTIM_ID, authId: 'victim@example.com' }, SECRET, { algorithm: 'HS256', expiresIn: 3600 })}`), refDeps());
+    check(near.status === 200 && !!near.headers?.['X-Auth-Refreshed-Token'], 'me: token inside its refresh window → X-Auth-Refreshed-Token');
+  }
+
+  // ═══ POST /api/referral/collect ═════════════════════════════════════════════
+  resetWorld();
+  {
+    const none = await handleReferralCollect(req(null, { authId: 'victim@example.com' }), refDeps());
+    check(none.status === 401 && dividendRows.size === 0 && refCoinEvents.length === 0, 'collect: no token (1.5.1 client) → 401, nothing collected (victim can still collect)', none);
+    check(legacyLog.some((l) => l.endpoint === 'referral/collect' && l.outcome === 'refused'), 'collect: no token → [legacy-tokenless] referral/collect refused');
+    const mismatch = await handleReferralCollect(req(ALICE(), { authId: 'victim@example.com' }), refDeps());
+    check(mismatch.status === 403 && dividendRows.size === 0, 'collect: token + body authId of another user → 403, nothing collected', mismatch);
+  }
+  for (const [label, auth] of BAD_AUTH) {
+    const r = await handleReferralCollect(req(auth, { authId: 'victim@example.com' }), refDeps());
+    check(r.status === 401 && dividendRows.size === 0 && refCoinEvents.length === 0, `collect: ${label} → 401, nothing collected`, r);
+  }
+  {
+    const r = await handleReferralCollect(req(VICTIM(), { authId: 'victim@example.com' }), refDeps());
+    check(r.status === 200 && r.body.amount === DIVIDEND_DAILY_CAP && r.body.alreadyCollected === false, 'collect: valid token → 200, 100 collected', r);
+    check(refCoinEvents.length === 1 && refCoinEvents[0].userId === VICTIM_ID && refCoinEvents[0].source === 'referral-dividend', 'collect: the coin event goes to the token user');
+    const again = await handleReferralCollect(req(VICTIM(), {}), refDeps());
+    check(again.status === 200 && again.body.amount === 0 && again.body.alreadyCollected === true && refCoinEvents.length === 1, 'collect: second call the same UTC day → amount 0, alreadyCollected (once a day)');
+    const me = await handleReferralMe(meReq(VICTIM()), refDeps());
+    check(me.body.alreadyCollectedToday === true && me.body.dividendAvailable === 0, 'collect: me afterwards shows collected, 0 available');
+  }
+  {
+    const r = await handleReferralCollect(req(NOCODE(), {}), refDeps());
+    check(r.status === 200 && r.body.amount === 0 && r.body.alreadyCollected === true && dividendRows.get(`${NOCODE_ID}:2026-11-20`) === 0,
+      'collect: no friends → amount 0, a 0 "checked today" row (as before)', r);
+    const ghost = await handleReferralCollect(req(GHOST, {}), refDeps());
+    check(ghost.status === 401, 'collect: valid token for a deleted account → 401');
+  }
+
+  // ═══ POST /api/referral/redeem ══════════════════════════════════════════════
+  resetWorld();
+  // What the 1.5.1 app does with a redeem failure (src/db/sync/syncReferral.ts before 2026-11-20).
+  const oldClientIsFinal = (status: number, body: Record<string, unknown>): boolean => {
+    let reason = status >= 500 || status === 429 ? 'NETWORK' : 'INVALID';
+    const known = ['ALREADY_REDEEMED', 'SELF_REFERRAL', 'CODE_NOT_FOUND', 'REFEREE_NOT_FOUND'];
+    if (typeof body.code === 'string' && known.includes(body.code)) reason = body.code;
+    return ['ALREADY_REDEEMED', 'SELF_REFERRAL', 'CODE_NOT_FOUND', 'INVALID'].includes(reason);
+  };
+  {
+    const none = await handleReferralRedeem(req(null, { inviteCode: 'FP-VICTM', refereeAuthId: 'nocode@example.com' }), refDeps());
+    check(none.status === 401 && !referralRows.some((r) => r.refereeId === NOCODE_ID) && refCoinEvents.length === 0,
+      'redeem: no token (1.5.1 client) → 401, nothing redeemed for the named account', none);
+    check(!oldClientIsFinal(none.status, none.body), 'redeem: the tokenless 401 is one the 1.5.1 app retries next launch (keeps the pending invite)', none.body);
+    check(legacyLog.some((l) => l.endpoint === 'referral/redeem' && l.outcome === 'refused'), 'redeem: no token → [legacy-tokenless] referral/redeem refused');
+    const bad = await handleReferralRedeem(req(null, { inviteCode: 'bad code!', refereeAuthId: 'nocode@example.com' }), refDeps());
+    check(bad.status === 400, 'redeem: no token + malformed code → 400 (final, as before)');
+  }
+  {
+    // Someone else's account named as the referee.
+    const r = await handleReferralRedeem(req(ALICE(), { inviteCode: 'FP-VICTM', refereeAuthId: 'nocode@example.com' }), refDeps());
+    check(r.status === 403 && !referralRows.some((row) => row.refereeId === NOCODE_ID) && refCoinEvents.length === 0,
+      'redeem: token + refereeAuthId of another user → 403, nothing redeemed', r);
+  }
+  for (const [label, auth] of BAD_AUTH) {
+    const r = await handleReferralRedeem(req(auth, { inviteCode: 'FP-VICTM', refereeAuthId: 'nocode@example.com' }), refDeps());
+    check(r.status === 401 && r.body.error === 'Invalid or expired token' && refCoinEvents.length === 0, `redeem: ${label} → 401, nothing redeemed`, r);
+  }
+  {
+    const self = await handleReferralRedeem(req(VICTIM(), { inviteCode: 'fp-victm', refereeAuthId: 'victim@example.com' }), refDeps());
+    check(self.status === 400 && self.body.code === 'SELF_REFERRAL' && refCoinEvents.length === 0, 'redeem: own code (any case) → 400 SELF_REFERRAL, nothing written', self);
+    const unknown = await handleReferralRedeem(req(NOCODE(), { inviteCode: 'FP-NOPE1' }), refDeps());
+    check(unknown.status === 404 && unknown.body.code === 'CODE_NOT_FOUND', 'redeem: unknown code → 404 CODE_NOT_FOUND');
+  }
+  {
+    const r = await handleReferralRedeem(req(NOCODE(), { inviteCode: 'FP-VICTM', refereeAuthId: 'nocode@example.com' }), refDeps());
+    check(r.status === 200 && r.body.ok === true && r.body.bonusGranted === SIGNUP_BONUS_COINS, 'redeem: valid token → 200, 500 bonus', r);
+    check(r.body.referrerAuthId === '', 'redeem: the referrer\'s email is no longer returned (referrerAuthId empty)', r.body);
+    const row = referralRows.find((x) => x.refereeId === NOCODE_ID);
+    check(!!row && row.referrerId === VICTIM_ID, 'redeem: the referee is the token user, linked to the code owner');
+    check(refCoinEvents.filter((e) => e.source === 'referral-signup-bonus').length === 2
+      && refCoinEvents.some((e) => e.userId === VICTIM_ID) && refCoinEvents.some((e) => e.userId === NOCODE_ID), 'redeem: 500 to each side (reward logic unchanged)');
+    check(friendshipsMade.length === 1 && friendshipsMade[0][0] === VICTIM_ID && friendshipsMade[0][1] === NOCODE_ID, 'redeem: auto-friendship referrer ↔ referee');
+    const twice = await handleReferralRedeem(req(NOCODE(), { inviteCode: 'FP-VICTM' }), refDeps());
+    check(twice.status === 409 && twice.body.code === 'ALREADY_REDEEMED' && refCoinEvents.length === 2, 'redeem: second redeem by the same user → 409 ALREADY_REDEEMED, no new coins', twice);
+    users.get(ALICE_ID)!.referralCode = 'FP-ALICE';
+    const other = await handleReferralRedeem(req(NOCODE(), { inviteCode: 'FP-ALICE' }), refDeps());
+    check(other.status === 409 && refCoinEvents.length === 2, 'redeem: a different code after redeeming → still 409 (one redemption per account, ever)');
+  }
+  {
+    users.get(VICTIM_ID)!.referralCode = 'FP-VICTM';
+    const apple = await handleReferralRedeem(req(APPLE(), { inviteCode: 'FP-ALICE', refereeAuthId: 'kid@privaterelay.appleid.com' }), refDeps());
+    check(apple.status === 409, 'redeem: Apple account sending its relay email as refereeAuthId → accepted (already redeemed in the fixture → 409)', apple);
+    const ghost = await handleReferralRedeem(req(GHOST, { inviteCode: 'FP-VICTM' }), refDeps());
+    check(ghost.status === 401 && ghost.body.error === 'Invalid or expired token', 'redeem: valid token for a deleted account → 401', ghost);
+  }
+  {
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    const redeemEvents = captures.filter((c) => c.event === 'referral_redeem_server');
+    check(redeemEvents.length > 0 && redeemEvents.every((c) => uuidRe.test(c.distinctId)), 'redeem: analytics distinct ids are profile uuids (never an email)', redeemEvents.map((c) => c.distinctId));
   }
 
   // ═══ The real legacy log line carries no PII ═══════════════════════════════

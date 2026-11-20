@@ -150,10 +150,12 @@ export const useReferralStore = create<ReferralState>()(
       },
 
       refresh: async (authId) => {
+        // authId only gates "signed in"; the server knows the user from the
+        // session token (2026-11-20), so it is no longer sent.
         if (!authId) return;
         set({ isLoading: true });
         try {
-          const snapshot = await fetchReferralState(authId);
+          const snapshot = await fetchReferralState();
           if (!snapshot) {
             set({ isLoading: false });
             return;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Platform,
   Pressable,
   Linking,
+  ActivityIndicator,
+  type AlertButton,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -24,6 +26,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { signOut as lifecycleSignOut } from "../../lib/auth/lifecycle";
+import { deleteAccountEverywhere } from "../../lib/auth/accountDeletion";
 import { useNotificationStore } from "../notifications/useNotificationStore";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { AVATAR_LIST, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
@@ -45,6 +48,58 @@ export const SIGN_OUT_DIALOG = {
   confirm: "התנתקות",
   cancel: "ביטול",
 } as const;
+
+/**
+ * Account deletion copy (App Store Review Guideline 5.1.1(v)): what is
+ * deleted, that it can't be undone, and that deleting does NOT cancel a store
+ * subscription (with where to cancel it). Plain Hebrew; only the store names
+ * stay in English.
+ */
+export const DELETE_ACCOUNT_DIALOG = {
+  title: "מחיקת חשבון",
+  message:
+    "המחיקה סופית ואי אפשר לשחזר אותה. יימחקו החשבון וכל מה שנשמר בו: הפרופיל והשם, ההתקדמות בשיעורים, המטבעות והיהלומים, הרצף, תיק ההשקעות הווירטואלי, החברים וההזמנות, וכל מה שפרסמתם בקהילה.",
+  guestTitle: "מחיקת הנתונים",
+  guestMessage:
+    "אין לכם חשבון רשום, אז נמחק את כל מה שנשמר במכשיר הזה: ההתקדמות, המטבעות, הרצף וההגדרות. אי אפשר לשחזר אותם.",
+  subscriptionIos:
+    "יש לכם מנוי פעיל? מחיקת החשבון לא מבטלת אותו. כדי שלא תחויבו שוב, בטלו אותו בהגדרות המנויים של App Store.",
+  subscriptionAndroid:
+    "יש לכם מנוי פעיל? מחיקת החשבון לא מבטלת אותו. כדי שלא תחויבו שוב, בטלו אותו בהגדרות המנויים של Google Play.",
+  subscriptionOther:
+    "יש לכם מנוי פעיל? מחיקת החשבון לא מבטלת אותו. כדי שלא תחויבו שוב, בטלו אותו בהגדרות המנויים של App Store או Google Play.",
+  manageSubscription: "ניהול המנוי",
+  notNow: "לא עכשיו",
+  continue: "המשך למחיקה",
+  finalTitle: "אישור אחרון",
+  finalMessage: "למחוק את החשבון ואת כל הנתונים לצמיתות?",
+  guestFinalMessage: "למחוק את כל הנתונים מהמכשיר לצמיתות?",
+  finalKeep: "לא, להשאיר",
+  finalConfirm: "כן, למחוק",
+  deleting: "מוחקים את החשבון",
+  doneTitle: "החשבון נמחק",
+  doneMessage: "החשבון וכל הנתונים שלו נמחקו.",
+  guestDoneTitle: "הנתונים נמחקו",
+  guestDoneMessage: "כל מה שנשמר במכשיר נמחק.",
+  failedTitle: "המחיקה לא הצליחה",
+  failedMessage:
+    "לא מחקנו כלום. בדקו את החיבור לאינטרנט ונסו שוב. אם זה חוזר, כתבו לנו דרך \"פנייה לתמיכה\" כאן בהגדרות.",
+  needsSignInTitle: "צריך להתחבר שוב",
+  needsSignInMessage:
+    "כדי למחוק את החשבון צריך קודם להתחבר אליו. אחרי ההתחברות חזרו לכאן ומחקו אותו.",
+  sessionExpiredMessage:
+    "החיבור לחשבון פג, ולכן לא מחקנו כלום. התחברו שוב ואז תוכלו למחוק את החשבון.",
+  signIn: "להתחברות",
+  ok: "הבנתי",
+} as const;
+
+/** Where the store's own subscription management opens. */
+const MANAGE_SUBSCRIPTION_URL: string | null =
+  Platform.OS === "ios"
+    ? "https://apps.apple.com/account/subscriptions"
+    : Platform.OS === "android"
+      ? "https://play.google.com/store/account/subscriptions"
+      : null;
 
 // Stitch Premium Blue Theme
 const STITCH_BLUE = {
@@ -140,7 +195,11 @@ export function SettingsScreen() {
   const accountEmail = useAuthStore((s) => s.email);
   const profile = useAuthStore((s) => s.profile);
   const updateProfile = useAuthStore((s) => s.updateProfile);
-  const deleteAccount = useAuthStore((s) => s.deleteAccount);
+  const isGuest = useAuthStore((s) => s.isGuest);
+
+  // Account deletion in progress (blocks a second run and shows the overlay).
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
 
   // Connect-account (link a second login provider to the current uuid)
   const { promptAppleSignIn, isAvailable: appleLinkAvailable } = useAppleAuth();
@@ -287,34 +346,61 @@ export function SettingsScreen() {
     ]);
   }
 
+  async function runDeleteAccount() {
+    if (deletingRef.current) return;
+    deletingRef.current = true;
+    setDeleting(true);
+    const D = DELETE_ACCOUNT_DIALOG;
+    try {
+      const result = await deleteAccountEverywhere();
+      if (result.ok) {
+        // Everything on the device is gone: start over on the welcome screen.
+        router.replace("/(auth)/onboarding");
+        if (result.scope === "account") Alert.alert(D.doneTitle, D.doneMessage, [{ text: D.ok }]);
+        else Alert.alert(D.guestDoneTitle, D.guestDoneMessage, [{ text: D.ok }]);
+        return;
+      }
+      if (result.reason === "needs_sign_in") {
+        Alert.alert(D.needsSignInTitle, D.needsSignInMessage, [
+          { text: D.notNow, style: "cancel" },
+          { text: D.signIn, onPress: () => router.push("/(auth)/sign-in") },
+        ]);
+      } else if (result.reason === "session_expired") {
+        Alert.alert(D.needsSignInTitle, D.sessionExpiredMessage, [{ text: D.ok }]);
+      } else {
+        Alert.alert(D.failedTitle, D.failedMessage, [{ text: D.ok }]);
+      }
+    } catch {
+      Alert.alert(D.failedTitle, D.failedMessage, [{ text: D.ok }]);
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
+    }
+  }
+
   function handleDeleteAccount() {
+    const D = DELETE_ACCOUNT_DIALOG;
+    const subscriptionNote =
+      Platform.OS === "ios" ? D.subscriptionIos : Platform.OS === "android" ? D.subscriptionAndroid : D.subscriptionOther;
+    const buttons: AlertButton[] = [{ text: D.notNow, style: "cancel" }];
+    if (MANAGE_SUBSCRIPTION_URL) {
+      const url = MANAGE_SUBSCRIPTION_URL;
+      buttons.push({ text: D.manageSubscription, onPress: () => { Linking.openURL(url).catch(() => { /* ignore */ }); } });
+    }
+    buttons.push({
+      text: D.continue,
+      style: "destructive",
+      onPress: () => {
+        Alert.alert(D.finalTitle, isGuest ? D.guestFinalMessage : D.finalMessage, [
+          { text: D.finalKeep, style: "cancel" },
+          { text: D.finalConfirm, style: "destructive", onPress: () => { void runDeleteAccount(); } },
+        ]);
+      },
+    });
     Alert.alert(
-      "מחיקת חשבון",
-      "הפעולה תמחק לצמיתות את כל הנתונים שלכם: התקדמות, מטבעות, פרופיל והישגים. לא ניתן לשחזר. להמשיך?",
-      [
-        { text: "ביטול", style: "cancel" },
-        {
-          text: "מחיקה לצמיתות",
-          style: "destructive",
-          onPress: () => {
-            Alert.alert("אישור אחרון", "למחוק את החשבון לצמיתות?", [
-              { text: "ביטול", style: "cancel" },
-              {
-                text: "כן, למחוק",
-                style: "destructive",
-                onPress: async () => {
-                  try {
-                    await deleteAccount();
-                    router.replace("/(auth)/sign-in");
-                  } catch {
-                    Alert.alert("המחיקה נכשלה", "נסו שוב, או פנו לתמיכה.");
-                  }
-                },
-              },
-            ]);
-          },
-        },
-      ],
+      isGuest ? D.guestTitle : D.title,
+      `${isGuest ? D.guestMessage : D.message}\n\n${subscriptionNote}`,
+      buttons,
     );
   }
 
@@ -860,6 +946,21 @@ export function SettingsScreen() {
             </GlowCard>
           </Animated.View>
         )}
+
+        {/* Account deletion in progress: blocks the screen until the server answers. */}
+        {deleting && (
+          <View
+            style={styles.deletingOverlay}
+            accessibilityViewIsModal
+            accessibilityLiveRegion="polite"
+            accessibilityLabel={DELETE_ACCOUNT_DIALOG.deleting}
+          >
+            <View style={styles.deletingCard}>
+              <ActivityIndicator size="large" color={STITCH_BLUE.primary} />
+              <Text style={[styles.deletingText, RTL]}>{DELETE_ACCOUNT_DIALOG.deleting}</Text>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -1078,6 +1179,30 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "800",
     color: STITCH_BLUE.textSecondary,
+    textAlign: "center",
+  },
+  deletingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    zIndex: 10000,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  deletingCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    gap: 14,
+    maxWidth: 320,
+    width: "100%",
+  },
+  deletingText: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: STITCH_BLUE.textPrimary,
     textAlign: "center",
   },
 });

@@ -74,8 +74,9 @@ interface SessionActions {
   setAvatar: (id: string) => void;
   /** Add a newly-unlocked avatar to the owned list. */
   addOwnedAvatar: (id: string) => void;
-  /** Delete the server profile row and wipe all local state. */
-  deleteAccount: () => Promise<void>;
+  // Account deletion lives in src/lib/auth/accountDeletion.ts (server delete,
+  // then a full device wipe). The local-only `deleteAccount` that used to be
+  // here left the server account and the session token in place (2026-11-20).
   /** Show an inline auth error banner. */
   setAuthError: (message: string | null) => void;
   clearAuthError: () => void;
@@ -244,14 +245,6 @@ export const useAuthStore = create<SessionState & SessionActions>()(
           if (owned.includes(id)) return {};
           return { profile: { ...state.profile, ownedAvatars: [...owned, id] } };
         }),
-
-      deleteAccount: async () => {
-        try {
-          const keys = await AsyncStorage.getAllKeys();
-          if (keys.length > 0) await AsyncStorage.multiRemove(keys);
-        } catch { /* ignore */ }
-        set(initialState);
-      },
 
       setAuthError: (message: string | null) => set({ authError: message }),
       clearAuthError: () => set({ authError: null }),

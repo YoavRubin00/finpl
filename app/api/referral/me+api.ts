@@ -1,59 +1,24 @@
-import { sql } from 'drizzle-orm';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { enforceRateLimit } from '../_shared/rateLimit';
+import { enforceRateLimit, getClientId } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import { sanitizeString } from '../_shared/validate';
 import { json } from '../_shared/json';
-
-function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
-  const dbSql = neon(url);
-  return drizzle(dbSql);
-}
-
-/** Daily dividend rate, mirrored server-side. Must match `referralConstants.ts`. */
-const DIVIDEND_RATE = 0.05;
-/** Signup bonus per side, mirrored server-side. Must match `referralConstants.ts`. */
-const SIGNUP_BONUS_COINS = 500;
-
-interface ReferredFriendRow {
-  authId: string;
-  displayName: string | null;
-  linkedAt: string;
-  yesterdayLearningCoins: number;
-}
-
-interface MeResponse {
-  ok: true;
-  friends: ReferredFriendRow[];
-  totalYesterdayLearningCoins: number;
-  dividendAvailable: number;
-  alreadyCollectedToday: boolean;
-  todayDateUTC: string;
-  /** Total signup-bonus coins accrued for the referrer that haven't yet been
-   *  credited to local balance. Server atomically flips the flag in the same
-   *  call — client MUST call addCoins(pendingSignupBonus) immediately. */
-  pendingSignupBonus: number;
-  /** The user's CANONICAL invite code as registered in the DB (null if none
-   *  registered yet). Adoption fallback for stale local codes — the client
-   *  must adopt this when it differs from its locally-stored code, otherwise
-   *  it keeps rendering a QR the server can't resolve. */
-  referralCode: string | null;
-}
+import { handleReferralMe } from '../../../api/_shared/referral';
+import { createReferralDeps } from '../../../api/_shared/userWriteStores';
 
 /**
- * GET /api/referral/me?authId=X
+ * GET /api/referral/me  (Authorization: Bearer <session>)
  *
- * Returns the user's referred friends with each friend's "yesterday learning
- * coins" plus the dividend available to collect today.
+ * The caller's referred friends (display name, link date, yesterday's
+ * learning coins), today's dividend, the signup bonuses to add locally
+ * (`pendingSignupBonus`, flipped to "credited" in the same call: the app MUST
+ * addCoins it) and the caller's canonical invite code.
  *
- * "Yesterday" is computed in UTC (matches dividend_collections.date_collected
- * which is also UTC). The 5% rate is applied to the SUM of all friends'
- * yesterday coins from learning sources only.
+ * → 200 { ok, friends, totalYesterdayLearningCoins, dividendAvailable,
+ *         alreadyCollectedToday, todayDateUTC, pendingSignupBonus, referralCode }
+ * → 401 no session / invalid session / the account no longer exists
+ * → 403 ?authId= names another user · 429 rate limited
  *
- * If the user already collected today, dividendAvailable is 0 and
- * alreadyCollectedToday is true — the UI should disable the collect button.
+ * `friends[].authId` is an opaque key (it used to be the friend's email).
+ * Logic in api/_shared/referral.ts, shared with production (api/referral/me.ts).
  */
 export async function GET(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'referral-me', { limit: 60, windowSec: 60 });
@@ -61,148 +26,16 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const url = new URL(request.url);
-    const authId = sanitizeString(url.searchParams.get('authId'), 128);
-    if (!authId) {
-      return json({ error: 'Missing authId' }, { status: 400 });
-    }
-
-    const db = getDb();
-
-    // Resolve the caller's uuid — the referral tables are keyed by user_id
-    // (uuid FK), NOT auth_id, since the identity rekey (migration 0004). The
-    // old *_auth_id column references errored ("column does not exist") → 500.
-    const meRows = await db.execute(sql`
-      SELECT id, referral_code FROM user_profiles WHERE auth_id = ${authId} LIMIT 1
-    `);
-    const meRow = ((meRows as unknown as { rows?: { id: string; referral_code: string | null }[] }).rows
-      ?? (meRows as unknown as { id: string; referral_code: string | null }[]))[0];
-    const callerUserId = meRow?.id;
-    const registeredReferralCode = meRow?.referral_code ?? null;
-    if (!callerUserId) {
-      const empty: MeResponse = {
-        ok: true,
-        friends: [],
-        totalYesterdayLearningCoins: 0,
-        dividendAvailable: 0,
-        alreadyCollectedToday: false,
-        todayDateUTC: new Date().toISOString().slice(0, 10),
-        pendingSignupBonus: 0,
-        referralCode: null,
-      };
-      return json(empty);
-    }
-
-    // The three statements below only depend on callerUserId, so they go to
-    // Neon as ONE batch (one HTTP round trip, run in this order inside a single
-    // transaction) instead of three sequential awaits. Same SQL, same results.
-    //
-    // 1) Each referred friend + sum of their yesterday learning coins, joined
-    //    with user_profiles for display name + auth_id.
-    const friendsQuery = db.execute(sql`
-      SELECT
-        ref.auth_id       AS auth_id,
-        ref.display_name  AS display_name,
-        r.linked_at       AS linked_at,
-        COALESCE((
-          SELECT SUM(ce.amount)::int
-            FROM coin_events ce
-           WHERE ce.user_id = r.referee_user_id
-             AND ce.source IN ('lesson','quiz','daily-quest')
-             AND ce.granted_at >= (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '1 day')
-             AND ce.granted_at <  date_trunc('day', now() AT TIME ZONE 'UTC')
-        ), 0) AS yesterday_learning_coins
-      FROM referrals r
-      LEFT JOIN user_profiles ref ON ref.id = r.referee_user_id
-      WHERE r.referrer_user_id = ${callerUserId}
-      ORDER BY r.linked_at DESC
-    `);
-
-    // 2) Has the user already collected today? dividend_collections is keyed by
-    //    user_id (identity rekey / migration 0004) — the old auth_id column is gone.
-    const todayQuery = db.execute(sql`
-      SELECT 1 AS hit
-        FROM dividend_collections
-       WHERE user_id = ${callerUserId}
-         AND date_collected = (date_trunc('day', now() AT TIME ZONE 'UTC'))::date
-       LIMIT 1
-    `);
-
-    // 3) Atomically flip referrer_local_credited from false→true for any
-    //    redemptions not yet reflected in this user's local balance. The CTE
-    //    returns the COUNT of newly-credited rows; we multiply by
-    //    SIGNUP_BONUS_COINS to get the total owed. The caller MUST addCoins()
-    //    locally before discarding this response.
-    const bonusQuery = db.execute(sql`
-      WITH credited AS (
-        UPDATE referrals
-           SET referrer_local_credited = true
-         WHERE referrer_user_id = ${callerUserId}
-           AND referrer_local_credited = false
-        RETURNING 1
-      )
-      SELECT COUNT(*)::int AS n FROM credited
-    `);
-
-    const [friendsResult, todayResult, bonusResult] = await db.batch([
-      friendsQuery,
-      todayQuery,
-      bonusQuery,
-    ]);
-
-    const rawRows = (friendsResult as unknown as { rows?: unknown[] }).rows
-      ?? (friendsResult as unknown as unknown[]);
-    const rows = Array.isArray(rawRows) ? rawRows : [];
-
-    const friends: ReferredFriendRow[] = rows.map((r) => {
-      const row = r as {
-        auth_id: string;
-        display_name: string | null;
-        linked_at: string | Date;
-        yesterday_learning_coins: number | string;
-      };
-      return {
-        authId: row.auth_id,
-        displayName: row.display_name ?? null,
-        linkedAt:
-          typeof row.linked_at === 'string' ? row.linked_at : row.linked_at.toISOString(),
-        yesterdayLearningCoins: Number(row.yesterday_learning_coins) || 0,
-      };
-    });
-
-    const totalYesterdayLearningCoins = friends.reduce(
-      (sum, f) => sum + f.yesterdayLearningCoins,
-      0,
+    const result = await handleReferralMe(
+      {
+        authorization: request.headers.get('authorization'),
+        body: null,
+        clientIp: getClientId(request),
+        queryAuthId: url.searchParams.get('authId'),
+      },
+      createReferralDeps(),
     );
-    // Daily cap 100 (מוני 8.7, approved by Yoav) — must mirror collect+api.ts.
-    const grossDividend = Math.min(100, Math.floor(totalYesterdayLearningCoins * DIVIDEND_RATE));
-
-    const todayRows =
-      (todayResult as unknown as { rows?: unknown[] }).rows
-      ?? (todayResult as unknown as unknown[]);
-    const alreadyCollectedToday = Array.isArray(todayRows) && todayRows.length > 0;
-
-    const dividendAvailable = alreadyCollectedToday ? 0 : grossDividend;
-
-    const bonusRows =
-      (bonusResult as unknown as { rows?: { n: number }[] }).rows
-      ?? (bonusResult as unknown as { n: number }[]);
-    const newlyCreditedCount =
-      Array.isArray(bonusRows) && bonusRows.length > 0 ? Number(bonusRows[0]?.n) || 0 : 0;
-    const pendingSignupBonus = newlyCreditedCount * SIGNUP_BONUS_COINS;
-
-    const todayDateUTC = new Date().toISOString().slice(0, 10);
-
-    const responseBody: MeResponse = {
-      ok: true,
-      friends,
-      totalYesterdayLearningCoins,
-      dividendAvailable,
-      alreadyCollectedToday,
-      todayDateUTC,
-      pendingSignupBonus,
-      referralCode: registeredReferralCode,
-    };
-    return json(responseBody);
+    return json(result.body, { status: result.status, headers: result.headers });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'referral/me GET');
   }

@@ -1,7 +1,14 @@
-import { getApiBase } from '../apiBase';
 import { api, ApiError } from '../../lib/api/client';
 
+// Every referral call goes through the shared API client, which attaches the
+// session token. Since 2026-11-20 the server acts on the token's user and
+// refuses me / collect / redeem without one (api/_shared/referral.ts); without
+// a session (guest, or a session that still needs a sign-in code) the client
+// answers 401 locally and nothing is sent.
+
 export interface ReferredFriendRow {
+  /** Opaque per-friend key, used as a list key. (Before 2026-11-20 it was the
+   *  friend's auth_id, i.e. their email; the field name stayed.) */
   authId: string;
   displayName: string | null;
   linkedAt: string;
@@ -25,6 +32,7 @@ export interface ReferralStateSnapshot {
 
 export interface RedeemResult {
   ok: true;
+  /** Always '' since 2026-11-20 (it used to leak the referrer's email). */
   referrerAuthId: string;
   bonusGranted: number;
 }
@@ -103,14 +111,19 @@ export async function registerReferralCode(
   }
 }
 
+const KNOWN_REDEEM_CODES: readonly RedeemFailureReason[] =
+  ['ALREADY_REDEEMED', 'SELF_REFERRAL', 'CODE_NOT_FOUND', 'REFEREE_NOT_FOUND'];
+
 /**
- * Redeem an invite code on behalf of the new user. Atomic on the server:
- * creates the referral link AND grants 500 coins to both parties.
+ * Redeem an invite code for the signed-in user. Atomic on the server: creates
+ * the referral link AND grants 500 coins to both parties. The referee is the
+ * session's user; `refereeAuthId` is still sent so a server from before
+ * 2026-11-20 keeps working (the current one only checks it names the same user).
  *
  * Never throws. Returns a discriminated outcome so callers can tell a FINAL
  * rejection (already redeemed / self-referral / dead code — clear pending
- * state, never retry) from a TRANSIENT failure (network / 5xx / the
- * REFEREE_NOT_FOUND signup race — keep pending state and retry next launch).
+ * state, never retry) from a TRANSIENT failure (network / 5xx / no usable
+ * session — keep pending state and retry next launch).
  * The old `RedeemResult | null` shape collapsed both into null, which made
  * the _layout pending hook delete the code on temporary failures.
  */
@@ -118,70 +131,76 @@ export async function redeemReferralCode(
   inviteCode: string,
   refereeAuthId: string,
 ): Promise<RedeemOutcome> {
-  const base = getApiBase();
   try {
-    const res = await fetch(`${base}/api/referral/redeem`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inviteCode, refereeAuthId }),
-    });
-    if (res.ok) {
-      return (await res.json()) as RedeemResult;
+    const json = await api.post<{ inviteCode: string; refereeAuthId: string }, RedeemResult>(
+      '/api/referral/redeem',
+      { inviteCode, refereeAuthId },
+    );
+    return json;
+  } catch (err) {
+    if (!(err instanceof ApiError)) {
+      // Offline / DNS / aborted / unparseable answer — transient by definition.
+      return { ok: false, reason: 'NETWORK', final: false };
     }
-    // 4xx carries a machine-readable `code`; 5xx / rate-limit are transient.
-    let reason: RedeemFailureReason = res.status >= 500 || res.status === 429 ? 'NETWORK' : 'INVALID';
-    try {
-      const json = (await res.json()) as { code?: string };
-      const known: readonly RedeemFailureReason[] =
-        ['ALREADY_REDEEMED', 'SELF_REFERRAL', 'CODE_NOT_FOUND', 'REFEREE_NOT_FOUND'];
-      if (json.code && (known as readonly string[]).includes(json.code)) {
-        reason = json.code as RedeemFailureReason;
-      }
-    } catch { /* unparseable body — keep the status-based reason */ }
+    // No session here yet (or it was rejected and is being signed out), a
+    // refused authId (stale local identity), rate limit, 5xx: keep the invite
+    // and retry on a later launch, when there is a session.
+    if (err.status === 401 || err.status === 403 || err.status === 429 || err.status >= 500) {
+      return { ok: false, reason: 'NETWORK', final: false };
+    }
+    // Other 4xx carry a machine-readable `code`.
+    const code = (err.body as { code?: unknown } | null)?.code;
+    const reason: RedeemFailureReason =
+      typeof code === 'string' && (KNOWN_REDEEM_CODES as readonly string[]).includes(code)
+        ? (code as RedeemFailureReason)
+        : 'INVALID';
     return { ok: false, reason, final: FINAL_REDEEM_REASONS.includes(reason) };
-  } catch {
-    // Thrown fetch = offline / DNS / aborted — transient by definition.
-    return { ok: false, reason: 'NETWORK', final: false };
   }
 }
 
-/** Fetch the user's referral state (friends + pending dividend). */
-export async function fetchReferralState(authId: string): Promise<ReferralStateSnapshot | null> {
-  const base = getApiBase();
-  const res = await fetch(
-    `${base}/api/referral/me?authId=${encodeURIComponent(authId)}`,
-  );
-  if (!res.ok) return null;
-  const json = (await res.json()) as { ok: true } & ReferralStateSnapshot;
-  return {
-    friends: json.friends,
-    totalYesterdayLearningCoins: json.totalYesterdayLearningCoins,
-    dividendAvailable: json.dividendAvailable,
-    alreadyCollectedToday: json.alreadyCollectedToday,
-    todayDateUTC: json.todayDateUTC,
-    pendingSignupBonus: json.pendingSignupBonus ?? 0,
-    referralCode: json.referralCode ?? null,
-  };
+/**
+ * Fetch the signed-in user's referral state (friends + pending dividend).
+ * null on any failure (no session, offline, 5xx): callers keep what they have.
+ * The server knows the user from the session token; no email in the URL.
+ */
+export async function fetchReferralState(): Promise<ReferralStateSnapshot | null> {
+  try {
+    const json = await api.get<({ ok: true } & ReferralStateSnapshot) | null>('/api/referral/me');
+    if (!json) return null;
+    return {
+      friends: json.friends,
+      totalYesterdayLearningCoins: json.totalYesterdayLearningCoins,
+      dividendAvailable: json.dividendAvailable,
+      alreadyCollectedToday: json.alreadyCollectedToday,
+      todayDateUTC: json.todayDateUTC,
+      pendingSignupBonus: json.pendingSignupBonus ?? 0,
+      referralCode: json.referralCode ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Collect today's dividend. Server returns:
+ * Collect today's dividend for the signed-in user. Server returns:
  *  - { amount: N, alreadyCollected: false } — first collect today, N coins granted
  *  - { amount: 0, alreadyCollected: true }  — already collected today (or no friends)
  *
- * Returns null on network failure.
+ * Returns null on any failure (no session, offline, 5xx). `authId` is still
+ * sent for a server from before 2026-11-20; the current one only checks it.
  */
 export async function collectReferralDividend(authId: string): Promise<{
   amount: number;
   alreadyCollected: boolean;
 } | null> {
-  const base = getApiBase();
-  const res = await fetch(`${base}/api/referral/collect`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ authId }),
-  });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { ok: true; amount: number; alreadyCollected?: boolean };
-  return { amount: json.amount, alreadyCollected: json.alreadyCollected === true };
+  try {
+    const json = await api.post<
+      { authId: string },
+      { ok: true; amount: number; alreadyCollected?: boolean } | null
+    >('/api/referral/collect', { authId });
+    if (!json) return null;
+    return { amount: json.amount, alreadyCollected: json.alreadyCollected === true };
+  } catch {
+    return null;
+  }
 }
