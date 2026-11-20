@@ -1,45 +1,23 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { banditVariants } from '../../../src/db/schema';
+import { getDb } from '../../../api/_shared/db';
+import { BANDIT_STATE_CDN_CACHE, loadBanditState } from '../../../api/_shared/bandit';
+import { CDN_CACHE_HEADER } from '../../../api/_shared/cdnCache';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 
-function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
-  const dbSql = neon(url);
-  return drizzle(dbSql);
-}
+export type { BanditServerVariant } from '../../../api/_shared/bandit';
 
-export interface BanditServerVariant {
-  variantId: string;
-  alpha: number;
-  beta: number;
-  impressions: number;
-  conversions: number;
-}
-
-/** GET /api/bandit/state — returns global alpha/beta for all variants, grouped by experiment. */
+/** GET /api/bandit/state — returns global alpha/beta for all variants, grouped by experiment.
+ *  Logic lives in api/_shared/bandit.ts (shared with the production api/ tree). */
 export async function GET(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'bandit-state-get', { limit: 60, windowSec: 60 });
   if (blocked) return blocked;
 
   try {
-    const db = getDb();
-    const rows = await db.select().from(banditVariants);
-
-    const grouped: Record<string, BanditServerVariant[]> = {};
-    for (const row of rows) {
-      const list = grouped[row.experimentId] ?? (grouped[row.experimentId] = []);
-      list.push({
-        variantId: row.variantId,
-        alpha: row.alpha,
-        beta: row.beta,
-        impressions: row.impressions,
-        conversions: row.conversions,
-      });
-    }
-
-    return Response.json({ ok: true, experiments: grouped });
+    const experiments = await loadBanditState(getDb());
+    return Response.json(
+      { ok: true, experiments },
+      { headers: { [CDN_CACHE_HEADER]: BANDIT_STATE_CDN_CACHE } },
+    );
   } catch (err: unknown) {
     return safeErrorResponse(err, 'bandit/state GET');
   }

@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { TIMEOUTS, timeoutSignal } from '../_shared/timeout';
 
 /**
  * POST /api/voice/session
@@ -32,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const url = `${ELEVENLABS_BASE}/convai/conversation/get_signed_url?agent_id=${encodeURIComponent(agentId)}`;
     const upstream = await fetch(url, {
       method: 'GET',
+      signal: timeoutSignal(TIMEOUTS.quick),
       headers: { 'xi-api-key': apiKey },
     });
 

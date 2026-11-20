@@ -36,16 +36,13 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     if (body.avatarUrl !== undefined && body.avatarUrl !== null) setFields.avatarUrl = body.avatarUrl;
     if (body.preferences !== undefined && body.preferences !== null) setFields.preferences = body.preferences;
 
-    await db
+    // UPDATE … RETURNING (all columns, same keys as select()): one DB round
+    // trip instead of UPDATE then SELECT.
+    const rows = await db
       .update(userProfiles)
       .set(setFields)
-      .where(eq(userProfiles.id, ctx.userId));
-
-    const rows = await db
-      .select()
-      .from(userProfiles)
       .where(eq(userProfiles.id, ctx.userId))
-      .limit(1);
+      .returning();
     return res.status(200).json({ ok: true, profile: rows[0] ?? null });
   }
 

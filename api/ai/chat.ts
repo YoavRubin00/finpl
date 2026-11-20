@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { HEBREW_STYLE_RULES } from '../_shared/hebrewStyle';
+import { TIMEOUTS } from '../_shared/timeout';
 
 interface ChatRequestBody {
   systemPrompt: string;
@@ -60,10 +61,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // partial candidates. Parsing these into raw text and writing them to
     // `res` lets the RN client read clean UTF-8 chunks off `response.body`,
     // without the JSON envelope leaking mid-stream.
+    // Bound only the wait for Gemini's response HEADERS: a hung connection is
+    // cut after TIMEOUTS.aiStreamHeaders instead of holding the function to
+    // maxDuration. The timer is cleared as soon as the stream starts, so a long
+    // but healthy answer is never interrupted.
+    const headersController = new AbortController();
+    const headersTimer = setTimeout(() => headersController.abort(), TIMEOUTS.aiStreamHeaders);
     const upstream = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
+        signal: headersController.signal as unknown as NonNullable<RequestInit['signal']>,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           // The client owns the persona prompt; the server appends the shared
@@ -73,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           generationConfig: { maxOutputTokens: maxTokens },
         }),
       },
-    );
+    ).finally(() => clearTimeout(headersTimer));
 
     if (!upstream.ok || !upstream.body) {
       console.error(`[ai/chat] Gemini stream returned ${upstream.status}`);

@@ -12,18 +12,20 @@ interface EconomyDeltaBody {
   virtualBalanceSet?: number;
 }
 
+const ECONOMY_COLUMNS = {
+  xp: userProfiles.xp,
+  coins: userProfiles.coins,
+  gems: userProfiles.gems,
+  level: userProfiles.level,
+  virtualBalance: userProfiles.virtualBalance,
+};
+
 export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => {
   const db = getDb();
 
   if (req.method === 'GET') {
     const rows = await db
-      .select({
-        xp: userProfiles.xp,
-        coins: userProfiles.coins,
-        gems: userProfiles.gems,
-        level: userProfiles.level,
-        virtualBalance: userProfiles.virtualBalance,
-      })
+      .select(ECONOMY_COLUMNS)
       .from(userProfiles)
       .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
@@ -51,22 +53,14 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
       return res.status(400).json({ error: 'No deltas provided' });
     }
 
-    await db
+    // UPDATE … RETURNING: one DB round trip instead of UPDATE then SELECT.
+    // Same columns, same row (the post-update values), same `null` when the
+    // profile row does not exist.
+    const rows = await db
       .update(userProfiles)
       .set(updates)
-      .where(eq(userProfiles.id, ctx.userId));
-
-    const rows = await db
-      .select({
-        xp: userProfiles.xp,
-        coins: userProfiles.coins,
-        gems: userProfiles.gems,
-        level: userProfiles.level,
-        virtualBalance: userProfiles.virtualBalance,
-      })
-      .from(userProfiles)
       .where(eq(userProfiles.id, ctx.userId))
-      .limit(1);
+      .returning(ECONOMY_COLUMNS);
     return res.status(200).json({ ok: true, economy: rows[0] ?? null });
   }
 

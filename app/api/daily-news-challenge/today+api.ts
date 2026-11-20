@@ -13,6 +13,7 @@ import { dailyNewsChallenge } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { getDateKeyIL, getDb, type DailyChallengePayload } from './_lib';
+import { CDN_CACHE_HEADER, cdnCacheValue } from '../../../api/_shared/cdnCache';
 
 export async function GET(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'daily-news-challenge-today', { limit: 60, windowSec: 60 });
@@ -22,9 +23,16 @@ export async function GET(request: Request): Promise<Response> {
     const dateKey = getDateKeyIL();
     const db = getDb();
 
-    // Today's row first; if missing, latest row as fallback.
+    // Today's row first; if missing, latest row as fallback. Only the columns
+    // the response uses — sources_used (full audit trail) stays in the DB.
     const rows = await db
-      .select()
+      .select({
+        dateKey: dailyNewsChallenge.dateKey,
+        heroTitle: dailyNewsChallenge.heroTitle,
+        heroImageUrl: dailyNewsChallenge.heroImageUrl,
+        items: dailyNewsChallenge.items,
+        isFallback: dailyNewsChallenge.isFallback,
+      })
       .from(dailyNewsChallenge)
       .orderBy(desc(dailyNewsChallenge.dateKey))
       .limit(1);
@@ -54,16 +62,22 @@ export async function GET(request: Request): Promise<Response> {
     // surface a "תוכן של אתמול" hint instead of pretending it's fresh.
     const isToday = row.dateKey === dateKey;
     const isFallback = !isToday || (row.isFallback ?? false);
-    return Response.json({
-      ok: true,
-      dateKey: row.dateKey,
-      isToday,
-      isFallback,
-      heroTitle: row.heroTitle,
-      heroImageUrl: row.heroImageUrl,
-      items: safeItems,
-      sourcesUsed: [],
-    });
+    // One row for everyone, rewritten once a day by the 04:00 UTC cron. A
+    // short CDN TTL keeps the new row visible within ~2 minutes of the cron
+    // and bounds how long `isToday` can lag across Israeli midnight.
+    return Response.json(
+      {
+        ok: true,
+        dateKey: row.dateKey,
+        isToday,
+        isFallback,
+        heroTitle: row.heroTitle,
+        heroImageUrl: row.heroImageUrl,
+        items: safeItems,
+        sourcesUsed: [],
+      },
+      { headers: { [CDN_CACHE_HEADER]: cdnCacheValue(120, 600) } },
+    );
   } catch (err) {
     return safeErrorResponse(err, 'daily-news-challenge/today');
   }

@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { timeoutSignal } from './_shared/timeout';
 
 /**
  * GET /api/img?u=<encoded Vercel-Blob image URL>
@@ -17,6 +18,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  */
 const ALLOWED_HOST = '8mnwcjygpqev3keg.public.blob.vercel-storage.com';
 const RETRYABLE = new Set([403, 408, 429, 500, 502, 503, 504]);
+const IMG_ATTEMPT_TIMEOUT_MS = 15_000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -38,7 +40,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   let upstream: Response | null = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      upstream = await fetch(target.toString(), { headers: { Accept: 'image/*' } });
+      // Per-attempt bound (covers the body read below too): a hung Blob
+      // connection now fails over to the next attempt / the redirect instead
+      // of holding the function to maxDuration.
+      upstream = await fetch(target.toString(), {
+        headers: { Accept: 'image/*' },
+        signal: timeoutSignal(IMG_ATTEMPT_TIMEOUT_MS),
+      });
       if (upstream.ok || !RETRYABLE.has(upstream.status)) break;
     } catch { /* transient network blip — retry */ }
     if (attempt < 2) await sleep(300 * (attempt + 1));
@@ -53,7 +61,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const contentType = upstream.headers.get('content-type') ?? 'image/png';
-  const buf = Buffer.from(await upstream.arrayBuffer());
+  let buf: Buffer;
+  try {
+    buf = Buffer.from(await upstream.arrayBuffer());
+  } catch {
+    // Body read aborted/failed mid-transfer: same fallback as a failed fetch.
+    res.setHeader('Cache-Control', 'no-store');
+    res.redirect(302, target.toString());
+    return;
+  }
   res.setHeader('Content-Type', contentType);
   // Infographics are immutable PNGs — cache hard at the Vercel edge + client so
   // the function effectively runs once per asset, then the CDN serves it.

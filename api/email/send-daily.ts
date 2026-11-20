@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const result = await runDailyEmailBatch();
-    console.info(`[send-daily] batch done: sent=${result.sent} failed=${result.failed} total=${result.total} (${result.targeting})`);
+    console.info(`[send-daily] batch done: sent=${result.sent} failed=${result.failed} deferred=${result.deferred} total=${result.total} (${result.targeting})`);
     return res.status(200).json({ ok: true, ...result });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error';

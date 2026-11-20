@@ -19,6 +19,7 @@
  */
 
 import type { TavilyBundle } from './tavily';
+import { TIMEOUTS, timeoutSignal } from '../../../api/_shared/timeout';
 
 const PERPLEXITY_SEARCH_URL = 'https://api.perplexity.ai/search';
 
@@ -59,6 +60,7 @@ export async function fetchTickerNews(
 
   const res = await fetch(PERPLEXITY_SEARCH_URL, {
     method: 'POST',
+    signal: timeoutSignal(TIMEOUTS.search),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',

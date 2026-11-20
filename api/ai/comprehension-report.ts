@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { HEBREW_STYLE_RULES } from '../_shared/hebrewStyle';
+import { TIMEOUTS, timeoutSignal } from '../_shared/timeout';
 
 // POST /api/ai/comprehension-report
 //
@@ -145,6 +146,7 @@ ${transcriptText}
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
+        signal: timeoutSignal(TIMEOUTS.aiLong),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemPrompt }] },

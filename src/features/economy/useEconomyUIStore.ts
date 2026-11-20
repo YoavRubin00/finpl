@@ -11,7 +11,6 @@ import {
   STREAK_30_BONUS_XP,
 } from "../../constants/economy";
 import { getLevelFromXP, getPyramidLayer } from "../../utils/progression";
-import { upsertInventory } from "../../db/sync/syncInventory";
 import { useAuthStore } from "../auth/useAuthStore";
 import * as Notifications from "expo-notifications";
 import { applyEconomyDelta } from "../../lib/api/economy";
@@ -371,23 +370,12 @@ export function fireEconomyDelta(delta: {
     // for data we already have in hand).
     .then((res) => {
       queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy);
-      // Mirror the server-authoritative economy to the profile row (keyed by
-      // email via /api/sync/profile). CRITICAL: we mirror the SERVER's values
-      // from `res.economy`, never the optimistic React Query cache. The old
-      // per-action upsertInventory calls read the cache — which on a cold-start
-      // race is still empty (coins/gems = 0) before the economy GET resolves —
-      // and wrote 0/0 absolute, wiping the real balance. Active users lost all
-      // coins+gems this way (QA 2026-06-16). Sourcing from res.economy makes the
-      // mirror impossible to clobber.
-      const eco = res.economy;
-      const authId = useAuthStore.getState().email;
-      if (eco && authId) {
-        upsertInventory(authId, {
-          xp: eco.xp ?? 0,
-          coins: eco.coins ?? 0,
-          gems: eco.gems ?? 0,
-        }).catch(() => { /* non-fatal mirror */ });
-      }
+      // (Removed 2026-11-20: a follow-up upsertInventory() "mirror" POST to
+      // /api/sync/profile used to fire here after every delta. It sent no
+      // Authorization header, so production's Bearer-only /api/sync/profile
+      // answered 401 every time — and that endpoint ignores xp/coins/gems
+      // anyway; /api/sync/economy above already wrote them to the same row.
+      // One guaranteed-failing request per reward, no effect.)
     })
     .catch(() => { /* swallow — optimistic state stays until server is reachable */ });
 }

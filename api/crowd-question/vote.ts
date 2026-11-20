@@ -1,15 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { eq } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { crowdQuestionVotes, userProfiles } from '../../src/db/schema';
-
-function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
-  const sqlClient = neon(url);
-  return drizzle(sqlClient);
-}
+import { userProfiles } from '../../src/db/schema';
+import { getDb } from '../_shared/db';
+import { CQ_ISO_DATE_RE as ISO_DATE_RE, CQ_QUESTION_ID_RE as QUESTION_ID_RE, recordCrowdVote } from '../_shared/crowdQuestion';
 
 function sanitizeString(value: unknown, maxLength: number): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -30,9 +23,6 @@ interface VoteBody {
   choice: 'a' | 'b';
   voteDateIL: string;
 }
-
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const QUESTION_ID_RE = /^[a-z0-9-]{1,80}$/i;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -74,26 +64,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    await db
-      .insert(crowdQuestionVotes)
-      .values({ userId: user.id, questionId, choice, voteDateIl: voteDateIL })
-      .onConflictDoNothing({ target: [crowdQuestionVotes.userId, crowdQuestionVotes.voteDateIl] });
+    // Insert + fresh counts in one DB round trip (see recordCrowdVote).
+    const { countA, countB, total } = await recordCrowdVote(db, {
+      userId: user.id,
+      questionId,
+      choice,
+      voteDateIL,
+    });
 
-    const counts = await db.execute(sql`
-      SELECT choice, COUNT(*)::int AS count
-      FROM crowd_question_votes
-      WHERE question_id = ${questionId} AND vote_date_il = ${voteDateIL}
-      GROUP BY choice
-    `);
-
-    let countA = 0;
-    let countB = 0;
-    for (const row of counts.rows as Array<{ choice: string; count: number }>) {
-      if (row.choice === 'a') countA = row.count;
-      else if (row.choice === 'b') countB = row.count;
-    }
-
-    return res.status(200).json({ ok: true, countA, countB, total: countA + countB });
+    return res.status(200).json({ ok: true, countA, countB, total });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error';
     console.error('[crowd-question/vote]', message, err);

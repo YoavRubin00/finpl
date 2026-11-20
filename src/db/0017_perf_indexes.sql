@@ -1,0 +1,35 @@
+-- 0017_perf_indexes.sql — server perf pass 2026-11-20. NOT YET APPLIED.
+--
+-- Run OUTSIDE a transaction (CONCURRENTLY refuses to run inside one), one
+-- statement at a time, e.g. with psql in its default autocommit mode:
+--   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f src/db/0017_perf_indexes.sql
+-- Idempotent (IF NOT EXISTS) and non-blocking (CONCURRENTLY: no write lock on
+-- user_profiles while it builds). If a build is interrupted it can leave an
+-- INVALID index behind: DROP INDEX CONCURRENTLY it and re-run this file.
+--
+-- Audit result: every hot query in api/ and app/api/ is already served by an
+-- existing index (PKs, the unique constraints on user_profiles.auth_id / email /
+-- referral_code, idx_coin_events_user_date2, idx_cq_votes_question_date,
+-- idx_module_progress_user, idx_referrals_*, idx_bar_content_type_active,
+-- idx_daily_news_challenge_date, …). The only non-sargable predicates on a table
+-- that keeps growing are the case-insensitive fallbacks below.
+--
+-- 1) lower(email): api/_shared/authProfile.ts byEmail() falls back to
+--    `lower(email) = $1 ORDER BY created_at LIMIT 1` whenever the exact match
+--    misses — i.e. on every first sign-in of a new email and every
+--    case-mismatched login — plus api/_shared/sendDailyEmails.ts
+--    unsubscribeByEmail(). Today that is a sequential scan of user_profiles
+--    (~1.5k rows, about a millisecond); it grows linearly with signups and sits
+--    on the sign-in path. Updates that don't change email stay HOT, so the
+--    frequent economy/streak writes to user_profiles pay nothing extra.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_user_profiles_email_lower" ON "user_profiles" (lower("email"));
+-- 2) lower(auth_id): same pattern in authProfile.ts byAuthId() — the fallback
+--    for legacy email-shaped auth ids that miss the exact (unique-indexed) match.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_user_profiles_auth_id_lower" ON "user_profiles" (lower("auth_id"));
+--
+-- Deliberately NOT added (tables are tiny or the feature is switched off;
+-- revisit if that changes):
+--   * trade_room_messages / portfolio_comments (created_at) for the hourly
+--     moderation sweep — social features are off (SOCIAL_FEATURES_ENABLED=false).
+--   * investor_journal_events: `to_char(event_date,'YYYY-MM') = $1` can't use
+--     ije_month_idx, but the table holds a few dozen curated rows.
