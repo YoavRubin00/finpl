@@ -58,7 +58,7 @@ initPostHog();
 void captureLaunchAttribution();
 
 import { Stack, useRouter, useSegments, useRootNavigationState, usePathname } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, InteractionManager, Platform, Text, TextInput } from "react-native";
 import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
 import { useDailyQuestsStore } from "../src/features/daily-quests/useDailyQuestsStore";
@@ -83,7 +83,7 @@ import { useAuthStore } from "../src/features/auth/useAuthStore";
 import { useEconomyUIStore } from "../src/features/economy/useEconomyUIStore";
 import { useStreakDailyTick } from "../src/features/economy/useStreak";
 import { setOnUnauthorized } from "../src/lib/api/client";
-import { signOut as lifecycleSignOut, bootFromToken } from "../src/lib/auth/lifecycle";
+import { signOut as lifecycleSignOut, bootFromToken, abandonPendingBoot } from "../src/lib/auth/lifecycle";
 import { startAppStateListener } from "../src/lib/auth/appStateListener";
 
 setOnUnauthorized(() => {
@@ -113,6 +113,7 @@ import { GlobalUpgradeModal } from "../src/features/subscription/UpgradeModal";
 import { PostStreakIncomeSplash } from "../src/features/assets/PostStreakIncomeSplash";
 import { useNotificationSetup } from "../src/features/notifications/useNotifications";
 import { LoadingWisdom } from "../src/components/ui/LoadingWisdom";
+import { BootRetryScreen, type BootRetryState } from "../src/components/ui/BootRetryScreen";
 import { AppIntroSplash } from "../src/components/ui/AppIntroSplash";
 import { GlobalErrorBoundary } from "../src/components/ui/ErrorBoundary";
 import { NetworkStatusBanner } from "../src/components/ui/NetworkStatusBanner";
@@ -138,7 +139,6 @@ const PredictionResultsHost: React.ComponentType | null = SOCIAL_FEATURES_ENABLE
 import { GuestValueGateHost } from "../src/features/auth/guestValueGate";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
-import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
 import { FreezeRefundModalGate } from "../src/features/streak/StreakFreezeRefundModal";
@@ -443,9 +443,10 @@ function RootLayoutInner() {
   }, [hasOnboardedForAds]);
 
   // ── RevenueCat init ──
-  useEffect(() => {
-    configureRevenueCat();
-  }, []);
+  // Done by bootFromToken (lifecycle.ts) on every cold start: with the saved
+  // user id for a signed-in user, anonymously otherwise. Configuring here,
+  // anonymously and before the boot, made every cold start of a signed-in user
+  // run Purchases.logIn (and fire rc_login_succeeded) for an unchanged id.
 
   // Mirror PRO status into the energy store so EVERY energy mutation is inert
   // for Pro (Yoav 18/06: "למשתמש שהוא פרו לא צריך לרדת/להוסיף אנרגיה בכלל").
@@ -685,6 +686,11 @@ function RootLayoutInner() {
 
   const [hydrated, setHydrated] = useState(false);
   const [bootComplete, setBootComplete] = useState(false);
+  // A stored token with no saved session on this device whose server did not
+  // answer within the boot limit (or failed): a retry screen instead of an
+  // endless loader. null = not needed.
+  const [bootRetry, setBootRetry] = useState<BootRetryState | null>(null);
+  const bootAttemptRef = useRef(0);
   const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
@@ -693,19 +699,61 @@ function RootLayoutInner() {
     return unsub;
   }, []);
 
-  // Cold-launch boot: attempt to restore session from stored JWT before rendering routes
+  // Cold-launch boot: restore the session from the stored JWT before rendering
+  // routes. bootFromToken resolves at once for a signed-in user with saved
+  // state (the server work finishes in the background) and otherwise waits at
+  // most BOOT_NETWORK_TIMEOUT_MS (perf 20.11).
+  // The module-first experiment is DEAD (ca38fda2 — guardrail smashed).
+  // Its boot gate used to AWAIT auth+tutorial store rehydration here before
+  // rendering any route; that unbounded wait shipped only in the 1.4.3
+  // binary and is the prime suspect for 1.4.3's first-screen deficit
+  // (welcome CTA 61% vs 79% on 1.4.2 — cohort 5-7.7, n=104/33, ~3σ): every
+  // ms added before a FRESH install's first paint bleeds first-tap users.
+  // Boot no longer blocks on hydration (Yoav 2026-07-08, pre-1.4.4); any
+  // future first-run experiment MUST use a bounded (timeout-raced) wait.
+  const runBoot = useCallback(() => {
+    const attempt = ++bootAttemptRef.current;
+    const isCurrent = () => attempt === bootAttemptRef.current;
+    bootFromToken()
+      .then((result) => {
+        if (!isCurrent()) return;
+        if (result.outcome !== "retry" || !result.settled) {
+          setBootRetry(null);
+          setBootComplete(true);
+          return;
+        }
+        setBootRetry("waiting");
+        void result.settled.then((late) => {
+          if (!isCurrent()) return;
+          if (late === "error") {
+            setBootRetry("failed");
+            return;
+          }
+          setBootRetry(null);
+          setBootComplete(true);
+        });
+      })
+      .catch(() => {
+        if (isCurrent()) setBootComplete(true);
+      });
+  }, []);
+
   useEffect(() => {
-    bootFromToken().finally(() => {
-      // The module-first experiment is DEAD (ca38fda2 — guardrail smashed).
-      // Its boot gate used to AWAIT auth+tutorial store rehydration here before
-      // rendering any route; that unbounded wait shipped only in the 1.4.3
-      // binary and is the prime suspect for 1.4.3's first-screen deficit
-      // (welcome CTA 61% vs 79% on 1.4.2 — cohort 5-7.7, n=104/33, ~3σ): every
-      // ms added before a FRESH install's first paint bleeds first-tap users.
-      // Boot no longer blocks on hydration (Yoav 2026-07-08, pre-1.4.4); any
-      // future first-run experiment MUST use a bounded (timeout-raced) wait.
-      setBootComplete(true);
-    });
+    runBoot();
+  }, [runBoot]);
+
+  const retryBoot = useCallback(() => {
+    setBootRetry("waiting");
+    runBoot();
+  }, [runBoot]);
+
+  // Go on signed out, as a failed boot always did. The attempt still running
+  // is ignored and may no longer sign this device in.
+  const continueWithoutSession = useCallback(() => {
+    bootAttemptRef.current++;
+    abandonPendingBoot();
+    setBootRetry(null);
+    setBootComplete(true);
   }, []);
 
   // Daily streak tick — fire `recordDailyActivity` once per Israeli day on app
@@ -842,6 +890,9 @@ function RootLayoutInner() {
   }, [hydrated, isAuthenticated, hasCompletedOnboarding, hasSeenWalkthrough, walkthroughTriggered, isMod01Complete, pendingPostWalkthroughFirstChest, segments]);
 
   if (!hydrated || !bootComplete || !navState?.key || !fontsLoaded) {
+    if (bootRetry && hydrated && fontsLoaded) {
+      return <BootRetryScreen state={bootRetry} onRetry={retryBoot} onContinue={continueWithoutSession} />;
+    }
     return <LoadingWisdom />;
   }
 

@@ -118,19 +118,33 @@ export function configureRevenueCat(appUserId?: string): void {
 
 /** Link a logged-in user to RevenueCat so purchases persist across devices */
 export async function loginRevenueCat(appUserId: string): Promise<CustomerInfo | null> {
-  if (IS_WEB || !Purchases) return null;
+  return (await loginRevenueCatDetailed(appUserId)).customerInfo;
+}
+
+/**
+ * Same as loginRevenueCat, and also says whether this call actually switched
+ * the RevenueCat identity (`Purchases.logIn` ran). It does not when the SDK was
+ * already configured with this id, which is the normal cold start of a
+ * returning user since the lifecycle configures with the saved id (20.11).
+ */
+export async function loginRevenueCatDetailed(
+  appUserId: string,
+): Promise<{ customerInfo: CustomerInfo | null; switched: boolean }> {
+  if (IS_WEB || !Purchases) return { customerInfo: null, switched: false };
   return withIdentity(async () => {
     // Configure first when a caller got here before the lifecycle did.
     // Configuring with the id already identifies the user.
     if (!sdkConfigured) {
       configureRevenueCat(appUserId);
-      if (!sdkConfigured) return null;
-      return Purchases.getCustomerInfo();
+      if (!sdkConfigured) return { customerInfo: null, switched: false };
+      return { customerInfo: await Purchases.getCustomerInfo(), switched: false };
     }
-    if (configuredFor === appUserId) return Purchases.getCustomerInfo();
+    if (configuredFor === appUserId) {
+      return { customerInfo: await Purchases.getCustomerInfo(), switched: false };
+    }
     const { customerInfo } = await Purchases.logIn(appUserId);
     configuredFor = appUserId;
-    return customerInfo;
+    return { customerInfo, switched: true };
   });
 }
 
@@ -346,10 +360,26 @@ export async function checkProEntitlement(): Promise<boolean> {
   return customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined;
 }
 
-/** Get current customer info */
+/** Get current customer info. May be the SDK's cached copy, even a stale one. */
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
   if (IS_WEB || !Purchases) return null;
   return Purchases.getCustomerInfo();
+}
+
+/**
+ * Customer info fetched from RevenueCat now, not the device cache. getCustomerInfo()
+ * returns the cached copy even when it is stale, which is fine for display but
+ * not for writing Pro state to the server. Rejects when RevenueCat can't
+ * answer, so callers don't act on an unknown state. Only call it when a fresh
+ * answer is needed: it drops the cache, so until the next successful fetch the
+ * SDK has no copy to fall back on.
+ */
+export async function getFreshCustomerInfo(): Promise<CustomerInfo | null> {
+  if (IS_WEB || !Purchases || !sdkConfigured) return null;
+  return withIdentity(async () => {
+    await Purchases.invalidateCustomerInfoCache();
+    return Purchases.getCustomerInfo();
+  });
 }
 
 /** Restore purchases (e.g. after reinstall) */

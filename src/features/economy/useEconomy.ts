@@ -18,9 +18,15 @@ function isEconomy(v: unknown): v is Economy {
 }
 
 /** Shown while the real query is pending on a cold open — the LAST server-
- *  confirmed balance for this account, never 0. Pure read (no writes on render). */
-function economyPlaceholder(): Economy | undefined {
+ *  confirmed balance for this account, never 0. Pure read (no writes on render).
+ *  The cold boot also seeds the cache with it (lifecycle.ts). */
+export function economyPlaceholder(): Economy | undefined {
   return readSnapshot(ECONOMY_SNAPSHOT_KEY, isEconomy)?.value;
+}
+
+/** Record a server-confirmed economy row as the cold-open snapshot. */
+export function writeEconomySnapshot(economy: Economy | null | undefined): void {
+  writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy);
 }
 
 export function useEconomy() {

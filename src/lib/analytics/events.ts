@@ -117,6 +117,23 @@ export type AppEvent =
   // sign-in now needs a mailed code. Counts who has to sign in again.
   | { name: 'legacy_session_needs_code'; props: Record<string, never> }
   | { name: 'ghost_session_needs_code'; props: Record<string, never> }
+  // Cold start (lifecycle.bootFromToken, 20.11). `boot_completed` fires once
+  // per launch when the loading screen may go away. `ms` counts from the start
+  // of the boot (root layout mount), not from process start. `path`:
+  //   cached   - signed-in user with saved state: rendered at once, the server
+  //              calls finish in the background
+  //   network  - waited for the server and it answered within the limit
+  //   timeout  - the server did not answer within BOOT_NETWORK_TIMEOUT_MS; the
+  //              app went on with saved state (or showed the retry screen)
+  //   no_token - guest / signed out / fresh install: no server call to wait on
+  // `outcome`: signed_in | signed_out | retry (no saved session and no answer
+  // in time: the retry screen is shown).
+  // `boot_network_settled` fires when the boot's server work ends, whichever
+  // path rendered first. `result`: ok | auth_invalid (server rejected the token
+  // and the user was signed out) | no_profile | error (network or server error;
+  // nothing was downgraded) | superseded (a newer boot or a sign-in/out took over).
+  | { name: 'boot_completed'; props: { ms: number; path: 'cached' | 'network' | 'timeout' | 'no_token'; outcome: 'signed_in' | 'signed_out' | 'retry' } }
+  | { name: 'boot_network_settled'; props: { ms: number; path: 'cached' | 'network' | 'timeout'; result: 'ok' | 'auth_invalid' | 'no_profile' | 'error' | 'superseded' } }
 
   // ── Lesson / Module ────────────────────────────────────────────────────
   // SCHEMA UNIFICATION (Yoav 11.7): the emitters historically sent module_id

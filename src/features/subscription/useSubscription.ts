@@ -5,8 +5,47 @@ import { getSubscription, syncSubscription, type SubscriptionState } from '../..
 import { checkProEntitlement, RC_ENTITLEMENT_PRO } from '../../services/revenueCat';
 import type { CustomerInfo } from '../../services/revenueCat';
 import { useAuthStore } from '../auth/useAuthStore';
+import { readSnapshot, writeSnapshot } from '../economy/querySnapshot';
 
 export const subscriptionQueryKey = ['subscription'] as const;
+
+/**
+ * Last server-confirmed subscription for this account (keyed by authId inside),
+ * so a cold start can show a paying user as Pro before the server answers
+ * (boot without waiting on the network, 20.11). Written only from server
+ * answers, never from a guess. A definite server answer replaces it; a timeout
+ * or an error never does.
+ */
+const SUBSCRIPTION_SNAPSHOT_KEY = 'subscription-snapshot:v1';
+
+function isSubscriptionState(v: unknown): v is SubscriptionState {
+  if (!v || typeof v !== 'object') return false;
+  const s = v as Partial<SubscriptionState>;
+  const boolOrNull = s.isPro === null || typeof s.isPro === 'boolean';
+  const strOrNull = (x: unknown): boolean => x === null || x === undefined || typeof x === 'string';
+  return boolOrNull && strOrNull(s.proExpiresAt) && strOrNull(s.proSource);
+}
+
+/** A server answer of `subscription: null` (no row) is a definite "not Pro". */
+function normalizeSubscription(sub: SubscriptionState | null | undefined): SubscriptionState {
+  return sub ?? { isPro: false, proExpiresAt: null, proSource: null };
+}
+
+export function readSubscriptionSnapshot(): SubscriptionState | null {
+  return readSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, isSubscriptionState)?.value ?? null;
+}
+
+/** Call with a server answer only. */
+export function writeSubscriptionSnapshot(sub: SubscriptionState | null | undefined): void {
+  writeSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, normalizeSubscription(sub));
+}
+
+/** GET the subscription and record it as the last known state. */
+export async function fetchSubscription(): Promise<SubscriptionState | null> {
+  const sub = (await getSubscription()).subscription;
+  writeSubscriptionSnapshot(sub);
+  return sub;
+}
 
 export function useSubscription() {
   // Skip for guests — they have no RevenueCat entitlement yet; useIsPro()
@@ -22,7 +61,7 @@ export function useSubscription() {
     queryKey: subscriptionQueryKey,
     queryFn: async () => {
       if (devWebPro) return { isPro: true, proExpiresAt: null, proSource: null } as SubscriptionState;
-      return (await getSubscription()).subscription;
+      return fetchSubscription();
     },
     staleTime: 30_000,
     enabled: (isAuthenticated && !isGuest) || devWebPro,
@@ -47,6 +86,7 @@ export function useSyncFromRevenueCat() {
     },
     onSuccess: (sub) => {
       qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, sub);
+      writeSubscriptionSnapshot(sub);
     },
   });
 }

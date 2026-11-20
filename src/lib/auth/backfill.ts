@@ -63,11 +63,14 @@ export const LEGACY_KEYS_V0: string[] = [
   'feed-interactions-storage', // was missing entirely
 ];
 
-export async function runBackfillV1(): Promise<void> {
+/** Resolves true when legacy data was sent and the server answer was written to
+ *  the profile/progress caches, false when there was nothing to send. Throws
+ *  when the upload failed. */
+export async function runBackfillV1(): Promise<boolean> {
   const local = await readLegacyLocalState(AsyncStorage);
 
   if (!local.profile && !local.modules) {
-    return;
+    return false;
   }
 
   const moduleCount = Array.isArray(local.modules) ? local.modules.length : 0;
@@ -86,6 +89,7 @@ export async function runBackfillV1(): Promise<void> {
     captureEvent('backfill_succeeded', { durationMs: Date.now() - startMs });
 
     await AsyncStorage.multiRemove(LEGACY_KEYS_V0).catch(() => { /* swallow */ });
+    return true;
   } catch (err) {
     captureEvent('backfill_failed', { reason: err instanceof Error ? err.message : String(err) });
     throw err;
