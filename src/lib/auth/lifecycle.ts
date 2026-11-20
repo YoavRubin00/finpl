@@ -282,15 +282,27 @@ function toEpochMs(value: string | null | undefined): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
-/** Would POSTing this RevenueCat state change what the server reports? */
+/**
+ * Would POSTing this RevenueCat state change what the server reports?
+ * Since 2026-11-20 the server ignores the device's expiry while it reports Pro
+ * (RevenueCat's webhook keeps it), and never lets the device remove a Pro it
+ * granted itself (pro_source other than 'store': promotional / manual / gift),
+ * so those POSTs would change nothing — skip them instead of sending one on
+ * every launch.
+ */
 function matchesServer(rc: { isPro: boolean; proExpiresAt: string | null }, server: SubscriptionState | null): boolean {
-  if (rc.isPro !== (server?.isPro === true)) return false;
+  const serverPro = server?.isPro === true;
+  if (rc.isPro && serverPro) return true;
+  if (!rc.isPro && serverPro && isServerGrantedPro(server)) return true;
+  if (rc.isPro !== serverPro) return false;
   // Both not Pro: the server already reports what the POST would say.
-  if (!rc.isPro) return true;
-  const a = toEpochMs(rc.proExpiresAt);
-  const b = toEpochMs(server?.proExpiresAt);
-  if (a === null || b === null) return rc.proExpiresAt === (server?.proExpiresAt ?? null);
-  return Math.abs(a - b) < 1000;
+  return true;
+}
+
+function isServerGrantedPro(server: SubscriptionState | null): boolean {
+  if (!server?.isPro || !server.proSource || server.proSource === 'store') return false;
+  const exp = toEpochMs(server.proExpiresAt);
+  return exp === null ? server.proExpiresAt == null : exp > Date.now();
 }
 
 /**
@@ -320,8 +332,21 @@ async function syncRevenueCatToServer(serverSub: SubscriptionState | null, gen: 
 
   const res = await syncSubscription(fresh);
   if (gen !== bootGeneration) return; // signed out meanwhile: don't touch the next session's cache
-  queryClient.setQueryData<SubscriptionState | null>(subscriptionQueryKey, res.subscription);
   writeSubscriptionSnapshot(res.subscription);
+  if (fresh.isPro && res.subscription?.isPro !== true) {
+    // The server makes an account Pro only when RevenueCat confirms it or its
+    // webhook has landed (2026-11-20), so it can lag the store. The store's
+    // fresh answer is shown for this session; the server's answer stays the
+    // saved state, and the next launch asks again.
+    queryClient.setQueryData<SubscriptionState | null>(subscriptionQueryKey, {
+      isPro: true,
+      proExpiresAt: fresh.proExpiresAt,
+      proSource: res.subscription?.proSource ?? null,
+    });
+    captureEvent('rc_server_pro_unconfirmed', { has_server_row: res.subscription !== null });
+    return;
+  }
+  queryClient.setQueryData<SubscriptionState | null>(subscriptionQueryKey, res.subscription);
 }
 
 function startRevenueCatSync(serverSub: SubscriptionState | null | undefined, gen: number): void {
