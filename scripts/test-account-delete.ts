@@ -261,6 +261,22 @@ async function main(): Promise<void> {
     check(!!bridge && /UPDATE "?bridge_clicks"? SET user_id = NULL, user_email = NULL WHERE/.test(bridge.sql),
       'plan: bridge clicks anonymised (user id + email cleared)', bridge?.sql);
 
+    // 0018 with revenuecat_events.app_user_id (the raw RevenueCat id of a
+    // purchase the webhook could not credit).
+    const withAppUser = allColumns(true);
+    withAppUser.set('revenuecat_events', new Map([['user_id', { nullable: true }], ['app_user_id', { nullable: true }]]));
+    const rc2 = buildAccountDeletePlan(ctx, withAppUser).map((s) => ({ name: s.name, ...dialect.sqlToQuery(s.query) }))
+      .find((q) => q.name === 'revenuecat_events_anonymised');
+    check(!!rc2 && /UPDATE revenuecat_events SET user_id = NULL, app_user_id = NULL WHERE user_id = \$1::uuid OR \(user_id IS NULL AND lower\(app_user_id\) IN \(\$2, \$3\)\)/.test(rc2.sql),
+      'plan (0018 + app_user_id): their purchase rows lose user_id AND app_user_id; unlinked rows lose app_user_id when it is one of their addresses or their id',
+      rc2?.sql);
+    check(!!rc2 && JSON.stringify(rc2.params) === JSON.stringify([id, emails[0], id.toLowerCase()]),
+      'plan (0018 + app_user_id): bound only to their id and their own addresses (a row tied to another account is never touched)', rc2?.params);
+    const noAddress = buildAccountDeletePlan({ userId: id, emails: [] }, withAppUser).map((s) => ({ name: s.name, ...dialect.sqlToQuery(s.query) }))
+      .find((q) => q.name === 'revenuecat_events_anonymised');
+    check(!!noAddress && /lower\(app_user_id\) IN \(\$2\)\)/.test(noAddress.sql) && JSON.stringify(noAddress.params) === JSON.stringify([id, id]),
+      'plan (0018 + app_user_id): an account with no address still clears unlinked rows holding its id', noAddress);
+
     const before0019 = buildAccountDeletePlan(ctx, allColumns(false)).map((s) => ({ name: s.name, ...dialect.sqlToQuery(s.query) }));
     const ref0 = before0019.find((q) => q.name.startsWith('referrals_as_referrer'));
     check(ref0?.name === 'referrals_as_referrer_deleted' && /DELETE FROM referrals WHERE referrer_user_id = \$1::uuid/.test(ref0.sql),

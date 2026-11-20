@@ -46,9 +46,13 @@
 //   breaking_news_tracked, paper_trades, paper_portfolio, module_progress,
 //   ai_mentor_usage, user_stats, user_feedback, parental_consents, inventory,
 //   bridge_redemptions      delete
-//   revenuecat_events       anonymise (user_id NULL): the purchase event ids
-//                           stay so a webhook redelivered later still credits
-//                           nothing; the row no longer points at anyone
+//   revenuecat_events       anonymise (user_id and app_user_id NULL): the
+//                           purchase event ids stay so a webhook redelivered
+//                           later still credits nothing; the row no longer
+//                           points at anyone. Also purchases the webhook could
+//                           not credit (user_id NULL) whose raw RevenueCat id
+//                           (app_user_id) is one of their addresses or their
+//                           profile id: app_user_id cleared
 //   support_messages        delete (their messages; also rows sent with their
 //                           email and no user id)
 //   bridge_clicks           anonymise (user_id and user_email NULL; the
@@ -224,10 +228,22 @@ export function buildAccountDeletePlan(ctx: AccountDeleteContext, columns: Colum
     if (has(table, 'user_id')) add(table, sql`DELETE FROM ${sql.identifier(table)} WHERE user_id = ${id}`);
   }
 
-  // Purchase events the RevenueCat webhook already credited: keep the event id
-  // (it is what makes a redelivered webhook a no-op), drop the link to the user.
+  // Purchase events: keep the event id (it is what makes a redelivered webhook
+  // a no-op), drop every link to the person. Their own rows lose user_id and
+  // app_user_id. A purchase the webhook could not credit (user_id NULL) keeps
+  // the raw RevenueCat id in app_user_id: cleared when that id is one of their
+  // addresses or their profile id (a row tied to another account is never
+  // touched).
   if (has('revenuecat_events', 'user_id')) {
-    add('revenuecat_events_anonymised', sql`UPDATE revenuecat_events SET user_id = NULL WHERE user_id = ${id}`);
+    const sets = [sql`user_id = NULL`];
+    const conds = [sql`user_id = ${id}`];
+    if (has('revenuecat_events', 'app_user_id')) {
+      sets.push(sql`app_user_id = NULL`);
+      const keys = list([...new Set([...ctx.emails, ctx.userId.toLowerCase()])]);
+      conds.push(sql`(user_id IS NULL AND lower(app_user_id) IN (${keys}))`);
+    }
+    add('revenuecat_events_anonymised',
+      sql`UPDATE revenuecat_events SET ${sql.join(sets, sql`, `)} WHERE ${anyOf(conds)}`);
   }
 
   // Rows carrying only an email: matched by address ONLY when they belong to
