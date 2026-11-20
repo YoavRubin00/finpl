@@ -1,13 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from 'drizzle-orm';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-
-function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
-  const sqlClient = neon(url);
-  return drizzle(sqlClient);
-}
+import { getDb } from '../_shared/db';
+import { CQ_ISO_DATE_RE, CQ_QUESTION_ID_RE, getCrowdCounts } from '../_shared/crowdQuestion';
 
 function sanitizeString(value: unknown, maxLength: number): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -15,9 +8,7 @@ function sanitizeString(value: unknown, maxLength: number): string | undefined {
   return cleaned.trim().slice(0, maxLength) || undefined;
 }
 
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const QUESTION_ID_RE = /^[a-z0-9-]{1,80}$/i;
-
+/** GET /api/crowd-question/stats?questionId=X&voteDateIL=YYYY-MM-DD */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -32,29 +23,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!questionId || !voteDateIL) {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
-    if (!QUESTION_ID_RE.test(questionId)) {
+    if (!CQ_QUESTION_ID_RE.test(questionId)) {
       return res.status(400).json({ error: 'Invalid questionId' });
     }
-    if (!ISO_DATE_RE.test(voteDateIL)) {
+    if (!CQ_ISO_DATE_RE.test(voteDateIL)) {
       return res.status(400).json({ error: 'Invalid voteDateIL' });
     }
 
-    const db = getDb();
-    const counts = await db.execute(sql`
-      SELECT choice, COUNT(*)::int AS count
-      FROM crowd_question_votes
-      WHERE question_id = ${questionId} AND vote_date_il = ${voteDateIL}
-      GROUP BY choice
-    `);
-
-    let countA = 0;
-    let countB = 0;
-    for (const row of counts.rows as Array<{ choice: string; count: number }>) {
-      if (row.choice === 'a') countA = row.count;
-      else if (row.choice === 'b') countB = row.count;
-    }
-
-    return res.status(200).json({ ok: true, countA, countB, total: countA + countB });
+    const { countA, countB, total } = await getCrowdCounts(getDb(), questionId, voteDateIL);
+    return res.status(200).json({ ok: true, countA, countB, total });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error';
     console.error('[crowd-question/stats]', message, err);

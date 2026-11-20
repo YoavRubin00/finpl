@@ -1,53 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { banditVariants } from '../../src/db/schema';
+import { getDb } from '../_shared/db';
+import { BANDIT_STATE_CDN_CACHE, loadBanditState } from '../_shared/bandit';
+import { CDN_CACHE_HEADER } from '../_shared/cdnCache';
 
-function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
-  const sqlClient = neon(url);
-  return drizzle(sqlClient);
-}
-
-interface ServerVariant {
-  variantId: string;
-  alpha: number;
-  beta: number;
-  impressions: number;
-  conversions: number;
-}
-
+/** GET /api/bandit/state — global alpha/beta for all variants, grouped by
+ *  experiment. Public and identical for every caller, so the CDN answers it. */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const db = getDb();
-    const rows = await db
-      .select({
-        experimentId: banditVariants.experimentId,
-        variantId: banditVariants.variantId,
-        alpha: banditVariants.alpha,
-        beta: banditVariants.beta,
-        impressions: banditVariants.impressions,
-        conversions: banditVariants.conversions,
-      })
-      .from(banditVariants);
-
-    const experiments: Record<string, ServerVariant[]> = {};
-    for (const row of rows) {
-      const bucket = experiments[row.experimentId] ?? [];
-      bucket.push({
-        variantId: row.variantId,
-        alpha: row.alpha,
-        beta: row.beta,
-        impressions: row.impressions,
-        conversions: row.conversions,
-      });
-      experiments[row.experimentId] = bucket;
-    }
-
+    const experiments = await loadBanditState(getDb());
+    res.setHeader(CDN_CACHE_HEADER, BANDIT_STATE_CDN_CACHE);
     return res.status(200).json({ ok: true, experiments });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error';
