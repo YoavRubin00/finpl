@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, AppState, useWindowDimensions, ActivityIndicator } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Alert, useWindowDimensions, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -38,17 +38,15 @@ import { markDailyActivityCompleted } from "../economy/useStreak";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { SignupGateStep, reportSignupGateCompleted, getSignupGateLastMethod } from "./SignupGateStep";
-import { isModuleFirstArm } from "./firstRunExperiment";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { EmailCodeStep, sendEmailCode } from "../auth/EmailCodeStep";
 import type { VerifiedSession } from "../../lib/api/auth";
 import { useAppleAuth } from "../auth/useAppleAuth";
-import { useBandit } from "../bandit/useBandit";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
 import { captureEvent } from "../../lib/posthog";
 import { track } from "../../lib/analytics/events";
-import { onboardingStepProps, isTrackedOnboardingStep } from "./onboardingSteps";
+import { onboardingStepProps, isTrackedOnboardingStep, ONBOARDING_STEP_ORDER } from "./onboardingSteps";
 import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
 import { FREE_AVATARS } from "../avatars/avatarData";
 import type { AvatarDefinition } from "../avatars/avatarData";
@@ -71,14 +69,17 @@ const SLIDE_MS = 300;
 // the exact screens where the funnel leaks most (screen-1 = −18.6%). The
 // typing effect still plays; the advance just doesn't wait for it to finish.
 const AUTO_ADVANCE_MS = 500;
-const TOTAL_STEPS = 3;
+// Questions on the progress bar: goal + age (2026-11-20, the dream question is
+// gone; new users answer the goal on the welcome screen, so the age screen
+// shows a full bar: it is the last question).
+const TOTAL_STEPS = 2;
 
 // Module-level callback ref, StepShell notifies ProfilingFlow when user taps
 // so the persistent Finn overlay can mirror the typing animation.
 const finnTriggerRef: { current: (() => void) | null } = { current: null };
 
 const STEPS_WITH_PERSISTENT_FINN = new Set([
-  "dream", "goal", "age",
+  "goal", "age",
 ]);
 
 // ─── Instagram Stories progress bar ──────────────────────────────────────────
@@ -110,9 +111,11 @@ interface CardProps {
   onPress: () => void;
   index: number;
   lottieSource?: number;
+  /** Tighter padding, for the five goal cards on the welcome screen. */
+  compact?: boolean;
 }
 
-function AnimatedCard({ label, sublabel, selected, onPress, index, lottieSource }: CardProps) {
+function AnimatedCard({ label, sublabel, selected, onPress, index, lottieSource, compact = false }: CardProps) {
   const ty = useSharedValue(48);
   const opacity = useSharedValue(0);
   const pressScale = useSharedValue(1);
@@ -147,7 +150,7 @@ function AnimatedCard({ label, sublabel, selected, onPress, index, lottieSource 
   }));
 
   return (
-    <Animated.View style={[styles.cardWrap, wrapStyle]}>
+    <Animated.View style={[styles.cardWrap, compact && { marginBottom: 8 }, wrapStyle]}>
       {/* Neon glow overlay */}
       <Animated.View style={[StyleSheet.absoluteFillObject, styles.cardGlow, glowStyle]} />
       <Pressable
@@ -155,14 +158,14 @@ function AnimatedCard({ label, sublabel, selected, onPress, index, lottieSource 
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityState={{ selected }}
-        style={[styles.tapCard, selected && styles.tapCardSelected]}
+        style={[styles.tapCard, compact && { paddingVertical: 11 }, selected && styles.tapCardSelected]}
       >
         <View style={{ flex: 1 }}>
           <Text style={[styles.tapCardLabel, selected && styles.tapCardLabelActive]}>
             {label}
           </Text>
           {sublabel ? (
-            <Text style={[styles.tapCardSub, selected && styles.tapCardSubActive]}>
+            <Text style={[styles.tapCardSub, compact && { marginTop: 2 }, selected && styles.tapCardSubActive]}>
               {sublabel}
             </Text>
           ) : null}
@@ -468,7 +471,10 @@ function StepShell({
 
 // ─── Profile summary screen ───────────────────────────────────────────────────
 
-type EditableStep = 'dream' | 'goal' | 'knowledge' | 'daily-goal';
+// The dream question was removed (2026-11-20; its answer is read nowhere
+// outside onboarding), so it is no longer a summary row either. A stored
+// financialDream is kept untouched on the profile.
+type EditableStep = 'goal' | 'knowledge' | 'daily-goal';
 
 function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Collected; onDone: () => void; onEditStep?: (step: EditableStep) => void }) {
   const ctaScale = useSharedValue(0);
@@ -477,12 +483,10 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
   }, []);
   const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
-  const dreamLabel = collected.financialDream ? DREAMS.find((d) => d.id === collected.financialDream)?.label : null;
   const goalLabel = collected.financialGoal ? GOALS.find((g) => g.id === collected.financialGoal)?.label : null;
   const knowledgeLabel = collected.knowledgeLevel ? KNOWLEDGE_LABELS[collected.knowledgeLevel] : null;
 
   const rows = [
-    dreamLabel ? { icon: '🎯', label: 'החלום שלך', value: dreamLabel, step: 'dream' as EditableStep } : null,
     goalLabel ? { icon: '📌', label: 'המטרה שלך', value: goalLabel, step: 'goal' as EditableStep } : null,
     knowledgeLabel ? { icon: '🧠', label: 'רמת ידע', value: knowledgeLabel, step: 'knowledge' as EditableStep } : null,
     collected.dailyGoalMinutes ? { icon: '⏰', label: 'יעד יומי', value: `${collected.dailyGoalMinutes} דקות`, step: 'daily-goal' as EditableStep } : null,
@@ -590,90 +594,6 @@ function FinishOnboardingStep({ onFinish }: { onFinish: () => void }) {
   return <View style={{ flex: 1, backgroundColor: FINISH_BG }} accessible={false} />;
 }
 
-// ─── Step: Q0 Dream (Duolingo-style "pick your dream") ─────────────────────
-
-const DREAM_LOTTIES: Record<FinancialDream, number> = {
-  trip: require("../../../assets/lottie/wired-flat-804-sun-hover-rays.json") as number,
-  car: require("../../../assets/lottie/wired-flat-504-school-bus-hover-pinch.json") as number,
-  apartment: require("../../../assets/lottie/wired-flat-3302-house-sold-hover-pinch.json") as number,
-  freedom: require("../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json") as number,
-};
-
-const DREAMS: { id: FinancialDream; emoji: string; label: string; sub: string }[] = [
-  { id: "trip", emoji: "", label: "טיול גדול", sub: "30,000 ₪" },
-  { id: "car", emoji: "", label: "רכב ראשון", sub: "50,000 ₪" },
-  { id: "apartment", emoji: "", label: "דירה משלך", sub: "300,000 ₪" },
-  { id: "freedom", emoji: "", label: "חופש כלכלי", sub: "הכל אפשרי" },
-];
-
-function DreamStep({ onNext, onBack, initialValue, escapeEnabled = false }: { onNext: (v: FinancialDream | null) => void; onBack?: () => void; initialValue?: FinancialDream | null; escapeEnabled?: boolean }) {
-  // Seed local selection from collected.financialDream so that a Back
-  // navigation re-mounts the step with the previous choice already
-  // highlighted (QA audit 2026-05-31).
-  const [sel, setSel] = useState<FinancialDream | null>(initialValue ?? null);
-  const advancedRef = useRef(false);
-  // Reset the lock every time the step is mounted (e.g. user came Back).
-  // Without this the auto-advance ref stays true and Tap is silently
-  // ignored.
-  useEffect(() => { advancedRef.current = false; }, []);
-  // Q1 exposure marker. onboarding_step_completed('dream') is partial (the
-  // first-sim path skips this step), so this per-mount event is the clean
-  // denominator for measuring the dream-question conversion + the A/B arm.
-  useEffect(() => {
-    try { captureEvent('dream_step_shown', { easy_exit_enabled: escapeEnabled }); } catch { /* non-fatal */ }
-  }, [escapeEnabled]);
-  const tap = useCallback((id: FinancialDream) => {
-    if (advancedRef.current) return;
-    advancedRef.current = true;
-    setSel(id);
-    setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
-  }, [onNext]);
-  // Low-commitment exit (onboarding_dream_easy_exit treatment): a user with no
-  // specific financial dream advances recording null (already a handled state
-  // everywhere) instead of bailing. Shares the advance lock with `tap`.
-  const skip = useCallback(() => {
-    if (advancedRef.current) return;
-    advancedRef.current = true;
-    tapHaptic();
-    try { captureEvent('dream_easy_exit_tapped'); } catch { /* non-fatal */ }
-    onNext(null);
-  }, [onNext]);
-
-  return (
-    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה, הדרך תתגלה" finnState={sel ? "tablet" : "thinking"} onBack={onBack}>
-      <View style={styles.grid}>
-        {DREAMS.map((d, i) => (
-          <AnimatedGridCard
-            key={d.id}
-            index={i}
-            emoji={d.emoji}
-            label={d.label}
-            sublabel={d.sub}
-            selected={sel === d.id}
-            onPress={() => tap(d.id)}
-            lottieSource={DREAM_LOTTIES[d.id]}
-          />
-        ))}
-      </View>
-      {escapeEnabled && (
-        <Pressable
-          onPress={skip}
-          accessibilityRole="button"
-          accessibilityLabel="עדיין לא בטוח, קדימה נתחיל"
-          hitSlop={8}
-          style={{ alignSelf: 'center', marginTop: 18, paddingVertical: 8, paddingHorizontal: 12 }}
-        >
-          <Text style={{ writingDirection: 'rtl', textAlign: 'center', fontSize: 15, fontWeight: '700', color: '#64748b' }} allowFontScaling={false}>
-            עדיין לא בטוח? קדימה, נתחיל
-          </Text>
-        </Pressable>
-      )}
-    </StepShell>
-  );
-}
-
-// ─── Step: Compound Aha Moment ────────────────────────────────────────────────
-
 
 // ─── Lottie mappings for question steps ───────────────────────────────────────
 
@@ -718,8 +638,15 @@ const DEADLINE_LOTTIES: Record<DeadlineStress, number> = {
   "high-stress": require("../../../assets/lottie/wired-flat-2534-work-life-balance-hover-pinch.json") as number,
 };
 
-// ─── Step: Q1 Goal ────────────────────────────────────────────────────────────
+// ─── Goal question (welcome screen for new users; GoalStep in redo) ──────────
 
+// Welcome copy (2026-11-20): one line on what the app is, then the goal
+// question. Plain Hebrew, singular gender-neutral (BRAND.md), no em-dashes.
+const WELCOME_WHAT_IT_IS = "כאן לומדים לנהל כסף במשחק, כמה דקות ביום.";
+const GOAL_QUESTION = "למה הצטרפת?";
+
+// The answer is stored as profile.financialGoal and read by the chat prompt,
+// AI insights / banner tip, payslip analyzer, myth deck and the profile screen.
 const GOALS: { id: FinancialGoal; label: string; sub: string }[] = [
   { id: "cash-flow", label: "הכסף בורח לי מהידיים", sub: "תזרים ותקציב" },
   { id: "investing", label: "אני רוצה שהכסף יעבוד", sub: "השקעות" },
@@ -728,14 +655,9 @@ const GOALS: { id: FinancialGoal; label: string; sub: string }[] = [
   { id: "unsure", label: "עדיין לא ברור לי", sub: "רק הצצה" },
 ];
 
-const DREAM_REACTIONS: Record<FinancialDream, string> = {
-  trip: "טיול גדול זה יעד מדהים. נראה מאיפה מתחילים.",
-  car: "רכב ראשון? לגמרי אפשרי לצלול לזה.",
-  apartment: "דירה זה ים גדול. טוב שצללת.",
-  freedom: "חופש מוחלט. היעד הכי שווה שיש.",
-};
-
-function GoalStep({ dream, onNext, onBack, initialValue }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void; onBack?: () => void; initialValue?: FinancialGoal | null }) {
+// Standalone goal question. Since 2026-11-20 new users answer the goal on the
+// welcome screen (IntroStep); this step is used by the profile redo flow only.
+function GoalStep({ onNext, onBack, initialValue }: { onNext: (v: FinancialGoal) => void; onBack?: () => void; initialValue?: FinancialGoal | null }) {
   const [sel, setSel] = useState<FinancialGoal | null>(initialValue ?? null);
   const advancedRef = useRef(false);
   useEffect(() => { advancedRef.current = false; }, []);
@@ -746,10 +668,8 @@ function GoalStep({ dream, onNext, onBack, initialValue }: { dream: FinancialDre
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
 
-  const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את הפיד שלך";
-
   return (
-    <StepShell stepIndex={1} question="למה הצטרפת?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"} onBack={onBack}>
+    <StepShell stepIndex={0} question={GOAL_QUESTION} hint="זה יעצב את הפיד שלך" finnState={sel ? "tablet" : "idle"} onBack={onBack}>
       <View>
         {GOALS.map((g, i) => (
           <AnimatedCard key={g.id} index={i} label={g.label} sublabel={g.sub}
@@ -851,7 +771,7 @@ function AgeStep({ knowledge, onNext, onBack, initialAgeGroup }: { knowledge: Kn
   const dynamicHint = knowledge ? KNOWLEDGE_REACTIONS[knowledge] : "רק בשביל להתאים את ההמלצות";
 
   return (
-    <StepShell stepIndex={2} question="מה הגיל שלך?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"} onBack={onBack}>
+    <StepShell stepIndex={1} question="מה הגיל שלך?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"} onBack={onBack}>
       {AGE_GROUPS.map((g, i) => (
         <AnimatedCard key={g.label} index={i} label={g.label} sublabel={g.sub}
           selected={sel === i} onPress={() => tap(i)}
@@ -1677,21 +1597,22 @@ const simStyles = StyleSheet.create({
 // ─── Intro (personalisation splash) ──────────────────────────────────────────
 
 interface IntroStepProps {
-  onRegister: () => void;
-  onGuest: () => void;
   onLoginSuccess: () => void;
-  /** Active-layout: user picked their Dream on the welcome screen → enter guest + jump to "goal". */
-  onPickDream: (dream: FinancialDream) => void;
+  /** The user tapped a goal card on the welcome screen. The parent stores the
+   *  goal (and enters guest mode if needed) and moves on to the age question. */
+  onPickGoal: (goal: FinancialGoal) => void;
+  /** Goal picked earlier in this session (Back from the age question). */
+  initialGoal?: FinancialGoal | null;
 }
 
-function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDream }: IntroStepProps) {
-  // 2026-05-30 — two-step intro (Duolingo cadence):
-  //   "welcome"  — DEFAULT. Big mascot + "מתחילים" CTA. Friendly first impression
-  //                that doesn't ask for anything; "I have an account" link routes
-  //                returning users to login.
-  //   "register" — Account-creation prompt. Apple/Google up top + a visible
-  //                "Start without account" button (not a tiny link — users see it
-  //                and don't bounce). Reached by tapping "מתחילים" on welcome.
+function IntroStep({ onLoginSuccess, onPickGoal, initialGoal }: IntroStepProps) {
+  // Sub-states:
+  //   "welcome"  — DEFAULT. Mascot + one line on what the app is + the goal
+  //                question as tappable cards (2026-11-20: one flow for every
+  //                new user; the welcome-hook and dream experiments are gone).
+  //                "יש לי כבר חשבון" routes returning users to login.
+  //   "register" — Account-creation prompt. Not reachable from the welcome
+  //                any more (no code path sets it); kept untouched.
   //   "login"    — Apple/Google + email form for returning users.
   const [subStep, setSubStep] = useState<"welcome" | "register" | "login">("welcome");
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
@@ -1704,54 +1625,31 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
   const authError = useAuthStore((s) => s.authError);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const introRouter = useRouter();
-  // Welcome-hook bandit (Yoav 2026-06-26): the welcome screen loses ~20-30% who
-  // never tap the CTA — the #1 top-of-funnel leak. Thompson-sampling A/B/C/control
-  // over the copy (control + benefit/curiosity/empathy), optimizing tap-through.
-  const { payload: welcomeCopy, variantId: welcomeVariantId, trackImpression: trackWelcomeImpression, trackConversion: trackWelcomeConversion, trackDismiss: trackWelcomeDismiss } = useBandit('onboarding_welcome_hook');
-  const welcomeConvertedRef = useRef(false);
-  const welcomeDismissedRef = useRef(false);
-  // ── Active first-screen (bandit arm 'active_question') ──
-  // Render the first Dream question as tappable cards on the welcome screen so
-  // the first interaction is a meaningful choice + juice, then advance straight
-  // to "goal" (skipping the standalone dream step for this path).
-  const isActiveLayout = welcomeCopy.layout === 'active_question';
+  // A real signed-in account that has not finished onboarding (a session
+  // restored on a reinstall) has nothing to log in to: hide the login link.
+  const hasRealAccount = useAuthStore((s) => s.isAuthenticated && !s.isGuest);
   const { playSound: playIntroSound } = useSoundEffect();
   const reducedMotionIntro = useReducedMotion();
-  const [pickedDream, setPickedDream] = useState<FinancialDream | null>(null);
-  const [showDreamBurst, setShowDreamBurst] = useState(false);
-  const pickedDreamRef = useRef(false);
+  const [pickedGoal, setPickedGoal] = useState<FinancialGoal | null>(initialGoal ?? null);
+  const [showPickBurst, setShowPickBurst] = useState(false);
+  const pickedGoalRef = useRef(false);
   const idleScale = useSharedValue(1);
-  // Fit the welcome screen to the window height (layout only; the arm's copy,
-  // cards and conversion tap are untouched). The choice cards are the primary
-  // action, so the mascot and the gaps give way first. Three sizes: full
-  // (880pt+ windows, unchanged), compact (700–879pt: most Android phones and
-  // the standard iPhones), tight (iPhone SE class / 640pt-tall Android).
+  // Fit the welcome screen to the window height. The goal cards are the
+  // primary action, so the mascot and the gaps give way first. Three sizes:
+  // full (880pt+ windows), compact (700–879pt: most Android phones and the
+  // standard iPhones), tight (iPhone SE class / 640pt-tall Android). Taller
+  // content still scrolls (ScrollView below).
   const { height: windowHeight } = useWindowDimensions();
-  const welcomeFit = !isActiveLayout || windowHeight >= 880
-    ? { mascotBg: 200, mascot: 160, finnWrap: null, textGap: 28, loginGap: 36, shell: null }
+  const welcomeFit = windowHeight >= 880
+    ? { mascotBg: 140, mascot: 112, finnWrap: { marginBottom: 18 }, textGap: 22, loginGap: 22, shell: null }
     : windowHeight >= 700
-      ? { mascotBg: 132, mascot: 106, finnWrap: { marginBottom: 14 }, textGap: 18, loginGap: 18, shell: { paddingTop: 12, paddingBottom: 12 } }
-      : { mascotBg: 96, mascot: 78, finnWrap: { marginBottom: 10 }, textGap: 14, loginGap: 10, shell: { paddingTop: 8, paddingBottom: 8 } };
+      ? { mascotBg: 100, mascot: 80, finnWrap: { marginBottom: 12 }, textGap: 16, loginGap: 14, shell: { paddingTop: 12, paddingBottom: 12 } }
+      : { mascotBg: 76, mascot: 60, finnWrap: { marginBottom: 8 }, textGap: 12, loginGap: 10, shell: { paddingTop: 8, paddingBottom: 8 } };
   useEffect(() => {
-    trackWelcomeImpression();
-    // Screen-1 view event with the arm baked in: welcome_viewed → welcome_primary_clicked
-    // is the clean per-variant pass-through funnel (the step_name='intro' completion
-    // can't be broken down by layout on its own).
-    try {
-      captureEvent('welcome_viewed', {
-        variant: welcomeVariantId,
-        layout: isActiveLayout ? 'active_question' : 'passive',
-      });
-    } catch { /* non-fatal */ }
-    // The welcome screen has no explicit reject button — leaving the app without
-    // tapping the CTA is the bandit's "dismiss" (failure) signal. Fire once.
-    const subscription = AppState.addEventListener('change', (next) => {
-      if (next !== 'active' && !welcomeConvertedRef.current && !welcomeDismissedRef.current) {
-        welcomeDismissedRef.current = true;
-        try { trackWelcomeDismiss(); } catch { /* non-fatal */ }
-      }
-    });
-    return () => subscription.remove();
+    // Screen-1 view event: welcome_viewed → welcome_primary_clicked is the
+    // welcome pass-through funnel (onboarding_step_viewed / _completed for
+    // step 'intro' carry the same funnel with position props).
+    try { captureEvent('welcome_viewed', { layout: 'goal_question' }); } catch { /* non-fatal */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1847,33 +1745,31 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
     transform: [{ translateY: textTy.value }],
   }));
   const ctaAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
-  // Idle bounce on the mascot (active layout only) — pulls the eye for low-intent
-  // cold-opens in the first seconds. No-op under reduced motion.
+  // Idle bounce on the mascot — pulls the eye for low-intent cold-opens in the
+  // first seconds. No-op under reduced motion.
   useEffect(() => {
-    if (!isActiveLayout || reducedMotionIntro) return;
+    if (reducedMotionIntro) return;
     idleScale.value = withDelay(700, withRepeat(withSequence(
       withTiming(1.05, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
       withTiming(1.0, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
     ), -1, false));
-  }, [isActiveLayout, reducedMotionIntro]);
+  }, [reducedMotionIntro]);
   const finnActiveStyle = useAnimatedStyle(() => ({
     opacity: finnOpacity.value,
     transform: [{ scale: finnScale.value * idleScale.value }],
   }));
-  // First-tap on a Dream card: select + juice (visual only) + telemetry, then
-  // advance to "goal" after the same beat DreamStep uses (AUTO_ADVANCE_MS).
-  function handlePickDream(id: FinancialDream) {
-    if (pickedDreamRef.current) return;
-    pickedDreamRef.current = true;
-    welcomeConvertedRef.current = true;
-    setPickedDream(id);
-    setShowDreamBurst(true);
+  // Tap on a goal card: select + juice (visual only) + telemetry, then advance
+  // to the age question after the same beat the question steps use.
+  function handlePickGoal(id: FinancialGoal) {
+    if (pickedGoalRef.current) return;
+    pickedGoalRef.current = true;
+    setPickedGoal(id);
+    setShowPickBurst(true);
     try { successHaptic(); } catch { /* non-fatal */ }
     try { playIntroSound('btn_click_heavy'); } catch { /* non-fatal */ }
-    try { trackWelcomeConversion(); } catch { /* non-fatal */ }
-    try { captureEvent('welcome_primary_clicked', { destination: 'onboarding_guest', variant: welcomeVariantId, dream: id }); } catch { /* non-fatal */ }
+    try { captureEvent('welcome_primary_clicked', { destination: 'onboarding_guest', goal: id }); } catch { /* non-fatal */ }
     setTermsAccepted(true);
-    setTimeout(() => onPickDream(id), AUTO_ADVANCE_MS);
+    setTimeout(() => onPickGoal(id), AUTO_ADVANCE_MS);
   }
 
   const inputStyle = {
@@ -1889,10 +1785,10 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
     textAlign: "right" as const,
   };
 
-  // ── Welcome sub-state (DEFAULT — friendly first impression, no ask) ──
-  // Mirrors the prior screen exactly so returning users see what they expect.
-  // Tap "מתחילים" → "register" subStep (the new account-creation prompt).
-  // "כבר יש לי חשבון" → "login" subStep.
+  // ── Welcome sub-state (DEFAULT) ──
+  // One line on what the app is + the goal question as cards. A card tap is
+  // the start (stores the goal, guest mode, on to the age question).
+  // "יש לי כבר חשבון" → "login" subStep.
   if (subStep === "welcome") {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }} edges={["top", "bottom"]}>
@@ -1914,7 +1810,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
           bounces={false}
           keyboardShouldPersistTaps="handled"
         >
-        <Animated.View style={[introStyles.finnWrap, welcomeFit.finnWrap, isActiveLayout ? finnActiveStyle : finnStyle]}>
+        <Animated.View style={[introStyles.finnWrap, welcomeFit.finnWrap, finnActiveStyle]}>
           <LinearGradient
             colors={["#ecfeff", "#f0fdfa"]}
             style={[introStyles.finnBg, { width: welcomeFit.mascotBg, height: welcomeFit.mascotBg, borderRadius: welcomeFit.mascotBg / 2 }]}
@@ -1924,58 +1820,37 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
             <ExpoImage source={FINN_HELLO} style={{ width: welcomeFit.mascot, height: welcomeFit.mascot }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
           </LinearGradient>
         </Animated.View>
-        {showDreamBurst ? (
-          <ParticleBurst color="gold" onComplete={() => setShowDreamBurst(false)} />
+        {showPickBurst ? (
+          <ParticleBurst color="gold" onComplete={() => setShowPickBurst(false)} />
         ) : null}
 
+        {/* One line on what the app is, then the goal question (2026-11-20). */}
         <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: welcomeFit.textGap }]}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
-            {welcomeCopy.eyebrow}
+          <Text style={{ fontSize: 15, fontWeight: "700", color: "#0891b2", textAlign: "center", writingDirection: "rtl", lineHeight: 22, maxWidth: 330, marginBottom: 8 }}>
+            {WELCOME_WHAT_IT_IS}
           </Text>
-          <Text style={[introStyles.title, { marginBottom: welcomeCopy.benefit ? 12 : 0 }]}>{welcomeCopy.title}</Text>
-          {welcomeCopy.benefit ? (
-            <Text style={{ fontSize: 14.5, fontWeight: "500", color: "#475569", textAlign: "center", writingDirection: "rtl", lineHeight: 21, maxWidth: 330 }}>
-              {welcomeCopy.benefit}
-            </Text>
-          ) : null}
+          <Text style={[introStyles.title, { marginBottom: 0 }]} accessibilityRole="header">{GOAL_QUESTION}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", width: "100%" }]}>
-          {isActiveLayout ? (
-            /* Active first-screen: the first Dream question as tappable cards. Conversion = card tap. */
-            <View style={[styles.grid, { width: "100%" }]}>
-              {DREAMS.map((d, i) => (
-                <AnimatedGridCard
-                  key={d.id}
-                  index={i}
-                  emoji={d.emoji}
-                  label={d.label}
-                  sublabel={d.sub}
-                  selected={pickedDream === d.id}
-                  onPress={() => handlePickDream(d.id)}
-                  lottieSource={DREAM_LOTTIES[d.id]}
-                />
-              ))}
-            </View>
-          ) : (
-            /* Primary CTA — bandit variant copy; conversion = this tap */
-            <Pressable
-              onPress={() => {
-                welcomeConvertedRef.current = true;
-                try { trackWelcomeConversion(); } catch { /* non-fatal */ }
-                try { captureEvent('welcome_primary_clicked', { destination: 'onboarding_guest', variant: welcomeVariantId }); } catch { /* non-fatal */ }
-                setTermsAccepted(true);
-                onGuest();
-              }}
-              style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
-              accessibilityRole="button"
-              accessibilityLabel={welcomeCopy.cta}
-            >
-              <Text style={introStyles.ctaText}>{welcomeCopy.cta}</Text>
-            </Pressable>
-          )}
+          {/* The goal question as tappable cards. The tap is the start: it
+              stores the goal and moves on to the age question. */}
+          <View style={{ width: "100%" }}>
+            {GOALS.map((g, i) => (
+              <AnimatedCard
+                key={g.id}
+                index={i}
+                label={g.label}
+                sublabel={g.sub}
+                selected={pickedGoal === g.id}
+                onPress={() => handlePickGoal(g.id)}
+                lottieSource={GOAL_LOTTIES[g.id]}
+                compact
+              />
+            ))}
+          </View>
 
-          {/* Disclaimer right under the primary button */}
+          {/* Disclaimer right under the choices */}
           <Text
             style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 15, maxWidth: 300 }}
           >
@@ -1991,31 +1866,34 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
           </Text>
 
           {/* Returning user link, intentionally subdued (signup for new users
-              now happens after the 3 onboarding questions via SignupGateStep) */}
-          <Pressable
-            onPress={() => {
-              try { captureEvent('welcome_login_link_clicked'); } catch { /* non-fatal */ }
-              setSubStep("login");
-            }}
-            accessibilityRole="link"
-            accessibilityLabel="יש לי כבר חשבון"
-            hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
-            style={{ marginTop: welcomeFit.loginGap, paddingVertical: 6 }}
-          >
-            <Text style={{ fontSize: 13, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center" }}>
-              {"יש לי כבר חשבון"}
-            </Text>
-          </Pressable>
+              happens after the questions via SignupGateStep). Hidden for a
+              real account that is already signed in. */}
+          {!hasRealAccount ? (
+            <Pressable
+              onPress={() => {
+                try { captureEvent('welcome_login_link_clicked'); } catch { /* non-fatal */ }
+                setSubStep("login");
+              }}
+              accessibilityRole="link"
+              accessibilityLabel="יש לי כבר חשבון"
+              hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
+              style={{ marginTop: welcomeFit.loginGap, paddingVertical: 6 }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center" }}>
+                {"יש לי כבר חשבון"}
+              </Text>
+            </Pressable>
+          ) : null}
         </Animated.View>
         </ScrollView>
       </SafeAreaView>
     );
   }
 
-  // ── Register sub-state — appears after tapping "מתחילים" on welcome ──
-  // Duolingo-style: prominent OAuth CTAs, visible-but-secondary "Start without
-  // account" button (not a tiny link — users explicitly asked for this so they
-  // don't bounce). Login link sits at the bottom for returning users.
+  // ── Register sub-state — unreachable (nothing sets it since the welcome
+  // became a direct question); kept as it was. Duolingo-style: prominent OAuth
+  // CTAs, visible-but-secondary "Start without account" button. Login link
+  // sits at the bottom for returning users.
   if (subStep === "register") {
     return (
       <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
@@ -2088,7 +1966,9 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess, onPickDre
               this so first-time users don't bounce when they aren't ready to
               create an account yet. */}
           <Pressable
-            onPress={() => { setTermsAccepted(true); onGuest(); }}
+            // (Unreachable sub-step.) No account → back to the welcome, where
+            // the goal question is the start.
+            onPress={() => { setTermsAccepted(true); setSubStep("welcome"); }}
             style={{
               width: "100%",
               borderRadius: 14,
@@ -2413,113 +2293,14 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-// ─── Module-first hook (onboarding_module_first v1, Yoav 5.7.26) ────────────
-// The one-tap welcome for the module-first arm: mascot + a single CTA that
-// drops the user straight into mod-0-1 (value first; profiling comes after
-// the module). Deliberately does NOT mount IntroStep and does NOT call
-// useBandit('onboarding_welcome_hook') — a v1 impression would pollute that
-// pinned experiment. Keeps the welcome screen's terms disclaimer + login
-// link (a returning user on a fresh install still needs a way in).
-
-interface ModuleFirstHookProps {
-  onStart: () => void;
-}
-
-function ModuleFirstHook({ onStart }: ModuleFirstHookProps) {
-  const hookRouter = useRouter();
-  const startedRef = useRef(false);
-  // Same entrance choreography as IntroStep's welcome — familiar-feeling beat.
-  const finnScale = useSharedValue(0.8);
-  const finnOpacity = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-  const textTy = useSharedValue(24);
-  const ctaScale = useSharedValue(0);
-  useEffect(() => {
-    finnOpacity.value = withTiming(1, { duration: 400 });
-    finnScale.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.quad) });
-    textOpacity.value = withDelay(300, withTiming(1, { duration: 300 }));
-    textTy.value = withDelay(300, withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) }));
-    ctaScale.value = withDelay(200, withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const finnStyle = useAnimatedStyle(() => ({
-    opacity: finnOpacity.value,
-    transform: [{ scale: finnScale.value }],
-  }));
-  const textStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-    transform: [{ translateY: textTy.value }],
-  }));
-  const ctaAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
-
-  return (
-    <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
-      <Animated.View style={[introStyles.finnWrap, finnStyle]}>
-        <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
-        </LinearGradient>
-      </Animated.View>
-
-      <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
-          {"היי, אני קפטן שארק"}
-        </Text>
-        <Text style={[introStyles.title, { marginBottom: 12 }]}>{"קודם משחקים.\nשאלות — אחר כך."}</Text>
-        <Text style={{ fontSize: 14.5, fontWeight: "500", color: "#475569", textAlign: "center", writingDirection: "rtl", lineHeight: 21, maxWidth: 330 }}>
-          {"שיעור ראשון קצר על הכסף שלך — עם מתנות בדרך."}
-        </Text>
-      </Animated.View>
-
-      <Animated.View style={[ctaAnimStyle, { alignItems: "center", width: "100%" }]}>
-        <Pressable
-          onPress={() => {
-            if (startedRef.current) return; // double-tap guard — one navigation
-            startedRef.current = true;
-            onStart();
-          }}
-          style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
-          accessibilityRole="button"
-          accessibilityLabel="מתחילים"
-        >
-          <Text style={introStyles.ctaText}>{"מתחילים"}</Text>
-        </Pressable>
-
-        <Text
-          style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 15, maxWidth: 300 }}
-        >
-          {"המשך השימוש מהווה אישור של "}
-          <Text
-            style={{ color: "#0891b2" }}
-            accessibilityRole="link"
-            accessibilityLabel="תנאי השימוש"
-            onPress={() => hookRouter.push("/(auth)/terms" as never)}
-          >
-            תנאי השימוש
-          </Text>
-        </Text>
-
-        <Pressable
-          onPress={() => {
-            try { captureEvent('welcome_login_link_clicked'); } catch { /* non-fatal */ }
-            hookRouter.push("/(auth)/sign-in" as never);
-          }}
-          accessibilityRole="link"
-          accessibilityLabel="יש לי כבר חשבון"
-          style={{ marginTop: 36, paddingVertical: 6 }}
-        >
-          <Text style={{ fontSize: 13, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center" }}>
-            {"יש לי כבר חשבון"}
-          </Text>
-        </Pressable>
-      </Animated.View>
-    </SafeAreaView>
-  );
-}
-
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
+// One flow for every new user (2026-11-20, the onboarding experiments are
+// cancelled): intro (welcome + goal question) → age → signup-gate →
+// celebration (finish, no UI) → welcome chest → mod-0-1. Redo (profile
+// screen): goal → age → profile-summary → building-profile.
 type FlowStep =
-  | "intro" | "dream" | "first-sim" | "goal" | "knowledge" | "age" | "signup-gate" | "learning-time"
+  | "intro" | "first-sim" | "goal" | "knowledge" | "age" | "signup-gate" | "learning-time"
   | "learning-style" | "deadline" | "daily-goal" | "companion" | "finance-experts"
   | "avatar" | "building-profile" | "profile-summary" | "celebration";
 
@@ -2528,9 +2309,9 @@ type FlowStep =
 // (The funnel position props, step_index / total_steps, come from
 // onboardingSteps.ts instead.)
 const FLOW_STEP_ORDER: Partial<Record<FlowStep, number>> = {
-  intro: 0, dream: 1, goal: 2, age: 3, "signup-gate": 4,
-  knowledge: 5, "daily-goal": 5, "profile-summary": 6, "building-profile": 7,
-  celebration: 8,
+  intro: 0, goal: 1, age: 2, "signup-gate": 3,
+  knowledge: 4, "daily-goal": 4, "profile-summary": 5, "building-profile": 6,
+  celebration: 7,
 };
 
 interface Collected {
@@ -2571,32 +2352,26 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const displayName = useAuthStore((s) => s.displayName) ?? "You";
   const { playSound } = useSoundEffect();
 
-  // screen-1 dream-question easy-exit A/B (onboarding_dream_easy_exit). Selected
-  // at the parent level so the arm is STABLE across DreamStep re-mounts (Back
-  // from goal→dream) within one onboarding session — the parent doesn't unmount
-  // on step changes. useBandit sets the person property + fires
-  // bandit_variant_assigned once; new-user cohort filtering in the analytics
-  // read excludes the redo mounts this also covers.
-  const { payload: dreamEasyExit } = useBandit('onboarding_dream_easy_exit');
-  const dreamEasyExitEnabled = dreamEasyExit.variant === 'easy_exit';
-
   const isRedo = mode === "redo";
-  // Skip intro if user already registered/signed-in or is guest (came back from register screen).
+  // Entry step. Nothing about the flow's position is persisted except the
+  // profile blob, so this also decides where users mid-flow on an older build
+  // land (a guest who was on the old dream / goal / age steps, a module-first
+  // user, a signed-in account that never finished onboarding).
   // Post-OAuth-mid-signup recovery: when a user completes OAuth from the signup-gate, useGoogleAuth /
   // useAppleAuth do router.replace("/(auth)/onboarding") which re-mounts this component with
-  // isAuthenticated=true. saveCollected() already wrote dream/goal/age into useAuthStore.profile
+  // isAuthenticated=true. saveCollected() already wrote goal/age into useAuthStore.profile
   // before the OAuth prompt, so a profile that exists while onboarding is still incomplete is the
-  // signal that the user already got past the questions — skip straight to celebration instead of dream.
-  // (The signal used to be `profile.financialDream` being truthy. The dream question has an
-  // easy-exit that stores financialDream=null, so those users were sent back to question 1 right
-  // after signing up. The profile blob is only ever created by the gate's seed, by
-  // completeOnboarding, or by convertGuestToUser — never by a plain sign-in — so its existence
-  // is the reliable signal.)
+  // signal that the user already got past the questions — skip straight to the finish step.
+  // (The profile blob is only ever created by the gate's seed, by completeOnboarding, or by
+  // convertGuestToUser — never by a plain sign-in — so its existence is the reliable signal.
+  // Users who were on the old celebration / streak screens have it too.)
   const resumedPastGate = !isRedo && isAuthenticated && existingProfile != null;
   const [step, setStep] = useState<FlowStep>(() => {
-    if (isRedo) return "dream";
+    if (isRedo) return "goal";
     if (resumedPastGate) return "celebration";
-    if (isAuthenticated || isGuest) return "dream";
+    // Everyone else starts at the welcome, which IS the goal question (a guest
+    // who was mid-flow lost the unsaved answers anyway; this used to be the
+    // standalone dream step).
     return "intro";
   });
   // Wall-clock anchor for onboarding duration. Used by the completion event so
@@ -2605,15 +2380,12 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
 
   useEffect(() => {
     if (!isRedo) {
-      // Module-first v1: the one-tap hook is NOT profiling — onboarding_started
-      // fires on the post-module re-mount (stage 'profiling') instead, so the
-      // started→completed guardrail denominator stays comparable across arms.
-      if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'hook') return;
       // `entry_step` tells the mounts apart. This event fires on EVERY mount of
-      // the flow, and only 'intro' is a brand-new user: 'dream' is a guest or a
-      // signed-in user coming back mid-flow, 'celebration' is the re-mount after
-      // OAuth / email register. Without it the started→completed rate counts
-      // returning users and re-mounts in the denominator.
+      // the flow: 'intro' is a new user or a guest / signed-in user coming back
+      // before the gate (isGuest / is_guest tell those apart), 'celebration' is
+      // the re-mount after OAuth / email register or a relaunch past the gate.
+      // Without it the started→completed rate counts re-mounts in the
+      // denominator.
       try { track({ name: 'onboarding_started', props: { entry_step: step } }); } catch { /* non-fatal */ }
       // Resuming at the celebration means the user got past the signup gate on
       // a path that left this component (Google, email register, or an app
@@ -2638,7 +2410,6 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   useEffect(() => {
     const funnelMode = isRedo ? "redo" : "new";
     if (!isTrackedOnboardingStep(step, funnelMode)) return;
-    if (!isRedo && step === "intro" && isModuleFirstArm()) return;
     try {
       track({ name: 'onboarding_step_viewed', props: { ...onboardingStepProps(step, funnelMode), mode: funnelMode } });
     } catch { /* non-fatal */ }
@@ -2796,7 +2567,8 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       try {
         captureEvent('onboarding_completed', {
           duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
-          total_steps: TOTAL_STEPS,
+          // Same count as the step events' total_steps (onboardingSteps.ts).
+          total_steps: ONBOARDING_STEP_ORDER.length,
         });
       } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
       try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
@@ -2871,14 +2643,6 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // sends a pending-chest user anyway) so the learn map mounts behind the
     // opaque chest; a relaunch with the chest still pending resumes there too.
     try { captureEvent('onboarding_enter_first_module', { target: 'mod-0-1', chapter_id: 'chapter-0' }); } catch { /* non-fatal */ }
-    // First-run experiment bookkeeping (both arms): the reordered flow is over.
-    // NOTE: v1's conversion does NOT fire here — the variant's journey END is
-    // the tour-end welcome chest (Yoav 5.7.26), recorded in
-    // PostWalkthroughFirstChest.handleOpen, guarded on the activation stamp.
-    try {
-      const tut = useTutorialStore.getState();
-      if (tut.firstRunArm !== null) tut.setFirstRunStage('done');
-    } catch { /* non-fatal */ }
     // PAINT-THEN-NAVIGATE (Yoav 11.7: the chest screen "loaded slow"): a
     // synchronous replace made the user WAIT through the heavy (tabs)/learn-map
     // mount before the chest gate could paint. The gate is armed above and
@@ -2946,30 +2710,17 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     setStep("building-profile");
   }} onEditStep={editSummaryStep} />;
   if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("celebration")} />;
-  // Module-first first-run (onboarding_module_first v1): replace the welcome
-  // with the one-tap hook → guest mode → straight into mod-0-1. ProfilingFlow
-  // re-mounts AFTER the module with isGuest=true, so the step initializer
-  // starts at "dream" and this branch never renders again.
-  if (!isRedo && step === "intro" && isModuleFirstArm()) return (
-    <ModuleFirstHook
-      onStart={() => {
-        try { captureEvent('onboarding_module_first_hook_tapped'); } catch { /* non-fatal */ }
-        enterGuestMode('module_first_hook');
-        try { useTutorialStore.getState().setFirstRunStage('module'); } catch { /* non-fatal */ }
-        router.replace("/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree" as never);
-      }}
-    />
-  );
+  // Welcome = the goal question, for every new user (no variants since
+  // 2026-11-20). Redo never shows it: redo starts at the standalone goal step.
   if (!isRedo && step === "intro") return (
     <IntroStep
-      onRegister={() => router.push("/register" as never)}
-      onGuest={() => {
-        enterGuestMode('welcome_cta');
-        slide("dream", {});
-      }}
-      onPickDream={(dream) => {
-        enterGuestMode('welcome_dream_card');
-        slide("goal", { financialDream: dream });
+      initialGoal={collected.financialGoal}
+      onPickGoal={(goal) => {
+        // Guest mode only for a signed-out user. A guest coming back, or a real
+        // account that never finished onboarding, is already signed in, and
+        // enterGuestMode would turn a real account into a guest.
+        if (!useAuthStore.getState().isAuthenticated) enterGuestMode('welcome_goal_card');
+        slide("age", { financialGoal: goal });
       }}
       onLoginSuccess={() => router.replace("/" as never)}
     />
@@ -2978,39 +2729,23 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff", overflow: "hidden" }}>
       <Animated.View style={[{ flex: 1 }, slideStyle]}>
-        {step === "dream" && <DreamStep
-          initialValue={collected.financialDream}
-          escapeEnabled={dreamEasyExitEnabled}
-          onNext={(v) => {
-            if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
-            else { slide("goal", { financialDream: v }); }
-          }}
-          onBack={
-            // Order matters. In redo mode `dream` is the first step and
-            // `step === "intro"` renders NOTHING (the intro branch is gated on
-            // !isRedo), so setStep("intro") here left a guest on a blank screen
-            // with no way out (QA 2026-07-02). Route: edit-from-summary → back
-            // to summary; redo → exit the redo flow; else guest → welcome.
-            returnToSummary
-              ? () => { setReturnToSummary(false); slide("profile-summary", {}); }
-              : isRedo
-                ? onRedoComplete
-                : isGuest
-                  ? () => {
-                      try { captureEvent('onboarding_dream_back_clicked'); } catch { /* non-fatal */ }
-                      setStep("intro");
-                    }
-                  : undefined
-          }
-        />}
+        {/* Redo only (new users answer the goal on the welcome screen). */}
         {step === "goal" && <GoalStep
-          dream={collected.financialDream}
           initialValue={collected.financialGoal}
           onNext={(v) => {
             if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialGoal: v }); }
             else { slide("age", { financialGoal: v }); }
           }}
-          onBack={() => slide("dream", {})}
+          onBack={
+            // Edit-from-summary → back to the summary; otherwise goal is the
+            // first redo step, so Back leaves the redo flow (never a blank
+            // screen: the intro branch above is gated on !isRedo).
+            returnToSummary
+              ? () => { setReturnToSummary(false); slide("profile-summary", {}); }
+              : isRedo
+                ? onRedoComplete
+                : () => slide("intro", {})
+          }
         />}
         {step === "age" && <AgeStep
           knowledge={collected.knowledgeLevel}
@@ -3032,7 +2767,9 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
             isRedo ? "profile-summary" : (isAuthenticated && !isGuest) ? "celebration" : "signup-gate",
             { ageGroup: ag, birthYear: by },
           )}
-          onBack={() => slide("goal", {})}
+          // Back to wherever the goal was asked: the welcome for new users,
+          // the standalone goal step in redo.
+          onBack={() => slide(isRedo ? "goal" : "intro", {})}
         />}
         {step === "signup-gate" && <SignupGateStep
           onSignupSuccess={(method) => {

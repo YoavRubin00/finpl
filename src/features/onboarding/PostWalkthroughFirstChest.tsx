@@ -42,9 +42,6 @@ import { FINN_HAPPY } from '../retention-loops/finnMascotConfig';
 import { useTomorrowChestStore } from '../retention-loops/useTomorrowChestStore';
 import { captureEvent } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
-import { isModuleFirstArm, FIRST_RUN_EXPERIMENT_ID, firstRunVariantId } from './firstRunExperiment';
-import { useTopicProgressStore } from '../topic-learning/useTopicProgressStore';
-import { useBanditStore } from '../bandit/useBanditStore';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { useNotificationStore } from '../notifications/useNotificationStore';
 import { useBannerCooldownStore } from '../notifications/useBannerCooldownStore';
@@ -79,9 +76,9 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
   const hasSeenAppWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const mod01Done = useCompletedModulesStore((s) => s.completedIds.includes('mod-0-1'));
   const router = useRouter();
-  // The new first run (tour not seen yet) goes straight into the first lesson.
-  // Module-first v1 and the legacy "chest after the tour" order go to the map.
-  const goesToLesson = !isModuleFirstArm() && !hasSeenAppWalkthrough && !mod01Done;
+  // The first run (tour not seen yet) goes straight into the first lesson.
+  // The legacy "chest after the tour" order goes to the map.
+  const goesToLesson = !hasSeenAppWalkthrough && !mod01Done;
 
   // Funnel step 'first-chest' (onboarding_step_viewed / _completed), the last
   // onboarding screen before mod-0-1.
@@ -133,24 +130,8 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
       try { addCoins(FIRST_CHEST_COINS, 'lesson'); } catch { /* non-fatal */ }
       try { addXP(FIRST_CHEST_XP, 'lesson_complete'); } catch { /* non-fatal */ }
       try { captureEvent('first_chest_opened', { coins: FIRST_CHEST_COINS, xp: FIRST_CHEST_XP }); } catch { /* non-fatal */ }
-      // Module-first v1 journey END (Yoav 5.7.26: "הסיום של הוריאנט החדש היא
-      // בהגעה לתיבה שבסוף ההדרכה"): reaching THIS chest means the full
-      // reordered first-run completed — module + its chest + profiling + tour.
-      // Convert HERE, guarded on the activation stamp (a v1 user who bailed
-      // the module pre-threshold must not convert; they convert later at the
-      // accordion chest like control) and one-shot via the PERSISTED
-      // firstChestOpened flag — grantedRef alone resets if a kill between
-      // open and continue re-shows this modal.
-      try {
-        const tut = useTutorialStore.getState();
-        if (
-          !tut.firstChestOpened &&
-          isModuleFirstArm() &&
-          Boolean(useTopicProgressStore.getState().modulesPastThreshold['mod-0-1'])
-        ) {
-          useBanditStore.getState().recordConversion(FIRST_RUN_EXPERIMENT_ID, firstRunVariantId('module_first'));
-        }
-      } catch { /* non-fatal */ }
+      // (The module-first experiment's conversion used to be recorded here; the
+      // experiment is cancelled, 2026-11-20.)
       // Unlock the notification-permission ask at this earliest guaranteed win —
       // every new user opens the welcome chest, so even those who later drop DURING
       // mod-0-1 still get asked for push (→ the streak comeback reminder fires).
@@ -168,9 +149,8 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
   const handleContinue = useCallback(() => {
     tapHaptic();
     const tut = useTutorialStore.getState();
-    const moduleFirst = isModuleFirstArm();
     const lessonDone = useCompletedModulesStore.getState().completedIds.includes('mod-0-1');
-    const toLesson = !moduleFirst && !tut.hasSeenAppWalkthrough && !lessonDone;
+    const toLesson = !tut.hasSeenAppWalkthrough && !lessonDone;
     try { captureEvent('first_chest_continue', { next: toLesson ? 'lesson' : 'map' }); } catch { /* non-fatal */ }
     try {
       track({
@@ -179,21 +159,14 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
       });
     } catch { /* non-fatal */ }
 
-    if (moduleFirst || tut.hasSeenAppWalkthrough) {
-      // Unchanged paths:
-      // - Module-first first-run (onboarding_module_first v1, Yoav 5.7.26): the
-      //   v1 user already played mod-0-1 BEFORE profiling — their earned
-      //   threshold chest is waiting on the learn map (the accordion fires it
-      //   on mount). Re-pushing the lesson would replay the half-done intro.
-      // - Legacy order: this chest was armed at the END of a tour
-      //   (AppWalkthroughOverlay.routePostWalkthrough, users who saw the tour
-      //   before any chest). The tour is over; back to the map as before.
+    if (tut.hasSeenAppWalkthrough) {
+      // Legacy order (unchanged): this chest was armed at the END of a tour
+      // (AppWalkthroughOverlay.routePostWalkthrough, users who saw the tour
+      // before any chest). The tour is over; back to the map as before.
+      // (The module-first branch that also landed here, with a push to the
+      // map, went with the experiment, 2026-11-20.)
       clearFlag(false);
       try { triggerWalkthrough(); } catch { /* non-fatal */ }
-      if (moduleFirst) {
-        try { router.push('/(tabs)/index' as never); } catch { /* non-fatal */ }
-        return;
-      }
       try { router.replace('/(tabs)' as never); } catch { /* non-fatal */ }
       return;
     }
@@ -241,9 +214,7 @@ function PostWalkthroughFirstChest(): React.JSX.Element {
           {/* Heading */}
           <Animated.View entering={FadeInUp.duration(360)} style={styles.headingWrap}>
             <Text style={[styles.heading, RTL_CENTER]} allowFontScaling={false}>
-              {/* Module-first v1 already opened their earned lesson chest at the
-                  handoff — for them this is a bonus, not "the first". */}
-              {opened ? 'יש! 🎁' : isModuleFirstArm() ? 'תיבת בונוס בשבילך!' : 'התיבה הראשונה שלך!'}
+              {opened ? 'יש! 🎁' : 'התיבה הראשונה שלך!'}
             </Text>
             {!opened && (
               <Text style={[styles.subheading, RTL_CENTER]} allowFontScaling={false}>

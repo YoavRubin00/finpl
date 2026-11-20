@@ -53,29 +53,23 @@ export type ProGateFeature =
 
 export type AppEvent =
   // ── Onboarding ─────────────────────────────────────────────────────────
-  // `entry_step` tells the mounts apart: only 'intro' is a brand-new user.
+  // `entry_step` tells the mounts apart: 'intro' = before the gate (new user,
+  // or a guest coming back), 'celebration' = re-mount past the gate.
   | { name: 'onboarding_started'; props: { entry_step: string } }
   // Per-step funnel (activation pass 2026-11-20). Both events carry the same
   // position props, from src/features/onboarding/onboardingSteps.ts:
-  //   step        stable step id ('intro' | 'dream' | 'goal' | 'age' |
-  //               'signup-gate' | 'first-chest'; redo mode uses
-  //               'dream' | 'goal' | 'age' | 'profile-summary' | 'knowledge' |
-  //               'daily-goal')
-  //   step_index  position in the canonical order for the mode (a dream picked
-  //               on the welcome screen skips 'dream', so 0 then 2 is normal)
-  //   total_steps length of that canonical order
+  //   step        stable step id. New users: 'intro' (welcome + goal
+  //               question) | 'age' | 'signup-gate' | 'first-chest'. Redo:
+  //               'goal' | 'age' | 'profile-summary' | 'knowledge' | 'daily-goal'
+  //   step_index  position in the canonical order for the mode
+  //   total_steps length of that canonical order (4 for new users since the
+  //               second 2026-11-20 pass; it was 6 with 'dream' and 'goal')
   // `step_name` carries the same value as `step`, kept so insights already
   // built on it keep working. Funnels should count `direction: 'forward'` only.
+  // (dream_step_shown / dream_easy_exit_tapped stopped with the dream question.)
   | { name: 'onboarding_step_viewed'; props: { step: string; step_index: number; total_steps: number; mode: 'new' | 'redo' } }
   | { name: 'onboarding_step_completed'; props: { step: string; step_index: number; total_steps: number; step_name: string; next_step?: string; mode?: 'new' | 'redo'; direction?: 'forward' | 'back' } }
   | { name: 'onboarding_completed'; props: { duration_sec?: number; total_steps?: number } }
-  // screen-1 dream-question easy-exit experiment (onboarding_dream_easy_exit).
-  // `dream_step_shown` fires on every DreamStep mount so we can finally measure
-  // Q1 conversion in isolation (onboarding_step_completed('dream') is partial —
-  // the first-sim path skips the standalone dream step). `dream_easy_exit_tapped`
-  // fires when a user takes the low-commitment exit (records financialDream=null).
-  | { name: 'dream_step_shown'; props: { easy_exit_enabled: boolean } }
-  | { name: 'dream_easy_exit_tapped'; props?: Record<string, never> }
   | { name: 'signup_gate_shown'; props: { source: 'post_onboarding_questions' | 'lesson_gate' | string } }
   | { name: 'signup_gate_method_clicked'; props: { method: 'apple' | 'google' | 'email' | 'guest'; source: string } }
   | { name: 'signup_gate_skipped'; props: { source: string } }
@@ -93,8 +87,10 @@ export type AppEvent =
   // from the same pass are typed above since 2026-11-20.)
   | { name: 'signup_gate_completed'; props: { source: string; outcome: 'apple' | 'google' | 'email' | 'guest' | 'account'; via: 'in_place' | 'resume'; time_open_ms?: number } }
   // Fires on the real signed-out → guest transition (useAuthStore.enterGuestMode).
-  // Every new user enters guest mode at the welcome CTA; an account is optional.
-  | { name: 'guest_mode_entered'; props: { source: 'welcome_cta' | 'welcome_dream_card' | 'signup_gate_email' | 'enter_first_module' | 'module_first_hook' | 'register_screen_skip' | string } }
+  // Every new user enters guest mode on the welcome screen (a goal card,
+  // 'welcome_goal_card' since 2026-11-20); an account is optional. Older
+  // sources ('welcome_cta', 'welcome_dream_card', 'module_first_hook') stop.
+  | { name: 'guest_mode_entered'; props: { source: 'welcome_goal_card' | 'welcome_cta' | 'welcome_dream_card' | 'signup_gate_email' | 'enter_first_module' | 'module_first_hook' | 'register_screen_skip' | string } }
   // The /oauthredirect landing screen left by itself instead of spinning
   // forever: the Google sign-in it was waiting for was not in flight any more
   // (cancel / dismiss / failure / app cold-started by the deep link), or it
