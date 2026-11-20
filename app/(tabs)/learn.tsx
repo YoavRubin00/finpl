@@ -20,12 +20,15 @@ import { learnMapHref } from "../../src/lib/navigation/learnMap";
 export default function LearnRedirect() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  // Router-internal params (`__…`) are not part of the link. A string, so the
+  // effect below re-runs only when the link really changes.
+  const href = learnMapHref(
+    Object.fromEntries(Object.entries(params).filter(([key]) => !key.startsWith("__"))),
+  );
   useFocusEffect(
     useCallback(() => {
-      // Router-internal params (`__…`) are not part of the link.
-      const query = Object.fromEntries(Object.entries(params).filter(([key]) => !key.startsWith("__")));
-      router.replace(learnMapHref(query) as Href);
-    }, [router, params]),
+      router.replace(href as Href);
+    }, [router, href]),
   );
   return null;
 }
