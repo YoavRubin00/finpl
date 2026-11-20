@@ -65,7 +65,7 @@ export type TomorrowChestStatus = 'none' | 'sealed' | 'ready';
  *  בלילה" — returning tomorrow is the single best-paying decision of day-0,
  *  and it's a live compound-interest lesson. Max injection ≈ 300, one-shot,
  *  return-gated — less than one portfolio share. */
-const CHEST_COINS_FLOOR = 100;
+export const CHEST_COINS_FLOOR = 100;
 const OVERNIGHT_MATCH_RATE = 0.5;
 const OVERNIGHT_MATCH_CAP = 200;
 /** Day-after-day CHAIN (Yoav 11.7: "לשפר את החוויה בתיבת חזרה יום אחרי יום").
