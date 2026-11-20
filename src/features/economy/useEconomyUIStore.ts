@@ -15,7 +15,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import * as Notifications from "expo-notifications";
 import { applyEconomyDelta } from "../../lib/api/economy";
 import { queryClient } from "../../lib/queryClient";
-import { economyQueryKey } from "./useEconomy";
+import { economyQueryKey, economyPlaceholder } from "./useEconomy";
 import { registerLocalStore } from "../../lib/stores/registry";
 import type { Economy } from "../../lib/api/economy";
 import type { StreakState } from "../../lib/api/streak";
@@ -342,7 +342,12 @@ export function fireEconomyDelta(delta: {
   // roundtrip + invalidate — which silently never resolves when /api/sync/economy
   // isn't deployed (DEV without server, missing route). XP earned in modules
   // was effectively invisible until next cold start.
-  queryClient.setQueryData<Economy | null>(economyQueryKey, (old) => {
+  queryClient.setQueryData<Economy | null>(economyQueryKey, (cached) => {
+    // Nothing read yet this launch (a reward on mount, e.g. the daily login
+    // bonus, lands before the boot has seeded or read the economy): start from
+    // the last server-confirmed balance, not from 0 (boot review 20.11: the
+    // first open of each day showed 0 coins / 0 gems until the server answered).
+    const old = cached === undefined ? economyPlaceholder() : cached;
     if (!old) {
       return {
         xp: delta.xpDelta ?? 0,
