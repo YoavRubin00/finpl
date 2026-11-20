@@ -1,42 +1,25 @@
 import { neon } from '@neondatabase/serverless';
-import { Resend } from 'resend';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString } from '../_shared/validate';
+import { sendBridgeAlert } from '../../../api/_shared/bridgeAlert';
 
 const VALID_ACTIONS = new Set(['redeem', 'link_open']);
 
-/** Owner inbox — gets an email on every real redemption. */
-const OWNER_EMAIL = process.env.OWNER_NOTIFICATION_EMAIL ?? '';
-
-const BENEFIT_LABELS: Record<string, string> = {
-  'bridge-invest-altshuler': 'אלטשולר שחם טרייד',
-  'bridge-invest-inter-il': 'אינטראקטיב ישראל',
-};
-
-function buildAlertHtml(params: {
-  action: string;
-  benefitId: string;
-  userEmail: string | null;
-  platform: string | null;
-  timestamp: string;
-}): string {
-  const label = BENEFIT_LABELS[params.benefitId] ?? params.benefitId;
-  const actionLabel = params.action === 'redeem' ? '💰 המרה (הוצאת מטבעות)' : '🔗 פתיחת קישור';
-  return `
-    <div style="font-family:sans-serif;direction:rtl;text-align:right;max-width:480px;margin:0 auto">
-      <h2 style="color:#0369a1">📊 FinPlay — פעולת שותף חדשה</h2>
-      <table style="width:100%;border-collapse:collapse">
-        <tr><td style="padding:8px;font-weight:700;color:#475569">פעולה</td><td style="padding:8px">${actionLabel}</td></tr>
-        <tr style="background:#f8fafc"><td style="padding:8px;font-weight:700;color:#475569">שותף</td><td style="padding:8px">${label}</td></tr>
-        <tr><td style="padding:8px;font-weight:700;color:#475569">משתמש</td><td style="padding:8px">${params.userEmail ?? 'לא ידוע'}</td></tr>
-        <tr style="background:#f8fafc"><td style="padding:8px;font-weight:700;color:#475569">פלטפורמה</td><td style="padding:8px">${params.platform ?? '—'}</td></tr>
-        <tr><td style="padding:8px;font-weight:700;color:#475569">זמן</td><td style="padding:8px">${params.timestamp}</td></tr>
-      </table>
-    </div>
-  `;
-}
-
+/**
+ * POST /api/bridge/track-click — tracking ping for Bridge partner clicks.
+ *
+ * Not a redemption check: app builds before the 2026-11-20 OTA decide a
+ * redemption on the device and report it here (no session; `authId` and
+ * `userEmail` are whatever the body says). Newer builds redeem through
+ * POST /api/bridge/redeem, which checks and deducts the server balance and
+ * writes the 'redeem' row itself. For the old builds' reports:
+ *   - one 'redeem' row per (user, benefit): a repeat (replay, second device,
+ *     reinstall) is answered ok and neither stored nor emailed again;
+ *   - no owner email when the authId names no account;
+ *   - the owner email says the report is unverified, and is HTML-escaped (the
+ *     client-supplied email used to be inserted raw).
+ */
 export async function POST(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'bridge-track', { limit: 20, windowSec: 60 });
   if (blocked) return blocked;
@@ -67,21 +50,23 @@ export async function POST(request: Request): Promise<Response> {
       userId = rows[0]?.id ?? null;
     }
 
-    await sql`
+    // A known user's repeated 'redeem' report is skipped (see header).
+    const inserted = await sql`
       INSERT INTO bridge_clicks (benefit_id, user_id, user_email, action, platform)
-      VALUES (${benefitId}, ${userId}, ${userEmail}, ${action}, ${platform})
-    `;
+      SELECT ${benefitId}::text, ${userId}::uuid, ${userEmail}::text, ${action}::text, ${platform}::text
+       WHERE NOT (
+         ${action}::text = 'redeem'
+         AND ${userId}::uuid IS NOT NULL
+         AND EXISTS (
+           SELECT 1 FROM bridge_clicks
+            WHERE user_id = ${userId}::uuid AND benefit_id = ${benefitId}::text AND action = 'redeem'
+         )
+       )
+      RETURNING id
+    ` as { id: number }[];
 
-    // Send owner alert on every redeem (link_open is higher frequency, skip email for those).
-    if (action === 'redeem') {
-      const resend = new Resend(process.env.RESEND_API_KEY ?? '');
-      const timestamp = new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' });
-      resend.emails.send({
-        from: 'FinPlay Alerts <alerts@finplay.co.il>',
-        to: OWNER_EMAIL,
-        subject: `💰 המרה חדשה — ${BENEFIT_LABELS[benefitId] ?? benefitId}`,
-        html: buildAlertHtml({ action, benefitId, userEmail, platform, timestamp }),
-      }).catch(() => { /* non-critical */ });
+    if (action === 'redeem' && userId && inserted.length > 0) {
+      sendBridgeAlert({ action: 'redeem', benefitId, userEmail, platform, verified: false });
     }
 
     return Response.json({ ok: true });
