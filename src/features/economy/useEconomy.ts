@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { applyEconomyDelta, getEconomy, type Economy } from '../../lib/api/economy';
 import { useAuthStore } from '../auth/useAuthStore';
 import { guardedQueryFn } from '../../lib/queryGuard';
-import { readSnapshot, writeSnapshot } from './querySnapshot';
+import { whenHydrated } from '../../lib/stores/whenHydrated';
+import { isSnapshotPrimed, primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
 
 export const economyQueryKey = ['economy'] as const;
 
@@ -28,6 +29,37 @@ export function economyPlaceholder(): Economy | undefined {
 /** Record a server-confirmed economy row as the cold-open snapshot. */
 export function writeEconomySnapshot(economy: Economy | null | undefined, forAuthId?: string): void {
   writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy, forAuthId);
+}
+
+/** Load the saved balance from storage (AsyncStorage on devices). */
+export function primeEconomySnapshot(): Promise<void> {
+  return primeSnapshot(ECONOMY_SNAPSHOT_KEY);
+}
+
+/** Upper bound on waiting for the saved balance before an optimistic reward is
+ *  shown anyway (from 0, as before). Same order as the boot's own caps. */
+const ECONOMY_BASE_WAIT_MS = 3000;
+
+/**
+ * Whether an optimistic economy write can start now: the account is known
+ * (auth store loaded) and, for a signed-in account, its saved balance has been
+ * loaded. False only during the first moments of a launch on a device, where
+ * rewards granted on mount (daily login bonus) used to start from 0 coins /
+ * 0 gems because the saved balance was still in AsyncStorage (20.11).
+ */
+export function economyBaseReady(): boolean {
+  if (!useAuthStore.persist.hasHydrated()) return false;
+  const { authId, isGuest } = useAuthStore.getState();
+  if (!authId || isGuest) return true; // no saved server balance to wait for
+  return isSnapshotPrimed(ECONOMY_SNAPSHOT_KEY);
+}
+
+/** Resolves once economyBaseReady() would be true, or after a few seconds. */
+export async function whenEconomyBaseReady(): Promise<void> {
+  const startedAt = Date.now();
+  await whenHydrated(useAuthStore, ECONOMY_BASE_WAIT_MS);
+  const left = Math.max(0, ECONOMY_BASE_WAIT_MS - (Date.now() - startedAt));
+  await Promise.race([primeEconomySnapshot(), new Promise<void>((r) => setTimeout(r, left))]);
 }
 
 /** GET /api/sync/economy as a query function: never overwrites a newer local

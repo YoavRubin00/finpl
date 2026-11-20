@@ -5,7 +5,7 @@ import { getSubscription, syncSubscription, type SubscriptionState } from '../..
 import { checkProEntitlement, RC_ENTITLEMENT_PRO } from '../../services/revenueCat';
 import type { CustomerInfo } from '../../services/revenueCat';
 import { useAuthStore } from '../auth/useAuthStore';
-import { readSnapshot, writeSnapshot } from '../economy/querySnapshot';
+import { primeSnapshot, readSnapshot, writeSnapshot } from '../economy/querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
 
 export const subscriptionQueryKey = ['subscription'] as const;
@@ -39,6 +39,12 @@ export function readSubscriptionSnapshot(): SubscriptionState | null {
 /** Call with a server answer only. */
 export function writeSubscriptionSnapshot(sub: SubscriptionState | null | undefined, forAuthId?: string): void {
   writeSnapshot(SUBSCRIPTION_SNAPSHOT_KEY, normalizeSubscription(sub), forAuthId);
+}
+
+/** Load the saved Pro state from storage (AsyncStorage on devices). The cold
+ *  boot waits for this (bounded) before deciding whether it can open at once. */
+export function primeSubscriptionSnapshot(): Promise<void> {
+  return primeSnapshot(SUBSCRIPTION_SNAPSHOT_KEY);
 }
 
 /** GET the subscription as a query function: a late answer never overwrites a

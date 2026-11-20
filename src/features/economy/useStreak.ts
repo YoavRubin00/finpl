@@ -9,7 +9,7 @@ import { useEconomyUIStore } from './useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { captureEvent, setPersonProperties } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
-import { readSnapshot, writeSnapshot } from './querySnapshot';
+import { primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
 
 export const streakQueryKey = ['streak'] as const;
@@ -33,6 +33,11 @@ export function streakPlaceholder(): StreakState | undefined {
 /** Record a server-confirmed streak as the cold-open snapshot. */
 export function writeStreakSnapshot(streak: StreakState | null | undefined, forAuthId?: string): void {
   writeSnapshot(STREAK_SNAPSHOT_KEY, streak, forAuthId);
+}
+
+/** Load the saved streak from storage (AsyncStorage on devices). */
+export function primeStreakSnapshot(): Promise<void> {
+  return primeSnapshot(STREAK_SNAPSHOT_KEY);
 }
 
 /** GET /api/sync/streak as a query function: a late answer never overwrites
