@@ -1,4 +1,4 @@
-import { View, Text, Image, Pressable, Modal, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Image, Pressable, Modal, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,13 +14,17 @@ interface RedemptionModalProps {
   benefit: Benefit | null;
   isRedeemed?: boolean;
   canAfford?: boolean;
+  /** The redemption request is running: spinner on the button, no second tap.
+   *  Closing stays possible (the partner site then does not open). */
+  busy?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function RedemptionModal({ visible, benefit, isRedeemed = false, canAfford = true, onConfirm, onCancel }: RedemptionModalProps) {
+export function RedemptionModal({ visible, benefit, isRedeemed = false, canAfford = true, busy = false, onConfirm, onCancel }: RedemptionModalProps) {
   const insets = useSafeAreaInsets();
   if (!benefit) return null;
+  const blocked = !canAfford && !isRedeemed;
 
   return (
     <Modal
@@ -101,20 +105,21 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
               cause the white-on-white bg-loss bug). */}
           <Pressable
             onPress={onConfirm}
-            disabled={!canAfford && !isRedeemed}
+            disabled={blocked || busy}
             style={({ pressed }) =>
-              !canAfford && !isRedeemed
+              blocked
                 ? styles.confirmBtnDisabled
                 : [
                     styles.confirmBtnShell,
-                    pressed && styles.confirmBtnShellPressed,
+                    pressed && !busy && styles.confirmBtnShellPressed,
+                    busy && styles.confirmBtnShellBusy,
                   ]
             }
             accessibilityRole="button"
-            accessibilityState={{ disabled: !canAfford && !isRedeemed }}
-            accessibilityLabel={isRedeemed ? 'מעבר לאתר השותף' : canAfford ? 'מימוש ההטבה' : 'אין מספיק מטבעות'}
+            accessibilityState={{ disabled: blocked || busy, busy }}
+            accessibilityLabel={busy ? 'מממשים את ההטבה' : isRedeemed ? 'מעבר לאתר השותף' : canAfford ? 'מימוש ההטבה' : 'אין מספיק מטבעות'}
           >
-            {!canAfford && !isRedeemed ? (
+            {blocked ? (
               <Text style={styles.confirmBtnTextDisabled}>אין מספיק מטבעות</Text>
             ) : (
               <View style={styles.confirmBtnInner}>
@@ -126,9 +131,13 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={styles.confirmBtnRim} pointerEvents="none" />
-                <Text style={styles.confirmBtnText}>
-                  {isRedeemed ? 'מעבר לאתר השותף' : 'מימוש ההטבה'}
-                </Text>
+                {busy ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text style={styles.confirmBtnText}>
+                    {isRedeemed ? 'מעבר לאתר השותף' : 'מימוש ההטבה'}
+                  </Text>
+                )}
               </View>
             )}
           </Pressable>
@@ -289,6 +298,9 @@ const styles = StyleSheet.create({
     marginTop: 7,
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 2 },
+  },
+  confirmBtnShellBusy: {
+    opacity: 0.85,
   },
   /* Inner: clips gradient to pill shape */
   confirmBtnInner: {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Image, Pressable, Linking, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, Linking, StyleSheet, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -49,11 +49,17 @@ interface BenefitCardProps {
    *  mod-0-5 Bridge handoff CTA), this card renders with a gold border + corner
    *  badge so the user immediately recognises "this is the one I was sent to". */
   isHighlighted?: boolean;
+  /** A redemption of this benefit got no answer that says what happened (the
+   *  server may have deducted already): the buy button stays reachable whatever
+   *  the balance on screen, so the next tap asks the server again. */
+  redeemPending?: boolean;
+  /** This benefit's redemption request is running: spinner, no second tap. */
+  busy?: boolean;
 }
 
-export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurchase, isHighlighted = false }: BenefitCardProps) {
+export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurchase, isHighlighted = false, redeemPending = false, busy = false }: BenefitCardProps) {
   const router = useRouter();
-  const canAfford   = coins >= benefit.costCoins;
+  const canAfford   = coins >= benefit.costCoins || redeemPending;
   const lockedByPro = benefit.proOnly && !isPro;
   const isAdSlot    = benefit.partnerAdSlot === true;
   const isPartnerAd = benefit.isPartnerAd === true;
@@ -62,7 +68,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
   // re-spending coins).
   const isDisabled  = !benefit.isAvailable || lockedByPro || isAdSlot;
   const coinsNeeded = benefit.costCoins - coins;
-  const progress    = Math.min(coins / benefit.costCoins, 1);
+  const progress    = canAfford ? 1 : Math.min(coins / benefit.costCoins, 1);
 
   // Animated progress bar
   const barWidth = useSharedValue(0);
@@ -254,18 +260,27 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
               return (
                 <Pressable
                   onPress={onPurchase}
+                  disabled={busy}
                   accessibilityRole="button"
-                  accessibilityLabel={`מימוש ההטבה תמורת ${formatNumber(benefit.costCoins)} מטבעות`}
+                  accessibilityState={{ disabled: busy, busy }}
+                  accessibilityLabel={busy ? 'מממשים את ההטבה' : `מימוש ההטבה תמורת ${formatNumber(benefit.costCoins)} מטבעות`}
                   hitSlop={8}
                   style={({ pressed }) => [
                     styles.costButton,
-                    pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+                    pressed && !busy && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+                    busy && { opacity: 0.85 },
                   ]}
                 >
-                  <GoldCoinIcon size={16} />
-                  <Text style={styles.costButtonText}>
-                    עלות {formatNumber(benefit.costCoins)}
-                  </Text>
+                  {busy ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <GoldCoinIcon size={16} />
+                      <Text style={styles.costButtonText}>
+                        עלות {formatNumber(benefit.costCoins)}
+                      </Text>
+                    </>
+                  )}
                 </Pressable>
               );
             }

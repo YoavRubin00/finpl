@@ -8,6 +8,7 @@ import {
   Linking,
   AppState,
   Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,6 +53,15 @@ import { CATEGORY_LABELS } from './types';
 import type { Benefit, BenefitCategory } from './types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
+
+/** The session is missing or was rejected (redeem answered 401): ask the user
+ *  to sign in again instead of "try again in a moment". Plain Hebrew. */
+const SIGNED_OUT_PROMPT = {
+  title: 'צריך להתחבר שוב',
+  body: 'כדי לממש הטבות, התחברו שוב לחשבון שלכם.',
+  later: 'לא עכשיו',
+  signIn: 'להתחברות',
+} as const;
 
 // Only categories that hold a real (non-placeholder) benefit get a tab —
 // derived from bridgeData, so re-enabling a partner slot brings its tab back
@@ -201,6 +211,12 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const redeemBenefit = useBridgeStore((s) => s.redeemBenefit);
   const redeemedCount = useBridgeStore((s) => s.getRedeemedCount());
   const savedValue = useBridgeStore((s) => s.getTotalSavedValue());
+  // Benefits whose last redemption got no answer that says what happened: the
+  // next tap must reach the server even when the balance on screen (perhaps
+  // already lowered by that deduction) looks too small.
+  const pendingRedeemIds = useBridgeStore((s) => s.pendingRedeemIds);
+  const isRedeemPending = (benefitId: string): boolean =>
+    Array.isArray(pendingRedeemIds) && pendingRedeemIds.includes(benefitId);
 
   const { tab, highlight } = useLocalSearchParams<{ tab?: BenefitCategory; highlight?: string }>();
   // When a deep-link names a specific benefit (e.g. /bridge?highlight=bridge-invest-altshuler
@@ -382,10 +398,29 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
     setModalVisible(true);
   }, [coins, isPro, isBenefitRedeemed]);
 
+  // Bumped whenever the redemption sheet is closed by the user, so a request
+  // that finishes afterwards knows not to open the partner site.
+  const modalSessionRef = useRef(0);
+  // False once the Bridge has unmounted: a late answer then shows nothing and
+  // opens nothing.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const handleCancel = useCallback(() => {
+    modalSessionRef.current++;
     setModalVisible(false);
     setSelectedBenefit(null);
   }, []);
+
+  const promptSignIn = useCallback(() => {
+    Alert.alert(SIGNED_OUT_PROMPT.title, SIGNED_OUT_PROMPT.body, [
+      { text: SIGNED_OUT_PROMPT.later, style: 'cancel' },
+      { text: SIGNED_OUT_PROMPT.signIn, onPress: () => router.push('/(auth)/sign-in' as never) },
+    ]);
+  }, [router]);
 
   const openPartnerUrl = useCallback(async (url: string) => {
     // Don't gate on Linking.canOpenURL — on Android 11+ it returns false for
@@ -403,8 +438,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
 
   // One redemption request at a time: the server call takes a moment and a
   // second tap must not start another one (the server would answer
-  // alreadyRedeemed anyway, but the UI would celebrate twice).
+  // alreadyRedeemed anyway, but the UI would celebrate twice). The ref blocks
+  // synchronously; redeemingId drives the spinner on the card / in the sheet.
   const redeemInFlightRef = useRef(false);
+  const [redeemingId, setRedeemingId] = useState<string | null>(null);
 
   // Direct purchase shortcut: bypasses the confirmation modal. Used by the
   // big blue cost button on the card itself — needed because the modal
@@ -430,12 +467,18 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       return;
     }
     redeemInFlightRef.current = true;
+    setRedeemingId(benefit.id);
     let result: BridgeRedeemResult;
     try {
       result = await redeemBenefit(benefit.id);
     } finally {
       redeemInFlightRef.current = false;
+      if (mountedRef.current) setRedeemingId(null);
     }
+    // Left the Bridge meanwhile: nothing to show, and never open the partner
+    // site on top of whatever screen the user is on now. The card shows the
+    // redemption (and its partner link) on the next visit.
+    if (!mountedRef.current) return;
     if (result.ok) {
       setSuccessTitle(benefit.title);
       setShowConfetti(true);
@@ -480,11 +523,13 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         setToast(bridgeToastFor({ kind: 'not_available' }));
       } else if (result.reason === 'insufficient_coins') {
         setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: benefit.costCoins, coins: result.coins }));
+      } else if (result.reason === 'signed_out') {
+        promptSignIn();
       } else {
         setToast(bridgeToastFor({ kind: 'redeem_failed' }));
       }
     }
-  }, [isBenefitRedeemed, redeemBenefit, openPartnerUrl, email, isPro]);
+  }, [isBenefitRedeemed, redeemBenefit, openPartnerUrl, email, isPro, promptSignIn]);
 
   const handleConfirm = useCallback(async () => {
     if (!selectedBenefit) return;
@@ -510,49 +555,62 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       }
       return;
     }
+    const benefit = selectedBenefit;
+    const session = modalSessionRef.current;
     redeemInFlightRef.current = true;
+    setRedeemingId(benefit.id);
     let result: BridgeRedeemResult;
     try {
-      result = await redeemBenefit(selectedBenefit.id);
+      result = await redeemBenefit(benefit.id);
     } finally {
       redeemInFlightRef.current = false;
+      if (mountedRef.current) setRedeemingId(null);
     }
-    setModalVisible(false);
-    setSelectedBenefit(null);
+    // Left the Bridge meanwhile: nothing to show, and never open the partner
+    // site on top of whatever screen the user is on now.
+    if (!mountedRef.current) return;
+    // The user closed the sheet while the request ran: say how it went, but
+    // don't open the partner site they walked away from (the card keeps its
+    // partner link after a redemption).
+    const stillOpen = modalSessionRef.current === session;
+    if (stillOpen) {
+      setModalVisible(false);
+      setSelectedBenefit(null);
+    }
     if (result.ok) {
-      setSuccessTitle(selectedBenefit.title);
+      setSuccessTitle(benefit.title);
       setShowConfetti(true);
       // Signed-in redemptions are recorded by the server itself.
-      if (!result.serverChecked) trackBridgeClick(selectedBenefit.id, 'redeem', email);
+      if (!result.serverChecked) trackBridgeClick(benefit.id, 'redeem', email);
       captureEvent('bridge_redeem_confirmed', {
-        benefit_id: selectedBenefit.id,
-        partner_name: selectedBenefit.partnerName,
-        category: selectedBenefit.category,
-        cost_coins: selectedBenefit.costCoins,
+        benefit_id: benefit.id,
+        partner_name: benefit.partnerName,
+        category: benefit.category,
+        cost_coins: benefit.costCoins,
         entry_point: 'modal',
         is_pro: isPro,
         server_checked: result.serverChecked,
         already_redeemed: result.alreadyRedeemed,
       });
-      if (selectedBenefit.partnerUrl) {
+      if (benefit.partnerUrl && stillOpen) {
         captureEvent('bridge_partner_url_opened', {
-          benefit_id: selectedBenefit.id,
-          partner_name: selectedBenefit.partnerName,
-          category: selectedBenefit.category,
-          cost_coins: selectedBenefit.costCoins,
+          benefit_id: benefit.id,
+          partner_name: benefit.partnerName,
+          category: benefit.category,
+          cost_coins: benefit.costCoins,
           entry_point: 'modal',
           was_redeemed_before: false,
           is_pro: isPro,
         });
-        openPartnerUrl(selectedBenefit.partnerUrl);
+        openPartnerUrl(benefit.partnerUrl);
       }
     } else {
       // Surface the failure to the user so they understand why nothing happened.
       captureEvent('bridge_redeem_failed', {
-        benefit_id: selectedBenefit.id,
-        partner_name: selectedBenefit.partnerName,
-        category: selectedBenefit.category,
-        cost_coins: selectedBenefit.costCoins,
+        benefit_id: benefit.id,
+        partner_name: benefit.partnerName,
+        category: benefit.category,
+        cost_coins: benefit.costCoins,
         reason: result.reason === 'failed' ? 'unknown' : result.reason,
         coins_at_attempt: result.coins,
         entry_point: 'modal',
@@ -561,12 +619,14 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       if (result.reason === 'not_available') {
         setToast(bridgeToastFor({ kind: 'not_available' }));
       } else if (result.reason === 'insufficient_coins') {
-        setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: selectedBenefit.costCoins, coins: result.coins }));
+        setToast(bridgeToastFor({ kind: 'insufficient_coins', cost: benefit.costCoins, coins: result.coins }));
+      } else if (result.reason === 'signed_out') {
+        promptSignIn();
       } else {
         setToast(bridgeToastFor({ kind: 'redeem_failed' }));
       }
     }
-  }, [selectedBenefit, redeemBenefit, email, isBenefitRedeemed, openPartnerUrl, isPro]);
+  }, [selectedBenefit, redeemBenefit, email, isBenefitRedeemed, openPartnerUrl, isPro, promptSignIn]);
 
   return (
     <View style={styles.root}>
@@ -734,6 +794,8 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                 onPress={() => handleCardPress(benefit)}
                 onPurchase={() => handleQuickPurchase(benefit)}
                 isHighlighted={highlight === benefit.id}
+                redeemPending={isRedeemPending(benefit.id)}
+                busy={redeemingId === benefit.id}
               />
             </Animated.View>
           ))}
@@ -782,7 +844,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         visible={modalVisible}
         benefit={selectedBenefit}
         isRedeemed={selectedBenefit ? isBenefitRedeemed(selectedBenefit.id) : false}
-        canAfford={selectedBenefit ? coins >= selectedBenefit.costCoins : true}
+        // A benefit whose last redemption got no answer may already be paid
+        // for: let the confirm reach the server whatever the balance shows.
+        canAfford={selectedBenefit ? coins >= selectedBenefit.costCoins || isRedeemPending(selectedBenefit.id) : true}
+        busy={!!selectedBenefit && redeemingId === selectedBenefit.id}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />
