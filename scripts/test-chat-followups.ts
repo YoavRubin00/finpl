@@ -92,5 +92,64 @@ for (const size of [1, 2, 3, 5, 7, 13, 1000]) {
   check(got === answer && followups === null, 'malformed trailer: answer kept, no chips');
 }
 
+// ── Markdown around the marker / loose markers (boot review 20.11) ──────────
+// Each runs through the real (deployed) server splitter first, then the client.
+const chips = '["איך מחשבים את זה?", "כמה זמן לוקח?"]';
+
+{
+  const { wire } = serve(`${answer}\n**${FOLLOWUPS_MARKER}**\n${chips}`, 4);
+  const { answer: got, followups } = splitChatResponse(wire);
+  check(got === answer, 'bold marker: no stray ** left in the answer');
+  check(followups?.[1] === 'כמה זמן לוקח?', 'bold marker: chips parsed');
+}
+
+{
+  const { wire } = serve(`${answer}\n\`\`\`\n${FOLLOWUPS_MARKER}\n${chips}\n\`\`\``, 5);
+  const { answer: got, followups } = splitChatResponse(wire);
+  check(got === answer, 'marker inside a code fence: no dangling ``` left');
+  check(followups?.[0] === 'איך מחשבים את זה?', 'marker inside a code fence: chips parsed');
+}
+
+{
+  const { wire } = serve(`${answer}\n\`\`\`json\n${FOLLOWUPS_MARKER}\n${chips}\n\`\`\``, 7);
+  const { answer: got } = splitChatResponse(wire);
+  check(got === answer, 'marker inside a ```json fence: no dangling fence left');
+}
+
+{
+  // The server only knows the exact marker: a loosely written one reaches the
+  // client as text, with no trailer. The client cuts it.
+  for (const loose of ['@@ FOLLOWUPS @@', '@@followups@@', '@@FOLLOWUP@@', '@@ Follow-Ups @@']) {
+    const { wire } = serve(`${answer}\n${loose}\n${chips}`, 6);
+    check(!wire.includes(FOLLOWUPS_SEPARATOR), `loose marker "${loose}": server sends no trailer`);
+    const { answer: got, followups } = splitChatResponse(wire);
+    check(got === answer, `loose marker "${loose}": hidden from the answer`);
+    check(followups?.[0] === 'איך מחשבים את זה?', `loose marker "${loose}": chips still parsed`);
+  }
+}
+
+{
+  const { wire } = serve(`${answer}\n**@@ FOLLOWUPS @@**\n${chips}`, 3);
+  const { answer: got, followups } = splitChatResponse(wire);
+  check(got === answer && followups !== null, 'bold loose marker: hidden, no ** left, chips parsed');
+}
+
+{
+  // Marker on the same line as the last sentence, wrapped in bold.
+  const { wire } = serve(`${answer} **${FOLLOWUPS_MARKER}** ${chips}`, 9);
+  const { answer: got } = splitChatResponse(wire);
+  check(got === answer, 'inline bold marker: unpaired ** glued to the answer removed');
+}
+
+{
+  // Balanced markdown at the end of a real answer is left alone.
+  const withCode = 'דוגמה:\n```\nx = 1\n```';
+  const { wire } = serve(`${withCode}\n${FOLLOWUPS_MARKER}\n${chips}`, 4);
+  check(splitChatResponse(wire).answer === withCode, 'closed code block at the end kept');
+  const withBold = 'השורה האחרונה **מודגשת**';
+  const { wire: wire2 } = serve(`${withBold}\n${FOLLOWUPS_MARKER}\n${chips}`, 4);
+  check(splitChatResponse(wire2).answer === withBold, 'balanced bold at the end kept');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

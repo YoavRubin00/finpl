@@ -120,17 +120,27 @@ export class FollowupStreamSplitter {
 export function splitChatResponse(raw: string): { answer: string; followups: [string, string] | null } {
   const sep = raw.indexOf(FOLLOWUPS_SEPARATOR);
   if (sep === -1) {
+    // No trailer: the server found no exact marker. The model may still have
+    // written one loosely (`@@ FOLLOWUPS @@`, other case); cut there.
+    const loose = lastLooseMarker(raw);
+    if (loose) {
+      return {
+        answer: stripTrailingDebris(raw.slice(0, loose.index)),
+        followups: parseQuestionPair(raw.slice(loose.index + loose.length)),
+      };
+    }
     const trimmed = raw.replace(/\s+$/, '');
     const lastBreak = trimmed.lastIndexOf('\n');
     const lastLine = trimmed.slice(lastBreak + 1).trim();
     if (lastBreak !== -1 && lastLine.startsWith('[') && lastLine.endsWith(']')) {
       const pair = parseQuestionPair(lastLine);
-      if (pair) return { answer: trimmed.slice(0, lastBreak).replace(/\s+$/, ''), followups: pair };
+      if (pair) return { answer: stripTrailingDebris(trimmed.slice(0, lastBreak)), followups: pair };
     }
-    // Trailing whitespace is what preceded a marker whose chips didn't parse.
-    return { answer: trimmed, followups: null };
+    // Trailing whitespace / markdown is what preceded a marker whose chips
+    // didn't parse.
+    return { answer: stripTrailingDebris(trimmed), followups: null };
   }
-  const answer = raw.slice(0, sep).replace(/\s+$/, '');
+  const answer = stripTrailingDebris(raw.slice(0, sep));
   let followups: [string, string] | null = null;
   try {
     const parsed = JSON.parse(raw.slice(sep + 1)) as { followups?: unknown };
@@ -141,4 +151,48 @@ export function splitChatResponse(raw: string): { answer: string; followups: [st
     /* malformed trailer: keep the answer, no chips */
   }
   return { answer, followups };
+}
+
+/** The marker as the model may really write it: spaces inside, other case,
+ *  "FOLLOWUP" / "FOLLOW-UPS". */
+const LOOSE_MARKER = /@@\s*follow[\s_-]*ups?\s*@@/gi;
+
+function lastLooseMarker(text: string): { index: number; length: number } | null {
+  let last: { index: number; length: number } | null = null;
+  for (const m of text.matchAll(LOOSE_MARKER)) {
+    if (m.index !== undefined) last = { index: m.index, length: m[0].length };
+  }
+  return last;
+}
+
+function countFenceLines(text: string): number {
+  return text.split('\n').filter((line) => /^\s*`{3,}/.test(line)).length;
+}
+
+/**
+ * What a marker wrapped in markdown leaves at the end of the answer once the
+ * marker and chips are cut off: a line of bare emphasis (`**`, `__`, `*`), an
+ * unclosed code fence (```` ``` ```` / ```` ```json ````), a trailing rule, or
+ * an unpaired `**` glued to the last line. Removed; balanced markdown stays.
+ */
+function stripTrailingDebris(text: string): string {
+  let out = text.replace(/\s+$/, '');
+  for (;;) {
+    const lastBreak = out.lastIndexOf('\n');
+    const lastLine = out.slice(lastBreak + 1).trim();
+    const debris =
+      /^[*_~]+$/.test(lastLine)
+      || /^-{3,}$/.test(lastLine)
+      || (/^`{3,}[\w-]*$/.test(lastLine) && countFenceLines(out) % 2 === 1);
+    if (!debris) break;
+    out = (lastBreak === -1 ? '' : out.slice(0, lastBreak)).replace(/\s+$/, '');
+  }
+  // An unpaired emphasis run glued to the end of the last line.
+  const lastBreak = out.lastIndexOf('\n');
+  const lastLine = out.slice(lastBreak + 1);
+  const glued = /\s*(\*\*|__)$/.exec(lastLine);
+  if (glued && lastLine.split(glued[1]).length % 2 === 0) {
+    out = out.slice(0, out.length - glued[0].length).replace(/\s+$/, '');
+  }
+  return out;
 }
