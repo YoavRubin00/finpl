@@ -54,6 +54,19 @@ async function request<TBody, TResponse>(
   body?: TBody,
 ): Promise<TResponse> {
   const token = await tokenStore.get();
+
+  // Every /api/sync/* route is Bearer-only on the server (withAuth), so a
+  // tokenless call (guest session) can only ever get 401 "Missing
+  // Authorization header". Answer that locally instead of spending a request:
+  // guests were firing a guaranteed-401 streak tick on every foreground, a
+  // session-time POST on every background and an economy POST per reward.
+  // Callers see exactly what the server would have produced (ApiError 401,
+  // same body), and — as before for a tokenless 401 — no auth_token_invalid
+  // event and no onUnauthorized sign-out.
+  if (!token && path.startsWith('/api/sync/')) {
+    throw new ApiError('Unauthorized', 401, { error: 'Missing Authorization header' });
+  }
+
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 

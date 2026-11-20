@@ -101,6 +101,14 @@ export const useReferralStore = create<ReferralState>()(
       registerCodeWithServer: async (authId) => {
         const state = get();
         if (!authId) return;
+        // Already registered on this device for this signed-in user (the flag
+        // is persisted and cleared by reset() on sign-out). The root layout
+        // calls this on EVERY cold start, so without this guard each launch
+        // re-POSTed /api/referral/register-code (and fired the server-side
+        // referral_register_code_server event) for an already-registered code.
+        // Canonical-code self-heal still happens via refresh() (/api/referral/me
+        // returns the DB code) on the referral and assets screens.
+        if (state.isRegisteredOnServer && state.referralCode) return;
         // Make sure we have a code first.
         if (!state.referralCode) {
           set({ referralCode: generateReferralCode() });
@@ -124,7 +132,10 @@ export const useReferralStore = create<ReferralState>()(
             if (result.canonicalCode && result.canonicalCode !== get().referralCode) {
               set({ referralCode: result.canonicalCode, isRegisteredOnServer: true });
             } else {
-              set({ isRegisteredOnServer: true });
+              // canonicalCode null = the server had no profile row yet
+              // (signup race), so nothing was registered: leave the flag
+              // false so the next launch tries again.
+              set({ isRegisteredOnServer: result.canonicalCode != null });
             }
             return;
           }
@@ -164,7 +175,12 @@ export const useReferralStore = create<ReferralState>()(
           const serverCode = snapshot.referralCode;
           const adoptCode = serverCode !== null && serverCode !== get().referralCode
             ? { referralCode: serverCode, isRegisteredOnServer: true }
-            : {};
+            // The DB holds NO code for this user: clear the flag so the next
+            // launch registers it again (registerCodeWithServer skips while
+            // the flag is set).
+            : serverCode === null
+              ? { isRegisteredOnServer: false }
+              : {};
           set({
             referredFriends: friends,
             dividendAvailable: snapshot.dividendAvailable,
