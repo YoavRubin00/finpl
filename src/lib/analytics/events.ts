@@ -132,7 +132,30 @@ export type AppEvent =
   // path rendered first. `result`: ok | auth_invalid (server rejected the token
   // and the user was signed out) | no_profile | error (network or server error;
   // nothing was downgraded) | superseded (a newer boot or a sign-in/out took over).
-  | { name: 'boot_completed'; props: { ms: number; path: 'cached' | 'network' | 'timeout' | 'no_token'; outcome: 'signed_in' | 'signed_out' | 'retry' } }
+  // Since the boot-snapshots fix (20.11), once per launch even if the root
+  // layout mounts twice (a second mount joins the first boot); `attempt` is 1
+  // for the launch, 2+ for each retry-screen "try again". Local storage waits
+  // (AsyncStorage on devices): `auth_hydration_ms` / `_capped` (auth store,
+  // cap 5s) and `snapshot_prime_ms` / `_capped` (saved Pro state, balance and
+  // streak, cap 500ms; null when not needed, i.e. no token). A capped prime
+  // means the boot could not see the saved Pro state and took the network path.
+  | {
+      name: 'boot_completed';
+      props: {
+        ms: number;
+        path: 'cached' | 'network' | 'timeout' | 'no_token';
+        outcome: 'signed_in' | 'signed_out' | 'retry';
+        attempt: number;
+        auth_hydration_ms: number;
+        auth_hydration_capped: boolean;
+        snapshot_prime_ms: number | null;
+        snapshot_prime_capped: boolean | null;
+      };
+    }
+  // The root layout mounted again in the same app process (seen at launch on
+  // devices, 40-400 ms after the first mount; cause not confirmed). Fires once
+  // per extra mount, with the time since the first one.
+  | { name: 'root_layout_remounted'; props: { mount: number; ms_since_first_mount: number } }
   | { name: 'boot_network_settled'; props: { ms: number; path: 'cached' | 'network' | 'timeout'; result: 'ok' | 'auth_invalid' | 'no_profile' | 'error' | 'superseded' } }
 
   // ── Lesson / Module ────────────────────────────────────────────────────

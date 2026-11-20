@@ -15,7 +15,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import * as Notifications from "expo-notifications";
 import { applyEconomyDelta } from "../../lib/api/economy";
 import { queryClient } from "../../lib/queryClient";
-import { economyQueryKey, economyPlaceholder } from "./useEconomy";
+import { economyQueryKey, economyPlaceholder, economyBaseReady, whenEconomyBaseReady } from "./useEconomy";
 import { registerLocalStore } from "../../lib/stores/registry";
 import type { Economy } from "../../lib/api/economy";
 import type { StreakState } from "../../lib/api/streak";
@@ -342,7 +342,12 @@ export function fireEconomyDelta(delta: {
   // roundtrip + invalidate — which silently never resolves when /api/sync/economy
   // isn't deployed (DEV without server, missing route). XP earned in modules
   // was effectively invisible until next cold start.
-  queryClient.setQueryData<Economy | null>(economyQueryKey, (cached) => {
+  let answered = false;
+  const showOptimistic = () => {
+    // The server's answer to this delta already landed: it includes the
+    // delta, so adding it again would double it on screen.
+    if (answered) return;
+    queryClient.setQueryData<Economy | null>(economyQueryKey, (cached) => {
     // Nothing read yet this launch (a reward on mount, e.g. the daily login
     // bonus, lands before the boot has seeded or read the economy): start from
     // the last server-confirmed balance, not from 0 (boot review 20.11: the
@@ -368,12 +373,23 @@ export function fireEconomyDelta(delta: {
         ? delta.virtualBalanceSet.toString()
         : old.virtualBalance,
     };
-  });
+    });
+  };
+  // On devices the saved balance loads from AsyncStorage after launch, and the
+  // mount-time rewards come first: with nothing read yet, wait for the saved
+  // balance (or the account to turn out a guest) before showing the step, so
+  // it starts from the real balance, not from 0. The POST below goes out now.
+  if (queryClient.getQueryData(economyQueryKey) !== undefined || economyBaseReady()) {
+    showOptimistic();
+  } else {
+    void whenEconomyBaseReady().then(showOptimistic, showOptimistic);
+  }
   applyEconomyDelta(delta)
     // Server response IS the authoritative economy — write it straight to the
     // cache instead of invalidating (which would trigger a second GET round-trip
     // for data we already have in hand).
     .then((res) => {
+      answered = true;
       queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy);
       // (Removed 2026-11-20: a follow-up upsertInventory() "mirror" POST to
       // /api/sync/profile used to fire here after every delta. It sent no

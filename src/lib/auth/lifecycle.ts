@@ -17,14 +17,28 @@ import { resetAllLocalStores, getLocalStorageKeys } from '../stores/registry';
 import { clearAllPersistedState } from '../zustandStorage';
 import { runBackfillV1 } from './backfill';
 import { profileQueryKey, profileQueryFn } from '../../features/auth/useProfile';
-import { economyQueryKey, economyQueryFn, economyPlaceholder } from '../../features/economy/useEconomy';
-import { streakQueryKey, streakQueryFn, streakPlaceholder } from '../../features/economy/useStreak';
+import {
+  economyQueryKey,
+  economyQueryFn,
+  economyPlaceholder,
+  primeEconomySnapshot,
+} from '../../features/economy/useEconomy';
+import {
+  streakQueryKey,
+  streakQueryFn,
+  streakPlaceholder,
+  primeStreakSnapshot,
+} from '../../features/economy/useStreak';
 import {
   subscriptionQueryKey,
   subscriptionQueryFn,
   readSubscriptionSnapshot,
   writeSubscriptionSnapshot,
+  primeSubscriptionSnapshot,
 } from '../../features/subscription/useSubscription';
+import { resetSnapshotMemory } from '../../features/economy/querySnapshot';
+import { whenHydrated } from '../stores/whenHydrated';
+import { createSingleFlight, decideBootPath, TIMED_OUT, waitCapped, withTimeout } from './bootCore';
 import { progressQueryKey, progressQueryFn } from '../../features/chapter-1-content/useProgress';
 import { userStatsQueryKey, userStatsQueryFn } from '../../features/user-stats/useUserStats';
 import { getProfile, type ProfileRow } from '../api/profile';
@@ -55,8 +69,34 @@ export const BOOT_NETWORK_TIMEOUT_MS = 3000;
 /** RevenueCat's cached customer info is a local read; bounded anyway. */
 const RC_CACHE_READ_TIMEOUT_MS = 500;
 
-/** Upper bound on waiting for the auth store to load from disk (MMKV: ~instant). */
-const AUTH_HYDRATION_TIMEOUT_MS = 1000;
+/**
+ * Upper bound on waiting for the auth store to load from disk. On devices that
+ * is AsyncStorage (src/lib/zustandStorage.ts), typically tens of ms. The root
+ * layout renders nothing until this store has loaded anyway, so waiting here
+ * costs no first-paint time; the cap only protects against a storage that
+ * never answers. It used to be 1s with "MMKV: ~instant": a slower load was
+ * then read as "no session" and could show a signed-in user the retry screen.
+ * Past the cap the session is treated as unknown, never as signed out.
+ */
+const AUTH_HYDRATION_TIMEOUT_MS = 5000;
+
+/**
+ * Upper bound on loading the saved snapshots (Pro state, balance, streak) that
+ * decide whether a signed-in user can open at once. Three small AsyncStorage
+ * reads, started when this module loads (with the rest of the app's stores),
+ * so usually done before the boot asks. 500ms covers a slow cold disk on a
+ * low-end phone; past it the boot takes the network path (up to
+ * BOOT_NETWORK_TIMEOUT_MS), which is slower but still correct.
+ */
+export const SNAPSHOT_PRIME_TIMEOUT_MS = 500;
+
+/** The saved state the cold boot needs before it can open at once. */
+function primeBootSnapshots(): Promise<void> {
+  return Promise.all([primeSubscriptionSnapshot(), primeEconomySnapshot(), primeStreakSnapshot()]).then(() => undefined);
+}
+// Start reading them now, in parallel with the stores loading, so the boot
+// rarely has to wait. AsyncStorage answers in order, so this is cheap.
+void primeBootSnapshots();
 
 /** How long the waiting boot path waits for a sign-out already under way
  *  (RevenueCat logOut is a network call) before deciding what to render. */
@@ -99,6 +139,9 @@ let bootGeneration = 0;
  */
 export async function abandonPendingBoot(): Promise<void> {
   bootGeneration++;
+  // A root layout that mounts again joins the launch's boot: give it this
+  // outcome, not the retry screen again.
+  bootFlight.replace({ isAuthenticated: false, path: 'network', outcome: 'signed_out' });
   await tokenStore.clear().catch(() => { /* non-fatal */ });
   await backfillFlag.reset().catch(() => { /* non-fatal */ });
 }
@@ -151,35 +194,6 @@ function isTokenExpiredLocally(token: string): boolean {
   }
 }
 
-const TIMED_OUT = Symbol('timed-out');
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<typeof TIMED_OUT>((resolve) => {
-    timer = setTimeout(() => resolve(TIMED_OUT), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timer !== null) clearTimeout(timer);
-  });
-}
-
-function waitForAuthHydration(): Promise<void> {
-  if (useAuthStore.persist.hasHydrated()) return Promise.resolve();
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      unsub();
-      clearTimeout(timer);
-      resolve();
-    };
-    const unsub = useAuthStore.persist.onFinishHydration(finish);
-    const timer = setTimeout(finish, AUTH_HYDRATION_TIMEOUT_MS);
-    // It may have finished between the check above and the subscription.
-    if (useAuthStore.persist.hasHydrated()) finish();
-  });
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Query cache: saved snapshots first, then the server, without losing newer
@@ -490,6 +504,9 @@ export async function signOut(): Promise<void> {
 
       queryClient.clear();
       resetAllLocalStores();
+      // Saved snapshots held in memory (keyed by authId, so never readable by
+      // the next account, but nothing of this account should stay loaded).
+      resetSnapshotMemory();
 
       const keys = getLocalStorageKeys();
       if (keys.length > 0) {
@@ -692,18 +709,52 @@ async function endRejectedSession(bootToken: string): Promise<BootNetworkResult>
   return stored === null ? 'auth_invalid' : 'superseded';
 }
 
+/** How long the boot waited for local storage, for boot_completed. */
+interface BootWaits {
+  attempt: number;
+  auth: { ms: number; capped: boolean };
+  /** null when the boot did not need the snapshots (no token). */
+  prime: { ms: number; capped: boolean } | null;
+}
+
 function finishBoot(
   startedAt: number,
+  waits: BootWaits,
   path: BootPath,
   outcome: BootOutcome,
   isAuthenticated: boolean,
   settled?: Promise<BootNetworkResult>,
 ): BootResult {
   try {
-    track({ name: 'boot_completed', props: { ms: Date.now() - startedAt, path, outcome } });
+    track({
+      name: 'boot_completed',
+      props: {
+        ms: Date.now() - startedAt,
+        path,
+        outcome,
+        attempt: waits.attempt,
+        auth_hydration_ms: waits.auth.ms,
+        auth_hydration_capped: waits.auth.capped,
+        snapshot_prime_ms: waits.prime?.ms ?? null,
+        snapshot_prime_capped: waits.prime?.capped ?? null,
+      },
+    });
   } catch { /* non-fatal */ }
   return { isAuthenticated, path, outcome, settled };
 }
+
+/** Whether a signed-in session is saved on this device. While the auth store
+ *  has not loaded (past its cap) the answer is unknown, taken as "yes" so a
+ *  signed-in user is never shown the retry screen; the layout still waits for
+ *  the store before rendering routes. */
+function sessionSavedOrUnknown(): boolean {
+  if (!useAuthStore.persist.hasHydrated()) return true;
+  const auth = useAuthStore.getState();
+  return auth.isAuthenticated && !auth.isGuest && auth.userId !== null;
+}
+
+const bootFlight = createSingleFlight<BootResult>();
+let bootAttempts = 0;
 
 /**
  * Cold start. Resolves when the loading screen may go away.
@@ -725,19 +776,34 @@ function finishBoot(
  * out, late answers never overwrite newer local writes (guardedQueryFn), and
  * the gates in the root layout (terms, force update, minors) render the same
  * way on every path.
+ *
+ * One boot per launch: a second call (the root layout can mount twice at
+ * launch) joins the boot already running or finished and gets its result;
+ * boot_completed fires once. `fresh` starts a genuinely new attempt (the retry
+ * screen's button).
  */
-export async function bootFromToken(): Promise<BootResult> {
+export function bootFromToken(opts?: { fresh?: boolean }): Promise<BootResult> {
+  return bootFlight.run(() => runBoot(++bootAttempts), opts);
+}
+
+async function runBoot(attempt: number): Promise<BootResult> {
   const startedAt = Date.now();
   const gen = ++bootGeneration;
 
-  const [tokenRead] = await Promise.all([
+  // Local storage first, all at once: the token (secure store), the auth store
+  // and the saved snapshots (AsyncStorage on devices). Only the first two
+  // decide anything for a launch with no token, so the snapshots are awaited
+  // only when there is one.
+  const primeWait = waitCapped(primeBootSnapshots(), SNAPSHOT_PRIME_TIMEOUT_MS);
+  const [tokenRead, authWait] = await Promise.all([
     tokenStore.get().then(
       (t) => ({ token: t, failed: false }),
       () => ({ token: null, failed: true }),
     ),
-    waitForAuthHydration(),
+    whenHydrated(useAuthStore, AUTH_HYDRATION_TIMEOUT_MS),
   ]);
   const { token, failed: tokenReadFailed } = tokenRead;
+  const waits: BootWaits = { attempt, auth: authWait, prime: null };
 
   const auth = useAuthStore.getState();
   const savedUserId = auth.isAuthenticated && !auth.isGuest ? auth.userId : null;
@@ -768,13 +834,15 @@ export async function bootFromToken(): Promise<BootResult> {
         }
       });
     }
-    return finishBoot(startedAt, 'no_token', 'signed_out', false);
+    return finishBoot(startedAt, waits, 'no_token', 'signed_out', false);
   }
 
-  const backfillDone = await backfillFlag.isDone().catch(() => false);
+  const [backfillDone, primeWaited] = await Promise.all([backfillFlag.isDone().catch(() => false), primeWait]);
+  waits.prime = primeWaited;
   const hasSession = savedUserId !== null;
 
-  // Saved last-known values for the first frame (see seedFromSnapshot).
+  // Saved last-known values for the first frame (see seedFromSnapshot), read
+  // after the prime above: on devices nothing is readable before it.
   // Snapshots are keyed by the saved authId, so another account's never show.
   const proKnown = hasSession && readSubscriptionSnapshot() !== null;
   if (hasSession) {
@@ -783,7 +851,12 @@ export async function bootFromToken(): Promise<BootResult> {
     seedFromSnapshot(streakQueryKey, streakPlaceholder());
   }
 
-  const cached = hasSession && proKnown && backfillDone && !isTokenExpiredLocally(token);
+  const cached = decideBootPath({
+    hasSession,
+    proKnown,
+    backfillDone,
+    tokenExpired: isTokenExpiredLocally(token),
+  }) === 'cached';
   let path: 'cached' | 'network' | 'timeout' = cached ? 'cached' : 'network';
 
   const hydration: Promise<BootNetworkResult> = hydrateSession(gen, backfillDone, token, startedAt)
@@ -795,35 +868,37 @@ export async function bootFromToken(): Promise<BootResult> {
       return result;
     });
 
-  if (cached) return finishBoot(startedAt, 'cached', 'signed_in', true);
+  if (cached) return finishBoot(startedAt, waits, 'cached', 'signed_in', true);
 
   const raced = await withTimeout(hydration, BOOT_NETWORK_TIMEOUT_MS);
+  // Re-read now: if the auth store loaded only after its cap, it has a say.
+  const saved = hasSession || sessionSavedOrUnknown();
 
   if (raced === TIMED_OUT) {
     path = 'timeout';
-    if (hasSession) {
+    if (saved) {
       // Another request's 401 may have signed the user out meanwhile (an
       // expired token): render that, not the old session.
-      if (await sessionEndedDuringBoot()) return finishBoot(startedAt, 'timeout', 'signed_out', false);
-      await seedProFromStoreCache();
-      return finishBoot(startedAt, 'timeout', 'signed_in', true);
+      if (await sessionEndedDuringBoot()) return finishBoot(startedAt, waits, 'timeout', 'signed_out', false);
+      if (hasSession) await seedProFromStoreCache();
+      return finishBoot(startedAt, waits, 'timeout', 'signed_in', true);
     }
-    return finishBoot(startedAt, 'timeout', 'retry', false, hydration);
+    return finishBoot(startedAt, waits, 'timeout', 'retry', false, hydration);
   }
 
   if (raced === 'ok') {
     if (hasSession) await seedProFromStoreCache(); // no-op unless the subscription read failed
-    return finishBoot(startedAt, 'network', 'signed_in', true);
+    return finishBoot(startedAt, waits, 'network', 'signed_in', true);
   }
-  if (raced === 'auth_invalid') return finishBoot(startedAt, 'network', 'signed_out', false);
+  if (raced === 'auth_invalid') return finishBoot(startedAt, waits, 'network', 'signed_out', false);
   // 'error' | 'no_profile' | 'superseded': not a definite sign-out, so a saved
   // session goes on with saved state, as before, unless a sign-out ran
   // during the boot.
-  if (hasSession) {
-    if (await sessionEndedDuringBoot()) return finishBoot(startedAt, 'network', 'signed_out', false);
-    await seedProFromStoreCache();
-    return finishBoot(startedAt, 'network', 'signed_in', true);
+  if (saved) {
+    if (await sessionEndedDuringBoot()) return finishBoot(startedAt, waits, 'network', 'signed_out', false);
+    if (hasSession) await seedProFromStoreCache();
+    return finishBoot(startedAt, waits, 'network', 'signed_in', true);
   }
-  if (raced === 'error') return finishBoot(startedAt, 'network', 'retry', false, hydration);
-  return finishBoot(startedAt, 'network', 'signed_out', false);
+  if (raced === 'error') return finishBoot(startedAt, waits, 'network', 'retry', false, hydration);
+  return finishBoot(startedAt, waits, 'network', 'signed_out', false);
 }

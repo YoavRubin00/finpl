@@ -1,3 +1,16 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// READ FIRST (boot review, 20.11): on devices this is AsyncStorage, not MMKV.
+// The installed react-native-mmkv is v4, which exports createMMKV() and no
+// `MMKV` class, so `new MMKV(...)` below always throws, mmkvUnavailable is set
+// and every call falls back to AsyncStorage. readStringSync() therefore always
+// returns null, every persisted store hydrates asynchronously, and nothing in
+// the app can rely on a synchronous first-frame read.
+// Switching to MMKV is a follow-up for a device-tested native release, not an
+// OTA: getItem() below moves keys from AsyncStorage into MMKV and deletes them
+// from AsyncStorage (a one-way migration of all persisted user state that an
+// OTA rollback would strand), and the v4 instance API differs (createMMKV,
+// remove() instead of delete()).
+// ─────────────────────────────────────────────────────────────────────────────
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { StateStorage } from 'zustand/middleware';

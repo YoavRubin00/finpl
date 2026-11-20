@@ -154,6 +154,42 @@ import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
 import { useTutorialStore } from "../src/stores/useTutorialStore";
 import { useGoogleAuth } from "../src/features/auth/useGoogleAuth";
 import { useIsModuleCompleted } from "../src/features/chapter-1-content/useProgress";
+import { useCompletedModulesStore } from "../src/features/economy/useCompletedModulesStore";
+import { whenAllHydrated, whenHydrated, type HydratingStore } from "../src/lib/stores/whenHydrated";
+import { track } from "../src/lib/analytics/events";
+
+// ── Persisted stores and launch timing (boot review 20.11) ──
+// On devices every persisted store loads from AsyncStorage after launch (MMKV
+// never initialises, see src/lib/zustandStorage.ts). Until a store has loaded
+// it holds its initial state, and a write is overwritten by the loaded state
+// (a mount-time daily login bonus could be granted again on every launch).
+/** Run `fn` once the store has loaded; at once when it already has. */
+function afterHydration(store: HydratingStore, fn: () => void): void {
+  const run = () => { try { fn(); } catch { /* non-fatal */ } };
+  if (store.persist.hasHydrated()) run();
+  else void whenHydrated(store).then(run);
+}
+
+/** Stores the root layout's gates read on the first frame (walkthrough
+ *  re-arm, popup gates, first-run redirects). A signed-in user's first frame
+ *  waits for them, bounded; a fresh install's does not (none of these gates
+ *  applies before onboarding, and its first paint must not wait). */
+const ROOT_GATE_STORES: HydratingStore[] = [
+  useTutorialStore,
+  useCompletedModulesStore,
+  useEconomyUIStore,
+  useComebackRewardStore,
+  useNudgeQueueStore,
+];
+const ROOT_GATE_STORES_CAP_MS = 2000;
+
+// Per app process, not per mount: the root layout can mount twice at launch
+// (two boot_completed events 40-400 ms apart on devices before the boot was
+// made single-flight; cause not confirmed, see root_layout_remounted).
+let rootLayoutMounts = 0;
+let firstRootLayoutMountAt = 0;
+let lastScreenSent: string | null = null;
+let banditLastHydratedAt = 0;
 
 // ── Global font override: all <Text> and <TextInput> use Heebo ──
 const FONT_FAMILY = "Heebo_400Regular";
@@ -290,8 +326,24 @@ function RootLayoutInner() {
   // exactly once per mount — the foreground watcher below handles
   // subsequent re-opens within the same RN process.
   useEffect(() => {
+    // After the store has loaded: before that lastSeenAt reads as 0 ("first
+    // open"), the lapse is missed, and the stamp overwrites the stored one.
+    const openedAt = Date.now();
+    afterHydration(useComebackRewardStore, () => useComebackRewardStore.getState().registerAppOpen(openedAt));
+  }, []);
+
+  // A second mount in the same process (see root_layout_remounted).
+  useEffect(() => {
+    rootLayoutMounts += 1;
+    if (rootLayoutMounts === 1) {
+      firstRootLayoutMountAt = Date.now();
+      return;
+    }
     try {
-      useComebackRewardStore.getState().registerAppOpen(Date.now());
+      track({
+        name: 'root_layout_remounted',
+        props: { mount: rootLayoutMounts, ms_since_first_mount: Date.now() - firstRootLayoutMountAt },
+      });
     } catch { /* non-fatal */ }
   }, []);
 
@@ -347,17 +399,19 @@ function RootLayoutInner() {
         // activeDates, so the next completion read a fake 2-day gap and burned
         // a freeze. awardLoginBonus is idempotent per IL-day
         // (lastLoginBonusDate guard), so this is a no-op after the first
-        // 'active' of each Israeli calendar day.
-        try { useEconomyUIStore.getState().awardLoginBonus(); } catch { /* non-fatal */ }
+        // 'active' of each Israeli calendar day — once the store has loaded
+        // (iOS can report 'active' right at launch, before it has).
+        afterHydration(useEconomyUIStore, () => useEconomyUIStore.getState().awardLoginBonus());
         // Foreground crossing midnight Israel-time: re-run the lazy day-key
         // check inside the quests store so the 4 stars + chest reset
         // immediately on resume, not on the next time the user navigates to
         // DuoLearnScreen. refreshQuests() is idempotent same-day.
-        try { useDailyQuestsStore.getState().refreshQuests(); } catch { /* non-fatal */ }
+        afterHydration(useDailyQuestsStore, () => useDailyQuestsStore.getState().refreshQuests());
         // R8 T3.2 — re-check comeback lapse on every foreground (covers
         // the "phone left charging for 8 days" pattern where the app is
         // still in memory but the lapse window has elapsed).
-        try { useComebackRewardStore.getState().registerAppOpen(Date.now()); } catch { /* non-fatal */ }
+        const resumedAt = Date.now();
+        afterHydration(useComebackRewardStore, () => useComebackRewardStore.getState().registerAppOpen(resumedAt));
       } else if (state === "inactive") {
         const now = Date.now();
         inactiveAt.current = now;
@@ -511,19 +565,24 @@ function RootLayoutInner() {
 
   // Award daily login XP on app open (cold start; every subsequent foreground
   // is covered by the AppState 'active' branch above — same idempotent call)
+  // Both read the store's last dates first, so they wait for it to load: run
+  // before, lastLoginBonusDate reads as never and the bonus was granted again
+  // on every launch (and lastSessionAt as never, losing the session bonus).
   useEffect(() => {
-    useEconomyUIStore.getState().awardLoginBonus();
-    // Stacking session bonus — coins for repeat returns within the same day.
-    // Tiered: 1h=50, 2h=120, 4h=300, 8h=800, 12h+=2000. Surfaces as banner via
-    // pendingSessionBonus state (consumed wherever the UI wants to show it).
-    useEconomyUIStore.getState().awardSessionStackingBonus();
+    afterHydration(useEconomyUIStore, () => {
+      useEconomyUIStore.getState().awardLoginBonus();
+      // Stacking session bonus — coins for repeat returns within the same day.
+      // Tiered: 1h=50, 2h=120, 4h=300, 8h=800, 12h+=2000. Surfaces as banner via
+      // pendingSessionBonus state (consumed wherever the UI wants to show it).
+      useEconomyUIStore.getState().awardSessionStackingBonus();
+    });
   }, []);
 
   // Reset Shark CTA session tokens on cold start (so BridgeCTA / ReferralCTA can fire once per session)
   useEffect(() => {
     // Dynamic import to avoid pulling the store into the critical boot path
     import("../src/stores/useNudgeQueueStore")
-      .then(({ useNudgeQueueStore }) => useNudgeQueueStore.getState().resetSession())
+      .then(({ useNudgeQueueStore }) => afterHydration(useNudgeQueueStore, () => useNudgeQueueStore.getState().resetSession()))
       .catch(() => { /* non-fatal */ });
   }, []);
 
@@ -536,15 +595,14 @@ function RootLayoutInner() {
     let cancelled = false;
     let interval: ReturnType<typeof setInterval> | null = null;
     // Minimum age before the bandit state is fetched again (20.11). Resuming
-    // within it (a brief iOS "inactive" blip, a quick app switch) no longer
-    // refetches; the 5-minute interval still does. One second of slack so the
-    // interval tick itself is never skipped.
+    // within it (a brief iOS "inactive" blip, a quick app switch, a second
+    // mount of this layout) no longer refetches; the 5-minute interval still
+    // does. One second of slack so the interval tick itself is never skipped.
     const BANDIT_MIN_AGE_MS = 5 * 60 * 1000;
-    let lastHydratedAt = 0;
 
     const hydrate = () => {
-      if (Date.now() - lastHydratedAt < BANDIT_MIN_AGE_MS - 1000) return;
-      lastHydratedAt = Date.now();
+      if (Date.now() - banditLastHydratedAt < BANDIT_MIN_AGE_MS - 1000) return;
+      banditLastHydratedAt = Date.now();
       import("../src/features/bandit/useBanditStore")
         .then(({ useBanditStore }) => {
           if (!cancelled) useBanditStore.getState().hydrateFromServer();
@@ -730,10 +788,21 @@ function RootLayoutInner() {
   const bootAttemptRef = useRef(0);
   const [splashVisible, setSplashVisible] = useState(true);
 
+  // Routes render once the auth store has loaded (no cap, as always) and, for
+  // a user past onboarding, once the gate stores have too (capped): with the
+  // instant boot the first frame can come before them on a device, and e.g.
+  // the walkthrough re-arm below would read "never seen the tour" and show it
+  // to an established user.
   useEffect(() => {
-    const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
-    if (useAuthStore.persist.hasHydrated()) setHydrated(true);
-    return unsub;
+    let cancelled = false;
+    void whenHydrated(useAuthStore)
+      .then(() => {
+        const { isAuthenticated, hasCompletedOnboarding } = useAuthStore.getState();
+        if (!isAuthenticated || !hasCompletedOnboarding) return undefined;
+        return whenAllHydrated(ROOT_GATE_STORES, ROOT_GATE_STORES_CAP_MS);
+      })
+      .then(() => { if (!cancelled) setHydrated(true); });
+    return () => { cancelled = true; };
   }, []);
 
   // Cold-launch boot: restore the session from the stored JWT before rendering
@@ -748,10 +817,13 @@ function RootLayoutInner() {
   // ms added before a FRESH install's first paint bleeds first-tap users.
   // Boot no longer blocks on hydration (Yoav 2026-07-08, pre-1.4.4); any
   // future first-run experiment MUST use a bounded (timeout-raced) wait.
-  const runBoot = useCallback(() => {
+  // One boot per launch: a second mount of this layout joins the boot already
+  // running (bootFromToken is single-flight); only "try again" (fresh) starts
+  // a new attempt.
+  const runBoot = useCallback((fresh: boolean) => {
     const attempt = ++bootAttemptRef.current;
     const isCurrent = () => attempt === bootAttemptRef.current;
-    bootFromToken()
+    bootFromToken({ fresh })
       .then((result) => {
         if (!isCurrent()) return;
         if (result.outcome !== "retry" || !result.settled) {
@@ -776,12 +848,12 @@ function RootLayoutInner() {
   }, []);
 
   useEffect(() => {
-    runBoot();
+    runBoot(false);
   }, [runBoot]);
 
   const retryBoot = useCallback(() => {
     setBootRetry("waiting");
-    runBoot();
+    runBoot(true);
   }, [runBoot]);
 
   // Go on signed out. The stored token is dropped first (local data is kept),
@@ -1127,10 +1199,11 @@ function SplashDismissOnMount({ onDismiss }: { onDismiss: () => void }) {
  */
 function ScreenTracker(): null {
   const pathname = usePathname();
-  const lastSentRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!pathname || pathname === lastSentRef.current) return;
-    lastSentRef.current = pathname;
+    // Module-level, not a ref: a second mount of the root layout at launch
+    // used to send the same `$screen /` twice.
+    if (!pathname || pathname === lastScreenSent) return;
+    lastScreenSent = pathname;
     captureScreen(pathname);
   }, [pathname]);
   return null;
