@@ -2,6 +2,7 @@
   "framework": null,
   "buildCommand": "",
   "outputDirectory": "public",
+  "regions": ["fra1"],
   "redirects": [
     { "source": "/", "destination": "https://finplay.me", "permanent": false }
   ],
