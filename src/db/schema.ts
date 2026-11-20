@@ -278,7 +278,9 @@ export const dividendCollections = pgTable("dividend_collections", {
 
 export const referrals = pgTable("referrals", {
 	refereeUserId: uuid("referee_user_id").notNull(),
-	referrerUserId: uuid("referrer_user_id").notNull(),
+	// Nullable + ON DELETE SET NULL since 0019 (2026-11-20): a deleted
+	// referrer's invitees keep their row (one redemption per account, ever).
+	referrerUserId: uuid("referrer_user_id"),
 	inviteCode: text("invite_code").notNull(),
 	signupBonusPaid: boolean("signup_bonus_paid").notNull().default(false),
 	linkedAt: timestamp("linked_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
@@ -296,7 +298,7 @@ export const referrals = pgTable("referrals", {
 			columns: [table.referrerUserId],
 			foreignColumns: [userProfiles.id],
 			name: "referrals_referrer_fk"
-		}).onDelete("cascade"),
+		}).onDelete("set null"),
 	check("referrals_uid_check", sql`referrer_user_id <> referee_user_id`),
 ]);
 
