@@ -30,9 +30,16 @@ const EMAIL_COOLDOWN_DAYS = 3;
 const MAX_DORMANT_DAYS = 45;
 const MAX_DRIP_EMAILS = 6;
 
+/** Wall-clock budget for one batch. vercel.json gives api functions 120s;
+ *  stopping at 100s leaves room for the in-flight user and the response. */
+const SEND_TIME_BUDGET_MS = 100_000;
+
 export interface DailyEmailResult {
   sent: number;
   failed: number;
+  /** Eligible users not reached because the time budget ran out (they stay
+   *  eligible for the next run). 0 on a normal day. */
+  deferred: number;
   total: number;
   date: string;
   targeting: string;
@@ -84,6 +91,7 @@ async function loadBanditStats(
  * Result: each eligible user gets at most one email every ~3 days.
  */
 export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
+  const batchStartedAt = Date.now();
   const resend = new Resend(process.env.RESEND_API_KEY ?? '');
   const db = getDb();
 
@@ -177,27 +185,23 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
   let sent = 0;
   let failed = 0;
 
-  for (const user of users) {
+  let deferred = 0;
+
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i];
     if (!user.email) continue;
 
+    // Stop cleanly before the platform kills the function (maxDuration 120s).
+    // A hard kill can land between resend.emails.send and the dailyEmailSentAt
+    // stamp, and that user would be mailed AGAIN on the next run. Users left
+    // over are still eligible tomorrow (nothing was stamped for them).
+    if (Date.now() - batchStartedAt > SEND_TIME_BUDGET_MS) {
+      deferred = users.length - i;
+      console.warn(`[send-daily] time budget reached — ${deferred} users deferred to the next run`);
+      break;
+    }
+
     try {
-      const [weeklyStats] = await db
-        .select({
-          weeklyModules: count(moduleProgress.id),
-          weeklyXp: sum(moduleProgress.xpEarned),
-        })
-        .from(moduleProgress)
-        .where(
-          and(
-            eq(moduleProgress.userId, user.id),
-            eq(moduleProgress.status, 'completed'),
-            gte(moduleProgress.completedAt, weekAgoIso),
-          ),
-        );
-
-      const weeklyModules = weeklyStats?.weeklyModules ?? 0;
-      const weeklyXp = Number(weeklyStats?.weeklyXp ?? 0);
-
       const unsubscribeUrl = `${baseUrl}/api/email/unsubscribe?id=${user.id}`;
 
       // D1 cohort (RETENTION-PLAN 2026-07-02 §2.3 / QW6): signed up YESTERDAY
@@ -254,6 +258,9 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         text = built.text;
       } catch (err) {
         console.error('[send-daily] retention build failed, falling back to legacy', err);
+        // Weekly stats feed ONLY this legacy template, so they're read only on
+        // this (rare) path instead of one extra DB round trip per user.
+        const { weeklyModules, weeklyXp } = await loadWeeklyStats(db, user.id, weekAgoIso);
         const legacy = buildDailyEmailHtml({
           name: user.displayName ?? 'חבר',
           streak: user.currentStreak ?? 0,
@@ -300,32 +307,37 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         })
         .where(eq(userProfiles.id, user.id));
 
-      // Still record a per-variant impression (dashboards slice by variant_id)
-      // — even though selection is now sequenced, not Thompson-sampled.
-      if (!isD1NewUser) {
-        try {
-          await db.execute(sql`
-            INSERT INTO bandit_variants
-              (experiment_id, variant_id, alpha, beta, impressions, conversions)
-            VALUES (${EXPERIMENT_ID}, ${variantId}, 1, 1, 1, 0)
-            ON CONFLICT (experiment_id, variant_id) DO UPDATE SET
-              impressions = bandit_variants.impressions + 1,
-              updated_at  = NOW();
-          `);
-        } catch (err) {
-          console.error('[send-daily] bandit impression record failed', err);
-        }
-      }
-
-      // PostHog SENT event — the top of the funnel. variant_id + seq let every
-      // downstream metric (opened/clicked/returned) be sliced per drip step;
-      // cohort splits day-1 new users from lapsed regulars.
-      await capturePostHog('retention_email_sent', user.id, {
-        variant_id: variantId,
-        cohort: isD1NewUser ? 'd1_new_user' : 'daily_cron',
-        seq: isD1NewUser ? -1 : seq,
-        streak: user.currentStreak ?? 0,
-      });
+      // The two bookkeeping writes below are independent of each other (and
+      // each swallows its own errors), so they run concurrently: one network
+      // wait per user instead of two in this sequential, time-boxed loop.
+      await Promise.all([
+        // Still record a per-variant impression (dashboards slice by variant_id)
+        // — even though selection is now sequenced, not Thompson-sampled.
+        (async () => {
+          if (isD1NewUser) return;
+          try {
+            await db.execute(sql`
+              INSERT INTO bandit_variants
+                (experiment_id, variant_id, alpha, beta, impressions, conversions)
+              VALUES (${EXPERIMENT_ID}, ${variantId}, 1, 1, 1, 0)
+              ON CONFLICT (experiment_id, variant_id) DO UPDATE SET
+                impressions = bandit_variants.impressions + 1,
+                updated_at  = NOW();
+            `);
+          } catch (err) {
+            console.error('[send-daily] bandit impression record failed', err);
+          }
+        })(),
+        // PostHog SENT event — the top of the funnel. variant_id + seq let every
+        // downstream metric (opened/clicked/returned) be sliced per drip step;
+        // cohort splits day-1 new users from lapsed regulars.
+        capturePostHog('retention_email_sent', user.id, {
+          variant_id: variantId,
+          cohort: isD1NewUser ? 'd1_new_user' : 'daily_cron',
+          seq: isD1NewUser ? -1 : seq,
+          streak: user.currentStreak ?? 0,
+        }),
+      ]);
 
       sent++;
     } catch (err) {
@@ -337,9 +349,35 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
   return {
     sent,
     failed,
+    deferred,
     total: users.length,
     date: todayDate,
     targeting: `inactive since ${inactiveCutoffDate} (D1 signups: ${yesterdayDate}), cooldown=${EMAIL_COOLDOWN_DAYS}d, dormant<=${MAX_DORMANT_DAYS}d, drip<=${MAX_DRIP_EMAILS}`,
+  };
+}
+
+/** Last-7-days completed modules + XP for one user (legacy template only). */
+async function loadWeeklyStats(
+  db: ReturnType<typeof getDb>,
+  userId: string,
+  weekAgoIso: string,
+): Promise<{ weeklyModules: number; weeklyXp: number }> {
+  const [weeklyStats] = await db
+    .select({
+      weeklyModules: count(moduleProgress.id),
+      weeklyXp: sum(moduleProgress.xpEarned),
+    })
+    .from(moduleProgress)
+    .where(
+      and(
+        eq(moduleProgress.userId, userId),
+        eq(moduleProgress.status, 'completed'),
+        gte(moduleProgress.completedAt, weekAgoIso),
+      ),
+    );
+  return {
+    weeklyModules: weeklyStats?.weeklyModules ?? 0,
+    weeklyXp: Number(weeklyStats?.weeklyXp ?? 0),
   };
 }
 
