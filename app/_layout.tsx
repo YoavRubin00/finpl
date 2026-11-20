@@ -135,7 +135,6 @@ import { PredictionResultsHost } from "../src/features/crowd-wisdom/PredictionRe
 import { SOCIAL_FEATURES_ENABLED } from "../src/config/social";
 import { GuestValueGateHost } from "../src/features/auth/guestValueGate";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
-import { ensureFirstRunAssignment, MODULE_FIRST_ENABLED } from "../src/features/onboarding/firstRunExperiment";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
@@ -585,11 +584,6 @@ function RootLayoutInner() {
   // in via the topic-tree Mod01WalkthroughPromptModal (before mod-0-1 is
   // fully completed). See the AppWalkthroughOverlay gate below.
   const walkthroughTriggered = useTutorialStore((s) => s.walkthroughTriggered);
-  // Module-first first-run experiment (onboarding_module_first, Yoav 5.7.26).
-  // The redirect guard below must let a v1 guest INTO /lesson/mod-0-1 before
-  // onboarding completes — and resume a killed app back into it.
-  const firstRunArm = useTutorialStore((s) => s.firstRunArm);
-  const firstRunStage = useTutorialStore((s) => s.firstRunStage);
   const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
@@ -702,10 +696,8 @@ function RootLayoutInner() {
       // binary and is the prime suspect for 1.4.3's first-screen deficit
       // (welcome CTA 61% vs 79% on 1.4.2 — cohort 5-7.7, n=104/33, ~3σ): every
       // ms added before a FRESH install's first paint bleeds first-tap users.
-      // Boot no longer blocks on hydration (Yoav 2026-07-08, pre-1.4.4). The
-      // assignment call stays as a harmless flag-off no-op; a revived first-run
-      // experiment MUST use a bounded (timeout-raced) wait instead.
-      try { ensureFirstRunAssignment(); } catch { /* non-fatal */ }
+      // Boot no longer blocks on hydration (Yoav 2026-07-08, pre-1.4.4); any
+      // future first-run experiment MUST use a bounded (timeout-raced) wait.
       setBootComplete(true);
     });
   }, []);
@@ -785,22 +777,6 @@ function RootLayoutInner() {
         router.replace("/(auth)/onboarding");
       }
     } else if (!hasCompletedOnboarding) {
-      // Module-first first-run (onboarding_module_first v1, Yoav 5.7.26):
-      // while the guest is in the 'module' stage, mod-0-1 is the ONE content
-      // route allowed pre-onboarding — and a cold start resumes INTO it
-      // instead of bouncing to onboarding (which would both strand the run
-      // and, worse, loop: the lesson's own exits route by stage). Scoped to
-      // exactly `lesson/mod-0-1` so a deep link to any other lesson still
-      // bounces and the guest paywall on mod-0-2+ stays intact.
-      const moduleFirstInModule =
-        MODULE_FIRST_ENABLED && firstRunArm === "module_first" && firstRunStage === "module";
-      if (moduleFirstInModule) {
-        const onMod01 = segments[0] === "lesson" && (segments as string[])[1] === "mod-0-1";
-        if (!onMod01) {
-          router.replace("/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree" as never);
-        }
-        return;
-      }
       // Allow auth routes (register, sign-in, terms) even before onboarding is
       // complete. The SignupGateStep at the end of the mini-onboarding sends
       // users to /(auth)/register and we do not want to bounce them back.
@@ -842,7 +818,7 @@ function RootLayoutInner() {
         router.replace("/(tabs)");
       }
     }
-  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete, walkthroughTriggered, pendingPostWalkthroughFirstChest, firstRunArm, firstRunStage]);
+  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete, walkthroughTriggered, pendingPostWalkthroughFirstChest]);
 
   // Fallback walkthrough re-arm (Yoav 2026-06-26, D1 lever). Diagnosed: ~38% of
   // users who commit (onboarding_enter_first_module) never fire walkthrough_started

@@ -127,7 +127,6 @@ import { SharkLoader } from "../../components/ui/SharkLoader";
 import { PopModal } from "../../components/ui/PopModal";
 import { useAuthStore } from "../auth/useAuthStore";
 import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
-import { isModuleFirstArm } from "../onboarding/firstRunExperiment";
 import { ChestCelebrationModal } from "../topic-learning/ChestCelebrationModal";
 import { getNextLessonAfter } from "../retention-loops/nextLessonTarget";
 import {
@@ -2379,10 +2378,6 @@ export function LessonFlowScreen() {
     // (reason:'navigation', phase:'quizzes').
     exitHandledRef.current = true;
     setHandoffChest(null);
-    if (isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'profiling') {
-      router.replace('/(auth)/onboarding' as never);
-      return;
-    }
     // PRIMARY: start the second lesson right here. `replace` swaps this lesson
     // for the next one; the map stays mounted underneath and re-opens on the
     // new lesson when it returns. No map detour between lesson 1 and lesson 2.
@@ -2405,31 +2400,6 @@ export function LessonFlowScreen() {
     }
   }
 
-  /** Module-first first-run (onboarding_module_first v1, Yoav 5.7.26): ANY
-   *  exit from mod-0-1 while the guest is still pre-onboarding must hand off
-   *  to ProfilingFlow instead of the map — the map is blocked pre-onboarding,
-   *  so a map navigation would get bounced by the _layout guard right back
-   *  into this lesson (an infinite trap). Covers the auto-flow chest-threshold
-   *  exit, back-button bails, and the post-module nav paths. Returns true when
-   *  it navigated / took ownership of navigation (callers must stop theirs). */
-  function maybeHandoffToProfiling(trigger: string): boolean {
-    if (id !== 'mod-0-1') return false;
-    if (!isModuleFirstArm()) return false;
-    const tut = useTutorialStore.getState();
-    if (tut.firstRunStage !== 'module') return false;
-    // Flip the stage BEFORE any UI: from here on, a kill resumes into
-    // profiling (the chest rewards, once granted, are not re-earnable).
-    tut.setFirstRunStage('profiling');
-    exitHandledRef.current = true; // a designed handoff, not an unexplained navigation
-    try { captureEvent('onboarding_module_first_handoff', { trigger }); } catch { /* non-fatal */ }
-    // Natural threshold completion → open the earned chest HERE (Yoav 5.7.26:
-    // the reward lands at the win moment, not after profiling). The modal's
-    // close CTA performs the navigation. Bails (back / force-exit) skip the
-    // ceremony — their chest fires later from the accordion, like control's.
-    if (trigger === 'chest_threshold' && grantHandoffChest()) return true;
-    router.replace('/(auth)/onboarding' as never);
-    return true;
-  }
   /** Safe back: go back if possible, otherwise fall back to tabs home */
   function safeGoBack() {
     // Show the "stay another minute" confirm during a long contiguous session:
@@ -2445,7 +2415,6 @@ export function LessonFlowScreen() {
     }
     // Unguarded phases leave immediately — still a deliberate back press.
     if (phase !== "summary") reportEarlyExit('back_button');
-    if (maybeHandoffToProfiling('back')) return;
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -2493,7 +2462,6 @@ export function LessonFlowScreen() {
     // Mark mod-0-1 complete on any exit so the user never gets stuck on it
     if (id === 'mod-0-1') completeModule('mod-0-1');
     setShowExitConfirm(false);
-    if (maybeHandoffToProfiling('force_exit')) return;
     if (router.canGoBack()) router.back();
     else returnToMap("/(tabs)/index");
   }
@@ -2508,7 +2476,6 @@ export function LessonFlowScreen() {
   function leaveLessonFromSheet() {
     reportEarlyExit('back_button');
     setShowExitConfirm(false);
-    if (maybeHandoffToProfiling('force_exit')) return;
     if (router.canGoBack()) router.back();
     else returnToMap("/(tabs)/index");
   }
@@ -2941,7 +2908,6 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1') completeModule('mod-0-1');
     // Module-first v1 defense-in-depth: any post-module nav pre-onboarding
     // goes to profiling, not the (blocked) map.
-    if (maybeHandoffToProfiling('post_module_nav')) return;
 
     // Pearl gate — if the just-completed module has a pearl after it, drop
     // the user on the learn map with `?openPearl=<moduleId>` so DuoLearnScreen
@@ -3244,7 +3210,6 @@ export function LessonFlowScreen() {
     // from the accordion when the user reaches the map AFTER profiling+tour
     // (state-based: threshold crossed + unstamped), so the reward isn't lost —
     // it's the pull that carries them through the questions.
-    if (maybeHandoffToProfiling('chest_threshold')) return;
     // INLINE mod-0-1 chest (panel item 4, Yoav 8.7): the threshold chest now
     // opens HERE, at the win moment — no map detour. The lesson→chest seam was
     // the biggest in-module leak (30-35% never reached the accordion chest on
@@ -6611,9 +6576,6 @@ export function LessonFlowScreen() {
           onContinueModule={() => closeHandoffChest('finish_module')}
           onAdvanceToNextModule={() => closeHandoffChest('continue')}
           onDismiss={() => closeHandoffChest('dismiss')}
-          // Module-first arm, still pre-onboarding: the next step is the
-          // profiling questions, not a lesson - one plain "ממשיכים" button.
-          soloCtaLabel={isModuleFirstArm() && useTutorialStore.getState().firstRunStage === 'profiling' ? 'ממשיכים' : undefined}
           analyticsModuleId="mod-0-1"
           analyticsSource="inline"
           ahaLine={ahaLineFor('mod-0-1')}
