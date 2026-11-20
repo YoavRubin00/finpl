@@ -5,7 +5,14 @@ import { getSubscription, syncSubscription, type SubscriptionState } from '../..
 import { checkProEntitlement, RC_ENTITLEMENT_PRO } from '../../services/revenueCat';
 import type { CustomerInfo } from '../../services/revenueCat';
 import { useAuthStore } from '../auth/useAuthStore';
-import { SUBSCRIPTION_SNAPSHOT_KEY, primeSnapshot, readSnapshot, writeSnapshot } from '../economy/querySnapshot';
+import {
+  SUBSCRIPTION_SNAPSHOT_KEY,
+  primeSnapshot,
+  readSnapshot,
+  requestAccount,
+  writeSnapshot,
+  type RequestAccount,
+} from '../economy/querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
 import { createStoreProOverride, storeProOverServer } from './proOverrideCore';
 import { withExpiryApplied } from './subscriptionSeedCore';
@@ -136,6 +143,9 @@ export function useSyncFromRevenueCat() {
   return useMutation({
     retry: 2,
     mutationFn: async (customerInfo: CustomerInfo | null) => {
+      // The account this is sent for (boot fix B7, 20.11): the answer, and the
+      // re-reads after it, can land after a sign-out or another sign-in.
+      const account = requestAccount();
       // The store's answer from a purchase, a restore or the paywall's login:
       // shown for this session even when the server below cannot confirm it
       // yet (noteStoreCustomerInfo). Without one there is nothing fresh.
@@ -145,10 +155,13 @@ export function useSyncFromRevenueCat() {
         : await checkProEntitlement();
       const proExpiresAt = customerInfo?.entitlements.active[RC_ENTITLEMENT_PRO]?.expirationDate ?? null;
       const subscription = (await syncSubscription({ isPro, proExpiresAt })).subscription;
-      return { subscription, rcIsPro: isPro, rcExpiresAt: proExpiresAt };
+      return { subscription, rcIsPro: isPro, rcExpiresAt: proExpiresAt, account };
     },
-    onSuccess: ({ subscription: sub, rcIsPro, rcExpiresAt }) => {
-      writeSubscriptionSnapshot(sub);
+    onSuccess: ({ subscription: sub, rcIsPro, rcExpiresAt, account }) => {
+      // Another session by now: neither its cache nor its snapshot (B7).
+      if (account.changed()) return;
+      const fileAs = account.fileAs();
+      if (fileAs) writeSubscriptionSnapshot(sub, fileAs);
       if (rcIsPro && sub?.isPro !== true) {
         // Since 2026-11-20 the server makes an account Pro only once
         // RevenueCat confirms it (or its webhook lands), so right after a
@@ -162,7 +175,7 @@ export function useSyncFromRevenueCat() {
           subscriptionQueryKey,
           shown?.isPro === true ? shown : storeProOverServer(sub, rcExpiresAt),
         );
-        recheckAfterPurchase(qc, 0);
+        recheckAfterPurchase(qc, 0, account);
         return;
       }
       qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, withStoreProOverride(sub));
@@ -172,20 +185,25 @@ export function useSyncFromRevenueCat() {
 
 /** Re-reads the server until it agrees with the store. The server's answer is
  *  saved as it is; on screen the store's "Pro" stays while its override is
- *  valid, so even the last re-read never locks a paying user out. */
-function recheckAfterPurchase(qc: ReturnType<typeof useQueryClient>, attempt: number): void {
+ *  valid, so even the last re-read never locks a paying user out. They belong
+ *  to the purchase's account: after a sign-out or another sign-in they stop,
+ *  and a re-read that lands after one writes nothing (B7). */
+function recheckAfterPurchase(qc: ReturnType<typeof useQueryClient>, attempt: number, account: RequestAccount): void {
   const last = attempt >= PURCHASE_RECHECK_MS.length - 1;
   setTimeout(() => {
     void (async () => {
+      if (account.changed()) return;
       try {
         const sub = (await getSubscription()).subscription;
+        if (account.changed()) return;
         if (sub?.isPro === true || last) {
           qc.setQueryData<SubscriptionState | null>(subscriptionQueryKey, withStoreProOverride(sub));
-          writeSubscriptionSnapshot(sub);
+          const fileAs = account.fileAs();
+          if (fileAs) writeSubscriptionSnapshot(sub, fileAs);
           return;
         }
       } catch { /* try again below */ }
-      if (!last) recheckAfterPurchase(qc, attempt + 1);
+      if (!last) recheckAfterPurchase(qc, attempt + 1, account);
     })();
   }, PURCHASE_RECHECK_MS[attempt]);
 }

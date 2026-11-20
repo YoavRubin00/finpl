@@ -14,19 +14,23 @@
 //  - B7: the snapshot key names live in one place and sign-out removes all
 //    three from storage; a sign-in files its balance and streak (not only the
 //    Pro state) under the new account, never a seed, an older answer, another
-//    account's or bought gems still pending.
+//    account's or bought gems still pending; a late answer (a POST, the
+//    streak tick, a purchase re-read) is cached and filed only for the account
+//    and session that asked.
 import fs from 'node:fs';
 import path from 'node:path';
 import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import { QueryClient } from '@tanstack/query-core';
 import {
+  createAccountTracker,
   createSnapshotStore,
   ECONOMY_SNAPSHOT_KEY,
   fileIfStillSignedIn,
   SNAPSHOT_STORAGE_KEYS,
   STREAK_SNAPSHOT_KEY,
   SUBSCRIPTION_SNAPSHOT_KEY,
+  type RequestAccount,
   type SnapshotStorage,
 } from '../src/features/economy/querySnapshotCore';
 import { createPendingGems, withoutPendingGems, type GemsCarrier } from '../src/features/economy/pendingGemsCore';
@@ -369,6 +373,96 @@ async function aNewSessionFilesItsAnswers(): Promise<void> {
     'B7: a failing write is reported, never thrown');
 }
 
+function lateAnswersBelongToTheirAccount(): void {
+  const A = 'a@example.com';
+  const B = 'b@example.com';
+  let authId: string | null = A;
+  const accounts = createAccountTracker(() => authId);
+
+  const steady = accounts.atStart();
+  check(steady.authId === A && !steady.changed() && steady.fileAs() === A, 'B7: nothing changed: cached and filed under the account that asked');
+
+  const forA = accounts.atStart();
+  authId = B; // another account signed in (no sign-out in between)
+  check(forA.changed() && forA.fileAs() === null, 'B7: another account signed in since: neither cached nor filed');
+  authId = A;
+
+  const beforeSignOut = accounts.atStart();
+  accounts.endSession(); // signOut() begins; the auth store still says A for a moment
+  check(beforeSignOut.changed() && beforeSignOut.fileAs() === null,
+    'B7: a sign-out began (the auth store not cleared yet): neither cached nor filed');
+  authId = null;
+  check(beforeSignOut.changed() && beforeSignOut.fileAs() === null, 'B7: ... and after it');
+  authId = A; // the same account signs in again
+  check(beforeSignOut.changed() && beforeSignOut.fileAs() === null,
+    "B7: the same account signing in again: the earlier session's answer still is not applied");
+  const afterSignIn = accounts.atStart();
+  check(!afterSignIn.changed() && afterSignIn.fileAs() === A, 'B7: a request of the new session is unaffected by the earlier sign-out');
+
+  // A launch: the auth store has not loaded yet, so no account is known when
+  // the login bonus's POST goes out; it loads while the request is in flight.
+  authId = null;
+  const preLoad = accounts.atStart();
+  authId = A;
+  check(!preLoad.changed() && preLoad.fileAs() === null,
+    'B7: started before the auth store loaded: still cached (as before), never filed (no account to file it under)');
+  // A guest's request, still a guest.
+  authId = null;
+  const guest = accounts.atStart();
+  check(!guest.changed() && guest.fileAs() === null, 'B7: a guest: cached as before, nothing to file');
+}
+
+async function aLateAnswerAfterSignOutWritesNothing(): Promise<void> {
+  // fireEconomyDelta for A is in flight; A signs out, B signs in; A's answer
+  // lands. It must reach neither B's cache nor any snapshot (it used to be
+  // cached, and filed under whoever was signed in when it landed).
+  const A = 'a@example.com';
+  const B = 'b@example.com';
+  let authId: string | null = A;
+  const accounts = createAccountTracker(() => authId);
+  const fake = fakeAsyncStorage(1);
+  const snapshots = createSnapshotStore({ storage: fake.storage, getAuthId: () => authId });
+  const client = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, gcTime: 5 * 60_000, retry: false } } });
+  const answerLanded = (account: RequestAccount, economy: Eco) => {
+    // useEconomyUIStore fireEconomyDelta .then (the same steps).
+    if (account.changed()) return;
+    client.setQueryData(['economy'], economy);
+    const fileAs = account.fileAs();
+    if (fileAs) snapshots.write(ECONOMY_SNAPSHOT_KEY, withoutPendingGems(economy), fileAs);
+  };
+
+  client.setQueryData(['economy'], { xp: 1, coins: 900, gems: 5, level: 1, virtualBalance: '0' });
+  const inFlight = accounts.atStart();
+
+  // signOut(): session ends, cache and memory cleared, saved snapshots removed,
+  // then the auth store. The answer lands in the middle of it.
+  accounts.endSession();
+  client.clear();
+  snapshots.reset();
+  answerLanded(inFlight, { xp: 1, coins: 1900, gems: 5, level: 1, virtualBalance: '0' });
+  await Promise.all(SNAPSHOT_STORAGE_KEYS.map((k) => fake.removeItem(k)));
+  authId = null;
+  await sleep(5);
+  check(client.getQueryData(['economy']) === undefined, "B7: A's late answer during the sign-out does not refill the cache");
+  check(!fake.data.has(ECONOMY_SNAPSHOT_KEY), "B7: ... nor A's saved balance on disk");
+
+  // B signs in; another of A's answers lands now.
+  authId = B;
+  client.setQueryData(['economy'], { xp: 0, coins: 50, gems: 0, level: 1, virtualBalance: '0' });
+  answerLanded(inFlight, { xp: 1, coins: 2900, gems: 5, level: 1, virtualBalance: '0' });
+  await sleep(5);
+  check(client.getQueryData<Eco>(['economy'])?.coins === 50, "B7: A's late answer does not reach B's cache");
+  check(!fake.data.has(ECONOMY_SNAPSHOT_KEY) && snapshots.read(ECONOMY_SNAPSHOT_KEY, isEco) === null,
+    "B7: and is never filed under B (it used to be)");
+
+  // B's own answer is cached and filed as usual.
+  answerLanded(accounts.atStart(), { xp: 0, coins: 80, gems: 0, level: 1, virtualBalance: '0' });
+  await sleep(5);
+  const filed = snapshots.read(ECONOMY_SNAPSHOT_KEY, isEco);
+  check(client.getQueryData<Eco>(['economy'])?.coins === 80 && filed?.authId === B && filed.value.coins === 80,
+    "B7: B's own answer is cached and filed under B");
+}
+
 async function main(): Promise<void> {
   await primeReadsTheRightAccount();
   await writeWinsOverALatePrime();
@@ -382,6 +476,8 @@ async function main(): Promise<void> {
   snapshotKeysAreOneList();
   await signOutLeavesNoSnapshot();
   await aNewSessionFilesItsAnswers();
+  lateAnswersBelongToTheirAccount();
+  await aLateAnswerAfterSignOutWritesNothing();
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);
 }

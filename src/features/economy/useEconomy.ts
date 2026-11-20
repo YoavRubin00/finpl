@@ -4,7 +4,14 @@ import { applyEconomyDelta, getEconomy, type Economy } from '../../lib/api/econo
 import { useAuthStore } from '../auth/useAuthStore';
 import { guardedQueryFn } from '../../lib/queryGuard';
 import { whenHydrated } from '../../lib/stores/whenHydrated';
-import { ECONOMY_SNAPSHOT_KEY, isSnapshotPrimed, primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
+import {
+  ECONOMY_SNAPSHOT_KEY,
+  isSnapshotPrimed,
+  primeSnapshot,
+  readSnapshot,
+  requestAccount,
+  writeSnapshot,
+} from './querySnapshot';
 import { createPendingGems, withoutPendingGems } from './pendingGemsCore';
 
 export { spendableGems } from './pendingGemsCore';
@@ -151,6 +158,9 @@ export function useApplyEconomyDelta() {
     mutationKey: economyQueryKey,
     mutationFn: async (input: DeltaInput) => (await applyEconomyDelta(input)).economy,
     onMutate: async (input) => {
+      // The account this change is made for (boot fix B7, 20.11): its answer
+      // can land after a sign-out or another account's sign-in.
+      const account = requestAccount();
       notePendingGemDelta(input.gemsDelta);
       await qc.cancelQueries({ queryKey: economyQueryKey });
       const prev = qc.getQueryData<Economy | null>(economyQueryKey);
@@ -166,9 +176,11 @@ export function useApplyEconomyDelta() {
             : old.virtualBalance,
         };
       });
-      return { prev };
+      return { prev, account };
     },
     onError: (_e, _i, ctx) => {
+      // Another session by now: its cache is not this request's to restore (B7).
+      if (ctx?.account.changed()) return;
       if (ctx?.prev !== undefined) qc.setQueryData(economyQueryKey, ctx.prev);
       // Only invalidate on error so the next render pulls fresh server truth.
       qc.invalidateQueries({ queryKey: economyQueryKey });
@@ -176,10 +188,14 @@ export function useApplyEconomyDelta() {
     // Server already returned the authoritative economy row — write it straight
     // into the cache instead of invalidating, which would trigger a redundant
     // GET /api/sync/economy after every XP/coin/gem mutation.
-    onSuccess: (economy) => {
+    onSuccess: (economy, _input, ctx) => {
+      // A sign-out or another account's sign-in since: not this cache's (B7).
+      if (ctx?.account.changed()) return;
       qc.setQueryData(economyQueryKey, withPendingGems(economy));
-      // Server-authoritative row → keep the cold-open snapshot fresh (UX-21).
-      writeSnapshot(ECONOMY_SNAPSHOT_KEY, economy);
+      // Server-authoritative row → keep the cold-open snapshot fresh (UX-21),
+      // filed under the account that made the change (B7).
+      const fileAs = ctx?.account.fileAs();
+      if (fileAs) writeEconomySnapshot(economy, fileAs);
     },
   });
 }

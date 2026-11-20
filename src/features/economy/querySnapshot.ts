@@ -17,7 +17,7 @@
 //    safe during render. Logic: querySnapshotCore.ts.
 import { readStringSync, zustandStorage } from '../../lib/zustandStorage';
 import { useAuthStore } from '../auth/useAuthStore';
-import { createSnapshotStore, type SnapshotEnvelope } from './querySnapshotCore';
+import { createAccountTracker, createSnapshotStore, type RequestAccount, type SnapshotEnvelope } from './querySnapshotCore';
 
 export {
   ECONOMY_SNAPSHOT_KEY,
@@ -26,6 +26,7 @@ export {
   SNAPSHOT_STORAGE_KEYS,
   fileIfStillSignedIn,
 } from './querySnapshotCore';
+export type { RequestAccount } from './querySnapshotCore';
 
 const store = createSnapshotStore({
   storage: zustandStorage,
@@ -58,6 +59,25 @@ export function primeSnapshot(key: string): Promise<void> {
 
 export function isSnapshotPrimed(key: string): boolean {
   return store.isPrimed(key);
+}
+
+const accounts = createAccountTracker(() => useAuthStore.getState().authId);
+
+/**
+ * The account a request is made for, taken when it starts, for its answer
+ * that lands later (boot fix B7, querySnapshotCore.ts): skip the cache write
+ * when `changed()`, file the snapshot only under `fileAs()`. Used by every
+ * late writer of the three snapshots (the economy POSTs, the streak tick and
+ * activity POSTs, the subscription purchase POST and its re-reads).
+ */
+export function requestAccount(): RequestAccount {
+  return accounts.atStart();
+}
+
+/** A sign-out or account wipe begins (lifecycle.ts): answers to requests
+ *  started before it are no longer this device's to apply. */
+export function endAccountSession(): void {
+  accounts.endSession();
 }
 
 /** Forget the snapshots held in memory (sign-out, account wipe). A prime

@@ -89,6 +89,54 @@ function parseRaw(raw: string | null): RawEnvelope | null {
   }
 }
 
+/**
+ * The account a request was made for, taken when it starts (boot fix B7,
+ * 20.11), for an answer that lands later: maybe after a sign-out, or another
+ * account's sign-in. Snapshot writes used to fall back to whoever was signed
+ * in when the answer landed, so a late answer could be filed (and cached)
+ * under the next account.
+ */
+export interface RequestAccount {
+  /** The signed-in account when the request started; null when none was
+   *  known yet (a guest, or a launch before the auth store has loaded). */
+  readonly authId: string | null;
+  /** The answer must not touch this session's cache: a sign-out (or account
+   *  wipe) began since the request started, or another account is signed in
+   *  now. A request started with no account known is still current while no
+   *  sign-out began (the auth store loading at launch is not a change). */
+  changed(): boolean;
+  /** The account to file the answer's snapshot under: the one it was made
+   *  for, still signed in, nothing ended since. null: don't file it. */
+  fileAs(): string | null;
+}
+
+export interface AccountTracker {
+  /** Taken when a request starts. */
+  atStart(): RequestAccount;
+  /** A sign-out or account wipe begins: answers to requests started before
+   *  belong to nothing that comes next. */
+  endSession(): void;
+}
+
+export function createAccountTracker(getAuthId: () => string | null): AccountTracker {
+  let session = 0;
+  return {
+    atStart(): RequestAccount {
+      const authId = getAuthId();
+      const startSession = session;
+      const sameAccount = (): boolean => getAuthId() === authId;
+      return {
+        authId,
+        changed: () => session !== startSession || (authId !== null && !sameAccount()),
+        fileAs: () => (authId !== null && session === startSession && sameAccount() ? authId : null),
+      };
+    },
+    endSession(): void {
+      session += 1;
+    },
+  };
+}
+
 export function createSnapshotStore(deps: {
   storage: SnapshotStorage;
   /** Synchronous read when the backend has one (MMKV); null when not. */

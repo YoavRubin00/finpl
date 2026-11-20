@@ -26,7 +26,9 @@ import {
   recordPurchasedGems,
   expirePendingGems,
   spendableGems,
+  writeEconomySnapshot,
 } from "./useEconomy";
+import { requestAccount } from "./querySnapshot";
 import { PENDING_GEMS_REREAD_MS } from "./pendingGemsCore";
 import { registerLocalStore } from "../../lib/stores/registry";
 import type { Economy } from "../../lib/api/economy";
@@ -351,6 +353,9 @@ type EconomyDeltaInput = {
  * boilerplate at 11 call sites and get optimistic UX for free.
  */
 export function fireEconomyDelta(delta: EconomyDeltaInput) {
+  // The account this delta is sent for (boot fix B7, 20.11): its answer can
+  // land after a sign-out or another account's sign-in.
+  const account = requestAccount();
   // Optimistic cache update so useEconomy() consumers (the wealth header, etc.)
   // reflect the delta immediately. Without this the UI waits for the server
   // roundtrip + invalidate — which silently never resolves when /api/sync/economy
@@ -361,6 +366,9 @@ export function fireEconomyDelta(delta: EconomyDeltaInput) {
     // The server's answer to this delta already landed: it includes the
     // delta, so adding it again would double it on screen.
     if (answered) return;
+    // Deferred (the wait below) past a sign-out or into another account's
+    // session: not that session's balance.
+    if (account.changed()) return;
     applyEconomyDeltaLocally(delta);
   };
   // On devices the saved balance loads from AsyncStorage after launch, and the
@@ -386,7 +394,16 @@ export function fireEconomyDelta(delta: EconomyDeltaInput) {
     // applyEconomyDelta (nothing was written).
     .then((res) => {
       answered = true;
+      // A sign-out or another account's sign-in since it was sent: the
+      // answer is the old session's balance, not for this cache (B7).
+      if (account.changed()) return;
       queryClient.setQueryData<Economy | null>(economyQueryKey, withPendingGems(res.economy));
+      // The server's balance after this delta is the account's last known
+      // one (B7: the snapshot used to keep the balance from before it, and a
+      // cold start soon after seeded that). Filed under the account that
+      // sent it, only while it is still the signed-in one.
+      const fileAs = account.fileAs();
+      if (fileAs) writeEconomySnapshot(res.economy, fileAs);
       // (Removed 2026-11-20: a follow-up upsertInventory() "mirror" POST to
       // /api/sync/profile used to fire here after every delta. It sent no
       // Authorization header, so production's Bearer-only /api/sync/profile

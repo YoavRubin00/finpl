@@ -9,7 +9,7 @@ import { useEconomyUIStore } from './useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { captureEvent, setPersonProperties } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
-import { STREAK_SNAPSHOT_KEY, primeSnapshot, readSnapshot, writeSnapshot } from './querySnapshot';
+import { STREAK_SNAPSHOT_KEY, primeSnapshot, readSnapshot, requestAccount, writeSnapshot } from './querySnapshot';
 import { guardedQueryFn } from '../../lib/queryGuard';
 import { serverStreakArrivals } from './launchStreakWait';
 
@@ -84,15 +84,24 @@ export function todayIsraelDate(): string {
 export function useRecordDailyActivity() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => (await recordDailyActivity(todayIsraelDate())).streak,
-    onSuccess: (streak) => {
+    mutationFn: async () => {
+      // The account this day is recorded for (boot fix B7, 20.11): the answer
+      // can land after a sign-out or another account's sign-in.
+      const account = requestAccount();
+      const streak = (await recordDailyActivity(todayIsraelDate())).streak;
+      return { streak, account };
+    },
+    onSuccess: ({ streak, account }) => {
+      // Another session by now: not its streak, its snapshot or its analytics.
+      if (account.changed()) return;
       // Snapshot the pre-update streak BEFORE overwriting the cache so the
       // shared emitter can detect a genuine streak extension.
       const prev = qc.getQueryData<StreakState | null>(streakQueryKey)?.currentStreak ?? 0;
       qc.setQueryData<StreakState | null>(streakQueryKey, streak);
       // The server's streak is in the cache: the launch's login bonus may run on it.
       serverStreakArrivals.note();
-      writeSnapshot(STREAK_SNAPSHOT_KEY, streak);
+      const fileAs = account.fileAs();
+      if (fileAs) writeStreakSnapshot(streak, fileAs);
       try {
         setPersonProperties({
           current_streak: streak?.currentStreak ?? 0,
@@ -188,12 +197,17 @@ export function markDailyActivityCompleted(): void {
   // server tells us the new value (and not fire on a no-op same-day call).
   const prevSnapshot = queryClient.getQueryData<StreakState | null>(streakQueryKey);
   const prevStreakBefore = prevSnapshot?.currentStreak ?? 0;
+  // The account this day is recorded for (boot fix B7, 20.11).
+  const account = requestAccount();
 
   void recordDailyActivity(todayIsraelDate())
     .then((res) => {
+      // A sign-out or another account's sign-in since: not this session's.
+      if (account.changed()) return;
       queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
       serverStreakArrivals.note(); // a real server streak (see launchStreakWait.ts)
-      writeSnapshot(STREAK_SNAPSHOT_KEY, res.streak);
+      const fileAs = account.fileAs();
+      if (fileAs) writeStreakSnapshot(res.streak, fileAs);
       // Keep the PostHog person streak props fresh (incl. server resets to 1/0).
       try {
         setPersonProperties({

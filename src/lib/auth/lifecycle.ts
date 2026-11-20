@@ -50,6 +50,7 @@ import {
   toEpochMs,
 } from '../../features/subscription/subscriptionSeedCore';
 import {
+  endAccountSession,
   fileIfStillSignedIn,
   resetSnapshotMemory,
   SNAPSHOT_STORAGE_KEYS,
@@ -551,6 +552,9 @@ let signOutInFlight: Promise<void> | null = null;
 export async function signOut(): Promise<void> {
   // A boot or sign-in still finishing must not sign this session back in.
   bootGeneration++;
+  // Nor may a late answer to this session's requests (a reward's POST, the
+  // streak tick, a purchase's re-read) write its cache or its snapshots (B7).
+  endAccountSession();
 
   if (signOutInFlight) return signOutInFlight;
 
@@ -632,8 +636,10 @@ const WIPE_RC_LOGOUT_WAIT_MS = 3000;
  * local waits on it.
  */
 export async function wipeDeviceForDeletedAccount(scope: 'account' | 'guest'): Promise<void> {
-  // A boot or sign-in still finishing must not sign this session back in.
+  // A boot or sign-in still finishing must not sign this session back in, nor
+  // may a late answer to this session's requests write anything (B7).
   bootGeneration++;
+  endAccountSession();
 
   // 1. Signed out, in memory and on disk. clear() makes persist write the
   //    signed-out state; removing the key afterwards runs after that write
