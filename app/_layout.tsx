@@ -58,7 +58,7 @@ initPostHog();
 void captureLaunchAttribution();
 
 import { Stack, useRouter, useSegments, useRootNavigationState, usePathname } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, InteractionManager, Platform, Text, TextInput } from "react-native";
 import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
 import { useDailyQuestsStore } from "../src/features/daily-quests/useDailyQuestsStore";
@@ -83,7 +83,7 @@ import { useAuthStore } from "../src/features/auth/useAuthStore";
 import { useEconomyUIStore } from "../src/features/economy/useEconomyUIStore";
 import { useStreakDailyTick } from "../src/features/economy/useStreak";
 import { setOnUnauthorized } from "../src/lib/api/client";
-import { signOut as lifecycleSignOut, bootFromToken } from "../src/lib/auth/lifecycle";
+import { signOut as lifecycleSignOut, bootFromToken, abandonPendingBoot } from "../src/lib/auth/lifecycle";
 import { startAppStateListener } from "../src/lib/auth/appStateListener";
 
 setOnUnauthorized(() => {
@@ -113,6 +113,7 @@ import { GlobalUpgradeModal } from "../src/features/subscription/UpgradeModal";
 import { PostStreakIncomeSplash } from "../src/features/assets/PostStreakIncomeSplash";
 import { useNotificationSetup } from "../src/features/notifications/useNotifications";
 import { LoadingWisdom } from "../src/components/ui/LoadingWisdom";
+import { BootRetryScreen, type BootRetryState } from "../src/components/ui/BootRetryScreen";
 import { AppIntroSplash } from "../src/components/ui/AppIntroSplash";
 import { GlobalErrorBoundary } from "../src/components/ui/ErrorBoundary";
 import { NetworkStatusBanner } from "../src/components/ui/NetworkStatusBanner";
@@ -138,7 +139,6 @@ const PredictionResultsHost: React.ComponentType | null = SOCIAL_FEATURES_ENABLE
 import { GuestValueGateHost } from "../src/features/auth/guestValueGate";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
-import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
 import { FreezeRefundModalGate } from "../src/features/streak/StreakFreezeRefundModal";
@@ -307,7 +307,9 @@ function RootLayoutInner() {
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        foregroundEnteredAt.current = Date.now();
+        // A brief iOS "inactive" blip (Control Center, a system dialog, Face ID)
+        // no longer ends the session, so only start a new one when none is open.
+        if (foregroundEnteredAt.current === null) foregroundEnteredAt.current = Date.now();
         // Coming back after 15+ minutes is a new "open": it gets its own single greeting (13.11).
         // A quick switch to another app and back is the same open — no new popup.
         if (backgroundedAt.current !== null && Date.now() - backgroundedAt.current >= 15 * 60 * 1000) {
@@ -331,15 +333,24 @@ function RootLayoutInner() {
         // the "phone left charging for 8 days" pattern where the app is
         // still in memory but the lapse window has elapsed).
         try { useComebackRewardStore.getState().registerAppOpen(Date.now()); } catch { /* non-fatal */ }
-      } else if (state === "background" || state === "inactive") {
-        if (state === "background" && backgroundedAt.current === null) backgroundedAt.current = Date.now();
+      } else if (state === "background") {
+        // Only a real background ends the session (20.11): "inactive" fires on
+        // every brief iOS interruption and used to send a session-time POST
+        // each time, often for 0 seconds.
+        if (backgroundedAt.current === null) backgroundedAt.current = Date.now();
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
           foregroundEnteredAt.current = null;
-          useUserStatsUIStore.getState().addSessionSeconds(secs);
-          apiRecordSessionTime(secs)
-            .then(() => queryClient.invalidateQueries({ queryKey: userStatsQueryKey }))
-            .catch(() => { /* fire-and-forget */ });
+          if (secs > 0) {
+            useUserStatsUIStore.getState().addSessionSeconds(secs);
+            apiRecordSessionTime(secs)
+              // The POST answers with the updated stats row: store it instead
+              // of invalidating, which fetched the same row again.
+              .then((res) => {
+                if (res?.userStats !== undefined) queryClient.setQueryData(userStatsQueryKey, res.userStats);
+              })
+              .catch(() => { /* fire-and-forget */ });
+          }
         }
       }
     });
@@ -443,9 +454,10 @@ function RootLayoutInner() {
   }, [hasOnboardedForAds]);
 
   // ── RevenueCat init ──
-  useEffect(() => {
-    configureRevenueCat();
-  }, []);
+  // Done by bootFromToken (lifecycle.ts) on every cold start: with the saved
+  // user id for a signed-in user, anonymously otherwise. Configuring here,
+  // anonymously and before the boot, made every cold start of a signed-in user
+  // run Purchases.logIn (and fire rc_login_succeeded) for an unchanged id.
 
   // Mirror PRO status into the energy store so EVERY energy mutation is inert
   // for Pro (Yoav 18/06: "למשתמש שהוא פרו לא צריך לרדת/להוסיף אנרגיה בכלל").
@@ -505,8 +517,16 @@ function RootLayoutInner() {
   useEffect(() => {
     let cancelled = false;
     let interval: ReturnType<typeof setInterval> | null = null;
+    // Minimum age before the bandit state is fetched again (20.11). Resuming
+    // within it (a brief iOS "inactive" blip, a quick app switch) no longer
+    // refetches; the 5-minute interval still does. One second of slack so the
+    // interval tick itself is never skipped.
+    const BANDIT_MIN_AGE_MS = 5 * 60 * 1000;
+    let lastHydratedAt = 0;
 
     const hydrate = () => {
+      if (Date.now() - lastHydratedAt < BANDIT_MIN_AGE_MS - 1000) return;
+      lastHydratedAt = Date.now();
       import("../src/features/bandit/useBanditStore")
         .then(({ useBanditStore }) => {
           if (!cancelled) useBanditStore.getState().hydrateFromServer();
@@ -517,7 +537,7 @@ function RootLayoutInner() {
     const start = () => {
       if (interval !== null) return;
       hydrate();
-      interval = setInterval(hydrate, 5 * 60 * 1000);
+      interval = setInterval(hydrate, BANDIT_MIN_AGE_MS);
     };
 
     const stop = () => {
@@ -685,6 +705,11 @@ function RootLayoutInner() {
 
   const [hydrated, setHydrated] = useState(false);
   const [bootComplete, setBootComplete] = useState(false);
+  // A stored token with no saved session on this device whose server did not
+  // answer within the boot limit (or failed): a retry screen instead of an
+  // endless loader. null = not needed.
+  const [bootRetry, setBootRetry] = useState<BootRetryState | null>(null);
+  const bootAttemptRef = useRef(0);
   const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
@@ -693,19 +718,61 @@ function RootLayoutInner() {
     return unsub;
   }, []);
 
-  // Cold-launch boot: attempt to restore session from stored JWT before rendering routes
+  // Cold-launch boot: restore the session from the stored JWT before rendering
+  // routes. bootFromToken resolves at once for a signed-in user with saved
+  // state (the server work finishes in the background) and otherwise waits at
+  // most BOOT_NETWORK_TIMEOUT_MS (perf 20.11).
+  // The module-first experiment is DEAD (ca38fda2 — guardrail smashed).
+  // Its boot gate used to AWAIT auth+tutorial store rehydration here before
+  // rendering any route; that unbounded wait shipped only in the 1.4.3
+  // binary and is the prime suspect for 1.4.3's first-screen deficit
+  // (welcome CTA 61% vs 79% on 1.4.2 — cohort 5-7.7, n=104/33, ~3σ): every
+  // ms added before a FRESH install's first paint bleeds first-tap users.
+  // Boot no longer blocks on hydration (Yoav 2026-07-08, pre-1.4.4); any
+  // future first-run experiment MUST use a bounded (timeout-raced) wait.
+  const runBoot = useCallback(() => {
+    const attempt = ++bootAttemptRef.current;
+    const isCurrent = () => attempt === bootAttemptRef.current;
+    bootFromToken()
+      .then((result) => {
+        if (!isCurrent()) return;
+        if (result.outcome !== "retry" || !result.settled) {
+          setBootRetry(null);
+          setBootComplete(true);
+          return;
+        }
+        setBootRetry("waiting");
+        void result.settled.then((late) => {
+          if (!isCurrent()) return;
+          if (late === "error") {
+            setBootRetry("failed");
+            return;
+          }
+          setBootRetry(null);
+          setBootComplete(true);
+        });
+      })
+      .catch(() => {
+        if (isCurrent()) setBootComplete(true);
+      });
+  }, []);
+
   useEffect(() => {
-    bootFromToken().finally(() => {
-      // The module-first experiment is DEAD (ca38fda2 — guardrail smashed).
-      // Its boot gate used to AWAIT auth+tutorial store rehydration here before
-      // rendering any route; that unbounded wait shipped only in the 1.4.3
-      // binary and is the prime suspect for 1.4.3's first-screen deficit
-      // (welcome CTA 61% vs 79% on 1.4.2 — cohort 5-7.7, n=104/33, ~3σ): every
-      // ms added before a FRESH install's first paint bleeds first-tap users.
-      // Boot no longer blocks on hydration (Yoav 2026-07-08, pre-1.4.4); any
-      // future first-run experiment MUST use a bounded (timeout-raced) wait.
-      setBootComplete(true);
-    });
+    runBoot();
+  }, [runBoot]);
+
+  const retryBoot = useCallback(() => {
+    setBootRetry("waiting");
+    runBoot();
+  }, [runBoot]);
+
+  // Go on signed out, as a failed boot always did. The attempt still running
+  // is ignored and may no longer sign this device in.
+  const continueWithoutSession = useCallback(() => {
+    bootAttemptRef.current++;
+    abandonPendingBoot();
+    setBootRetry(null);
+    setBootComplete(true);
   }, []);
 
   // Daily streak tick — fire `recordDailyActivity` once per Israeli day on app
@@ -842,6 +909,9 @@ function RootLayoutInner() {
   }, [hydrated, isAuthenticated, hasCompletedOnboarding, hasSeenWalkthrough, walkthroughTriggered, isMod01Complete, pendingPostWalkthroughFirstChest, segments]);
 
   if (!hydrated || !bootComplete || !navState?.key || !fontsLoaded) {
+    if (bootRetry && hydrated && fontsLoaded) {
+      return <BootRetryScreen state={bootRetry} onRetry={retryBoot} onContinue={continueWithoutSession} />;
+    }
     return <LoadingWisdom />;
   }
 

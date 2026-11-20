@@ -24,8 +24,14 @@ function isStreakState(v: unknown): v is StreakState {
     && (s.lastActiveDate === null || typeof s.lastActiveDate === 'string');
 }
 
-function streakPlaceholder(): StreakState | undefined {
+/** Last server-confirmed streak. The cold boot also seeds the cache with it (lifecycle.ts). */
+export function streakPlaceholder(): StreakState | undefined {
   return readSnapshot(STREAK_SNAPSHOT_KEY, isStreakState)?.value;
+}
+
+/** Record a server-confirmed streak as the cold-open snapshot. */
+export function writeStreakSnapshot(streak: StreakState | null | undefined): void {
+  writeSnapshot(STREAK_SNAPSHOT_KEY, streak);
 }
 
 export function useStreak() {

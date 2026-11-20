@@ -60,7 +60,7 @@ import { useFreeSharkCall } from "../shark-voice-chat/useFreeSharkCall";
 import { streamChatRequest } from "../../utils/streamChat";
 import { useHeartsStore } from "../subscription/useHeartsStore";
 import { captureEvent } from "../../lib/posthog";
-import { generateFollowups } from "./generateFollowups";
+import { splitChatResponse } from "./chatFollowups";
 import { MarkdownText } from "./MarkdownText";
 
 /* ------------------------------------------------------------------ */
@@ -624,7 +624,6 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   // AI-generated follow-up questions that replace the two default suggestion
   // chips after each answered turn. null = show the contextual defaults.
   const [dynamicSuggestions, setDynamicSuggestions] = useState<ChatSuggestion[] | null>(null);
-  const followupAbortRef = useRef<AbortController | null>(null);
 
   const companionId: CompanionId = profile?.companionId ?? "warren-buffett";
   const companion = COMPANION_PERSONALITIES[companionId];
@@ -755,24 +754,16 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     scrollViewRef.current?.scrollTo({ y: Math.max(0, anchorYRef.current - 8), animated: true });
   }, []);
 
-  // After a successful answer, quietly fetch two fresh follow-up questions and
-  // crossfade them into the two default suggestion chips. Best-effort: any
-  // failure leaves the current chips untouched. A new call aborts the prior one.
-  const triggerFollowups = useCallback((lastQ: string, lastA: string) => {
-    followupAbortRef.current?.abort();
-    const controller = new AbortController();
-    followupAbortRef.current = controller;
-    generateFollowups(lastQ, lastA, controller.signal)
-      .then((pair) => {
-        if (controller.signal.aborted || !pair) return;
-        setDynamicSuggestions([
-          { text: pair[0], moduleId: null },
-          { text: pair[1], moduleId: null },
-        ]);
-      })
-      .catch(() => {
-        // Swallowed — chips keep whatever they're showing.
-      });
+  // Crossfade the answer's two follow-up questions into the suggestion chips.
+  // They come in the same /api/ai/chat response as the answer (20.11; it used
+  // to be a second AI call per message). No chips in the response (older
+  // server, malformed output) leaves the current chips untouched.
+  const applyFollowups = useCallback((pair: [string, string] | null) => {
+    if (!pair) return;
+    setDynamicSuggestions([
+      { text: pair[0], moduleId: null },
+      { text: pair[1], moduleId: null },
+    ]);
   }, []);
 
   // Commit a finished reply: the whole response is accumulated during the stream
@@ -841,7 +832,6 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   // Abort any in-flight stream on unmount
   useEffect(() => () => {
     abortControllerRef.current?.abort();
-    followupAbortRef.current?.abort();
   }, []);
 
   // Auto-trigger AI response for lifeline intervention
@@ -879,7 +869,9 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     let accumulated = "";
 
     streamChatRequest(
-      { systemPrompt, messages: chatMessages, maxOutputTokens: 2500 },
+      // followups: the two suggestion chips come back after the answer in this
+      // same response (no second AI call).
+      { systemPrompt, messages: chatMessages, maxOutputTokens: 2500, followups: true },
       // Accumulate silently while the typing dots stay up — the reply is added
       // and revealed once, as a settled block, in the completion handler below.
       (chunk) => { accumulated += chunk; },
@@ -895,12 +887,11 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
         setTimeout(scrollToAnchor, 100);
         return;
       }
-      commitStreamedReply(draftTs, accumulated);
-      if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
+      const { answer, followups } = splitChatResponse(accumulated);
+      commitStreamedReply(draftTs, answer);
+      if (answer) AccessibilityInfo.announceForAccessibility(answer);
       markAllRead();
-      const lastQ = messages[0]?.content ?? "";
-      const lastA = stripDebugPreamble(accumulated);
-      if (lastQ && lastA) triggerFollowups(lastQ, lastA);
+      if (stripDebugPreamble(answer)) applyFollowups(followups);
       talkingTimeoutRef.current = setTimeout(() => setAnimationState("idle"), 3000);
       setTimeout(scrollToAnchor, 100);
     });
@@ -990,7 +981,9 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     let accumulated = "";
 
     const { ok } = await streamChatRequest(
-      { systemPrompt, messages: chatMessages, maxOutputTokens: 2500 },
+      // followups: the two suggestion chips come back after the answer in this
+      // same response (no second AI call; usage counting below is unchanged).
+      { systemPrompt, messages: chatMessages, maxOutputTokens: 2500, followups: true },
       // Accumulate silently; the settled block is committed + revealed below.
       (chunk) => { accumulated += chunk; },
       abortControllerRef.current.signal,
@@ -1004,8 +997,9 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
       markAllRead();
       setAnimationState("idle");
     } else {
-      commitStreamedReply(draftTs, accumulated);
-      if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
+      const { answer, followups } = splitChatResponse(accumulated);
+      commitStreamedReply(draftTs, answer);
+      if (answer) AccessibilityInfo.announceForAccessibility(answer);
       if (!isProNow) {
         useUsageStore.getState().incrementUsage("chat");
       }
@@ -1025,17 +1019,16 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
             },
           ];
         });
-      } else {
-        // Refresh the suggestion chips with follow-ups tailored to this answer.
-        const lastA = stripDebugPreamble(accumulated);
-        if (lastA) triggerFollowups(text, lastA);
+      } else if (stripDebugPreamble(answer)) {
+        // Refresh the suggestion chips with the follow-ups tailored to this answer.
+        applyFollowups(followups);
       }
       talkingTimeoutRef.current = setTimeout(() => setAnimationState("idle"), 3000);
     }
 
     setLoading(false);
     setTimeout(scrollToAnchor, 100);
-  }, [input, loading, messages, displayName, profile, companionId, companion, allCompletedModules, currentChapterId, lifelineConcept, markAllRead, scrollToAnchor, triggerFollowups, commitStreamedReply]);
+  }, [input, loading, messages, displayName, profile, companionId, companion, allCompletedModules, currentChapterId, lifelineConcept, markAllRead, scrollToAnchor, applyFollowups, commitStreamedReply]);
 
   const isPro = useIsPro();
   // Subscribe to chatMessagesToday so canSendChat re-evaluates after each send

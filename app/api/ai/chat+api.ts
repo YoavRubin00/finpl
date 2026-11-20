@@ -10,11 +10,15 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString } from '../_shared/validate';
+import { FOLLOWUPS_INSTRUCTION, FollowupStreamSplitter } from '../../../src/features/chat/chatFollowups';
 
 interface ChatRequestBody {
   systemPrompt: string;
   messages: Array<{ role: 'user' | 'model'; content: string }>;
   maxOutputTokens?: number;
+  /** Opt-in: follow-up chips after the answer in this same call. Same wire
+   *  format as api/ai/chat.ts (src/features/chat/chatFollowups.ts). */
+  followups?: boolean;
 }
 
 const GEMINI_API_KEY = process.env.GOOGLE_AI_API_KEY ?? '';
@@ -52,10 +56,11 @@ export async function POST(request: Request): Promise<Response> {
     }));
 
     const maxTokens = Math.min(body.maxOutputTokens ?? 2048, 4096);
+    const wantsFollowups = body.followups === true;
 
     const result = streamText({
       model: googleAI('gemini-2.5-flash'),
-      system: systemPrompt,
+      system: wantsFollowups ? systemPrompt + FOLLOWUPS_INSTRUCTION : systemPrompt,
       messages,
       maxOutputTokens: maxTokens,
     });
@@ -63,11 +68,18 @@ export async function POST(request: Request): Promise<Response> {
     // Pipe raw UTF-8 text chunks (no SSE framing) so React Native's fetch
     // with `reactNative: { textStreaming: true }` can read them off response.body.
     const encoder = new TextEncoder();
+    const splitter = wantsFollowups ? new FollowupStreamSplitter() : null;
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         try {
           for await (const chunk of result.textStream) {
-            controller.enqueue(encoder.encode(chunk));
+            const out = splitter ? splitter.push(chunk) : chunk;
+            if (out) controller.enqueue(encoder.encode(out));
+          }
+          if (splitter) {
+            const { text, trailer } = splitter.finish();
+            if (text) controller.enqueue(encoder.encode(text));
+            if (trailer) controller.enqueue(encoder.encode(trailer));
           }
           controller.close();
         } catch (streamErr) {

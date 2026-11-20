@@ -49,6 +49,12 @@ export function useProgress() {
 
 export function useIsModuleCompleted(moduleId: string): boolean {
   const { data } = useProgress();
+  // The durable local store is a superset of the server's completions (see
+  // useProgress). Reading it too keeps this right on a cold open that renders
+  // before the server progress arrives (boot without waiting, 20.11). The
+  // root layout's walkthrough re-arm and popup gates read this hook.
+  const doneLocally = useCompletedModulesStore((s) => s.completedIds.includes(moduleId));
+  if (doneLocally) return true;
   if (!data) return false;
   const row = data.find((m) => m.moduleId === moduleId);
   return row?.status === 'completed';
