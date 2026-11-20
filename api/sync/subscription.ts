@@ -53,20 +53,16 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     if (typeof body.isPro !== 'boolean') {
       return res.status(400).json({ error: 'Missing isPro boolean' });
     }
-    await db
+    // UPDATE … RETURNING: one DB round trip instead of UPDATE then SELECT.
+    const rows = await db
       .update(userProfiles)
       .set({
         isPro: body.isPro,
         proExpiresAt: body.proExpiresAt ?? null,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(userProfiles.id, ctx.userId));
-
-    const rows = await db
-      .select(SUBSCRIPTION_COLUMNS)
-      .from(userProfiles)
       .where(eq(userProfiles.id, ctx.userId))
-      .limit(1);
+      .returning(SUBSCRIPTION_COLUMNS);
     return res.status(200).json({ ok: true, subscription: applyExpiry(rows[0]) });
   }
 

@@ -92,9 +92,13 @@ export async function GET(request: Request): Promise<Response> {
       return json(empty);
     }
 
-    // Fetch each referred friend + sum of their yesterday learning coins, joined
-    // with user_profiles for display name + auth_id. Single round-trip.
-    const friendsResult = await db.execute(sql`
+    // The three statements below only depend on callerUserId, so they go to
+    // Neon as ONE batch (one HTTP round trip, run in this order inside a single
+    // transaction) instead of three sequential awaits. Same SQL, same results.
+    //
+    // 1) Each referred friend + sum of their yesterday learning coins, joined
+    //    with user_profiles for display name + auth_id.
+    const friendsQuery = db.execute(sql`
       SELECT
         ref.auth_id       AS auth_id,
         ref.display_name  AS display_name,
@@ -112,6 +116,38 @@ export async function GET(request: Request): Promise<Response> {
       WHERE r.referrer_user_id = ${callerUserId}
       ORDER BY r.linked_at DESC
     `);
+
+    // 2) Has the user already collected today? dividend_collections is keyed by
+    //    user_id (identity rekey / migration 0004) — the old auth_id column is gone.
+    const todayQuery = db.execute(sql`
+      SELECT 1 AS hit
+        FROM dividend_collections
+       WHERE user_id = ${callerUserId}
+         AND date_collected = (date_trunc('day', now() AT TIME ZONE 'UTC'))::date
+       LIMIT 1
+    `);
+
+    // 3) Atomically flip referrer_local_credited from false→true for any
+    //    redemptions not yet reflected in this user's local balance. The CTE
+    //    returns the COUNT of newly-credited rows; we multiply by
+    //    SIGNUP_BONUS_COINS to get the total owed. The caller MUST addCoins()
+    //    locally before discarding this response.
+    const bonusQuery = db.execute(sql`
+      WITH credited AS (
+        UPDATE referrals
+           SET referrer_local_credited = true
+         WHERE referrer_user_id = ${callerUserId}
+           AND referrer_local_credited = false
+        RETURNING 1
+      )
+      SELECT COUNT(*)::int AS n FROM credited
+    `);
+
+    const [friendsResult, todayResult, bonusResult] = await db.batch([
+      friendsQuery,
+      todayQuery,
+      bonusQuery,
+    ]);
 
     const rawRows = (friendsResult as unknown as { rows?: unknown[] }).rows
       ?? (friendsResult as unknown as unknown[]);
@@ -140,15 +176,6 @@ export async function GET(request: Request): Promise<Response> {
     // Daily cap 100 (מוני 8.7, approved by Yoav) — must mirror collect+api.ts.
     const grossDividend = Math.min(100, Math.floor(totalYesterdayLearningCoins * DIVIDEND_RATE));
 
-    // Has the user already collected today? dividend_collections is keyed by
-    // user_id (identity rekey / migration 0004) — the old auth_id column is gone.
-    const todayResult = await db.execute(sql`
-      SELECT 1 AS hit
-        FROM dividend_collections
-       WHERE user_id = ${callerUserId}
-         AND date_collected = (date_trunc('day', now() AT TIME ZONE 'UTC'))::date
-       LIMIT 1
-    `);
     const todayRows =
       (todayResult as unknown as { rows?: unknown[] }).rows
       ?? (todayResult as unknown as unknown[]);
@@ -156,20 +183,6 @@ export async function GET(request: Request): Promise<Response> {
 
     const dividendAvailable = alreadyCollectedToday ? 0 : grossDividend;
 
-    // Atomically flip referrer_local_credited from false→true for any redemptions
-    // not yet reflected in this user's local balance. The CTE returns the COUNT
-    // of newly-credited rows; we multiply by SIGNUP_BONUS_COINS to get the total
-    // owed. The caller MUST addCoins() locally before discarding this response.
-    const bonusResult = await db.execute(sql`
-      WITH credited AS (
-        UPDATE referrals
-           SET referrer_local_credited = true
-         WHERE referrer_user_id = ${callerUserId}
-           AND referrer_local_credited = false
-        RETURNING 1
-      )
-      SELECT COUNT(*)::int AS n FROM credited
-    `);
     const bonusRows =
       (bonusResult as unknown as { rows?: { n: number }[] }).rows
       ?? (bonusResult as unknown as { n: number }[]);

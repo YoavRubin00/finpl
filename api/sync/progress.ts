@@ -38,7 +38,10 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     const status = body.status ?? 'completed';
     const completedAt = status === 'completed' ? new Date().toISOString() : undefined;
 
-    await db
+    // Upsert + re-read in ONE HTTP round trip to Neon: db.batch runs both
+    // statements, in order, inside a single transaction. Same SQL and same
+    // response as the old sequential awaits.
+    const upsert = db
       .insert(moduleProgress)
       .values({
         userId,
@@ -64,11 +67,12 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
           updatedAt: new Date().toISOString(),
         },
       });
-
-    const rows = await db
+    const readBack = db
       .select()
       .from(moduleProgress)
       .where(eq(moduleProgress.userId, userId));
+
+    const [, rows] = await db.batch([upsert, readBack]);
     return res.status(200).json({ ok: true, progress: rows });
   }
 
