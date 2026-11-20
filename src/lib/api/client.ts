@@ -48,16 +48,21 @@ function tokenSignature(token: string): { format: 'jwt' | 'opaque' | 'empty'; le
   return { format: 'opaque', length: token.length };
 }
 
-// Write endpoints outside /api/sync/ that act on the session token's user
-// (server: api/_shared/callerAuth.ts). They used to trust an `authId` in the
-// body. The server still has a narrow tokenless path on grant-coins and
-// register-code for app bundles from before 2026-11-20; this client never
-// uses it — without a session there is nothing for these calls to do.
+// Endpoints outside /api/sync/ that act on the session token's user (server:
+// api/_shared/callerAuth.ts, referral.ts, accountDelete.ts). They used to trust
+// an `authId` in the body or query. The server still has a narrow tokenless
+// path on grant-coins and register-code for app bundles from before
+// 2026-11-20 (referral me/collect/redeem refuse tokenless calls); this client
+// never uses it — without a session there is nothing for these calls to do.
 const SESSION_ONLY_PATHS = new Set<string>([
   '/api/users/ping',
   '/api/economy/grant-coins',
   '/api/referral/register-code',
+  '/api/referral/me',
+  '/api/referral/collect',
+  '/api/referral/redeem',
   '/api/trading/trade',
+  '/api/account/delete',
 ]);
 
 function requiresSession(path: string): boolean {

@@ -1,179 +1,44 @@
-import { sql } from 'drizzle-orm';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { enforceRateLimit } from '../_shared/rateLimit';
+import { enforceRateLimit, getClientId } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import { sanitizeString } from '../_shared/validate';
 import { json } from '../_shared/json';
-import { capturePostHog } from '../../../api/_shared/posthogCapture';
-
-function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
-  const dbSql = neon(url);
-  return drizzle(dbSql);
-}
-
-interface RedeemBody {
-  inviteCode: string;
-  refereeAuthId: string;
-}
-
-const CODE_PATTERN = /^[A-Z0-9-]{4,12}$/;
-
-/** Magnitudes mirrored server-side. Must match `referralConstants.ts`. */
-const SIGNUP_BONUS_COINS = 500;
-
-interface RedeemSuccess {
-  ok: true;
-  referrerAuthId: string;
-  bonusGranted: number;
-}
+import { handleReferralRedeem } from '../../../api/_shared/referral';
+import { createReferralDeps } from '../../../api/_shared/userWriteStores';
 
 /**
- * POST /api/referral/redeem
+ * POST /api/referral/redeem  (Authorization: Bearer <session>)
  *
- * Atomic redemption flow:
- *   1. Look up referrer by invite code (user_profiles.referral_code).
- *   2. Validate self-referral (referee != referrer).
- *   3. INSERT referrals row (PK on referee_auth_id prevents double-redeem).
- *   4. Append two coin_events rows: 500 to referrer + 500 to referee.
- *   5. Mark referrals.signup_bonus_paid=true.
- *   6. Create an ACCEPTED friendship referrer↔referee (Yoav 2026-07-08 —
- *      support ticket: "צירפתי חבר דרך הקישור והוא לא מופיע כחבר". Inviting
- *      someone IS the friend request + acceptance; guarded against an
- *      existing pair in either direction).
+ * Body: { inviteCode, refereeAuthId? }
+ * The referee is the token's user. One statement links the referee to the
+ * code's owner (one redemption per account, ever) and grants 500 coins to
+ * each; then an accepted friendship between the two (best-effort).
  *
- * If referee already has a referrals row, returns 409 (one-time link only).
- * If code unknown, returns 404.
- * If self-referral, returns 400.
+ * → 200 { ok: true, referrerAuthId: '', bonusGranted }
+ * → 400 { code: 'SELF_REFERRAL' } / invalid code · 404 { code: 'CODE_NOT_FOUND' }
+ * → 409 { code: 'ALREADY_REDEEMED' }
+ * → 401 invalid session / the account no longer exists; no session at all:
+ *       401 { code: 'REFEREE_NOT_FOUND', retryable: true } (keeps the 1.5.1
+ *       app's pending invite for a retry after the OTA, see referral.ts)
+ * → 403 refereeAuthId names another user · 429 rate limited
+ *
+ * Logic in api/_shared/referral.ts, shared with production (api/referral/redeem.ts).
  */
 export async function POST(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'referral-redeem', { limit: 10, windowSec: 60 });
   if (blocked) return blocked;
 
+  let body: unknown;
   try {
-    const body = (await request.json()) as RedeemBody;
-    const inviteCode = sanitizeString(body.inviteCode, 12)?.toUpperCase();
-    const refereeAuthId = sanitizeString(body.refereeAuthId, 128);
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid invite code' }, { status: 400 });
+  }
 
-    if (!inviteCode || !CODE_PATTERN.test(inviteCode)) {
-      return json({ error: 'Invalid invite code' }, { status: 400 });
-    }
-    if (!refereeAuthId) {
-      return json({ error: 'Missing refereeAuthId' }, { status: 400 });
-    }
-
-    const db = getDb();
-
-    // 1. Lookup referrer by code — need their uuid (tables are user_id-keyed
-    //    since migration 0004; the old *_auth_id columns no longer exist).
-    const lookup = await db.execute(sql`
-      SELECT id, auth_id FROM user_profiles WHERE referral_code = ${inviteCode} LIMIT 1
-    `);
-    const referrerRow = ((lookup as unknown as { rows?: { id: string; auth_id: string }[] }).rows
-      ?? (lookup as unknown as { id: string; auth_id: string }[]))[0];
-    const referrerUserId = referrerRow?.id;
-    const referrerAuthId = referrerRow?.auth_id;
-    if (!referrerUserId || !referrerAuthId) {
-      // distinct_id fallback: the referee's uuid isn't resolved yet on this
-      // path, so we capture against their auth_id (marked via distinct_kind).
-      await capturePostHog('referral_redeem_server', refereeAuthId, {
-        result: 'code_not_found',
-        invite_code: inviteCode,
-        distinct_kind: 'auth_id',
-      });
-      return json({ error: 'Unknown invite code', code: 'CODE_NOT_FOUND' }, { status: 404 });
-    }
-
-    // Resolve the referee's uuid from their auth_id (they're a registered user).
-    const refereeLookup = await db.execute(sql`
-      SELECT id FROM user_profiles WHERE auth_id = ${refereeAuthId} LIMIT 1
-    `);
-    const refereeUserId = ((refereeLookup as unknown as { rows?: { id: string }[] }).rows
-      ?? (refereeLookup as unknown as { id: string }[]))[0]?.id;
-    if (!refereeUserId) {
-      await capturePostHog('referral_redeem_server', refereeAuthId, {
-        result: 'referee_not_found',
-        invite_code: inviteCode,
-        distinct_kind: 'auth_id',
-      });
-      return json({ error: 'Referee not registered', code: 'REFEREE_NOT_FOUND' }, { status: 400 });
-    }
-    if (referrerUserId === refereeUserId) {
-      await capturePostHog('referral_redeem_server', refereeUserId, {
-        result: 'self_referral',
-        invite_code: inviteCode,
-      });
-      return json({ error: 'Cannot self-refer', code: 'SELF_REFERRAL' }, { status: 400 });
-    }
-
-    // 2. Atomic insert + bonuses. The PK on referee_auth_id is the dedupe gate —
-    //    if the same referee tries again, the INSERT fails and we exit cleanly.
-    try {
-      await db.execute(sql`
-        WITH inserted AS (
-          INSERT INTO referrals (referee_user_id, referrer_user_id, invite_code, signup_bonus_paid)
-          VALUES (${refereeUserId}, ${referrerUserId}, ${inviteCode}, true)
-          RETURNING referee_user_id
-        ),
-        bonus_referrer AS (
-          INSERT INTO coin_events (user_id, amount, source)
-          SELECT ${referrerUserId}, ${SIGNUP_BONUS_COINS}, 'referral-signup-bonus'
-          FROM inserted
-        ),
-        bonus_referee AS (
-          INSERT INTO coin_events (user_id, amount, source)
-          SELECT ${refereeUserId}, ${SIGNUP_BONUS_COINS}, 'referral-signup-bonus'
-          FROM inserted
-        )
-        SELECT 1
-      `);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.toLowerCase().includes('unique') || msg.toLowerCase().includes('duplicate')) {
-        await capturePostHog('referral_redeem_server', refereeUserId, {
-          result: 'already_redeemed',
-          invite_code: inviteCode,
-        });
-        return json(
-          { error: 'Already redeemed an invite code', code: 'ALREADY_REDEEMED' },
-          { status: 409 },
-        );
-      }
-      throw err;
-    }
-
-    // 3. Auto-friendship (Yoav 2026-07-08): the invite IS the friend request +
-    //    acceptance — the pair appears in both users' friends lists right away.
-    //    Skipped when a row already exists in EITHER direction (pending or
-    //    accepted) so we never create a duplicate logical pair. Best-effort:
-    //    a failure here must never roll back the paid bonuses above.
-    try {
-      await db.execute(sql`
-        INSERT INTO friendships (requester_id, addressee_id, status, accepted_at)
-        SELECT ${referrerUserId}, ${refereeUserId}, 'accepted', now()
-        WHERE NOT EXISTS (
-          SELECT 1 FROM friendships
-          WHERE (requester_id = ${referrerUserId} AND addressee_id = ${refereeUserId})
-             OR (requester_id = ${refereeUserId} AND addressee_id = ${referrerUserId})
-        )
-        ON CONFLICT (requester_id, addressee_id) DO NOTHING
-      `);
-    } catch { /* non-fatal — bonuses already granted; friendship can be added manually */ }
-
-    await capturePostHog('referral_redeem_server', refereeUserId, {
-      result: 'success',
-      invite_code: inviteCode,
-      referrer_user_id: referrerUserId,
-      bonus_granted: SIGNUP_BONUS_COINS,
-    });
-
-    const body_out: RedeemSuccess = {
-      ok: true,
-      referrerAuthId,
-      bonusGranted: SIGNUP_BONUS_COINS,
-    };
-    return json(body_out);
+  try {
+    const result = await handleReferralRedeem(
+      { authorization: request.headers.get('authorization'), body, clientIp: getClientId(request) },
+      createReferralDeps(),
+    );
+    return json(result.body, { status: result.status, headers: result.headers });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'referral/redeem POST');
   }
