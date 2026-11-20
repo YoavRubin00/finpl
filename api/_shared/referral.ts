@@ -30,8 +30,10 @@
 //                  until the end of the UTC day for the updated app.
 //         redeem   401 with code REFEREE_NOT_FOUND → the old app's one
 //                  "retry next launch" code (anything else it treats as final
-//                  and throws the pending invite away), so the invite is
-//                  redeemed with the token on a launch after the OTA lands.
+//                  and throws the pending invite away). The old app retries
+//                  on at most 5 launches, then drops the invite, so the OTA
+//                  must go out right after this server: a launch that runs
+//                  the updated app redeems it with the token.
 //       Each refusal logs one "[legacy-tokenless]" line (endpoint + outcome).
 
 import {

@@ -84,6 +84,7 @@ import { useEconomyUIStore } from "../src/features/economy/useEconomyUIStore";
 import { useStreakDailyTick } from "../src/features/economy/useStreak";
 import { setOnUnauthorized } from "../src/lib/api/client";
 import { signOut as lifecycleSignOut, bootFromToken, abandonPendingBoot } from "../src/lib/auth/lifecycle";
+import { tokenStore } from "../src/lib/auth/secureStore";
 import { startAppStateListener } from "../src/lib/auth/appStateListener";
 
 setOnUnauthorized(() => {
@@ -749,6 +750,11 @@ function RootLayoutInner() {
         const MAX_ATTEMPTS = 5;
         const pending = await AsyncStorage.getItem(PENDING_KEY);
         if (!pending) return;
+        // No session on this device (signed in locally from an old build, still
+        // needs a sign-in code): the redeem can't be sent, so it must not spend
+        // one of the invite's tries. The invite waits for the sign-in.
+        if (!(await tokenStore.get().catch(() => null))) return;
+        if (cancelled) return;
         const attempts = Number(await AsyncStorage.getItem(ATTEMPTS_KEY)) || 0;
         if (attempts >= MAX_ATTEMPTS) {
           // Transient failures never resolved across MAX_ATTEMPTS launches —

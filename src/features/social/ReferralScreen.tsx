@@ -153,12 +153,16 @@ export function ReferralScreen() {
   const handleCollectDividend = useCallback(async () => {
     if (!userEmail) return;
     if (alreadyCollectedToday || dividendAvailable <= 0) return;
+    tapHaptic();
+    const result = await collectFromServer(userEmail);
+    // Only a collection the server confirmed counts. A refused or failed call
+    // (no session, offline, the server rolling out) used to play the success
+    // haptic and log the full amount anyway (review 20.11).
+    if (!result || result.amount <= 0) return;
     successHaptic();
-    const amount = dividendAvailable;
-    await collectFromServer(userEmail);
     track({
       name: 'referral_dividend_collected',
-      props: { coin_amount: amount, friends_count: referredFriends.length },
+      props: { coin_amount: result.amount, friends_count: referredFriends.length },
     });
   }, [userEmail, alreadyCollectedToday, dividendAvailable, collectFromServer, referredFriends.length]);
 

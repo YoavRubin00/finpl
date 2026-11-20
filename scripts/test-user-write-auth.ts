@@ -648,7 +648,7 @@ async function main(): Promise<void> {
     const none = await handleReferralRedeem(req(null, { inviteCode: 'FP-VICTM', refereeAuthId: 'nocode@example.com' }), refDeps());
     check(none.status === 401 && !referralRows.some((r) => r.refereeId === NOCODE_ID) && refCoinEvents.length === 0,
       'redeem: no token (1.5.1 client) → 401, nothing redeemed for the named account', none);
-    check(!oldClientIsFinal(none.status, none.body), 'redeem: the tokenless 401 is one the 1.5.1 app retries next launch (keeps the pending invite)', none.body);
+    check(!oldClientIsFinal(none.status, none.body), 'redeem: the tokenless 401 is one the 1.5.1 app retries (it keeps the pending invite for up to 5 launches)', none.body);
     check(legacyLog.some((l) => l.endpoint === 'referral/redeem' && l.outcome === 'refused'), 'redeem: no token → [legacy-tokenless] referral/redeem refused');
     const bad = await handleReferralRedeem(req(null, { inviteCode: 'bad code!', refereeAuthId: 'nocode@example.com' }), refDeps());
     check(bad.status === 400, 'redeem: no token + malformed code → 400 (final, as before)');
