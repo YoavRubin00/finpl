@@ -57,6 +57,12 @@ export const BRIDGE_REDEEMABLE: Readonly<Record<string, { costCoins: number; par
   },
 };
 
+/** A benefit id the server can redeem (own keys only: '__proto__' and
+ *  'constructor' are not benefits). */
+export function isRedeemableBenefit(benefitId: string | null | undefined): benefitId is string {
+  return typeof benefitId === 'string' && Object.prototype.hasOwnProperty.call(BRIDGE_REDEEMABLE, benefitId);
+}
+
 export type RedeemOutcome =
   | { kind: 'redeemed'; economy: EconomyRow; email: string | null }
   | { kind: 'already'; economy: EconomyRow }
@@ -90,10 +96,10 @@ export async function handleBridgeRedeem(input: CallerInput, deps: BridgeRedeemD
 
   const body = isRecord(input.body) ? input.body : {};
   const benefitId = sanitizeText(body.benefitId, 100);
-  const benefit = benefitId ? BRIDGE_REDEEMABLE[benefitId] : undefined;
-  if (!benefitId || !benefit || !Object.prototype.hasOwnProperty.call(BRIDGE_REDEEMABLE, benefitId)) {
+  if (!isRedeemableBenefit(benefitId)) {
     return { status: 404, body: { error: 'Unknown benefit', code: 'UNKNOWN_BENEFIT' }, headers };
   }
+  const benefit = BRIDGE_REDEEMABLE[benefitId];
   const platform = sanitizeText(body.platform, 10) ?? null;
 
   const r = await deps.store.redeem(userId, benefitId, benefit.costCoins, platform);
