@@ -84,6 +84,9 @@ export const DELETE_ACCOUNT_DIALOG = {
   failedTitle: "המחיקה לא הצליחה",
   failedMessage:
     "לא מחקנו כלום. בדקו את החיבור לאינטרנט ונסו שוב. אם זה חוזר, כתבו לנו דרך \"פנייה לתמיכה\" כאן בהגדרות.",
+  unknownTitle: "לא הצלחנו לוודא את המחיקה",
+  unknownMessage:
+    "לא קיבלנו תשובה מהשרת, אז אולי החשבון כבר נמחק ואולי לא. בדקו את החיבור לאינטרנט ונסו שוב. אם הוא כבר נמחק, הניסיון הבא ינקה גם את המכשיר.",
   needsSignInTitle: "צריך להתחבר שוב",
   needsSignInMessage:
     "כדי למחוק את החשבון צריך קודם להתחבר אליו. אחרי ההתחברות חזרו לכאן ומחקו אותו.",
@@ -367,6 +370,8 @@ export function SettingsScreen() {
         ]);
       } else if (result.reason === "session_expired") {
         Alert.alert(D.needsSignInTitle, D.sessionExpiredMessage, [{ text: D.ok }]);
+      } else if (result.reason === "unknown") {
+        Alert.alert(D.unknownTitle, D.unknownMessage, [{ text: D.ok }]);
       } else {
         Alert.alert(D.failedTitle, D.failedMessage, [{ text: D.ok }]);
       }

@@ -14,7 +14,8 @@ import {
 import { tokenStore, backfillFlag } from './secureStore';
 import { queryClient } from '../queryClient';
 import { resetAllLocalStores, getLocalStorageKeys } from '../stores/registry';
-import { clearAllPersistedState } from '../zustandStorage';
+import { resetLocalOnlyStores } from '../stores/localOnlyStores';
+import { clearAllPersistedState, zustandStorage } from '../zustandStorage';
 import { runBackfillV1 } from './backfill';
 import { profileQueryKey, profileQueryFn } from '../../features/auth/useProfile';
 import {
@@ -563,28 +564,50 @@ export async function signOut(): Promise<void> {
   return signOutInFlight;
 }
 
+/** How long the wipe waits for RevenueCat's logOut (a network call) at the end. */
+const WIPE_RC_LOGOUT_WAIT_MS = 3000;
+
 /**
  * After the server deleted the account (POST /api/account/delete answered
  * 200), or for a guest's device-only deletion: forget the session and wipe
  * everything the account left on this device. Unlike signOut() it removes ALL
  * persisted state (the app then starts like a fresh install, on the welcome
  * screen) and cancels scheduled local notifications. Never throws.
+ *
+ * Order matters if the app is killed half-way (review 20.11): the saved
+ * "signed in" state goes first, on disk too, so a relaunch can never come up
+ * as a signed-in account that no longer exists; then the session; then
+ * everything else local; the network (RevenueCat) comes last, so nothing
+ * local waits on it.
  */
 export async function wipeDeviceForDeletedAccount(scope: 'account' | 'guest'): Promise<void> {
   // A boot or sign-in still finishing must not sign this session back in.
   bootGeneration++;
 
-  // 1. The session first: nothing still running can use it, and client.ts only
+  // 1. Signed out, in memory and on disk. clear() makes persist write the
+  //    signed-out state; removing the key afterwards runs after that write
+  //    (storage answers in order), so when this returns the disk agrees.
+  useAuthStore.getState().clear();
+  const authKey = useAuthStore.persist.getOptions().name;
+  if (authKey) await Promise.resolve(zustandStorage.removeItem(authKey)).catch(() => { /* non-fatal */ });
+
+  // 2. The session: nothing still running can use it, and client.ts only
   //    stores a refreshed token while the token it sent is still the stored one.
   await tokenStore.clear().catch(() => { /* non-fatal */ });
   await backfillFlag.reset().catch(() => { /* non-fatal */ });
 
-  // 2. RevenueCat back to an anonymous customer on this device. This does NOT
-  //    cancel an App Store / Google Play subscription: only the user can, in
-  //    the store (the confirmation dialog says so).
-  await logoutRevenueCat().catch(() => { /* non-fatal: already anonymous */ });
+  // 3. Everything else, with no network call before it: server answers held
+  //    in memory, every registered store, the saved boot snapshots held in
+  //    memory, the persisted stores outside the registry (net worth, holdings,
+  //    financial profile, ...), then every persisted key except the few that
+  //    describe the device rather than the account.
+  queryClient.clear();
+  resetAllLocalStores();
+  resetSnapshotMemory();
+  await resetLocalOnlyStores();
+  await clearAllPersistedState().catch(() => { /* non-fatal */ });
 
-  // 3. Reminders scheduled for this user.
+  // 4. Reminders scheduled for this user.
   if (Platform.OS !== 'web') {
     try {
       const Notifications = await import('expo-notifications');
@@ -592,18 +615,18 @@ export async function wipeDeviceForDeletedAccount(scope: 'account' | 'guest'): P
     } catch { /* non-fatal */ }
   }
 
-  // 4. Server answers in memory, every local store, then everything persisted.
-  queryClient.clear();
-  resetAllLocalStores();
-  useAuthStore.getState().clear();
-  await clearAllPersistedState().catch(() => { /* non-fatal */ });
-
   // 5. Blank the email and name on the deleted person in PostHog, detach the
   //    device from that person, then count the deletion on the new anonymous
   //    id (no person properties).
   if (scope === 'account') forgetPersonDetails();
   resetUser();
   captureEvent('account_deleted', { scope });
+
+  // 6. RevenueCat back to an anonymous customer on this device, bounded so the
+  //    "deleting" screen never hangs on it. This does NOT cancel an App Store /
+  //    Google Play subscription: only the user can, in the store (the
+  //    confirmation dialog says so).
+  await withTimeout(logoutRevenueCat().catch(() => { /* non-fatal: already anonymous */ }), WIPE_RC_LOGOUT_WAIT_MS);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

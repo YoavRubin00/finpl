@@ -92,16 +92,26 @@ export const zustandStorage: StateStorage = {
 };
 
 /**
+ * Keys that describe the DEVICE, not the account, and survive an account
+ * deletion. `install_referrer_checked_v1` (app/_layout.tsx): the Play install
+ * referrer was already read on this install. Removing it made the next launch
+ * read the same referrer again and stage the old invite code, so the next
+ * account created on the device redeemed the deleted user's invite
+ * automatically (review 20.11).
+ */
+export const DEVICE_LEVEL_KEYS: ReadonlySet<string> = new Set(['install_referrer_checked_v1']);
+
+/**
  * Account deletion: drop everything the app persisted on this device, in both
  * stores (MMKV when available, and AsyncStorage, which also holds the stores
- * from before MMKV and the keys written directly, e.g. a pending invite).
- * Throws only if AsyncStorage itself fails.
+ * from before MMKV and the keys written directly, e.g. a pending invite),
+ * except DEVICE_LEVEL_KEYS. Throws only if AsyncStorage itself fails.
  */
 export async function clearAllPersistedState(): Promise<void> {
   const m = getMmkv();
   if (m && typeof m.clearAll === 'function') {
     try { m.clearAll(); } catch { /* fall through to AsyncStorage */ }
   }
-  const keys = await AsyncStorage.getAllKeys();
+  const keys = (await AsyncStorage.getAllKeys()).filter((k) => !DEVICE_LEVEL_KEYS.has(k));
   if (keys.length > 0) await AsyncStorage.multiRemove(keys);
 }
