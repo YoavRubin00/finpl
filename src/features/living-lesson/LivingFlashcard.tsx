@@ -43,7 +43,17 @@ interface LivingFlashcardProps {
    * one tap per segment. Tapping the card itself still reveals one at a time.
    */
   revealAllTrigger?: number;
+  /**
+   * Opt-in (first lesson, Module.fastStart, 20.11.26). Once every segment is
+   * on screen a tap on the card calls this (the lesson treats it as "המשך")
+   * instead of doing nothing. Taps within TAP_AFTER_REVEAL_GUARD_MS of the
+   * last reveal are ignored, so a quick double tap never skips text the user
+   * has not seen. Unset = unchanged: a finished card ignores taps.
+   */
+  onTapAfterReveal?: () => void;
 }
+
+const TAP_AFTER_REVEAL_GUARD_MS = 450;
 
 /**
  * The "living lesson" flashcard (Yoav 1.8) — replaces the PNG-infographic
@@ -52,7 +62,7 @@ interface LivingFlashcardProps {
  * rest of the app already uses, and each segment may carry one motion
  * visual instead of a static image.
  */
-export function LivingFlashcard({ segments: cardSegments, onAllRevealed, cardId, revealTrigger, revealAllTrigger }: LivingFlashcardProps) {
+export function LivingFlashcard({ segments: cardSegments, onAllRevealed, cardId, revealTrigger, revealAllTrigger, onTapAfterReveal }: LivingFlashcardProps) {
   const reducedMotion = useReducedMotion();
   const animate = !reducedMotion;
   // Living diagrams attach here, by card id, from the registry (lessonVisuals.ts).
@@ -84,11 +94,22 @@ export function LivingFlashcard({ segments: cardSegments, onAllRevealed, cardId,
 
   const hasMore = revealedCount < segments.length;
 
+  // When the newest segment appeared (mount counts) — guards onTapAfterReveal.
+  const lastRevealAtRef = useRef(Date.now());
+  useEffect(() => {
+    lastRevealAtRef.current = Date.now();
+  }, [revealedCount]);
+
   const handleTap = useCallback(() => {
-    if (!hasMore) return;
+    if (!hasMore) {
+      if (onTapAfterReveal && Date.now() - lastRevealAtRef.current >= TAP_AFTER_REVEAL_GUARD_MS) {
+        onTapAfterReveal();
+      }
+      return;
+    }
     tapHaptic();
     setRevealedCount((c) => Math.min(segments.length, c + 1));
-  }, [hasMore, segments.length]);
+  }, [hasMore, segments.length, onTapAfterReveal]);
 
   const handleTermPress = useCallback((term: string) => {
     selectionHaptic();
@@ -178,7 +199,7 @@ export function LivingFlashcard({ segments: cardSegments, onAllRevealed, cardId,
       >
         <Pressable
           onPress={handleTap}
-          disabled={!hasMore}
+          disabled={!hasMore && !onTapAfterReveal}
           accessibilityRole="button"
           accessibilityLabel={hasMore ? "הקש כדי להמשיך" : undefined}
           style={styles.tapArea}
