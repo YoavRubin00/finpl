@@ -21,17 +21,29 @@ export type SessionUserExists = (userId: string) => Promise<boolean>;
 
 export type BearerOutcome =
   | { ok: true; decoded: SessionPayloadDecoded }
-  | { ok: false; status: 401 | 500; body: { error: string } };
+  | { ok: false; status: 401 | 500; body: { error: string; code?: 'ACCOUNT_NOT_FOUND' } };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Did the account lookup return a row? neon-http's execute answers { rows };
+ * older paths saw a bare array. An answer in any other shape (a driver
+ * upgrade) must never read as "no such account": that is a 401, and a 401
+ * signs every user out and wipes their device. Throwing makes it a 500, which
+ * the app just retries.
+ */
+export function lookupFoundRow(result: unknown): boolean {
+  const withRows = result as { rows?: unknown } | null | undefined;
+  if (Array.isArray(withRows?.rows)) return withRows.rows.length > 0;
+  if (Array.isArray(result)) return result.length > 0;
+  throw new Error('unexpected result shape from the account lookup');
+}
 
 /** One indexed primary-key lookup. A `sub` that isn't a uuid names no row. */
 export const sessionUserExistsInDb: SessionUserExists = async (userId) => {
   if (!UUID_RE.test(userId)) return false;
   const result = await getDb().execute(sql`SELECT 1 AS hit FROM user_profiles WHERE id = ${userId}::uuid LIMIT 1`);
-  const withRows = result as unknown as { rows?: unknown[] };
-  const rows = Array.isArray(withRows?.rows) ? withRows.rows : Array.isArray(result) ? (result as unknown[]) : [];
-  return rows.length > 0;
+  return lookupFoundRow(result);
 };
 
 /**
@@ -74,7 +86,11 @@ export async function authenticateBearer(
     return { ok: false, status: 500, body: { error: 'An unexpected error occurred. Please try again later.' } };
   }
   if (!exists) {
-    return { ok: false, status: 401, body: { error: 'Invalid or expired token' } };
+    // Same status and message as an expired token: the app signs out on both
+    // and reads nothing else from a 401. The code and the log line (no id in
+    // it) let a rollout tell "account gone" from a normal expiry.
+    console.warn('[withAuth] session for an account that no longer exists');
+    return { ok: false, status: 401, body: { error: 'Invalid or expired token', code: 'ACCOUNT_NOT_FOUND' } };
   }
   return { ok: true, decoded };
 }
