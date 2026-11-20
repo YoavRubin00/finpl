@@ -307,7 +307,9 @@ function RootLayoutInner() {
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        foregroundEnteredAt.current = Date.now();
+        // A brief iOS "inactive" blip (Control Center, a system dialog, Face ID)
+        // no longer ends the session, so only start a new one when none is open.
+        if (foregroundEnteredAt.current === null) foregroundEnteredAt.current = Date.now();
         // Coming back after 15+ minutes is a new "open": it gets its own single greeting (13.11).
         // A quick switch to another app and back is the same open — no new popup.
         if (backgroundedAt.current !== null && Date.now() - backgroundedAt.current >= 15 * 60 * 1000) {
@@ -331,15 +333,24 @@ function RootLayoutInner() {
         // the "phone left charging for 8 days" pattern where the app is
         // still in memory but the lapse window has elapsed).
         try { useComebackRewardStore.getState().registerAppOpen(Date.now()); } catch { /* non-fatal */ }
-      } else if (state === "background" || state === "inactive") {
-        if (state === "background" && backgroundedAt.current === null) backgroundedAt.current = Date.now();
+      } else if (state === "background") {
+        // Only a real background ends the session (20.11): "inactive" fires on
+        // every brief iOS interruption and used to send a session-time POST
+        // each time, often for 0 seconds.
+        if (backgroundedAt.current === null) backgroundedAt.current = Date.now();
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
           foregroundEnteredAt.current = null;
-          useUserStatsUIStore.getState().addSessionSeconds(secs);
-          apiRecordSessionTime(secs)
-            .then(() => queryClient.invalidateQueries({ queryKey: userStatsQueryKey }))
-            .catch(() => { /* fire-and-forget */ });
+          if (secs > 0) {
+            useUserStatsUIStore.getState().addSessionSeconds(secs);
+            apiRecordSessionTime(secs)
+              // The POST answers with the updated stats row: store it instead
+              // of invalidating, which fetched the same row again.
+              .then((res) => {
+                if (res?.userStats !== undefined) queryClient.setQueryData(userStatsQueryKey, res.userStats);
+              })
+              .catch(() => { /* fire-and-forget */ });
+          }
         }
       }
     });
@@ -506,8 +517,16 @@ function RootLayoutInner() {
   useEffect(() => {
     let cancelled = false;
     let interval: ReturnType<typeof setInterval> | null = null;
+    // Minimum age before the bandit state is fetched again (20.11). Resuming
+    // within it (a brief iOS "inactive" blip, a quick app switch) no longer
+    // refetches; the 5-minute interval still does. One second of slack so the
+    // interval tick itself is never skipped.
+    const BANDIT_MIN_AGE_MS = 5 * 60 * 1000;
+    let lastHydratedAt = 0;
 
     const hydrate = () => {
+      if (Date.now() - lastHydratedAt < BANDIT_MIN_AGE_MS - 1000) return;
+      lastHydratedAt = Date.now();
       import("../src/features/bandit/useBanditStore")
         .then(({ useBanditStore }) => {
           if (!cancelled) useBanditStore.getState().hydrateFromServer();
@@ -518,7 +537,7 @@ function RootLayoutInner() {
     const start = () => {
       if (interval !== null) return;
       hydrate();
-      interval = setInterval(hydrate, 5 * 60 * 1000);
+      interval = setInterval(hydrate, BANDIT_MIN_AGE_MS);
     };
 
     const stop = () => {
