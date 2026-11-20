@@ -18,6 +18,7 @@ import { X, Lock, Layers } from "lucide-react-native";
 import { useTheme } from "../../hooks/useTheme";
 import { tapHaptic } from "../../utils/haptics";
 import { captureEvent } from "../../lib/posthog";
+import { returnToLearnMap } from "../../lib/navigation/learnMap";
 import { getAllDecks, type ModuleDeck } from "./deckCatalog";
 import { useCardCollectionStore } from "./useCardCollectionStore";
 import { useCollectionBackfill } from "./useCollectionBackfill";
@@ -122,7 +123,7 @@ export function CollectionScreen() {
                 מסיימים מודול, והחפיסה שלו עפה לכאן. הכרטיסיות נשארות אצלכם — סיכום מהיר לכל מה שלמדתם.
               </Text>
               <Pressable
-                onPress={() => { tapHaptic(); router.replace("/(tabs)/learn" as never); }}
+                onPress={() => { tapHaptic(); returnToLearnMap(router); }}
                 accessibilityRole="button"
                 accessibilityLabel="מעבר למסך הלמידה"
               >

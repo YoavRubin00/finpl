@@ -25,6 +25,7 @@ import { buildSystemPrompt } from '../chat/buildChatPrompt';
 import { MarkdownText } from '../chat/MarkdownText';
 import { streamChatRequest } from '../../utils/streamChat';
 import { captureEvent } from '../../lib/posthog';
+import { learnMapHref } from '../../lib/navigation/learnMap';
 import { getModuleChatFAQs, getDefaultFAQsForTitle } from './moduleChatFAQs';
 import { useTopicChatLimitStore, DAILY_LIMIT } from './useTopicChatLimitStore';
 import { useTopicProgressStore } from './useTopicProgressStore';
@@ -330,7 +331,7 @@ export function TopicChatScreen(): React.ReactElement {
                   if (router.canGoBack()) {
                     router.back();
                   } else {
-                    router.replace(`/(tabs)/learn?expandedModule=${moduleId}` as never);
+                    router.replace(learnMapHref({ expandedModule: moduleId }) as never);
                   }
                 }}
                 style={headerStyles.backBtn}

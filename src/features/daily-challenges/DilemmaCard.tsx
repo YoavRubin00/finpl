@@ -12,6 +12,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { learnMapHref } from '../../lib/navigation/learnMap';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 // glossary rendering available if needed: import { renderGlossaryText } from '../glossary/renderGlossaryText';
@@ -296,10 +297,10 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
       </View>
 
       {/* Celebration modal after completing */}
-      <Modal visible={showCelebration} transparent animationType="fade" onRequestClose={() => { setShowCelebration(false); router.replace("/(tabs)/learn" as never); }} accessibilityViewIsModal={true}>
+      <Modal visible={showCelebration} transparent animationType="fade" onRequestClose={() => { setShowCelebration(false); router.replace(learnMapHref() as never); }} accessibilityViewIsModal={true}>
         <Pressable
           style={styles.celebrationOverlay}
-          onPress={() => { setShowCelebration(false); router.replace("/(tabs)/learn" as never); }}
+          onPress={() => { setShowCelebration(false); router.replace(learnMapHref() as never); }}
           accessibilityRole="button"
           accessibilityLabel="סגור חלון חגיגה"
         >
@@ -327,7 +328,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
               </Animated.View>
             )}
             <Pressable
-              onPress={() => { setShowCelebration(false); router.replace("/(tabs)/learn" as never); }}
+              onPress={() => { setShowCelebration(false); router.replace(learnMapHref() as never); }}
               style={styles.celebrationBtn}
               accessibilityRole="button"
               accessibilityLabel="חזרה למפת הלמידה"

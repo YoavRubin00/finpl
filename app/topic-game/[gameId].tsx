@@ -10,6 +10,7 @@ import { FomoKillerCard } from '../../src/features/finfeed/minigames/fomo-killer
 import { HigherLowerCard } from '../../src/features/finfeed/minigames/higher-lower/HigherLowerCard';
 import { PriceSliderCard } from '../../src/features/finfeed/minigames/price-slider/PriceSliderCard';
 import { tapHaptic, successHaptic } from '../../src/utils/haptics';
+import { returnToLearnMap } from '../../src/lib/navigation/learnMap';
 import { useTopicProgressStore } from '../../src/features/topic-learning/useTopicProgressStore';
 import type { ShortGameId } from '../../src/features/topic-learning/moduleGameMap';
 
@@ -40,14 +41,15 @@ export default function TopicGameRoute(): React.ReactElement | null {
         defaultOrder: 0,
       });
     }
-    // Replace (not push) so the back-stack stays clean and the focus
-    // effect in DuoLearnScreen re-expands the module.
-    router.replace(`/(tabs)/learn?expandedModule=${moduleId}` as never);
+    // Pop back to the live map (its accordion is still open) instead of
+    // replacing this screen with a second (tabs) tree and a second map
+    // (perf pass 20.11). Cold start / deep link still replaces.
+    returnToLearnMap(router, { expandedModule: moduleId });
   }, [moduleId, router]);
 
   const handleClose = useCallback(() => {
     tapHaptic();
-    router.replace(`/(tabs)/learn?expandedModule=${moduleId}` as never);
+    returnToLearnMap(router, { expandedModule: moduleId });
   }, [moduleId, router]);
 
   const card = useMemo(() => {
@@ -74,7 +76,7 @@ export default function TopicGameRoute(): React.ReactElement | null {
   // to avoid "Cannot update during render" warnings and a possible nav loop.
   useEffect(() => {
     if (!card) {
-      router.replace(`/(tabs)/learn?expandedModule=${moduleId}` as never);
+      returnToLearnMap(router, { expandedModule: moduleId });
     }
   }, [card, moduleId, router]);
 

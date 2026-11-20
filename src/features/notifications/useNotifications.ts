@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useNotificationStore } from "./useNotificationStore";
 import { useFinnNotificationScheduler } from "./useFinnNotificationScheduler";
 import { track } from "../../lib/analytics/events";
+import { normalizeLearnMapHref } from "../../lib/navigation/learnMap";
 
 /**
  * Call once at the root layout level.
@@ -36,8 +37,11 @@ export function useNotificationSetup() {
     try { track({ name: 'push_opened', props: { channel, screen, entrypoint, ...(type ? { type } : {}) } }); } catch { /* non-fatal */ }
 
     // Legacy feedScrollIndex payloads have no screen and are intentionally ignored.
+    // Payloads (local schedules already on devices, server pushes) still say
+    // `/(tabs)/learn`; open the one map directly instead of hopping through
+    // that redirect route. `screen` above stays raw for attribution.
     if (screen) {
-      try { router.push(screen as never); } catch { /* non-fatal */ }
+      try { router.push(normalizeLearnMapHref(screen) as never); } catch { /* non-fatal */ }
     }
   }, [router]);
 

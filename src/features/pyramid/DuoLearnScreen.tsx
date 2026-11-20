@@ -30,7 +30,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { InvestorsJournalSheet } from "../investors-journal/InvestorsJournalSheet";
 import { useInvestorsJournalStore, currentJournalMonth } from "../investors-journal/useInvestorsJournalStore";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useFocusEffect, useIsFocused } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
 
 // PRO-lock badge Lottie, isolated so it can pause off-tab: the raw always-on
 // <LottieView loop> ran one loop per locked module (3-8 mounted at once on the
@@ -2054,6 +2054,7 @@ export function DuoLearnScreen() {
   // Cold-start fallback: lesson opened with no back-history (deep link /
   // onboarding) → it replace()'d here with ?completedPhase=… params instead.
   const completedPhaseConsumedRef = useRef<string | null>(null);
+  const navigation = useNavigation();
   useEffect(() => {
     const cp = completedPhaseParams.completedPhase;
     const cmid = completedPhaseParams.completedModuleId;
@@ -2070,9 +2071,18 @@ export function DuoLearnScreen() {
     if (completedPhaseConsumedRef.current === key) return;
     completedPhaseConsumedRef.current = key;
     applyTopicCompletion(cp, cmid, ckind, completedPhaseParams.expandedModule);
-    // Clear params so a screen rerender doesn't re-fire.
-    router.replace('/(tabs)/learn' as never);
-  }, [completedPhaseParams, router, applyTopicCompletion]);
+    // Clear params so a screen rerender doesn't re-fire. On THIS route, in place:
+    // this used to replace to /(tabs)/learn, which mounted a second full map
+    // (perf pass 20.11; that route is now a redirect back here).
+    try {
+      (navigation as unknown as { setParams: (p: Record<string, undefined>) => void }).setParams({
+        completedPhase: undefined,
+        completedModuleId: undefined,
+        completedKind: undefined,
+        expandedModule: undefined,
+      });
+    } catch { /* non-fatal: the consumed-key ref still blocks a re-fire */ }
+  }, [completedPhaseParams, navigation, applyTopicCompletion]);
   // Prefetch today's news challenge so the Daily Quests modal can fire the
   // 4th (news) quest cleanly and the sheet renders without a spinner on open.
   const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
