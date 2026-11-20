@@ -138,11 +138,18 @@ export function NotificationPermissionPrompt(): React.ReactElement | null {
       // out the gap. It does spend the session's slot, so nothing follows it.
       // One interrupt per open (13.11): it no longer forces its way on top after 12s. If another
       // popup greeted the user, it waits a little and otherwise asks on a later open.
-      if (!useNudgeQueueStore.getState().canTakePopupSlot('launch')) {
+      // 20.11: the primer usually becomes eligible MID-session, right after the first lesson's
+      // chest — by then something else already "greeted" this open, so as a launch popup it never
+      // showed (8 permission results in 30 days) and the next-day reminders had nobody to reach.
+      // Well into an open it is a moment the user just earned: only the gap applies. Right at app
+      // entry it still competes for the open's single greeting.
+      const q = useNudgeQueueStore.getState();
+      const kind = Date.now() - q.openStartedAt > 20_000 ? 'earned' : 'launch';
+      if (!q.canTakePopupSlot(kind)) {
         if (waited < 12000) t = setTimeout(() => tryShow(waited + 2000), 2000);
         return;
       }
-      useNudgeQueueStore.getState().takePopupSlot('launch', 'notifPrimer');
+      q.takePopupSlot(kind, 'notifPrimer');
       // Burn the one-shot + suppress the thin banner ONLY now, at actual
       // display. Marking at effect-start was the self-cancel bug that kept the
       // permission ask 100% dark since 2.7 (0 primer views, 1 permission
