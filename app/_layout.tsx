@@ -766,13 +766,17 @@ function RootLayoutInner() {
     runBoot();
   }, [runBoot]);
 
-  // Go on signed out, as a failed boot always did. The attempt still running
-  // is ignored and may no longer sign this device in.
+  // Go on signed out. The stored token is dropped first (local data is kept),
+  // so the attempt still running can neither sign this device in nor, with a
+  // late 401, sign it out, and a later Google/Apple sign-in signs in instead
+  // of linking to the abandoned account.
   const continueWithoutSession = useCallback(() => {
-    bootAttemptRef.current++;
-    abandonPendingBoot();
-    setBootRetry(null);
-    setBootComplete(true);
+    const attempt = ++bootAttemptRef.current;
+    void abandonPendingBoot().finally(() => {
+      if (attempt !== bootAttemptRef.current) return;
+      setBootRetry(null);
+      setBootComplete(true);
+    });
   }, []);
 
   // Daily streak tick — fire `recordDailyActivity` once per Israeli day on app

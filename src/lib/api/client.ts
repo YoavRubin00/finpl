@@ -105,8 +105,14 @@ async function request<TBody, TResponse>(
 
   const refreshed = res.headers.get('X-Auth-Refreshed-Token');
   if (refreshed) {
-    await tokenStore.set(refreshed);
-    lastTokenRotationAt = Date.now();
+    // Only rotate the session this request was sent with (20.11): a response
+    // that lands after a sign-out, a sign-in with another account, or
+    // "continue without signing in" must not store its token again.
+    const stored = await tokenStore.get().catch(() => null);
+    if (token && stored === token) {
+      await tokenStore.set(refreshed);
+      lastTokenRotationAt = Date.now();
+    }
   }
 
   if (res.status === 401) {
@@ -158,8 +164,14 @@ async function request<TBody, TResponse>(
       }
       // onUnauthorizedHandler still fires every time so the UI sign-out path
       // (handler in lifecycle.ts) reacts immediately to ANY rejected token —
-      // analytics rate-limit isn't business logic.
-      if (onUnauthorizedHandler) onUnauthorizedHandler();
+      // analytics rate-limit isn't business logic. But only while the rejected
+      // token is still the stored session (20.11): a late 401 for a token the
+      // app already dropped ("continue without signing in", a sign-in with
+      // another account, a rotation) must not sign out whoever uses the app now.
+      if (onUnauthorizedHandler) {
+        const stored = await tokenStore.get().catch(() => null);
+        if (stored === token) onUnauthorizedHandler();
+      }
     }
     throw new ApiError('Unauthorized', 401, errBody);
   }
