@@ -46,6 +46,15 @@ export interface ModuleIntroConfig {
   phase1Stat?: string;
   phase1LottieKey?: keyof typeof LOTTIE_MAP;
   captions: [string, string, string];
+  /**
+   * Opt-in single screen (first lesson, 20.11.26). When set, the intro is ONE
+   * static screen: the shark says this line and `phase0Rows` sit below it.
+   * No timed beats, no coin drag, no looping animation, and a tap anywhere
+   * starts the lesson (the pinned "מתחילים" button in LessonFlowScreen stays).
+   * The narration still plays but nothing waits for it. Unset = the classic
+   * three-beat intro, unchanged.
+   */
+  singleScreenHook?: string;
 }
 
 interface Props {
@@ -83,6 +92,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
   }, [audioState]);
 
   const [phase, setPhase] = useState<0 | 1 | 2>(0);
+  const singleScreenHook = config.singleScreenHook;
   const { playSound } = useSoundEffect();
   const reducedMotion = useReducedMotion();
   const dropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,6 +119,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
 
   // Phase advance timer
   useEffect(() => {
+    if (singleScreenHook) return; // one static screen: no timed beats
     if (phase >= 2) return;
     // UX-55 (Yoav 18.9.26): captions used to run on a wall clock while the
     // narration was still buffering, so on slow networks the text moved on
@@ -118,7 +129,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
     const next: 0 | 1 | 2 = phase === 0 ? 1 : 2;
     const timer = setTimeout(() => setPhase(next), PHASE_DURATIONS[phase]);
     return () => clearTimeout(timer);
-  }, [phase, audioState, audioUri, audioWaitExpired]);
+  }, [phase, audioState, audioUri, audioWaitExpired, singleScreenHook]);
 
   // Caption fade-in on phase change
   useEffect(() => {
@@ -166,6 +177,106 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
     });
 
   const lottieSource = config.phase1LottieKey ? LOTTIE_MAP[config.phase1LottieKey] : null;
+
+  const factRows = (
+    <View style={{
+      backgroundColor: '#1e293b',
+      borderRadius: 24,
+      borderWidth: 2,
+      borderColor: unitColors.bg,
+      width: '100%',
+      paddingVertical: 18,
+      paddingHorizontal: 20,
+      shadowColor: unitColors.glow,
+      shadowOpacity: 0.45,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 8,
+      gap: 10,
+    }}>
+      {config.phase0Rows.map((row, i) => (
+        <View key={i} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={[RTL, { color: '#94a3b8', fontSize: 13, fontWeight: '600' }]}>{row.label}</Text>
+          <Text style={[RTL, {
+            color: row.highlight ? '#fbbf24' : '#e2e8f0',
+            fontSize: row.highlight ? 20 : 17,
+            fontWeight: '900',
+          }]}>{row.value}</Text>
+          {row.note ? (
+            <Text style={[RTL, { color: '#64748b', fontSize: 12 }]}>{row.note}</Text>
+          ) : (
+            <View style={{ width: 60 }} />
+          )}
+        </View>
+      ))}
+    </View>
+  );
+
+  // Single screen (first lesson, 20.11.26). PostHog 30d: rage clicks in
+  // /lesson/mod-0-1 cluster right after the lesson opens and right after the
+  // intro narration starts. On the old intro only the small "דלג" and the
+  // pinned button reacted; the bubble and the stage ignored taps. Here the
+  // whole screen is the start control. accessible={false} keeps the hook and
+  // the rows readable for screen readers, who use the pinned "מתחילים" button.
+  if (singleScreenHook) {
+    // Talking loop only while the narration runs; afterwards a still shark
+    // (no endless animation on a screen the user may sit on).
+    const talking = !!audioUri && audioState !== 'finished' && audioState !== 'failed';
+    return (
+      <Pressable
+        onPress={() => { heavyHaptic(); onStart(); }}
+        accessible={false}
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, gap: 20 }}
+      >
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', width: '100%', paddingHorizontal: 4 }}>
+          <ExpoImage
+            ref={talkingImgRef}
+            source={talking ? SHARK_CALL_TALKING : SHARK_CALL_IDLE}
+            autoplay={talking}
+            style={{ width: 96, height: 96 }}
+            contentFit="contain"
+            accessible={false}
+          />
+          <View style={{
+            flex: 1,
+            backgroundColor: '#ffffff',
+            borderRadius: 18,
+            borderWidth: 2,
+            borderColor: unitColors.bg,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            marginEnd: 8,
+            marginBottom: 6,
+            shadowColor: unitColors.glow,
+            shadowOpacity: 0.3,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 4,
+          }}>
+            <Text style={[RTL, { fontSize: 16, fontWeight: '800', color: '#1f2937', lineHeight: 24 }]}>
+              {singleScreenHook}
+            </Text>
+            <View style={{
+              position: 'absolute',
+              bottom: 12,
+              right: -9,
+              width: 0,
+              height: 0,
+              borderTopWidth: 7,
+              borderBottomWidth: 7,
+              borderLeftWidth: 9,
+              borderTopColor: 'transparent',
+              borderBottomColor: 'transparent',
+              borderLeftColor: unitColors.bg,
+            }} />
+          </View>
+        </View>
+        <View style={{ width: STAGE_W }}>
+          {factRows}
+        </View>
+      </Pressable>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -255,39 +366,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioR
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>
 
           {/* Phase 0, fact rows */}
-          {phase === 0 && (
-            <View style={{
-              backgroundColor: '#1e293b',
-              borderRadius: 24,
-              borderWidth: 2,
-              borderColor: unitColors.bg,
-              width: '100%',
-              paddingVertical: 18,
-              paddingHorizontal: 20,
-              shadowColor: unitColors.glow,
-              shadowOpacity: 0.45,
-              shadowRadius: 16,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 8,
-              gap: 10,
-            }}>
-              {config.phase0Rows.map((row, i) => (
-                <View key={i} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={[RTL, { color: '#94a3b8', fontSize: 13, fontWeight: '600' }]}>{row.label}</Text>
-                  <Text style={[RTL, {
-                    color: row.highlight ? '#fbbf24' : '#e2e8f0',
-                    fontSize: row.highlight ? 20 : 17,
-                    fontWeight: '900',
-                  }]}>{row.value}</Text>
-                  {row.note ? (
-                    <Text style={[RTL, { color: '#64748b', fontSize: 12 }]}>{row.note}</Text>
-                  ) : (
-                    <View style={{ width: 60 }} />
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
+          {phase === 0 && factRows}
 
           {/* Phase 1, big stat or Lottie */}
           {phase === 1 && (

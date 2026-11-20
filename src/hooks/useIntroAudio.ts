@@ -36,7 +36,11 @@ const PREFETCH_WAIT_MAX_MS = 800;
 // what chapter0Data ACTUALLY ships per module (verified line-by-line against
 // the data; NEVER infer from the blob filename). Local assets are named by
 // ROLE (mod-0-2.mp3 = mod-0-2's intro) and every file is a bit-identical
-// (md5-verified) copy of its remote counterpart.
+// (md5-verified) copy of its remote counterpart, EXCEPT mod-0-1.mp3: since
+// 2026-11-20 it is the remote clip cut at 9.95s (its last line, "גררו את
+// המטבע הפנימה", pointed at a coin the one-screen first-lesson intro no longer
+// has). The bundled file always wins for that URL, so the app never plays the
+// longer remote one.
 //
 // ALL of chapter 0 (~950KB total) is bundled so the entire ONBOARDING is
 // immune to Vercel Blob's per-client 403 episodes — a brand-new user can

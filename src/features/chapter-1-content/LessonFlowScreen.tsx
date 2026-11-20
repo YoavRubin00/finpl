@@ -746,6 +746,7 @@ function FlashcardCard({
   onTermPress,
   onOpenChat,
   showFinnTip = false,
+  advanceOnCardTap = false,
 }: {
   card: Flashcard;
   index: number;
@@ -758,6 +759,8 @@ function FlashcardCard({
   onTermPress?: (term: string) => void;
   onOpenChat?: () => void;
   showFinnTip?: boolean;
+  /** Module.fastStart: a tap on a fully shown living card = "המשך". */
+  advanceOnCardTap?: boolean;
 }) {
   const cardStyle = useEntranceAnimation(slideInLeft, { delay: 0 });
   const { playSound } = useSoundEffect();
@@ -1014,6 +1017,7 @@ function FlashcardCard({
               revealTrigger={segTrigger}
               revealAllTrigger={segRevealAll}
               onAllRevealed={() => setAllSegmentsRevealed(true)}
+              onTapAfterReveal={advanceOnCardTap ? handleNextBtn : undefined}
             />
           </View>
 
@@ -2700,7 +2704,11 @@ export function LessonFlowScreen() {
     }
     const target: FlowPhase =
       SIM_FIRST_MODULE_IDS.has(mod.id) && MODULES_WITH_SIM.has(mod.id) ? "sim" : "flashcards";
-    if (imagesReady) {
+    // First-lesson fast path (Module.fastStart): straight to the cards. mod-0-1's
+    // cards draw their diagrams in code, and its prefetch list is keyed by the
+    // module id ("fc-0-1-*" = mod-0-2's pictures), so the wait below only ever
+    // held a new user on a loader for up to POST_INTRO_CAP_MS for nothing.
+    if (imagesReady || mod.fastStart) {
       setPhase(target);
     } else {
       setPendingPostIntroPhase(target);
@@ -4557,11 +4565,17 @@ export function LessonFlowScreen() {
       case 'game': mediumHaptic(); setPhase('game'); return;
       case 'podcast': mediumHaptic(); setPhase('podcast'); return;
       case 'couple-dilemma': mediumHaptic(); setPhase('couple-dilemma'); return;
-      case 'quiz': setPhase('quizzes'); safeTimeout(() => setShowQuizIntro(true), 50); return;
+      case 'quiz':
+        setPhase('quizzes');
+        // First-lesson fast path (Module.fastStart): no "רגע של אתגר" popup in
+        // front of a one-question quiz. Its overlay only reacts to its button,
+        // and for mod-0-1 it read "1 שאלות מחכות לך".
+        if (!mod?.fastStart) safeTimeout(() => setShowQuizIntro(true), 50);
+        return;
       case 'shark-dilemma': setPhase('shark-dilemma'); return;
       default: setPhase('summary'); return; // chat (separate route) / unknown → end
     }
-  }, []);
+  }, [mod]);
   const advanceFromChip = useCallback((currentKind: TopicKind) => {
     if (!mod) { setPhase('summary'); return; }
     // After the QUIZ, run the lesson-only tail (infographic / fun-video) before
@@ -5679,6 +5693,7 @@ export function LessonFlowScreen() {
               onTermPress={setActiveGlossaryTerm}
               onOpenChat={() => setShowChatOverlay(true)}
               showFinnTip={mod.id === "mod-0-1"}
+              advanceOnCardTap={mod.fastStart === true}
             />
           </Animated.View>
         )}

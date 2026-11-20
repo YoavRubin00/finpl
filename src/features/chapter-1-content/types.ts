@@ -223,6 +223,18 @@ export interface Module {
   };
   /** When set to 'short', renders a FinPlay Short cinematic intro instead of InteractiveIntroCard */
   introVariant?: 'short';
+  /**
+   * First-lesson fast path (20.11.26, mod-0-1 only). Opt-in; any module
+   * without it behaves exactly as before. When true the lesson:
+   *  - goes from the intro straight to the cards (no wait for image prefetch,
+   *    so no "מכין את הכרטיסיות" loader);
+   *  - opens the quiz without the "רגע של אתגר" popup;
+   *  - moves to the next card on a tap on a living card that is fully shown
+   *    (instead of the tap doing nothing).
+   * The intro itself is shortened separately, by `singleScreenHook` in the
+   * module's MODULE_INTRO_CONFIGS entry.
+   */
+  fastStart?: boolean;
   /** Optional 20-second podcast segment with two follow-up questions (comprehension + dilemma) */
   podcast?: PodcastSegment;
   /** Optional 5-second couple-dilemma video + Daisy narration + Tinder swipe choice */
