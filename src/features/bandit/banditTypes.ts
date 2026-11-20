@@ -10,10 +10,9 @@ export type ExperimentId =
   | 'upgrade_paywall_headline'
   | 'upgrade_trigger_timing'
   | 'daily_email_variant'
-  | 'onboarding_welcome_hook'
-  | 'day0_wager'
-  | 'onboarding_module_first'
-  | 'onboarding_dream_easy_exit';
+  | 'day0_wager';
+// (onboarding_welcome_hook, onboarding_module_first and
+// onboarding_dream_easy_exit were cancelled 2026-11-20, see banditConfig.ts.)
 
 export interface BanditVariant {
   id: string;
@@ -75,40 +74,9 @@ export type ExperimentPayloads = {
     // keyed by variant id. Payload only carries a short tone label for analytics.
     tone: 'meta' | 'sad' | 'streak' | 'minimal' | 'welcome';
   };
-  onboarding_welcome_hook: {
-    eyebrow: string;
-    title: string;
-    /** New value/hook line shown under the title; empty string = control (no line). */
-    benefit: string;
-    cta: string;
-    /**
-     * First-screen layout. Omitted/`'passive'` = the classic single-CTA welcome
-     * (the 4 copy arms). `'active_question'` renders the first profiling question
-     * (the Dream cards) directly on the welcome screen so the first tap is a
-     * meaningful choice — measured against the passive control. Optional so the
-     * existing arms stay valid without a layout field.
-     */
-    layout?: 'passive' | 'active_question';
-  };
   day0_wager: {
     /** true = show the day-0 wager (treatment); false = holdout (control). */
     show: boolean;
-  };
-  onboarding_module_first: {
-    /** First-run order. 'module_first' = one-tap hook → mod-0-1 → profiling →
-     *  tour; 'control' = the classic welcome → profiling → tour → mod-0-1.
-     *  The arm is selected ONCE at first boot and persisted in
-     *  useTutorialStore.firstRunArm — see firstRunExperiment.ts. */
-    variant: 'control' | 'module_first';
-  };
-  onboarding_dream_easy_exit: {
-    /** screen-1 dream question (DreamStep). 'control' = the 4 heavy dream
-     *  cards with no "don't know" exit; 'easy_exit' = same 4 cards PLUS a
-     *  low-commitment "עדיין לא יודע? קחו אותי פנימה" affordance that advances
-     *  recording financialDream=null. Targets the chronic screen-1 leak
-     *  (started→completed 55% vs 63% baseline) without the module-first
-     *  value-first inversion that failed. */
-    variant: 'control' | 'easy_exit';
   };
 };
 

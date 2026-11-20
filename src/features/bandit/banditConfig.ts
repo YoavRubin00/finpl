@@ -346,48 +346,14 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
     ],
   },
 
-  // Onboarding welcome-screen hook A/B/C/control (Yoav 2026-06-26). The welcome
-  // screen loses ~20-30% who never tap "מתחילים" — this is the #1 top-of-funnel
-  // leak. Variants add a value/hook line (the missing piece). Conversion = tap
-  // the primary CTA; dismiss = background the app on the welcome screen without
-  // tapping. Copy follows BRAND.md: Captain Shark, singular gender-neutral.
-  onboarding_welcome_hook: {
-    goal: 'retention',
-    // Pinned to the active-question arm (ים 2026-07-02): it wins on conversion
-    // in the bandit data, and post-26.6 the welcome screen is the funnel's
-    // biggest leak (74.5% pass) — no more traffic spent on the losing control.
-    pinned: 'welcome_hook_v4_active',
-    variants: [
-      {
-        id: 'welcome_hook_v0',
-        label: 'control',
-        payload: {
-          eyebrow: 'היי, אני קפטן שארק',
-          title: 'מתחילים לשחק עם\nהכסף שלך.',
-          benefit: '',
-          cta: 'מתחילים',
-        },
-      },
-      // Active first-screen (Yoav 2026-06-27): instead of a passive "tap to start"
-      // CTA, render the first profiling question (Dream cards) right here so the
-      // first interaction is a choice with instant juice. Screen 1 is ~53% of all
-      // onboarding loss and the drop is low-intent bounce — an active first tap
-      // (Duolingo/Brawl Stars pattern) is the bet. Conversion = tapping a card.
-      {
-        id: 'welcome_hook_v4_active',
-        label: 'active_question',
-        payload: {
-          eyebrow: 'היי, אני קפטן שארק',
-          title: 'מה החלום הפיננסי שלך?',
-          // Copy touch only (2026-11-20): the em-dash became ", ו". Same
-          // pinned arm, same layout.
-          benefit: 'נתחיל מהמטרה, והדרך תתגלה.',
-          cta: 'מתחילים',
-          layout: 'active_question',
-        },
-      },
-    ],
-  },
+  // Onboarding experiments CANCELLED 2026-11-20 (founder: "cancel the
+  // experiments, go with the short option"): onboarding_welcome_hook,
+  // onboarding_module_first and onboarding_dream_easy_exit are gone. Every new
+  // user gets the one short flow (welcome + goal question → age → signup gate →
+  // welcome chest → mod-0-1). Their rows stay in Neon (bandit_variants); the
+  // client ignores experiment ids it does not know (hydrateFromServer skips
+  // them, rehydrate prunes them from the persisted store).
+
   // Day-0 wager holdout (Yoav 2026-07-03): among mod-0-1-chest completers, ~50%
   // are SHOWN the "מתערבים?" wager (treatment) and ~50% held out (control), to
   // measure whether the wager lifts return. 2 arms, no conversion recorded →
@@ -398,84 +364,6 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
     variants: [
       { id: 'day0_wager_show', label: 'show', payload: { show: true } },
       { id: 'day0_wager_hide', label: 'hide', payload: { show: false } },
-    ],
-  },
-  // Module-first first-run (Yoav 2026-07-05). Screen-1 of onboarding is the
-  // funnel's biggest leak (−18.6%, ~53% of all onboarding loss) — users bail
-  // on profiling friction BEFORE seeing value. Treatment inverts the order:
-  // one-tap hook → mod-0-1 (value first) → profiling → tour LAST.
-  // Fixed 80/20 drip via `allocation` (NOT Thompson — a first-run reorder is
-  // too sensitive for adaptive traffic). The arm is drawn once per install and
-  // persisted (useTutorialStore.firstRunArm) by firstRunExperiment.ts — this
-  // config only supplies the draw weights + the analytics variant ids.
-  // Success metric — the FULL first-run journey, never activation alone
-  // (activation alone is structurally higher for module_first — all
-  // pre-module friction is removed). Conversion = the arm's journey END
-  // (Yoav 5.7.26): module_first → opening the tour-end welcome chest
-  // (= module + its chest + profiling + tour all done), recorded in
-  // PostWalkthroughFirstChest, guarded on the mod-0-1 activation stamp and
-  // the persisted firstChestOpened one-shot; control → the mod-0-1 accordion
-  // chest (post-onboarding + post-tour in control's order),
-  // hasCompletedOnboarding-guarded. A v1 module-bailer converts late at the
-  // accordion chest like control. PostHog read: chest_opened{mod-0-1} AND
-  // onboarding_completed within 72h (unordered), v1 journey-end marker =
-  // first_chest_opened — all sliced by the person property.
-  // Pre-registered guardrails (coordinator 5.7, approved): v1 is disqualified
-  // if post-module profiling completion < 85% of v0, or signup < 90% of v0.
-  // Kill switches: allocation v1→0 (new users), pinned control, or
-  // MODULE_FIRST_ENABLED=false in firstRunExperiment.ts (also in-flight users).
-  onboarding_module_first: {
-    goal: 'retention',
-    // KILLED 2026-07-07: guardrail smashed in the 1.4.3 rollout — v1
-    // onboarding-completion 8% vs v0 57% (pre-registered kill threshold was
-    // <85% of v0). v1 allocation → 0 stops NEW assignments; the in-flight
-    // rescue is MODULE_FIRST_ENABLED=false in firstRunExperiment.ts (both
-    // flipped together). See DECISION-LOG 2026-07-07.
-    allocation: {
-      onboarding_module_first_v0: 1.0,
-      onboarding_module_first_v1: 0,
-    },
-    variants: [
-      {
-        id: 'onboarding_module_first_v0',
-        label: 'control',
-        payload: { variant: 'control' },
-      },
-      {
-        id: 'onboarding_module_first_v1',
-        label: 'module_first',
-        payload: { variant: 'module_first' },
-      },
-    ],
-  },
-
-  // screen-1 dream-question easy-exit (RETENTION 2026-07-10). The chronic
-  // biggest onboarding leak is the early profiling stretch (intro→dream→goal):
-  // started→completed 55% vs 63% baseline, with age→completed=90% proving the
-  // drop is upstream of the last step, not a broken completion event. The
-  // dream question (DreamStep) is already one-tap but its 4 options are all
-  // heavy financial commitments and — unlike the goal question — it has NO
-  // low-commitment "don't know" exit. This experiment adds that exit for half
-  // the users. Fixed 50/50 allocation (not Thompson) for a fast, clean read;
-  // success = onboarding_completed by arm, guardrail = mod-0-1 chest by arm
-  // (don't win onboarding by producing tourists). Kill: v1→0 or pin v0.
-  onboarding_dream_easy_exit: {
-    goal: 'retention',
-    allocation: {
-      onboarding_dream_easy_exit_v0: 0.5,
-      onboarding_dream_easy_exit_v1: 0.5,
-    },
-    variants: [
-      {
-        id: 'onboarding_dream_easy_exit_v0',
-        label: 'control',
-        payload: { variant: 'control' },
-      },
-      {
-        id: 'onboarding_dream_easy_exit_v1',
-        label: 'easy_exit',
-        payload: { variant: 'easy_exit' },
-      },
     ],
   },
 };

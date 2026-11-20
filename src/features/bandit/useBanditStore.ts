@@ -223,6 +223,8 @@ export const useBanditStore = create<BanditState>()(
           const merged = { ...state.experiments };
           for (const expId of Object.keys(serverState)) {
             const exp = merged[expId as ExperimentId];
+            // Unknown id (an experiment removed from the code whose rows are
+            // still in Neon, e.g. the cancelled onboarding experiments): skip.
             if (!exp) continue;
             const serverVariants = serverState[expId];
             merged[expId as ExperimentId] = {
@@ -250,6 +252,16 @@ export const useBanditStore = create<BanditState>()(
       partialize: (state) => ({ experiments: state.experiments }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        // Drop experiments that were removed from the code (e.g. the onboarding
+        // experiments cancelled 2026-11-20). Their persisted entries would
+        // otherwise linger in `experiments` and show up in getBanditReport.
+        // Server rows for them are skipped in hydrateFromServer (unknown id).
+        try {
+          const persisted = state.experiments as Record<string, BanditExperiment>;
+          for (const key of Object.keys(persisted ?? {})) {
+            if (!(key in EXPERIMENT_CONFIGS)) delete persisted[key];
+          }
+        } catch { /* non-fatal: a stale entry is harmless */ }
         // Merge any new experiments added in code that don't yet exist in persisted state
         const defaults = buildInitialExperiments();
         for (const key of Object.keys(defaults) as ExperimentId[]) {

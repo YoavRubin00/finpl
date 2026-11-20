@@ -133,17 +133,14 @@ interface TutorialState {
    *  them regardless of the sequential previous-chapter gate. Persisted so
    *  the jump survives relaunches; earlier chapters stay exactly as they are. */
   investChapterJumpUnlocked: boolean;
-  /** Module-first first-run experiment (onboarding_module_first, Yoav 5.7.26).
-   *  The arm is drawn ONCE at first boot (firstRunExperiment.ts) and persisted
-   *  here so it can never flip mid-flow or on relaunch. `null` = not assigned
-   *  (existing/returning users) → every orchestration read treats it as
-   *  control, so the installed base is untouched. */
+  /** DEPRECATED (2026-11-20): the module-first first-run experiment
+   *  (onboarding_module_first) is cancelled. Nothing assigns or reads an arm
+   *  any more; a value persisted by an older build is cleared on rehydrate.
+   *  The field stays so the persisted shape and the remaining readers
+   *  (app/_layout.tsx, LessonFlowScreen, both behind the always-false
+   *  MODULE_FIRST_ENABLED / isModuleFirstArm()) keep compiling. */
   firstRunArm: 'control' | 'module_first' | null;
-  /** Where the module-first (v1) user is in the reordered first run:
-   *  'hook' → one-tap welcome; 'module' → inside mod-0-1 (the _layout guard
-   *  allows /lesson/mod-0-1 pre-onboarding ONLY in this stage and resumes a
-   *  killed app back into the lesson); 'profiling' → handed off to
-   *  ProfilingFlow; 'done' → enterFirstModule ran (normal app from here). */
+  /** DEPRECATED (2026-11-20), see firstRunArm. Cleared on rehydrate. */
   firstRunStage: 'hook' | 'module' | 'profiling' | 'done' | null;
   _hydrated: boolean;
   completeTradingHubIntro: () => void;
@@ -295,6 +292,14 @@ export const useTutorialStore = create<TutorialState>()(
         // OTA, with the balance never moving. Anyone who already opened the
         // chest has, by definition, already seen its reward.
         if (s.firstChestOpened && !s.firstChestRewardShown) patch.firstChestRewardShown = true;
+        // Module-first experiment cancelled (2026-11-20): drop an arm / stage an
+        // older build persisted. Nothing reads them (isModuleFirstArm() is always
+        // false), so this only keeps the state honest; the user's real position
+        // comes from the auth store (signed in? profile? onboarded?).
+        if (s.firstRunArm !== null || s.firstRunStage !== null) {
+          patch.firstRunArm = null;
+          patch.firstRunStage = null;
+        }
         if (s.hasSeenAppWalkthrough) {
           if (s.walkthroughActiveScreen !== null || s.walkthroughGlowTab !== null || s.appWalkthroughStep !== -1 || s.walkthroughTriggered) {
             patch.appWalkthroughStep = -1;

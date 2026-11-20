@@ -4,18 +4,23 @@
 // the steps or show where people leave. Every step event now carries
 // `step` (stable id), `step_index` and `total_steps` from the lists below.
 //
-// `step_index` is the position in the CANONICAL order, not in the path one
-// user took: a user who picks a dream card on the welcome screen skips the
-// standalone dream step, so their indexes go 0 → 2. Keep the ids stable; add
-// new steps at the position they appear, and never reuse an id for a
-// different screen.
+// `step_index` is the position in the CANONICAL order for the mode. Keep the
+// ids stable; add new steps at the position they appear, and never reuse an id
+// for a different screen.
+//
+// Order history (for reading older PostHog data):
+//   2026-11-20 a: intro(0) dream(1) goal(2) age(3) signup-gate(4) first-chest(5), total 6
+//   2026-11-20 b: intro(0) age(1) signup-gate(2) first-chest(3), total 4 (this file)
+//     One flow for every new user, onboarding experiments cancelled. The dream
+//     question is gone and the goal question moved onto the welcome screen, so
+//     'intro' now carries the goal answer (profile.financialGoal). A signed-in
+//     account that skips the gate goes intro → age → first-chest.
 
-/** New-user onboarding, first launch → first lesson. 'first-chest' is the
- *  welcome chest (PostWalkthroughFirstChest), the last screen before mod-0-1. */
+/** New-user onboarding, first launch → first lesson. 'intro' is the welcome
+ *  screen with the goal question; 'first-chest' is the welcome chest
+ *  (PostWalkthroughFirstChest), the last screen before mod-0-1. */
 export const ONBOARDING_STEP_ORDER = [
   "intro",
-  "dream",
-  "goal",
   "age",
   "signup-gate",
   "first-chest",
@@ -24,7 +29,6 @@ export const ONBOARDING_STEP_ORDER = [
 /** Profile redo (ProfileScreen → ProfilingFlow mode="redo"). 'knowledge' and
  *  'daily-goal' are only reached by editing a row of the summary. */
 export const REDO_STEP_ORDER = [
-  "dream",
   "goal",
   "age",
   "profile-summary",

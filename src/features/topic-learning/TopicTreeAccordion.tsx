@@ -22,8 +22,6 @@ import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStor
 import { useHeartsStore } from '../subscription/useHeartsStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
-import { useBanditStore } from '../bandit/useBanditStore';
-import { FIRST_RUN_EXPERIMENT_ID, firstRunVariantId } from '../onboarding/firstRunExperiment';
 import type { Module } from '../chapter-1-content/types';
 import type { Topic, ChestRarity } from './types';
 import { CHEST_RARITY_BONUS, chipsToChestFor, MODULE_TT_XP, MODULE_TT_COINS, CHEST_ENERGY_REWARD } from './types';
@@ -543,26 +541,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         },
       });
     } catch { /* non-fatal */ }
-    // Module-first first-run experiment (onboarding_module_first): the mod-0-1
-    // chest IS the activation metric — but a conversion counts ONLY as the
-    // COMPOUND "activated AND completed onboarding" (Yoav 5.7.26: an arm that
-    // produces module-finishers who never finish profiling must not win).
-    // Structurally the map is post-onboarding in both arms already, so the
-    // hasCompletedOnboarding check is a belt-and-suspenders invariant: if the
-    // chest ever moves (or a pre-onboarding map path appears), the metric
-    // degrades loudly to zero instead of silently becoming activation-only.
-    // Fires symmetrically for both arms at the same moment (this chest); the
-    // authoritative read stays the PostHog chest_opened event above, sliced
-    // by person.bandit_variant__onboarding_module_first.
-    if (module.id === 'mod-0-1') {
-      try {
-        const arm = useTutorialStore.getState().firstRunArm;
-        const onboarded = useAuthStore.getState().hasCompletedOnboarding;
-        if (arm !== null && onboarded) {
-          useBanditStore.getState().recordConversion(FIRST_RUN_EXPERIMENT_ID, firstRunVariantId(arm));
-        }
-      } catch { /* non-fatal */ }
-    }
+    // (The module-first onboarding experiment recorded its bandit conversion
+    // here at the mod-0-1 chest; the experiment is cancelled, 2026-11-20.)
   }, [summary.isModuleDone, summary.pct, mod01QuestionResolved, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive, focusTick]);
 
   // Small 100%-completion pop (Yoav 2026-06-26). Per-chip rewards were removed,
